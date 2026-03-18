@@ -1,0 +1,103 @@
+import { useState } from "react";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Badge } from "@/components/ui/Badge";
+import { Card, CardContent } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { formatCurrency, formatMonth } from "@/lib/utils";
+import { useMyPayslips } from "@/api/hooks";
+import { Download, FileText, Loader2 } from "lucide-react";
+
+export function MyPayslipsPage() {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const { data: res, isLoading } = useMyPayslips();
+  const payslips = res?.data?.data || [];
+
+  const parseJSON = (val: any) => {
+    if (typeof val === "string") try { return JSON.parse(val); } catch { return []; }
+    return val || [];
+  };
+
+  if (isLoading) {
+    return <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-brand-600" /></div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="My Payslips" description="View and download your payslips" />
+
+      {payslips.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <FileText className="mx-auto h-12 w-12 text-gray-300" />
+            <p className="mt-4 text-gray-500">No payslips available yet</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {payslips.map((ps: any) => {
+            const earnings = parseJSON(ps.earnings);
+            const deductions = parseJSON(ps.deductions);
+            return (
+              <Card key={ps.id}>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{formatMonth(ps.month, ps.year)}</h3>
+                      <p className="text-sm text-gray-500">
+                        Gross: {formatCurrency(ps.gross_earnings)} &middot; Net: <span className="font-semibold text-brand-700">{formatCurrency(ps.net_pay)}</span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge variant={ps.status}>{ps.status}</Badge>
+                      <Button variant="ghost" size="sm" onClick={() => setExpanded(expanded === ps.id ? null : ps.id)}>
+                        {expanded === ps.id ? "Hide" : "Details"}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => {
+                        const url = `${import.meta.env.VITE_API_URL || "/api/v1"}/self-service/payslips/${ps.id}/pdf`;
+                        window.open(url + `?token=${localStorage.getItem("access_token")}`, "_blank");
+                      }}>
+                        <Download className="h-4 w-4" /> PDF
+                      </Button>
+                    </div>
+                  </div>
+
+                  {expanded === ps.id && (
+                    <div className="mt-4 grid grid-cols-1 gap-4 border-t border-gray-100 pt-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-semibold text-green-700">Earnings</h4>
+                        {earnings.map((e: any) => (
+                          <div key={e.code} className="flex justify-between text-sm">
+                            <span className="text-gray-500">{e.name || e.code}</span>
+                            <span className="text-gray-900">{formatCurrency(e.amount)}</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between border-t pt-1 text-sm font-semibold">
+                          <span>Total Earnings</span>
+                          <span>{formatCurrency(ps.gross_earnings)}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-semibold text-red-700">Deductions</h4>
+                        {deductions.map((d: any) => (
+                          <div key={d.code} className="flex justify-between text-sm">
+                            <span className="text-gray-500">{d.name || d.code}</span>
+                            <span className="text-red-600">{formatCurrency(d.amount)}</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between border-t pt-1 text-sm font-semibold">
+                          <span>Total Deductions</span>
+                          <span className="text-red-600">{formatCurrency(ps.total_deductions)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,42 @@
+{
+  "recommendations": [
+    // Core
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "ms-vscode.vscode-typescript-next",
+
+    // React / Tailwind
+    "bradlc.vscode-tailwindcss",
+    "dsznajder.es7-react-js-snippets",
+    "formulahendry.auto-rename-tag",
+    "steoates.autoimport",
+
+    // Node.js / Express
+    "christian-kohler.npm-intellisense",
+    "christian-kohler.path-intellisense",
+
+    // Database
+    "cweijan.vscode-mysql-client2",
+    "mongodb.mongodb-vscode",
+
+    // Docker
+    "ms-azuretools.vscode-docker",
+
+    // Git
+    "eamodio.gitlens",
+    "mhutchie.git-graph",
+
+    // DX
+    "usernamehw.errorlens",
+    "gruntfuggly.todo-tree",
+    "streetsidesoftware.code-spell-checker",
+    "mikestead.dotenv",
+    "editorconfig.editorconfig",
+
+    // REST API testing
+    "humao.rest-client",
+
+    // Icons
+    "pkief.material-icon-theme"
+  ]
+}

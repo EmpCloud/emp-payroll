@@ -1,0 +1,238 @@
+###############################################################################
+# EMP-PAYROLL API — VS Code REST Client
+# Install extension: humao.rest-client
+# Click "Send Request" above any request to run it
+###############################################################################
+
+@baseUrl = http://localhost:4000/api/v1
+@token = {{login.response.body.data.accessToken}}
+
+### ─────────────────────────────────────────────
+### Health Check
+### ─────────────────────────────────────────────
+
+GET http://localhost:4000/health
+
+### ─────────────────────────────────────────────
+### Auth
+### ─────────────────────────────────────────────
+
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@empcloud.com",
+  "password": "admin123"
+}
+
+###
+
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "hr@empcloud.com",
+  "password": "hr12345",
+  "firstName": "Priya",
+  "lastName": "Sharma",
+  "role": "hr_admin"
+}
+
+### ─────────────────────────────────────────────
+### Organization
+### ─────────────────────────────────────────────
+
+GET {{baseUrl}}/organizations
+Authorization: Bearer {{token}}
+
+###
+
+POST {{baseUrl}}/organizations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "EmpCloud India",
+  "legalName": "EmpCloud India Private Limited",
+  "pan": "AADCE1234F",
+  "tan": "BLRE12345F",
+  "state": "KA",
+  "registeredAddress": {
+    "line1": "HSR Layout",
+    "city": "Bengaluru",
+    "state": "KA",
+    "postalCode": "560102",
+    "country": "IN"
+  }
+}
+
+### ─────────────────────────────────────────────
+### Employees
+### ─────────────────────────────────────────────
+
+GET {{baseUrl}}/employees?page=1&limit=10
+Authorization: Bearer {{token}}
+
+###
+
+POST {{baseUrl}}/employees
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "employeeCode": "EMP001",
+  "firstName": "Rahul",
+  "lastName": "Kumar",
+  "email": "rahul@empcloud.com",
+  "dateOfBirth": "1995-06-15",
+  "gender": "male",
+  "dateOfJoining": "2024-01-15",
+  "employmentType": "full_time",
+  "department": "Engineering",
+  "designation": "Senior Developer",
+  "bankDetails": {
+    "accountNumber": "1234567890",
+    "ifscCode": "SBIN0001234",
+    "bankName": "State Bank of India",
+    "accountHolderName": "Rahul Kumar"
+  },
+  "taxInfo": {
+    "pan": "ABCPK1234A",
+    "taxRegime": "new"
+  },
+  "pfDetails": {
+    "isEnrolled": true,
+    "contributionRate": 12,
+    "employerContributionRate": 12,
+    "isVoluntaryPF": false
+  }
+}
+
+### ─────────────────────────────────────────────
+### Salary Structures
+### ─────────────────────────────────────────────
+
+GET {{baseUrl}}/salary-structures
+Authorization: Bearer {{token}}
+
+###
+
+POST {{baseUrl}}/salary-structures
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Standard CTC - Engineering",
+  "description": "Default salary structure for engineering team",
+  "isDefault": true,
+  "components": [
+    { "name": "Basic Salary", "code": "BASIC", "type": "earning", "calculationType": "percentage", "value": 40, "percentageOf": "CTC", "isTaxable": true, "isStatutory": false, "isProratable": true },
+    { "name": "HRA", "code": "HRA", "type": "earning", "calculationType": "percentage", "value": 50, "percentageOf": "BASIC", "isTaxable": true, "isStatutory": false, "isProratable": true },
+    { "name": "Special Allowance", "code": "SA", "type": "earning", "calculationType": "fixed", "value": 0, "isTaxable": true, "isStatutory": false, "isProratable": true }
+  ]
+}
+
+### ─────────────────────────────────────────────
+### Payroll Runs
+### ─────────────────────────────────────────────
+
+GET {{baseUrl}}/payroll
+Authorization: Bearer {{token}}
+
+###
+
+POST {{baseUrl}}/payroll
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "March 2026 Payroll",
+  "month": 3,
+  "year": 2026,
+  "payDate": "2026-03-31"
+}
+
+###
+
+POST {{baseUrl}}/payroll/{{payrollRunId}}/compute
+Authorization: Bearer {{token}}
+
+###
+
+POST {{baseUrl}}/payroll/{{payrollRunId}}/approve
+Authorization: Bearer {{token}}
+
+### ─────────────────────────────────────────────
+### Payslips
+### ─────────────────────────────────────────────
+
+GET {{baseUrl}}/payslips?month=3&year=2026
+Authorization: Bearer {{token}}
+
+###
+
+GET {{baseUrl}}/payslips/{{payslipId}}/pdf
+Authorization: Bearer {{token}}
+
+### ─────────────────────────────────────────────
+### Tax
+### ─────────────────────────────────────────────
+
+GET {{baseUrl}}/tax/computation/{{employeeId}}
+Authorization: Bearer {{token}}
+
+###
+
+POST {{baseUrl}}/tax/declarations/{{employeeId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "financialYear": "2025-26",
+  "declarations": [
+    { "section": "80C", "description": "ELSS Mutual Fund", "amount": 100000 },
+    { "section": "80C", "description": "PPF", "amount": 50000 },
+    { "section": "80D", "description": "Health Insurance - Self", "amount": 25000 },
+    { "section": "80CCD_1B", "description": "NPS", "amount": 50000 }
+  ]
+}
+
+### ─────────────────────────────────────────────
+### Self-Service (Employee Portal)
+### ─────────────────────────────────────────────
+
+GET {{baseUrl}}/self-service/dashboard
+Authorization: Bearer {{token}}
+
+###
+
+GET {{baseUrl}}/self-service/payslips
+Authorization: Bearer {{token}}
+
+###
+
+GET {{baseUrl}}/self-service/salary/ctc
+Authorization: Bearer {{token}}
+
+###
+
+GET {{baseUrl}}/self-service/tax/computation
+Authorization: Bearer {{token}}
+
+###
+
+PUT {{baseUrl}}/self-service/tax/regime
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "regime": "new"
+}
+
+### ─────────────────────────────────────────────
+### Attendance
+### ─────────────────────────────────────────────
+
+GET {{baseUrl}}/attendance/summary/{{employeeId}}?month=3&year=2026
+Authorization: Bearer {{token}}

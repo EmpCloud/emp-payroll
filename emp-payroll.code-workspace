@@ -1,0 +1,120 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    // -----------------------------------------------------------------------
+    // Editor
+    // -----------------------------------------------------------------------
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit",
+      "source.organizeImports": "explicit"
+    },
+    "editor.tabSize": 2,
+    "editor.rulers": [100],
+    "editor.bracketPairColorization.enabled": true,
+    "editor.guides.bracketPairs": "active",
+    "editor.suggestSelection": "first",
+    "editor.linkedEditing": true,
+
+    // -----------------------------------------------------------------------
+    // Files — force LF line endings (critical: dev on Windows, deploy on Linux)
+    // -----------------------------------------------------------------------
+    "files.eol": "\n",
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/.git": true,
+      "**/coverage": true
+    },
+
+    // -----------------------------------------------------------------------
+    // Terminal — default to PowerShell on Windows
+    // -----------------------------------------------------------------------
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    "terminal.integrated.env.windows": {
+      "NODE_ENV": "development"
+    },
+    "terminal.integrated.cwd": "${workspaceFolder}",
+
+    // -----------------------------------------------------------------------
+    // TypeScript
+    // -----------------------------------------------------------------------
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "typescript.suggest.autoImports": true,
+    "typescript.updateImportsOnFileMove.enabled": "always",
+    "typescript.tsdk": "node_modules/typescript/lib",
+
+    // -----------------------------------------------------------------------
+    // Prettier
+    // -----------------------------------------------------------------------
+    "prettier.singleQuote": false,
+    "prettier.trailingComma": "all",
+    "prettier.printWidth": 100,
+    "prettier.semi": true,
+    "prettier.endOfLine": "lf",
+
+    // -----------------------------------------------------------------------
+    // ESLint
+    // -----------------------------------------------------------------------
+    "eslint.workingDirectories": [
+      "packages/server",
+      "packages/client",
+      "packages/shared"
+    ],
+    "eslint.validate": [
+      "javascript",
+      "javascriptreact",
+      "typescript",
+      "typescriptreact"
+    ],
+
+    // -----------------------------------------------------------------------
+    // Tailwind CSS IntelliSense
+    // -----------------------------------------------------------------------
+    "tailwindCSS.experimental.classRegex": [
+      ["clsx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+      ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+    ],
+    "tailwindCSS.rootFontSize": 16,
+
+    // -----------------------------------------------------------------------
+    // Docker
+    // -----------------------------------------------------------------------
+    "docker.composeCommand": "docker compose",
+
+    // -----------------------------------------------------------------------
+    // File associations
+    // -----------------------------------------------------------------------
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[json]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[css]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[markdown]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+
+    // -----------------------------------------------------------------------
+    // Search exclusions
+    // -----------------------------------------------------------------------
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/package-lock.json": true
+    }
+  }
+}

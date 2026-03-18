@@ -1,0 +1,92 @@
+version: "3.9"
+
+services:
+  # --------------------------------------------------------------------------
+  # MySQL
+  # --------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: emp-payroll-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: emp_payroll_secret
+      MYSQL_DATABASE: emp_payroll
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --------------------------------------------------------------------------
+  # Redis
+  # --------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: emp-payroll-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+
+  # --------------------------------------------------------------------------
+  # Server (Node.js API)
+  # --------------------------------------------------------------------------
+  server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.server
+    container_name: emp-payroll-server
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      HOST: 0.0.0.0
+      DB_PROVIDER: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: emp_payroll_secret
+      DB_NAME: emp_payroll
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: docker-dev-secret-change-in-prod
+      CORS_ORIGIN: http://localhost:5173
+      PAYROLL_COUNTRY: IN
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./packages/server/src:/app/packages/server/src
+      - ./packages/shared/src:/app/packages/shared/src
+
+  # --------------------------------------------------------------------------
+  # Client (Vite dev server)
+  # --------------------------------------------------------------------------
+  client:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.client
+    container_name: emp-payroll-client
+    restart: unless-stopped
+    ports:
+      - "5175:5173"
+    environment:
+      VITE_API_URL: http://localhost:4000/api/v1
+    depends_on:
+      - server
+    volumes:
+      - ./packages/client/src:/app/packages/client/src
+      - ./packages/shared/src:/app/packages/shared/src
+
+volumes:
+  mysql_data:
+  redis_data:

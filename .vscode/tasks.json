@@ -1,0 +1,102 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dev: full stack",
+      "type": "shell",
+      "command": "npm run dev",
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": ["$tsc-watch"]
+    },
+    {
+      "label": "dev: server only",
+      "type": "shell",
+      "command": "npm run dev:server",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": ["$tsc-watch"]
+    },
+    {
+      "label": "dev: client only",
+      "type": "shell",
+      "command": "npm run dev:client",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label": "build: all",
+      "type": "shell",
+      "command": "npm run build",
+      "group": "build",
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "test: server",
+      "type": "shell",
+      "command": "npm run test:server",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "test: client",
+      "type": "shell",
+      "command": "npm run test:client",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "db: migrate",
+      "type": "shell",
+      "command": "npm run db:migrate",
+      "problemMatcher": []
+    },
+    {
+      "label": "db: seed",
+      "type": "shell",
+      "command": "npm run db:seed",
+      "problemMatcher": []
+    },
+    {
+      "label": "db: reset",
+      "type": "shell",
+      "command": "npm run db:reset",
+      "problemMatcher": []
+    },
+    {
+      "label": "docker: start infra",
+      "type": "shell",
+      "command": "docker compose up -d",
+      "problemMatcher": []
+    },
+    {
+      "label": "docker: stop infra",
+      "type": "shell",
+      "command": "docker compose down",
+      "problemMatcher": []
+    },
+    {
+      "label": "docker: start with postgres",
+      "type": "shell",
+      "command": "docker compose --profile postgres up -d",
+      "problemMatcher": []
+    },
+    {
+      "label": "docker: start with mongodb",
+      "type": "shell",
+      "command": "docker compose --profile mongodb up -d",
+      "problemMatcher": []
+    },
+    {
+      "label": "lint: all",
+      "type": "shell",
+      "command": "npm run lint",
+      "problemMatcher": ["$eslint-stylish"]
+    },
+    {
+      "label": "install: dependencies",
+      "type": "shell",
+      "command": "npm install",
+      "problemMatcher": []
+    }
+  ]
+}

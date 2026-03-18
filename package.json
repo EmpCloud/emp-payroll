@@ -1,0 +1,57 @@
+{
+  "name": "emp-payroll",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open-source payroll management system — part of the EmpCloud HRMS ecosystem",
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EmpCloud/emp-payroll.git"
+  },
+  "workspaces": [
+    "packages/server",
+    "packages/client",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev --workspace=packages/server",
+    "dev:client": "npm run dev --workspace=packages/client",
+    "build": "npm run build --workspaces",
+    "build:server": "npm run build --workspace=packages/server",
+    "build:client": "npm run build --workspace=packages/client",
+    "test": "npm run test --workspaces",
+    "test:server": "npm run test --workspace=packages/server",
+    "test:client": "npm run test --workspace=packages/client",
+    "lint": "npm run lint --workspaces",
+    "db:migrate": "npm run db:migrate --workspace=packages/server",
+    "db:seed": "npm run db:seed --workspace=packages/server",
+    "db:reset": "npm run db:reset --workspace=packages/server",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist",
+    "prepare": "husky",
+    "format": "prettier --write \"packages/*/src/**/*.{ts,tsx,css,json}\"",
+    "format:check": "prettier --check \"packages/*/src/**/*.{ts,tsx,css,json}\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "husky": "^9.1.0",
+    "lint-staged": "^15.4.0",
+    "prettier": "^3.4.0",
+    "prettier-plugin-tailwindcss": "^0.6.0"
+  },
+  "lint-staged": {
+    "packages/*/src/**/*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "packages/*/src/**/*.{css,json,md}": [
+      "prettier --write"
+    ]
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
