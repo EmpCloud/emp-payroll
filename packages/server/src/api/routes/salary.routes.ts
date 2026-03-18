@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { SalaryService } from "../../services/salary.service";
+import { SalaryHistoryService } from "../../services/salary-history.service";
 import { authenticate, authorize } from "../middleware/auth.middleware";
 import { validate, createSalaryStructureSchema, assignSalarySchema } from "../validators";
 import { wrap, param } from "../helpers";
@@ -62,6 +63,12 @@ router.get("/employee/:empId", wrap(async (req, res) => {
 router.post("/employee/:empId/revision", authorize("hr_admin"), wrap(async (req, res) => {
   const data = await svc.salaryRevision(param(req, "empId"), req.body);
   res.status(201).json({ success: true, data });
+}));
+
+router.get("/employee/:empId/history", wrap(async (req, res) => {
+  const historySvc = new SalaryHistoryService();
+  const data = await historySvc.getHistory(param(req, "empId"));
+  res.json({ success: true, data });
 }));
 
 export { router as salaryRoutes };

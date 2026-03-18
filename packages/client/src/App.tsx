@@ -36,6 +36,7 @@ const HolidaysPage = lazy(() => import("@/pages/holidays/HolidaysPage").then((m)
 const LeavesPage = lazy(() => import("@/pages/leaves/LeavesPage").then((m) => ({ default: m.LeavesPage })));
 const SystemHealthPage = lazy(() => import("@/pages/system/SystemHealthPage").then((m) => ({ default: m.SystemHealthPage })));
 const OrgChartPage = lazy(() => import("@/pages/employees/OrgChartPage").then((m) => ({ default: m.OrgChartPage })));
+const LoansPage = lazy(() => import("@/pages/loans/LoansPage").then((m) => ({ default: m.LoansPage })));
 const SelfServiceDashboard = lazy(() => import("@/pages/self-service/SelfServiceDashboard").then((m) => ({ default: m.SelfServiceDashboard })));
 const MyPayslipsPage = lazy(() => import("@/pages/self-service/MyPayslipsPage").then((m) => ({ default: m.MyPayslipsPage })));
 const MySalaryPage = lazy(() => import("@/pages/self-service/MySalaryPage").then((m) => ({ default: m.MySalaryPage })));
@@ -98,6 +99,7 @@ export default function App() {
             <Route path="/attendance" element={<AttendancePage />} />
             <Route path="/reimbursements" element={<ReimbursementsPage />} />
             <Route path="/holidays" element={<HolidaysPage />} />
+            <Route path="/loans" element={<LoansPage />} />
             <Route path="/leaves" element={<LeavesPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings" element={<SettingsPage />} />

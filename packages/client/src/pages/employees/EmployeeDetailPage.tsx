@@ -12,7 +12,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { useEmployee, useEmployeeSalary, useUpdateEmployee, useSalaryStructures } from "@/api/hooks";
 import { apiGet, apiPost } from "@/api/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Mail, Phone, Building2, Calendar, CreditCard, Shield, Loader2, Pencil, Wallet } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Building2, Calendar, CreditCard, Shield, Loader2, Pencil, Wallet, History, Banknote } from "lucide-react";
 import toast from "react-hot-toast";
 
 export function EmployeeDetailPage() {
@@ -24,6 +24,16 @@ export function EmployeeDetailPage() {
   const { data: payslipsRes } = useQuery({
     queryKey: ["employee-payslips", id],
     queryFn: () => apiGet<any>(`/payslips/employee/${id}`),
+    enabled: !!id,
+  });
+  const { data: historyRes } = useQuery({
+    queryKey: ["salary-history", id],
+    queryFn: () => apiGet<any>(`/salary-structures/employee/${id}/history`),
+    enabled: !!id,
+  });
+  const { data: loansRes } = useQuery({
+    queryKey: ["employee-loans", id],
+    queryFn: () => apiGet<any>(`/loans/employee/${id}`),
     enabled: !!id,
   });
   const updateMutation = useUpdateEmployee(id!);
@@ -197,6 +207,64 @@ export function EmployeeDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Salary Revision History */}
+      {(historyRes?.data || []).length > 1 && (
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><History className="h-5 w-5" /> Salary History</CardTitle></CardHeader>
+          <CardContent className="p-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-gray-50">
+                  <th className="px-6 py-3 text-left font-medium text-gray-500">Effective From</th>
+                  <th className="px-6 py-3 text-left font-medium text-gray-500">Structure</th>
+                  <th className="px-6 py-3 text-right font-medium text-gray-500">CTC</th>
+                  <th className="px-6 py-3 text-right font-medium text-gray-500">Gross</th>
+                  <th className="px-6 py-3 text-left font-medium text-gray-500">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {(historyRes?.data || []).map((h: any, i: number) => (
+                  <tr key={h.id} className={i === 0 ? "bg-brand-50/30" : ""}>
+                    <td className="px-6 py-3">{new Date(h.effective_from).toLocaleDateString("en-IN")}</td>
+                    <td className="px-6 py-3">{h.structure_name}</td>
+                    <td className="px-6 py-3 text-right font-medium">{formatCurrency(h.ctc)}</td>
+                    <td className="px-6 py-3 text-right">{formatCurrency(h.gross_salary)}</td>
+                    <td className="px-6 py-3">
+                      <Badge variant={h.is_active ? "active" : "inactive"}>{h.is_active ? "Current" : "Previous"}</Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Active Loans */}
+      {(loansRes?.data?.data || []).length > 0 && (
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Banknote className="h-5 w-5" /> Loans & Advances</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {(loansRes?.data?.data || []).map((loan: any) => (
+                <div key={loan.id} className="flex items-center justify-between rounded-lg border border-gray-100 p-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{loan.description}</p>
+                    <p className="text-xs text-gray-500">
+                      {loan.type.replace("_", " ")} &middot; EMI: {formatCurrency(loan.emi_amount)}/mo &middot; {loan.installments_paid}/{loan.tenure_months} paid
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-orange-600">{formatCurrency(loan.outstanding_amount)}</p>
+                    <Badge variant={loan.status === "active" ? "active" : "approved"}>{loan.status}</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Edit Modal */}
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Employee" className="max-w-lg">

@@ -23,6 +23,7 @@ import { orgRoutes } from "./api/routes/org.routes";
 import { selfServiceRoutes } from "./api/routes/self-service.routes";
 import { reimbursementRoutes } from "./api/routes/reimbursement.routes";
 import { leaveRoutes } from "./api/routes/leave.routes";
+import { loanRoutes } from "./api/routes/loan.routes";
 import { errorHandler } from "./api/middleware/error.middleware";
 import { apiDocsHandler, swaggerUIHandler } from "./api/docs";
 import { authLimiter, apiLimiter } from "./api/middleware/rate-limit.middleware";
@@ -75,6 +76,7 @@ v1.use("/attendance", attendanceRoutes);
 v1.use("/self-service", selfServiceRoutes);
 v1.use("/reimbursements", reimbursementRoutes);
 v1.use("/leaves", leaveRoutes);
+v1.use("/loans", loanRoutes);
 v1.get("/docs/openapi.json", apiDocsHandler);
 v1.get("/docs", swaggerUIHandler);
 

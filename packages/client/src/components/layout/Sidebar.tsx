@@ -19,6 +19,7 @@ import {
   TreePalm,
   Network,
   Activity,
+  Banknote,
 } from "lucide-react";
 
 const navItems = [
@@ -33,6 +34,7 @@ const navItems = [
   { to: "/attendance", label: "Attendance", icon: CalendarDays },
   { to: "/leaves", label: "Leaves", icon: TreePalm },
   { to: "/reimbursements", label: "Reimbursements", icon: Receipt },
+  { to: "/loans", label: "Loans", icon: Banknote },
   { to: "/holidays", label: "Holidays", icon: Calendar },
   { to: "/reports", label: "Reports", icon: FileText },
   { to: "/audit", label: "Audit Log", icon: ScrollText },
