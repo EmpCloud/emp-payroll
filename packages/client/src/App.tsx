@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getUser } from "@/api/auth";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { KeyboardHelp } from "@/components/ui/KeyboardHelp";
 import { ThemeProvider } from "@/lib/theme";
 import { Loader2 } from "lucide-react";
 
@@ -32,6 +33,7 @@ const ReportsPage = lazy(() => import("@/pages/reports/ReportsPage").then((m) =>
 const OnboardingPage = lazy(() => import("@/pages/onboarding/OnboardingPage").then((m) => ({ default: m.OnboardingPage })));
 const ReimbursementsPage = lazy(() => import("@/pages/reimbursements/ReimbursementsPage").then((m) => ({ default: m.ReimbursementsPage })));
 const HolidaysPage = lazy(() => import("@/pages/holidays/HolidaysPage").then((m) => ({ default: m.HolidaysPage })));
+const LeavesPage = lazy(() => import("@/pages/leaves/LeavesPage").then((m) => ({ default: m.LeavesPage })));
 const SelfServiceDashboard = lazy(() => import("@/pages/self-service/SelfServiceDashboard").then((m) => ({ default: m.SelfServiceDashboard })));
 const MyPayslipsPage = lazy(() => import("@/pages/self-service/MyPayslipsPage").then((m) => ({ default: m.MyPayslipsPage })));
 const MySalaryPage = lazy(() => import("@/pages/self-service/MySalaryPage").then((m) => ({ default: m.MySalaryPage })));
@@ -70,6 +72,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <CommandPalette />
+        <KeyboardHelp />
         <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route element={<AuthLayout />}>
@@ -92,6 +95,7 @@ export default function App() {
             <Route path="/attendance" element={<AttendancePage />} />
             <Route path="/reimbursements" element={<ReimbursementsPage />} />
             <Route path="/holidays" element={<HolidaysPage />} />
+            <Route path="/leaves" element={<LeavesPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/audit" element={<AuditLogPage />} />

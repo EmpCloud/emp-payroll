@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { TaxDeclarationService } from "../../services/tax-declaration.service";
+import { Form16Service } from "../../services/form16.service";
 import { authenticate, authorize } from "../middleware/auth.middleware";
 import { validate, submitDeclarationSchema } from "../validators";
 import { wrap, param } from "../helpers";
@@ -49,8 +50,11 @@ router.put("/regime/:empId", wrap(async (req, res) => {
   res.json({ success: true, data });
 }));
 
-router.get("/form16/:empId", wrap(async (_req, res) => {
-  res.json({ success: true, data: { message: "Form 16 generation pending" } });
+router.get("/form16/:empId", wrap(async (req, res) => {
+  const form16Svc = new Form16Service();
+  const html = await form16Svc.generateHTML(param(req, "empId"), req.query.fy as string);
+  res.setHeader("Content-Type", "text/html");
+  res.send(html);
 }));
 
 router.get("/form12bb/:empId", wrap(async (_req, res) => {

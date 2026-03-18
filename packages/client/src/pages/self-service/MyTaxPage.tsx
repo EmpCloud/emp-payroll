@@ -7,7 +7,8 @@ import { useMyTaxComputation, useMySalary } from "@/api/hooks";
 import { getUser } from "@/api/auth";
 import { apiGet } from "@/api/client";
 import { useQuery } from "@tanstack/react-query";
-import { Calculator, IndianRupee, TrendingDown, FileText, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Calculator, IndianRupee, TrendingDown, FileText, Loader2, Download } from "lucide-react";
 
 export function MyTaxPage() {
   const user = getUser();
@@ -57,7 +58,18 @@ export function MyTaxPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My Tax" description="FY 2025-26 tax computation" />
+      <PageHeader
+        title="My Tax"
+        description="FY 2025-26 tax computation"
+        actions={
+          <Button variant="outline" size="sm" onClick={() => {
+            const url = `${import.meta.env.VITE_API_URL || "/api/v1"}/self-service/tax/form16?token=${localStorage.getItem("access_token")}`;
+            window.open(url, "_blank");
+          }}>
+            <Download className="h-4 w-4" /> Form 16
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Annual Income" value={formatCurrency(annualGross)} icon={IndianRupee} />

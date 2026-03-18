@@ -6,6 +6,7 @@ import { SalaryService } from "../../services/salary.service";
 import { PayslipService } from "../../services/payslip.service";
 import { TaxDeclarationService } from "../../services/tax-declaration.service";
 import { PayslipPDFService } from "../../services/payslip-pdf.service";
+import { Form16Service } from "../../services/form16.service";
 import { ReimbursementService } from "../../services/reimbursement.service";
 
 const router = Router();
@@ -100,8 +101,11 @@ router.post("/tax/declarations/:id/proof", wrap(async (_req, res) => {
   res.json({ success: true, data: { message: "Proof upload — file storage integration pending" } });
 }));
 
-router.get("/tax/form16", wrap(async (_req, res) => {
-  res.json({ success: true, data: { message: "Form 16 generation pending" } });
+router.get("/tax/form16", wrap(async (req, res) => {
+  const form16Svc = new Form16Service();
+  const html = await form16Svc.generateHTML(req.user!.userId, req.query.fy as string);
+  res.setHeader("Content-Type", "text/html");
+  res.send(html);
 }));
 
 // --- Reimbursements ---

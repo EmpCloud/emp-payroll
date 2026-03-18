@@ -7,8 +7,9 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { DataTable } from "@/components/ui/DataTable";
 import { formatCurrency, formatMonth } from "@/lib/utils";
 import { usePayrollRun, useRunPayslips, useComputePayroll, useApprovePayroll, usePayPayroll } from "@/api/hooks";
-import { ArrowLeft, Users, Wallet, TrendingDown, Building2, CheckCircle, Play, Loader2, CreditCard, Download } from "lucide-react";
-import { api } from "@/api/client";
+import { ArrowLeft, Users, Wallet, TrendingDown, Building2, CheckCircle, Play, Loader2, CreditCard, Download, Mail } from "lucide-react";
+import { api, apiPost } from "@/api/client";
+import { useState } from "react";
 import toast from "react-hot-toast";
 
 const columns = [
@@ -62,6 +63,7 @@ export function PayrollRunDetailPage() {
   const computeMutation = useComputePayroll(id!);
   const approveMutation = useApprovePayroll(id!);
   const payMutation = usePayPayroll(id!);
+  const [emailing, setEmailing] = useState(false);
 
   if (isLoading) {
     return <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-brand-600" /></div>;
@@ -134,6 +136,18 @@ export function PayrollRunDetailPage() {
                 } catch { toast.error("Failed to generate bank file"); }
               }}>
                 <Download className="h-4 w-4" /> Bank File
+              </Button>
+            )}
+            {(run.status === "paid" || run.status === "approved") && (
+              <Button variant="outline" loading={emailing} onClick={async () => {
+                setEmailing(true);
+                try {
+                  const res = await apiPost<any>(`/payroll/${id}/send-payslips`);
+                  toast.success(res.data?.message || "Payslip emails sent");
+                } catch { toast.error("Failed to send emails"); }
+                finally { setEmailing(false); }
+              }}>
+                <Mail className="h-4 w-4" /> Email Payslips
               </Button>
             )}
           </div>

@@ -16,17 +16,19 @@ import {
   ScrollText,
   Receipt,
   Calendar,
+  TreePalm,
 } from "lucide-react";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/employees", label: "Employees", icon: Users },
-  { to: "/payroll/structures", label: "Salary Structures", icon: Wallet },
+  { to: "/payroll/structures", label: "Structures", icon: Wallet },
   { to: "/payroll/runs", label: "Payroll Runs", icon: Play },
   { to: "/payroll/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/payslips", label: "Payslips", icon: FileText },
   { to: "/tax", label: "Tax", icon: Calculator },
   { to: "/attendance", label: "Attendance", icon: CalendarDays },
+  { to: "/leaves", label: "Leaves", icon: TreePalm },
   { to: "/reimbursements", label: "Reimbursements", icon: Receipt },
   { to: "/holidays", label: "Holidays", icon: Calendar },
   { to: "/reports", label: "Reports", icon: FileText },
