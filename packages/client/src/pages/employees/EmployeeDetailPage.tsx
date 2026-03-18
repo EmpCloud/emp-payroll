@@ -266,6 +266,9 @@ export function EmployeeDetailPage() {
         </Card>
       )}
 
+      {/* Timeline */}
+      <EmployeeTimeline emp={emp} payslips={payslips} salary={salary} history={historyRes?.data || []} />
+
       {/* Notes & Documents */}
       <EmployeeNotes employeeId={id!} />
 
@@ -312,6 +315,52 @@ export function EmployeeDetailPage() {
         />
       </Modal>
     </div>
+  );
+}
+
+function EmployeeTimeline({ emp, payslips, salary, history }: { emp: any; payslips: any[]; salary: any; history: any[] }) {
+  const events: { date: string; label: string; type: "join" | "salary" | "payslip" | "revision" }[] = [];
+
+  // Joining event
+  events.push({ date: emp.date_of_joining, label: `Joined as ${emp.designation} in ${emp.department}`, type: "join" });
+
+  // Salary revisions
+  for (const h of history) {
+    events.push({ date: h.effective_from, label: `Salary revised to ${formatCurrency(h.ctc)}/yr (${h.structure_name})`, type: "revision" });
+  }
+
+  // Recent payslips
+  for (const p of payslips.slice(0, 3)) {
+    const d = new Date(p.year, p.month - 1, 28).toISOString();
+    events.push({ date: d, label: `Payslip: ${formatCurrency(p.net_pay)} net (${new Date(p.year, p.month - 1).toLocaleString("en-IN", { month: "short", year: "numeric" })})`, type: "payslip" });
+  }
+
+  events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  if (events.length <= 1) return null;
+
+  const typeColors = {
+    join: "bg-green-500",
+    salary: "bg-brand-500",
+    payslip: "bg-blue-500",
+    revision: "bg-amber-500",
+  };
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="flex items-center gap-2"><Calendar className="h-5 w-5" /> Timeline</CardTitle></CardHeader>
+      <CardContent>
+        <div className="relative ml-3 border-l-2 border-gray-200 pl-6">
+          {events.slice(0, 10).map((event, i) => (
+            <div key={i} className="relative mb-5 last:mb-0">
+              <div className={`absolute -left-[31px] top-1 h-3 w-3 rounded-full ${typeColors[event.type]}`} />
+              <p className="text-sm text-gray-900">{event.label}</p>
+              <p className="text-xs text-gray-400">{formatDate(event.date)}</p>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

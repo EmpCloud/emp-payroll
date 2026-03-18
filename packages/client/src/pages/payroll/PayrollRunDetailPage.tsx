@@ -7,7 +7,7 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { DataTable } from "@/components/ui/DataTable";
 import { formatCurrency, formatMonth } from "@/lib/utils";
 import { usePayrollRun, useRunPayslips, useComputePayroll, useApprovePayroll, usePayPayroll } from "@/api/hooks";
-import { ArrowLeft, Users, Wallet, TrendingDown, Building2, CheckCircle, Play, Loader2, CreditCard, Download, Mail } from "lucide-react";
+import { ArrowLeft, Users, Wallet, TrendingDown, Building2, CheckCircle, Play, Loader2, CreditCard, Download, Mail, AlertTriangle } from "lucide-react";
 import { api, apiPost } from "@/api/client";
 import { useState } from "react";
 import toast from "react-hot-toast";
@@ -182,6 +182,27 @@ export function PayrollRunDetailPage() {
         <StatCard title="Deductions" value={Number(run.total_deductions) ? formatCurrency(run.total_deductions) : "—"} icon={TrendingDown} />
         <StatCard title="Net Pay" value={Number(run.total_net) ? formatCurrency(run.total_net) : "—"} icon={Building2} />
       </div>
+
+      {/* Variance Alerts */}
+      {payslips.length > 0 && (() => {
+        const zeroNet = payslips.filter((p: any) => Number(p.net_pay) <= 0);
+        const highDeduction = payslips.filter((p: any) => Number(p.total_deductions) > Number(p.gross_earnings) * 0.5);
+        const alerts = [
+          ...zeroNet.map((p: any) => `${p.first_name || "Employee"} has zero/negative net pay`),
+          ...highDeduction.map((p: any) => `${p.first_name || "Employee"} has deductions > 50% of gross`),
+        ];
+        return alerts.length > 0 ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600" />
+              <h3 className="font-semibold text-amber-800 dark:text-amber-200">Payroll Alerts ({alerts.length})</h3>
+            </div>
+            <ul className="list-disc list-inside space-y-1">
+              {alerts.map((a, i) => <li key={i} className="text-sm text-amber-700 dark:text-amber-300">{a}</li>)}
+            </ul>
+          </div>
+        ) : null;
+      })()}
 
       <Card>
         <CardHeader><CardTitle>Employee Payslips</CardTitle></CardHeader>
