@@ -33,7 +33,8 @@ const ReportsPage = lazy(() => import("@/pages/reports/ReportsPage").then((m) =>
 const OnboardingPage = lazy(() => import("@/pages/onboarding/OnboardingPage").then((m) => ({ default: m.OnboardingPage })));
 const ReimbursementsPage = lazy(() => import("@/pages/reimbursements/ReimbursementsPage").then((m) => ({ default: m.ReimbursementsPage })));
 const HolidaysPage = lazy(() => import("@/pages/holidays/HolidaysPage").then((m) => ({ default: m.HolidaysPage })));
-const LeavesPage = lazy(() => import("@/pages/leaves/LeavesPage").then((m) => ({ default: m.LeavesPage })));
+const LeavesPage = lazy(() => import("@/pages/leaves/LeaveManagementPage").then((m) => ({ default: m.LeaveManagementPage })));
+const MyLeavesPage = lazy(() => import("@/pages/self-service/MyLeavesPage").then((m) => ({ default: m.MyLeavesPage })));
 const SystemHealthPage = lazy(() => import("@/pages/system/SystemHealthPage").then((m) => ({ default: m.SystemHealthPage })));
 const OrgChartPage = lazy(() => import("@/pages/employees/OrgChartPage").then((m) => ({ default: m.OrgChartPage })));
 const LoansPage = lazy(() => import("@/pages/loans/LoansPage").then((m) => ({ default: m.LoansPage })));
@@ -129,6 +130,7 @@ export default function App() {
             <Route path="/my/tax" element={<MyTaxPage />} />
             <Route path="/my/declarations" element={<MyDeclarationsPage />} />
             <Route path="/my/reimbursements" element={<MyReimbursementsPage />} />
+            <Route path="/my/leaves" element={<MyLeavesPage />} />
             <Route path="/my/profile" element={<MyProfilePage />} />
           </Route>
 
