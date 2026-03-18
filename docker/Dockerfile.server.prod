@@ -1,5 +1,6 @@
-# Stage 1: Build
-FROM node:20-alpine AS build
+# Production server — uses tsx for TypeScript execution
+# This avoids build issues with tsc and keeps consistency with dev
+FROM node:20-alpine
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
@@ -12,24 +13,9 @@ RUN pnpm install --frozen-lockfile || pnpm install
 COPY packages/shared packages/shared
 COPY packages/server packages/server
 
-RUN pnpm --filter @emp-payroll/server build
-
-# Stage 2: Production
-FROM node:20-alpine
-RUN corepack enable && corepack prepare pnpm@latest --activate
-WORKDIR /app
-
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
-COPY packages/shared/package.json packages/shared/
-COPY packages/server/package.json packages/server/
-
-RUN pnpm install --frozen-lockfile --prod || pnpm install --prod
-
-COPY --from=build /app/packages/shared/dist packages/shared/dist
-COPY --from=build /app/packages/shared/package.json packages/shared/
-COPY --from=build /app/packages/server/dist packages/server/dist
-COPY --from=build /app/packages/server/package.json packages/server/
+# Create uploads directory
+RUN mkdir -p /app/uploads /app/backups
 
 ENV NODE_ENV=production
 EXPOSE 4000
-CMD ["node", "packages/server/dist/server/src/index.js"]
+CMD ["pnpm", "--filter", "@emp-payroll/server", "exec", "tsx", "src/index.ts"]

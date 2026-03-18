@@ -5,6 +5,9 @@ import bcrypt from "bcryptjs";
 export async function seed(knex: Knex): Promise<void> {
   // Clear existing data (reverse FK order)
   await knex("audit_logs").del();
+  for (const t of ["employee_notes", "employee_documents", "payroll_adjustments", "leave_balances", "loans"]) {
+    try { await knex(t).del(); } catch { /* table may not exist */ }
+  }
   await knex("reimbursements").del();
   await knex("attendance_summaries").del();
   await knex("tax_declarations").del();
