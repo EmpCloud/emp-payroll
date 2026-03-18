@@ -66,9 +66,16 @@ export class EmployeeService {
     const existing = await this.db.findOne<any>("employees", { email: data.email });
     if (existing) throw new AppError(409, "EMAIL_EXISTS", "Employee with this email already exists");
 
+    // Auto-generate employee code if not provided
+    let employeeCode = data.employeeCode;
+    if (!employeeCode) {
+      const count = await this.db.count("employees", { org_id: orgId });
+      employeeCode = `EMP${String(count + 1).padStart(3, "0")}`;
+    }
+
     const codeExists = await this.db.findOne<any>("employees", {
       org_id: orgId,
-      employee_code: data.employeeCode,
+      employee_code: employeeCode,
     });
     if (codeExists) throw new AppError(409, "CODE_EXISTS", "Employee code already in use");
 
@@ -76,7 +83,7 @@ export class EmployeeService {
 
     const employee = await this.db.create<any>("employees", {
       org_id: orgId,
-      employee_code: data.employeeCode,
+      employee_code: employeeCode,
       first_name: data.firstName,
       last_name: data.lastName,
       email: data.email,
@@ -88,9 +95,9 @@ export class EmployeeService {
       department: data.department,
       designation: data.designation,
       reporting_manager_id: data.reportingManagerId || null,
-      bank_details: JSON.stringify(data.bankDetails),
-      tax_info: JSON.stringify(data.taxInfo),
-      pf_details: JSON.stringify(data.pfDetails),
+      bank_details: JSON.stringify(data.bankDetails || {}),
+      tax_info: JSON.stringify(data.taxInfo || {}),
+      pf_details: JSON.stringify(data.pfDetails || {}),
       role: "employee",
       password_hash: defaultPassword,
       is_active: true,

@@ -51,7 +51,7 @@ export const registerSchema = z.object({
 // ---------------------------------------------------------------------------
 export const createEmployeeSchema = z.object({
   body: z.object({
-    employeeCode: z.string().min(1).max(50),
+    employeeCode: z.string().min(1).max(50).optional(),
     firstName: z.string().min(1).max(100),
     lastName: z.string().min(1).max(100),
     email: z.string().email(),
@@ -68,17 +68,17 @@ export const createEmployeeSchema = z.object({
       ifscCode: z.string(),
       bankName: z.string(),
       branchName: z.string().optional(),
-    }),
+    }).optional(),
     taxInfo: z.object({
-      pan: z.string().length(10),
+      pan: z.string().min(1).max(10),
       regime: z.enum(["old", "new"]).default("new"),
       uan: z.string().optional(),
-    }),
+    }).optional(),
     pfDetails: z.object({
       pfNumber: z.string().optional(),
       isOptedOut: z.boolean().default(false),
       contributionRate: z.number().default(12),
-    }),
+    }).optional(),
   }),
 });
 
