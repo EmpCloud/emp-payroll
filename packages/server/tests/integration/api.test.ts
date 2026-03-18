@@ -66,6 +66,28 @@ describe("API Integration Tests", () => {
       const res = await fetch(`${BASE}/employees`);
       expect(res.status).toBe(401);
     });
+
+    it("POST /auth/change-password works", async () => {
+      if (!token) return;
+      const res = await fetch(`${BASE}/auth/change-password`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ currentPassword: "Welcome@123", newPassword: "Welcome@123" }),
+      });
+      const data = await res.json();
+      expect(data.success).toBe(true);
+    });
+
+    it("POST /auth/change-password rejects wrong current password", async () => {
+      if (!token) return;
+      const res = await fetch(`${BASE}/auth/change-password`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ currentPassword: "wrongpass", newPassword: "NewPass@123" }),
+      });
+      const data = await res.json();
+      expect(data.success).toBe(false);
+    });
   });
 
   describe("Employees", () => {
