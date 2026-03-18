@@ -3,12 +3,17 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 import { formatCurrency, formatMonth } from "@/lib/utils";
 import { useMyPayslips } from "@/api/hooks";
-import { Download, FileText, Loader2 } from "lucide-react";
+import { apiPost } from "@/api/client";
+import { Download, FileText, Loader2, AlertTriangle } from "lucide-react";
+import toast from "react-hot-toast";
 
 export function MyPayslipsPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [disputeId, setDisputeId] = useState<string | null>(null);
+  const [disputing, setDisputing] = useState(false);
   const { data: res, isLoading } = useMyPayslips();
   const payslips = res?.data?.data || [];
 
@@ -58,6 +63,11 @@ export function MyPayslipsPage() {
                       }}>
                         <Download className="h-4 w-4" /> PDF
                       </Button>
+                      {ps.status !== "disputed" && (
+                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => setDisputeId(ps.id)}>
+                          <AlertTriangle className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -98,6 +108,39 @@ export function MyPayslipsPage() {
           })}
         </div>
       )}
+
+      {/* Dispute Modal */}
+      <Modal open={!!disputeId} onClose={() => setDisputeId(null)} title="Raise Payslip Dispute" className="max-w-md">
+        <form onSubmit={async (e) => {
+          e.preventDefault();
+          const fd = new FormData(e.currentTarget);
+          const reason = fd.get("reason") as string;
+          if (!reason.trim()) { toast.error("Please provide a reason"); return; }
+          setDisputing(true);
+          try {
+            await apiPost(`/payslips/${disputeId}/dispute`, { reason });
+            toast.success("Dispute raised. HR will review it.");
+            setDisputeId(null);
+          } catch (err: any) {
+            toast.error(err.response?.data?.error?.message || "Failed to raise dispute");
+          } finally { setDisputing(false); }
+        }} className="space-y-4">
+          <p className="text-sm text-gray-500">
+            If you believe there's an error in this payslip, describe the issue below. HR will review and respond.
+          </p>
+          <textarea
+            name="reason"
+            rows={4}
+            required
+            placeholder="Describe the issue (e.g., incorrect deduction, missing allowance...)"
+            className="w-full rounded-lg border border-gray-200 p-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          />
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" type="button" onClick={() => setDisputeId(null)}>Cancel</Button>
+            <Button type="submit" loading={disputing} className="bg-red-600 hover:bg-red-700">Raise Dispute</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
