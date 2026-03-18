@@ -12,7 +12,8 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { useEmployee, useEmployeeSalary, useUpdateEmployee, useSalaryStructures } from "@/api/hooks";
 import { apiGet, apiPost, apiDelete } from "@/api/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Mail, Phone, Building2, Calendar, CreditCard, Shield, Loader2, Pencil, Wallet, History, Banknote, StickyNote, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Building2, Calendar, CreditCard, Shield, Loader2, Pencil, Wallet, History, Banknote, StickyNote, Send, Trash2, FileText, Upload, CheckCircle } from "lucide-react";
+import { api } from "@/api/client";
 import toast from "react-hot-toast";
 
 export function EmployeeDetailPage() {
@@ -303,7 +304,10 @@ export function EmployeeDetailPage() {
       {/* Timeline */}
       <EmployeeTimeline emp={emp} payslips={payslips} salary={salary} history={historyRes?.data || []} />
 
-      {/* Notes & Documents */}
+      {/* Documents */}
+      <EmployeeDocuments employeeId={id!} />
+
+      {/* Notes */}
       <EmployeeNotes employeeId={id!} />
 
       {/* Edit Modal */}
@@ -349,6 +353,144 @@ export function EmployeeDetailPage() {
         />
       </Modal>
     </div>
+  );
+}
+
+function EmployeeDocuments({ employeeId }: { employeeId: string }) {
+  const [uploading, setUploading] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
+  const qc = useQueryClient();
+
+  const { data: docsRes, isLoading } = useQuery({
+    queryKey: ["employee-documents", employeeId],
+    queryFn: () => apiGet<any>(`/uploads/employees/${employeeId}/documents`),
+    enabled: !!employeeId,
+  });
+  const docs = docsRes?.data?.data || [];
+
+  const DOC_TYPES = [
+    { value: "aadhaar", label: "Aadhaar Card" },
+    { value: "pan", label: "PAN Card" },
+    { value: "offer_letter", label: "Offer Letter" },
+    { value: "id_proof", label: "ID Proof" },
+    { value: "address_proof", label: "Address Proof" },
+    { value: "education", label: "Education Certificate" },
+    { value: "experience", label: "Experience Letter" },
+    { value: "other", label: "Other" },
+  ];
+
+  async function handleUpload(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const file = fd.get("file") as File;
+    if (!file || !file.size) { toast.error("Select a file"); return; }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("name", (fd.get("docName") as string) || file.name);
+      formData.append("type", fd.get("docType") as string);
+      await api.post(`/uploads/employees/${employeeId}/documents`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success("Document uploaded");
+      setShowUpload(false);
+      qc.invalidateQueries({ queryKey: ["employee-documents", employeeId] });
+    } catch (err: any) {
+      toast.error(err.response?.data?.error?.message || "Upload failed");
+    } finally { setUploading(false); }
+  }
+
+  async function handleVerify(docId: string) {
+    try {
+      await apiPost(`/uploads/employees/${employeeId}/documents/${docId}/verify`);
+      toast.success("Document verified");
+      qc.invalidateQueries({ queryKey: ["employee-documents", employeeId] });
+    } catch { toast.error("Failed to verify"); }
+  }
+
+  async function handleDelete(docId: string) {
+    try {
+      await apiDelete(`/uploads/employees/${employeeId}/documents/${docId}`);
+      toast.success("Document deleted");
+      qc.invalidateQueries({ queryKey: ["employee-documents", employeeId] });
+    } catch { toast.error("Failed to delete"); }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" /> Documents</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setShowUpload(true)}>
+            <Upload className="h-4 w-4" /> Upload
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>
+        ) : docs.length === 0 ? (
+          <p className="py-4 text-center text-sm text-gray-400">No documents uploaded</p>
+        ) : (
+          <div className="space-y-2">
+            {docs.map((doc: any) => (
+              <div key={doc.id} className="group flex items-center justify-between rounded-lg border border-gray-100 p-3">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <a
+                      href={`${import.meta.env.VITE_API_URL?.replace("/api/v1", "") || ""}${doc.file_url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium text-brand-600 hover:underline"
+                    >
+                      {doc.name}
+                    </a>
+                    <p className="text-xs text-gray-400">{doc.type.replace("_", " ")} &middot; {formatDate(doc.created_at)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {doc.is_verified ? (
+                    <Badge variant="approved"><CheckCircle className="mr-1 h-3 w-3" /> Verified</Badge>
+                  ) : (
+                    <Button variant="ghost" size="sm" onClick={() => handleVerify(doc.id)} className="text-green-600">
+                      <CheckCircle className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <button onClick={() => handleDelete(doc.id)} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <Modal open={showUpload} onClose={() => setShowUpload(false)} title="Upload Document" className="max-w-md">
+          <form onSubmit={handleUpload} className="space-y-4">
+            <SelectField id="docType" name="docType" label="Document Type" options={DOC_TYPES} />
+            <Input id="docName" name="docName" label="Document Name" placeholder="e.g. Aadhaar front" />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">File</label>
+              <input
+                type="file"
+                name="file"
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                required
+                className="w-full rounded-lg border border-gray-200 p-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-brand-50 file:px-3 file:py-1 file:text-sm file:font-medium file:text-brand-700"
+              />
+              <p className="mt-1 text-xs text-gray-400">PDF, JPG, PNG, DOC up to 10MB</p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" type="button" onClick={() => setShowUpload(false)}>Cancel</Button>
+              <Button type="submit" loading={uploading}>Upload</Button>
+            </div>
+          </form>
+        </Modal>
+      </CardContent>
+    </Card>
   );
 }
 
