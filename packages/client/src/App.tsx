@@ -34,6 +34,8 @@ const OnboardingPage = lazy(() => import("@/pages/onboarding/OnboardingPage").th
 const ReimbursementsPage = lazy(() => import("@/pages/reimbursements/ReimbursementsPage").then((m) => ({ default: m.ReimbursementsPage })));
 const HolidaysPage = lazy(() => import("@/pages/holidays/HolidaysPage").then((m) => ({ default: m.HolidaysPage })));
 const LeavesPage = lazy(() => import("@/pages/leaves/LeavesPage").then((m) => ({ default: m.LeavesPage })));
+const SystemHealthPage = lazy(() => import("@/pages/system/SystemHealthPage").then((m) => ({ default: m.SystemHealthPage })));
+const OrgChartPage = lazy(() => import("@/pages/employees/OrgChartPage").then((m) => ({ default: m.OrgChartPage })));
 const SelfServiceDashboard = lazy(() => import("@/pages/self-service/SelfServiceDashboard").then((m) => ({ default: m.SelfServiceDashboard })));
 const MyPayslipsPage = lazy(() => import("@/pages/self-service/MyPayslipsPage").then((m) => ({ default: m.MyPayslipsPage })));
 const MySalaryPage = lazy(() => import("@/pages/self-service/MySalaryPage").then((m) => ({ default: m.MySalaryPage })));
@@ -86,6 +88,7 @@ export default function App() {
             <Route path="/employees" element={<EmployeeListPage />} />
             <Route path="/employees/new" element={<EmployeeCreatePage />} />
             <Route path="/employees/:id" element={<EmployeeDetailPage />} />
+            <Route path="/employees/org-chart" element={<OrgChartPage />} />
             <Route path="/payroll/structures" element={<SalaryStructuresPage />} />
             <Route path="/payroll/runs" element={<PayrollRunsPage />} />
             <Route path="/payroll/runs/:id" element={<PayrollRunDetailPage />} />
@@ -99,6 +102,7 @@ export default function App() {
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/audit" element={<AuditLogPage />} />
+            <Route path="/system" element={<SystemHealthPage />} />
           </Route>
 
           <Route element={<SelfServiceLayout />}>

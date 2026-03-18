@@ -26,6 +26,7 @@ import { leaveRoutes } from "./api/routes/leave.routes";
 import { errorHandler } from "./api/middleware/error.middleware";
 import { apiDocsHandler, swaggerUIHandler } from "./api/docs";
 import { authLimiter, apiLimiter } from "./api/middleware/rate-limit.middleware";
+import { healthRoutes } from "./api/routes/health.routes";
 
 const app = express();
 
@@ -55,9 +56,7 @@ app.use(morgan("combined", { stream: { write: (msg) => logger.info(msg.trim()) }
 // ---------------------------------------------------------------------------
 // Health check
 // ---------------------------------------------------------------------------
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString(), version: "0.1.0" });
-});
+app.use("/health", healthRoutes);
 
 // ---------------------------------------------------------------------------
 // API Routes (v1)
@@ -91,6 +90,10 @@ app.use(errorHandler);
 // ---------------------------------------------------------------------------
 async function start() {
   try {
+    // Validate configuration
+    const { validateConfig } = await import("./config/validate");
+    validateConfig();
+
     // Initialize database
     const db = await initDB();
     logger.info(`Database connected (provider: ${config.db.provider})`);

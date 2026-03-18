@@ -17,11 +17,14 @@ import {
   Receipt,
   Calendar,
   TreePalm,
+  Network,
+  Activity,
 } from "lucide-react";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/employees", label: "Employees", icon: Users },
+  { to: "/employees/org-chart", label: "Org Chart", icon: Network },
   { to: "/payroll/structures", label: "Structures", icon: Wallet },
   { to: "/payroll/runs", label: "Payroll Runs", icon: Play },
   { to: "/payroll/analytics", label: "Analytics", icon: BarChart3 },
@@ -33,6 +36,7 @@ const navItems = [
   { to: "/holidays", label: "Holidays", icon: Calendar },
   { to: "/reports", label: "Reports", icon: FileText },
   { to: "/audit", label: "Audit Log", icon: ScrollText },
+  { to: "/system", label: "System", icon: Activity },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 

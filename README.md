@@ -1,4 +1,4 @@
-# 💰 EMP Payroll
+# EMP Payroll
 
 **Open-source payroll management system — part of the [EmpCloud](https://empcloud.com) HRMS ecosystem.**
 
@@ -11,15 +11,58 @@ India-first payroll engine with PF, ESI, TDS, and Professional Tax built in. Des
 
 ## Features
 
-- **Salary Structure Builder** — CTC breakdown with configurable components (Basic, HRA, Special Allowance, etc.)
-- **India Tax Engine** — Old & New regime TDS computation with Sec 80C/80D deductions, HRA exemption, surcharge, cess
-- **Statutory Compliance** — PF (EPF/EPS), ESI, Professional Tax for all major Indian states
-- **Payroll Processing** — Monthly payroll runs with draft → compute → approve → pay workflow
-- **Payslip Generation** — PDF payslips with YTD tracking, emailed to employees
-- **Employee Self-Service** — Employees view payslips, submit tax declarations, switch regime, download Form 16
-- **Attendance Integration** — Sync with EmpMonitor or import CSV for LOP/overtime calculation
-- **Multi-DB Support** — Switch between MySQL, PostgreSQL, or MongoDB without code changes
-- **Audit Trail** — Every payroll action is logged for compliance
+### Payroll Engine
+- **Salary Structure Builder** — CTC breakdown with configurable components (Basic, HRA, SA, LTA)
+- **Payroll Processing** — Draft > Compute > Approve > Pay workflow with full audit trail
+- **Payslip PDF** — Printable payslip with company header, earnings/deductions, net pay
+- **Bank Transfer File** — NEFT/RTGS CSV for direct salary credit
+- **Payroll Analytics** — Cost trends, month-over-month comparison, headcount charts
+
+### India Compliance (FY 2025-26)
+- **Income Tax** — Old & New regime TDS, Sec 87A rebate, marginal relief, surcharge, 4% cess
+- **Provident Fund** — 12% EPF, EPS, admin/EDLI charges, PF ECR generation
+- **ESI** — 0.75% employee + 3.25% employer (gross <= 21,000)
+- **Professional Tax** — Karnataka, Maharashtra, Tamil Nadu, Telangana, West Bengal, Gujarat, Delhi
+- **Form 16** — Part A (TDS certificate) + Part B (salary & tax computation)
+- **Statutory Reports** — PF ECR, ESI return, PT return, TDS summary
+
+### Employee Management
+- **Employee CRUD** — Add, edit, deactivate with full profile
+- **Salary Assignment** — Assign structures, revise CTC with auto-calculated breakdown
+- **Tax Declarations** — Submit 80C/80D/NPS declarations with approval workflow
+- **CSV Import/Export** — Bulk employee import, CSV export
+- **Leave Balances** — Earned/casual/sick leave tracking per employee
+- **Reimbursements** — Submit, approve, reject, pay expense claims
+- **Department Filters** — Quick filter employees by department
+
+### Employee Self-Service Portal
+- **Dashboard** — CTC, latest payslip, tax regime, days at company
+- **My Payslips** — View history, expandable details, PDF download
+- **My Salary** — CTC breakdown with pie chart
+- **My Tax** — Tax computation, TDS tracker with progress bar, Form 16 download
+- **Declarations** — Submit investment proofs (80C, 80D, NPS, HRA)
+- **Reimbursements** — Submit expense claims, track status
+- **Change Password** — Self-service password change
+
+### UI & UX
+- **Dark Mode** — Light / Dark / System with persistent toggle
+- **Command Palette** — Ctrl+K to search pages, employees, actions
+- **Global Search** — Debounced employee search in top bar
+- **Notifications** — Bell dropdown with contextual alerts
+- **Breadcrumbs** — Auto-generated navigation trail
+- **Pagination** — Client-side with page numbers on all tables
+- **Mobile Responsive** — Hamburger menu, adaptive layouts
+- **Error Boundary** — Graceful error handling with recovery
+- **Loading Skeletons** — Shimmer states for all pages
+- **Keyboard Shortcuts** — Press ? for help
+
+### Infrastructure
+- **Docker Compose** — One-command dev setup (MySQL + Redis + API + Client)
+- **Production Docker** — Multi-stage builds, nginx reverse proxy, gzip
+- **API Rate Limiting** — Auth: 20/15min, API: 100/min
+- **Swagger Docs** — Interactive API docs at /api/v1/docs
+- **CI/CD** — GitHub Actions with type-check + tests + build
+- **Multi-DB** — MySQL, PostgreSQL, or MongoDB via env var
 
 ---
 
@@ -27,13 +70,67 @@ India-first payroll engine with PF, ESI, TDS, and Professional Tax built in. Des
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 19 + Vite + TypeScript + Tailwind CSS |
-| Backend | Node.js + Express + TypeScript |
-| Database | MySQL (default) / PostgreSQL / MongoDB |
-| Queue | BullMQ + Redis |
-| PDF | Puppeteer + Handlebars templates |
-| Auth | JWT (access + refresh tokens) |
-| Validation | Zod (shared between client & server) |
+| Frontend | React 19 + Vite + TypeScript + Tailwind CSS + React Query |
+| Backend | Node.js + Express 5 + TypeScript |
+| Database | MySQL 8 (default) / PostgreSQL / MongoDB |
+| Cache | Redis 7 |
+| Auth | JWT (access + refresh tokens) + bcrypt |
+| Validation | Zod (server-side) |
+| Charts | Recharts |
+| Email | Nodemailer (SMTP) |
+| Testing | Vitest (18 unit tests) |
+
+---
+
+## Quick Start
+
+### Option 1: Docker (Recommended)
+
+```bash
+git clone https://github.com/EmpCloud/emp-payroll.git
+cd emp-payroll
+docker compose up -d --build
+```
+
+Wait ~30 seconds, then:
+- **Frontend**: http://localhost:5175
+- **API**: http://localhost:4000
+- **API Docs**: http://localhost:4000/api/v1/docs
+
+Seed demo data:
+```bash
+docker exec emp-payroll-server pnpm --filter @emp-payroll/server exec tsx src/db/seed.ts
+```
+
+Login: `ananya@technova.in` / `Welcome@123`
+
+### Option 2: Local Development
+
+**Prerequisites:** Node.js >= 20, pnpm, MySQL 8+
+
+```bash
+git clone https://github.com/EmpCloud/emp-payroll.git
+cd emp-payroll
+pnpm install
+
+# Copy and edit env
+cp packages/server/.env.example packages/server/.env
+
+# Run migrations + seed
+pnpm --filter @emp-payroll/server exec tsx src/db/migrate.ts
+pnpm --filter @emp-payroll/server exec tsx src/db/seed.ts
+
+# Start dev servers
+pnpm --filter @emp-payroll/server dev    # API on :4000
+pnpm --filter @emp-payroll/client dev    # UI on :5173
+```
+
+### Option 3: Production Deploy
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+Serves on port 80 with nginx reverse proxy.
 
 ---
 
@@ -42,186 +139,112 @@ India-first payroll engine with PF, ESI, TDS, and Professional Tax built in. Des
 ```
 emp-payroll/
 ├── packages/
-│   ├── shared/              # Shared types, constants, validators
-│   │   └── src/
-│   │       ├── types/       # TypeScript interfaces (Employee, Payslip, etc.)
-│   │       └── constants/   # India tax slabs, PF rates, PT slabs
-│   │
-│   ├── server/              # Express API
-│   │   └── src/
-│   │       ├── api/
-│   │       │   ├── routes/          # 9 route modules
-│   │       │   ├── controllers/     # Request handlers
-│   │       │   ├── middleware/      # Auth, error, validation
-│   │       │   └── validators/      # Zod schemas
-│   │       ├── services/
-│   │       │   ├── payroll/         # Payroll computation engine
-│   │       │   ├── tax/             # India TDS calculator
-│   │       │   ├── compliance/      # PF, ESI, PT calculators
-│   │       │   ├── attendance/      # Attendance sync
-│   │       │   └── employee/        # Employee CRUD
-│   │       ├── db/
-│   │       │   ├── adapters/        # DB abstraction (MySQL/PG/Mongo)
-│   │       │   ├── migrations/      # SQL migrations
-│   │       │   └── seeds/           # Sample data
-│   │       ├── config/
-│   │       ├── utils/
-│   │       └── jobs/                # Background jobs (payslip PDF, email)
-│   │
-│   └── client/              # React SPA
+│   ├── shared/                 # Shared types, tax constants, validators
+│   ├── server/                 # Express API (85+ endpoints)
+│   │   ├── src/
+│   │   │   ├── api/
+│   │   │   │   ├── routes/     # 11 route modules
+│   │   │   │   ├── middleware/ # Auth, rate-limit, error handling
+│   │   │   │   ├── validators/ # Zod request schemas
+│   │   │   │   └── docs.ts    # Swagger/OpenAPI spec
+│   │   │   ├── services/       # Business logic
+│   │   │   │   ├── payroll, tax, compliance, employee, salary
+│   │   │   │   ├── auth, attendance, org, payslip, export
+│   │   │   │   ├── reimbursement, leave, audit, email
+│   │   │   │   ├── reports, bank-file, form16, payslip-pdf
+│   │   │   │   └── tax/ (india, us, uk engines)
+│   │   │   └── db/            # Adapters, migrations, seeds
+│   │   └── tests/unit/        # Vitest (18 tests)
+│   └── client/                 # React SPA (30 pages)
 │       └── src/
-│           ├── api/                 # Axios client + typed helpers
-│           ├── components/          # Reusable UI components
-│           ├── pages/
-│           │   ├── auth/            # Login
-│           │   ├── dashboard/       # Admin dashboard
-│           │   ├── employees/       # Employee CRUD
-│           │   ├── payroll/         # Salary structures, payroll runs
-│           │   ├── payslips/        # Payslip list + PDF download
-│           │   ├── tax/             # Tax overview + declarations
-│           │   ├── attendance/      # Attendance sync
-│           │   ├── settings/        # Org settings
-│           │   └── self-service/    # Employee portal (6 pages)
-│           ├── store/               # Zustand stores
-│           └── styles/
-│
-├── docs/                    # Architecture docs, API reference
-├── docker/                  # Dockerfiles
-├── docker-compose.yml       # MySQL + Redis + Mongo + PG
-└── .env.example
+│           ├── api/            # Axios client, hooks, auth helpers
+│           ├── components/     # 20+ reusable UI components
+│           ├── pages/          # 30 lazy-loaded page components
+│           ├── lib/            # Utils, theme provider
+│           └── styles/         # Tailwind + dark mode CSS
+├── docker/                     # Dockerfiles (dev + prod), nginx.conf
+├── docker-compose.yml          # Development setup
+├── docker-compose.prod.yml     # Production setup
+└── .github/workflows/ci.yml   # CI pipeline
 ```
 
 ---
 
-## Quick Start
+## API Endpoints (85+)
 
-### Prerequisites
-- Node.js >= 20
-- MySQL 8+ (or PostgreSQL 16+ or MongoDB 7+)
-- Redis 7+
-
-### 1. Clone & Install
-
-```bash
-git clone https://github.com/EmpCloud/emp-payroll.git
-cd emp-payroll
-npm install
-```
-
-### 2. Setup Environment
-
-```bash
-cp .env.example .env
-# Edit .env with your database credentials
-```
-
-### 3. Start Infrastructure (Docker)
-
-```bash
-# Default: MySQL + Redis
-docker compose up -d
-
-# With PostgreSQL instead:
-docker compose --profile postgres up -d
-
-# With MongoDB instead:
-docker compose --profile mongodb up -d
-```
-
-### 4. Run Migrations & Seed
-
-```bash
-npm run db:migrate
-npm run db:seed
-```
-
-### 5. Start Development
-
-```bash
-npm run dev
-# Server: http://localhost:4000
-# Client: http://localhost:5173
-```
-
----
-
-## Database Switching
-
-Change `DB_PROVIDER` in `.env` — zero code changes needed:
-
-```bash
-# MySQL (default)
-DB_PROVIDER=mysql
-DB_HOST=localhost
-DB_PORT=3306
-
-# PostgreSQL
-DB_PROVIDER=postgres
-DB_HOST=localhost
-DB_PORT=5432
-
-# MongoDB
-DB_PROVIDER=mongodb
-MONGO_URI=mongodb://localhost:27017/emp_payroll
-```
-
----
-
-## API Routes
-
-| Module | Base Path | Endpoints |
-|--------|-----------|-----------|
-| Auth | `/api/v1/auth` | login, register, refresh, logout |
-| Organizations | `/api/v1/organizations` | CRUD + settings |
-| Employees | `/api/v1/employees` | CRUD + bank/tax/PF details, import/export |
-| Salary Structures | `/api/v1/salary-structures` | CRUD + components, assign to employee |
-| Payroll | `/api/v1/payroll` | runs, compute, approve, pay, statutory reports |
-| Payslips | `/api/v1/payslips` | list, PDF download, dispute |
+| Module | Base Path | Key Endpoints |
+|--------|-----------|---------------|
+| Auth | `/api/v1/auth` | login, register, refresh, change-password |
+| Employees | `/api/v1/employees` | CRUD, bank/tax/PF details, import, export CSV |
+| Salary | `/api/v1/salary-structures` | CRUD, components, assign, revise |
+| Payroll | `/api/v1/payroll` | create, compute, approve, pay, cancel, reports |
+| Payslips | `/api/v1/payslips` | list, PDF, export CSV, dispute |
 | Tax | `/api/v1/tax` | computation, declarations, regime, Form 16 |
-| Attendance | `/api/v1/attendance` | summary, import, sync, LOP override |
-| Self-Service | `/api/v1/self-service` | dashboard, my payslips/salary/tax/profile |
+| Attendance | `/api/v1/attendance` | summary, bulk, import CSV, LOP override |
+| Leaves | `/api/v1/leaves` | balances, record, adjust |
+| Reimbursements | `/api/v1/reimbursements` | list, approve, reject, pay |
+| Organizations | `/api/v1/organizations` | CRUD, settings, activity log |
+| Self-Service | `/api/v1/self-service` | dashboard, payslips, salary, tax, profile |
+| Docs | `/api/v1/docs` | Swagger UI |
 
 ---
 
-## India Compliance (FY 2025-26)
+## Frontend Pages (30)
 
-- **Income Tax**: Old & New regime slabs, Sec 87A rebate, marginal relief, surcharge, 4% cess
-- **PF**: 12% employee, 3.67% employer EPF + 8.33% EPS, admin/EDLI charges
-- **ESI**: 0.75% employee + 3.25% employer (gross ≤ ₹21,000)
-- **Professional Tax**: Karnataka, Maharashtra, Tamil Nadu, Telangana, West Bengal, Gujarat, Delhi
-- **Section 80C/80D/80CCD**: Declaration workflow with proof upload and approval
+**Admin Dashboard**: Dashboard, Employees (list/create/detail), Salary Structures, Payroll Runs, Payroll Run Detail, Payroll Analytics, Payslips, Tax Overview, Attendance, Leaves, Reimbursements, Holidays, Reports, Audit Log, Settings
+
+**Self-Service Portal**: Dashboard, My Payslips, My Salary, My Tax, Declarations, Reimbursements, Profile
+
+**Other**: Login, Onboarding Wizard, 404 Page
 
 ---
 
-## Contributing
+## Demo Data
 
-We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+The seed creates:
+- **Organization**: TechNova Solutions Pvt. Ltd. (Bengaluru, KA)
+- **10 Employees**: Ananya (HR Admin), Rahul, Priya, Vikram, Sneha, Arjun, Meera, Karthik, Divya, Aditya
+- **Salary Structure**: Standard CTC with Basic (40%), HRA (50% of Basic), SA
+- **Payroll Run**: Last month, fully paid with 10 payslips
+- **Attendance**: 3 months of records for all employees
 
-### Priority areas for v1:
-1. Employee self-service portal UI
-2. Payslip PDF template
-3. More state PT slabs
-4. Unit tests for tax engine
-5. Swagger/OpenAPI docs
+Login as `ananya@technova.in` / `Welcome@123` (HR Admin)
+
+---
+
+## Running Tests
+
+```bash
+cd packages/server
+pnpm test
+```
+
+18 unit tests covering:
+- PF computation (wage ceiling, VPF, DA)
+- ESI eligibility and rates
+- Professional Tax per state
+- Income Tax (old/new regime, 80C, HRA, rebate, cess)
+
+---
+
+## Environment Variables
+
+See `packages/server/.env.example` for all options. Key variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DB_PROVIDER` | `mysql` | Database: mysql, postgres, mongodb |
+| `DB_HOST` | `localhost` | Database host |
+| `JWT_SECRET` | `change-this` | JWT signing secret |
+| `CORS_ORIGIN` | `http://localhost:5173` | Allowed frontend origin |
+| `PAYROLL_COUNTRY` | `IN` | Country for tax rules |
 
 ---
 
 ## License
 
-[GPL-3.0](./LICENSE) — Free to use, modify, and distribute. Modified versions must also be open source.
+[GPL-3.0](./LICENSE) — Free to use, modify, and distribute.
 
 ---
 
-## Part of the EmpCloud Ecosystem
-
-| Module | Status |
-|--------|--------|
-| [EmpMonitor](https://github.com/EmpCloud/EmpMonitor) | ✅ Live |
-| **EMP Payroll** | 🚧 Building |
-| EMP HRMS | 📋 Planned |
-| EMP Recruit | 📋 Planned |
-| EMP Field Force | 📋 Planned |
-
----
-
-**Built with ❤️ by the [EmpCloud](https://empcloud.com) team**
+**Built with care by the [EmpCloud](https://empcloud.com) team**
