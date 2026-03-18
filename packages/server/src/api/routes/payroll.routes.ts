@@ -3,6 +3,8 @@ import { PayrollService } from "../../services/payroll.service";
 import { BankFileService } from "../../services/bank-file.service";
 import { ReportsService } from "../../services/reports.service";
 import { EmailService } from "../../services/email.service";
+import { AccountingExportService } from "../../services/accounting-export.service";
+import { GovtFormatsService } from "../../services/govt-formats.service";
 import { authenticate, authorize } from "../middleware/auth.middleware";
 import { enforcePayrollLock } from "../middleware/payroll-lock.middleware";
 import { validate, createPayrollRunSchema } from "../validators";
@@ -102,6 +104,51 @@ router.get("/:id/reports/tds", wrap(async (req, res) => {
 router.get("/:id/reports/bank-file", wrap(async (req, res) => {
   const bankSvc = new BankFileService();
   const file = await bankSvc.generateBankFile(param(req, "id"), req.user!.orgId);
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", `attachment; filename=${file.filename}`);
+  res.send(file.content);
+}));
+
+// Accounting exports
+router.get("/:id/export/journal-csv", wrap(async (req, res) => {
+  const accSvc = new AccountingExportService();
+  const file = await accSvc.exportJournalCSV(param(req, "id"), req.user!.orgId);
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", `attachment; filename=${file.filename}`);
+  res.send(file.content);
+}));
+
+router.get("/:id/export/tally-xml", wrap(async (req, res) => {
+  const accSvc = new AccountingExportService();
+  const file = await accSvc.exportTallyXML(param(req, "id"), req.user!.orgId);
+  res.setHeader("Content-Type", "application/xml");
+  res.setHeader("Content-Disposition", `attachment; filename=${file.filename}`);
+  res.send(file.content);
+}));
+
+// Government portal formats
+router.get("/:id/reports/epfo", wrap(async (req, res) => {
+  const govSvc = new GovtFormatsService();
+  const file = await govSvc.generateEPFOFile(param(req, "id"), req.user!.orgId);
+  res.setHeader("Content-Type", "text/plain");
+  res.setHeader("Content-Disposition", `attachment; filename=${file.filename}`);
+  res.send(file.content);
+}));
+
+router.get("/:id/reports/esic", wrap(async (req, res) => {
+  const govSvc = new GovtFormatsService();
+  const file = await govSvc.generateESICReturn(param(req, "id"), req.user!.orgId);
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", `attachment; filename=${file.filename}`);
+  res.send(file.content);
+}));
+
+router.get("/reports/form24q", wrap(async (req, res) => {
+  const govSvc = new GovtFormatsService();
+  const file = await govSvc.generateForm24Q(req.user!.orgId, {
+    quarter: Number(req.query.quarter || 4) as any,
+    financialYear: (req.query.fy || "2025-2026") as string,
+  });
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", `attachment; filename=${file.filename}`);
   res.send(file.content);
