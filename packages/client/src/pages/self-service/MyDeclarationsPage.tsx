@@ -24,6 +24,7 @@ const SECTIONS = [
 
 export function MyDeclarationsPage() {
   const [showAdd, setShowAdd] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const qc = useQueryClient();
 
@@ -69,9 +70,14 @@ export function MyDeclarationsPage() {
         title="Tax Declarations"
         description="FY 2025-26 — Submit investment proofs and claims"
         actions={
-          <Button size="sm" onClick={() => setShowAdd(true)}>
-            <Plus className="h-4 w-4" /> New Declaration
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowWizard(true)}>
+              Quick Declare All
+            </Button>
+            <Button size="sm" onClick={() => setShowAdd(true)}>
+              <Plus className="h-4 w-4" /> New Declaration
+            </Button>
+          </div>
         }
       />
 
@@ -143,6 +149,54 @@ export function MyDeclarationsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Quick Declare Wizard */}
+      <Modal open={showWizard} onClose={() => setShowWizard(false)} title="Quick Tax Declaration" description="Declare all your investments in one go" className="max-w-2xl">
+        <form className="space-y-4" onSubmit={async (e) => {
+          e.preventDefault();
+          setSubmitting(true);
+          const fd = new FormData(e.currentTarget);
+          const now = new Date();
+          const fy = now.getMonth() >= 3 ? `${now.getFullYear()}-${now.getFullYear() + 1}` : `${now.getFullYear() - 1}-${now.getFullYear()}`;
+          const decs: any[] = [];
+          for (const s of SECTIONS) {
+            const amt = Number(fd.get(`wizard_${s.value}`) || 0);
+            if (amt > 0) {
+              decs.push({ section: s.value, description: s.label.split("—")[1]?.trim() || s.value, declaredAmount: amt });
+            }
+          }
+          if (decs.length === 0) { toast.error("Enter at least one amount"); setSubmitting(false); return; }
+          try {
+            await apiPost("/self-service/tax/declarations", { financialYear: fy, declarations: decs });
+            toast.success(`${decs.length} declarations submitted`);
+            setShowWizard(false);
+            qc.invalidateQueries({ queryKey: ["my-declarations"] });
+          } catch (err: any) {
+            toast.error(err.response?.data?.error?.message || "Failed");
+          } finally { setSubmitting(false); }
+        }}>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {SECTIONS.map((s) => (
+              <div key={s.value} className="rounded-lg border border-gray-200 p-3">
+                <label className="block text-xs font-medium text-gray-500 mb-1">{s.label}</label>
+                <input
+                  type="number"
+                  name={`wizard_${s.value}`}
+                  placeholder="0"
+                  className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+            Tip: Under Section 80C you can claim up to ₹1,50,000 for PPF, ELSS, LIC, etc. NPS under 80CCD(1B) gives an additional ₹50,000 deduction.
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" type="button" onClick={() => setShowWizard(false)}>Cancel</Button>
+            <Button type="submit" loading={submitting}>Submit All Declarations</Button>
+          </div>
+        </form>
+      </Modal>
 
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title="New Declaration">
         <form className="space-y-4" onSubmit={handleSubmit}>
