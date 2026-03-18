@@ -141,6 +141,18 @@ export function PayrollRunDetailPage() {
                 Cancel Run
               </Button>
             )}
+            {(run.status === "computed" || run.status === "approved") && (
+              <Button variant="outline" onClick={async () => {
+                if (!confirm("Revert to draft? This will delete all computed payslips for this run so you can fix data and recompute.")) return;
+                try {
+                  await apiPost(`/payroll/${id}/revert`);
+                  toast.success("Reverted to draft — fix data and recompute");
+                  window.location.reload();
+                } catch (err: any) { toast.error(err.response?.data?.error?.message || "Failed to revert"); }
+              }}>
+                Revert to Draft
+              </Button>
+            )}
             {run.status === "draft" && (
               <Button onClick={handleCompute} loading={computeMutation.isPending}>
                 <Play className="h-4 w-4" /> Compute Payroll

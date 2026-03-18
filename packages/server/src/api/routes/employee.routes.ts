@@ -21,6 +21,15 @@ router.get("/", authorize("hr_admin", "hr_manager"), wrap(async (req, res) => {
 }));
 
 // Static routes BEFORE /:id param routes
+router.get("/search", wrap(async (req, res) => {
+  const q = (req.query.q || req.query.query || "") as string;
+  if (!q || q.length < 2) {
+    return res.json({ success: true, data: [] });
+  }
+  const data = await svc.search(req.user!.orgId, q, Number(req.query.limit) || 20);
+  res.json({ success: true, data });
+}));
+
 router.get("/export", authorize("hr_admin", "hr_manager"), wrap(async (req, res) => {
   const exportSvc = new ExportService();
   const csv = await exportSvc.exportEmployeesCSV(req.user!.orgId);

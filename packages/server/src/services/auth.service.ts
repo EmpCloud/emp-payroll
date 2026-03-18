@@ -133,6 +133,65 @@ export class AuthService {
     await this.db.update("employees", employeeId, { password_hash: hash });
   }
 
+  // In-memory OTP store (use Redis in production)
+  private otpStore = new Map<string, { otp: string; expiresAt: number }>();
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const employee = await this.db.findOne<any>("employees", { email, is_active: true });
+    // Always return success to prevent email enumeration
+    if (!employee) return { message: "If the email exists, a reset OTP has been sent" };
+
+    const otp = String(Math.floor(100000 + Math.random() * 900000)); // 6-digit OTP
+    this.otpStore.set(email, { otp, expiresAt: Date.now() + 15 * 60 * 1000 }); // 15 min
+
+    // Try to send email, but don't fail if SMTP is not configured
+    try {
+      const { EmailService } = await import("./email.service");
+      const emailSvc = new EmailService();
+      await emailSvc.sendRaw({
+        to: email,
+        subject: "Password Reset OTP — EMP Payroll",
+        html: `
+          <div style="font-family:sans-serif;max-width:400px;margin:auto;padding:20px;">
+            <h2>Password Reset</h2>
+            <p>Your OTP to reset your password is:</p>
+            <div style="background:#f3f4f6;padding:16px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:8px;border-radius:8px;">
+              ${otp}
+            </div>
+            <p style="color:#6b7280;font-size:14px;margin-top:16px;">This OTP expires in 15 minutes. If you didn't request this, ignore this email.</p>
+          </div>
+        `,
+      });
+    } catch {
+      // SMTP not configured — log OTP for development
+      console.log(`[DEV] Password reset OTP for ${email}: ${otp}`);
+    }
+
+    return { message: "If the email exists, a reset OTP has been sent" };
+  }
+
+  async resetPasswordWithOTP(email: string, otp: string, newPassword: string): Promise<void> {
+    const stored = this.otpStore.get(email);
+    if (!stored || stored.otp !== otp) {
+      throw new AppError(400, "INVALID_OTP", "Invalid or expired OTP");
+    }
+    if (stored.expiresAt < Date.now()) {
+      this.otpStore.delete(email);
+      throw new AppError(400, "EXPIRED_OTP", "OTP has expired. Request a new one.");
+    }
+
+    if (newPassword.length < 8) {
+      throw new AppError(400, "WEAK_PASSWORD", "Password must be at least 8 characters");
+    }
+
+    const employee = await this.db.findOne<any>("employees", { email, is_active: true });
+    if (!employee) throw new AppError(404, "NOT_FOUND", "User not found");
+
+    const hash = await bcrypt.hash(newPassword, 12);
+    await this.db.update("employees", employee.id, { password_hash: hash });
+    this.otpStore.delete(email);
+  }
+
   private generateTokens(payload: AuthPayload): TokenPair {
     const accessToken = jwt.sign(
       { ...payload, type: "access" },

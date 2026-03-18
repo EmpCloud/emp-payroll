@@ -31,13 +31,15 @@ router.post("/logout", (_req, res) => {
   res.json({ success: true, data: { message: "Logged out" } });
 });
 
-router.post("/forgot-password", (_req, res) => {
-  res.json({ success: true, data: { message: "If the email exists, a reset link has been sent" } });
-});
+router.post("/forgot-password", wrap(async (req, res) => {
+  const result = await auth.forgotPassword(req.body.email);
+  res.json({ success: true, data: result });
+}));
 
-router.post("/reset-password", (_req, res) => {
+router.post("/reset-password", wrap(async (req, res) => {
+  await auth.resetPasswordWithOTP(req.body.email, req.body.otp, req.body.newPassword);
   res.json({ success: true, data: { message: "Password reset successful" } });
-});
+}));
 
 // Password change (self-service)
 router.post("/change-password", authenticate, wrap(async (req, res) => {

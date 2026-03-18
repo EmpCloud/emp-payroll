@@ -248,6 +248,26 @@ export class PayrollService {
     return this.db.update("payroll_runs", runId, { status: "cancelled" });
   }
 
+  async revertToDraft(runId: string, orgId: string) {
+    const run = await this.getRun(runId, orgId);
+    if (run.status === "paid") {
+      throw new AppError(400, "INVALID_STATUS", "Paid payroll runs cannot be reverted. Cancel and create a new run.");
+    }
+    if (run.status === "draft") {
+      throw new AppError(400, "ALREADY_DRAFT", "Payroll run is already in draft status");
+    }
+    // Delete existing payslips so they can be recomputed
+    await this.db.deleteMany("payslips", { payroll_run_id: runId });
+    return this.db.update("payroll_runs", runId, {
+      status: "draft",
+      total_gross: 0,
+      total_deductions: 0,
+      total_net: 0,
+      total_employer_contributions: 0,
+      employee_count: 0,
+    });
+  }
+
   async getRunSummary(runId: string, orgId: string) {
     const run = await this.getRun(runId, orgId);
     const payslips = await this.db.findMany<any>("payslips", {

@@ -13,6 +13,24 @@ export class EmployeeService {
     });
   }
 
+  async search(orgId: string, query: string, limit = 20) {
+    const q = `%${query}%`;
+    const result = await this.db.raw<any>(
+      `SELECT id, employee_code, first_name, last_name, email, department, designation, is_active
+       FROM employees
+       WHERE org_id = ? AND is_active = 1
+         AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ?
+              OR employee_code LIKE ? OR designation LIKE ? OR department LIKE ?
+              OR CONCAT(first_name, ' ', last_name) LIKE ?)
+       ORDER BY first_name, last_name
+       LIMIT ?`,
+      [orgId, q, q, q, q, q, q, q, limit]
+    );
+    // mysql2 raw returns [rows, fields]
+    const rows = Array.isArray(result) ? (Array.isArray(result[0]) ? result[0] : result) : result.rows || [];
+    return rows;
+  }
+
   async getById(id: string, orgId: string) {
     const emp = await this.db.findOne<any>("employees", { id, org_id: orgId });
     if (!emp) throw new AppError(404, "NOT_FOUND", "Employee not found");

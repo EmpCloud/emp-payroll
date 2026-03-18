@@ -47,6 +47,11 @@ router.post("/:id/cancel", authorize("hr_admin"), wrap(async (req, res) => {
   res.json({ success: true, data });
 }));
 
+router.post("/:id/revert", authorize("hr_admin"), wrap(async (req, res) => {
+  const data = await svc.revertToDraft(param(req, "id"), req.user!.orgId);
+  res.json({ success: true, data });
+}));
+
 router.get("/:id/summary", wrap(async (req, res) => {
   const data = await svc.getRunSummary(param(req, "id"), req.user!.orgId);
   res.json({ success: true, data });

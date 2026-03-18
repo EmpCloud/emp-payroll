@@ -42,6 +42,10 @@ export class EmailService {
     }
   }
 
+  async sendRaw(options: { to: string; subject: string; html: string }): Promise<boolean> {
+    return this.sendEmail(options);
+  }
+
   async sendPayslipEmail(payslipId: string): Promise<boolean> {
     const payslip = await this.db.findById<any>("payslips", payslipId);
     if (!payslip) return false;
