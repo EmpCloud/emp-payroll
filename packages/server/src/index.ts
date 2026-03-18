@@ -30,6 +30,7 @@ import { authLimiter, apiLimiter } from "./api/middleware/rate-limit.middleware"
 import { healthRoutes } from "./api/routes/health.routes";
 import { uploadRoutes } from "./api/routes/upload.routes";
 import { adjustmentRoutes } from "./api/routes/adjustment.routes";
+import { webhookRoutes } from "./api/routes/webhook.routes";
 import path from "path";
 
 const app = express();
@@ -82,6 +83,7 @@ v1.use("/leaves", leaveRoutes);
 v1.use("/loans", loanRoutes);
 v1.use("/uploads", uploadRoutes);
 v1.use("/adjustments", adjustmentRoutes);
+v1.use("/webhooks", webhookRoutes);
 v1.get("/docs/openapi.json", apiDocsHandler);
 v1.get("/docs", swaggerUIHandler);
 
