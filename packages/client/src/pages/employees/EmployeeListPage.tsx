@@ -10,7 +10,7 @@ import { CSVImportModal } from "@/components/ui/CSVImportModal";
 import { formatCurrency } from "@/lib/utils";
 import { useEmployees } from "@/api/hooks";
 import { api } from "@/api/client";
-import { Plus, Download, Upload, Loader2 } from "lucide-react";
+import { Plus, Download, Upload, Loader2, Search } from "lucide-react";
 import toast from "react-hot-toast";
 
 const columns = [
@@ -64,10 +64,20 @@ export function EmployeeListPage() {
   const { data: res, isLoading } = useEmployees({ limit: 100 });
   const [showImport, setShowImport] = useState(false);
   const [deptFilter, setDeptFilter] = useState("");
+  const [search, setSearch] = useState("");
 
   const allEmployees = res?.data?.data || [];
   const departments = Array.from(new Set<string>(allEmployees.map((e: any) => e.department))).sort();
-  const employees = deptFilter ? allEmployees.filter((e: any) => e.department === deptFilter) : allEmployees;
+  const filtered = deptFilter ? allEmployees.filter((e: any) => e.department === deptFilter) : allEmployees;
+  const employees = search
+    ? filtered.filter((e: any) => {
+        const q = search.toLowerCase();
+        return `${e.first_name} ${e.last_name}`.toLowerCase().includes(q) ||
+               e.email?.toLowerCase().includes(q) ||
+               e.employee_code?.toLowerCase().includes(q) ||
+               e.designation?.toLowerCase().includes(q);
+      })
+    : filtered;
   const total = res?.data?.total || allEmployees.length;
 
   return (
@@ -97,6 +107,20 @@ export function EmployeeListPage() {
           </>
         }
       />
+
+      {/* Search */}
+      {!isLoading && allEmployees.length > 0 && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by name, email, code, or designation..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+          />
+        </div>
+      )}
 
       {/* Department filters */}
       {!isLoading && departments.length > 1 && (

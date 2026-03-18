@@ -261,9 +261,24 @@ export class PayrollService {
   }
 
   async getRunPayslips(runId: string) {
-    return this.db.findMany<any>("payslips", {
-      filters: { payroll_run_id: runId },
-      limit: 1000,
-    });
+    const result = await this.db.raw<any>(
+      `SELECT p.*, e.first_name, e.last_name, e.employee_code, e.department, e.designation
+       FROM payslips p
+       LEFT JOIN employees e ON p.employee_id = e.id
+       WHERE p.payroll_run_id = ?
+       ORDER BY e.first_name, e.last_name`,
+      [runId]
+    );
+    // mysql2 raw returns [rows, fields], pg returns { rows }
+    const rows = Array.isArray(result) ? (Array.isArray(result[0]) ? result[0] : result) : result.rows || [];
+    // Parse JSON fields
+    const data = rows.map((r: any) => ({
+      ...r,
+      earnings: typeof r.earnings === "string" ? JSON.parse(r.earnings) : r.earnings,
+      deductions: typeof r.deductions === "string" ? JSON.parse(r.deductions) : r.deductions,
+      employer_contributions: typeof r.employer_contributions === "string" ? JSON.parse(r.employer_contributions) : r.employer_contributions,
+      reimbursements: typeof r.reimbursements === "string" ? JSON.parse(r.reimbursements) : r.reimbursements,
+    }));
+    return { data, total: data.length, page: 1, limit: 1000, totalPages: 1 };
   }
 }

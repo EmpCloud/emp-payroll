@@ -18,7 +18,10 @@ const columns = [
     header: "Employee",
     render: (row: any) => (
       <div>
-        <p className="font-medium text-gray-900">{row.employee_id?.slice(0, 8)}...</p>
+        <p className="font-medium text-gray-900">
+          {row.first_name ? `${row.first_name} ${row.last_name}` : row.employee_id?.slice(0, 8)}
+        </p>
+        {row.employee_code && <p className="text-xs text-gray-500">{row.employee_code} &middot; {row.department}</p>}
       </div>
     ),
   },

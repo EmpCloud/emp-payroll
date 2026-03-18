@@ -102,7 +102,7 @@ router.post("/:id/notes", wrap(async (req, res) => {
 }));
 
 router.delete("/:id/notes/:noteId", authorize("hr_admin", "hr_manager"), wrap(async (req, res) => {
-  await deleteNote(req.params.noteId, req.user!.orgId);
+  await deleteNote(req.params.noteId as string, req.user!.orgId);
   res.json({ success: true, data: { deleted: true } });
 }));
 
