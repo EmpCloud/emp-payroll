@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { EmployeeService } from "../../services/employee.service";
 import { ExportService } from "../../services/export.service";
+import { createNote, getNotes, deleteNote } from "../../services/notes.service";
 import { authenticate, authorize } from "../middleware/auth.middleware";
 import { validate, createEmployeeSchema, updateEmployeeSchema } from "../validators";
 import { wrap, param } from "../helpers";
@@ -80,6 +81,29 @@ router.get("/:id/pf-details", wrap(async (req, res) => {
 router.put("/:id/pf-details", authorize("hr_admin", "hr_manager"), wrap(async (req, res) => {
   const data = await svc.updatePfDetails(param(req, "id"), req.user!.orgId, req.body);
   res.json({ success: true, data });
+}));
+
+// Notes
+router.get("/:id/notes", wrap(async (req, res) => {
+  const notes = await getNotes(param(req, "id"), req.user!.orgId);
+  res.json({ success: true, data: notes });
+}));
+
+router.post("/:id/notes", wrap(async (req, res) => {
+  const data = await createNote({
+    orgId: req.user!.orgId,
+    employeeId: param(req, "id"),
+    authorId: req.user!.userId,
+    content: req.body.content,
+    category: req.body.category,
+    isPrivate: req.body.isPrivate,
+  });
+  res.status(201).json({ success: true, data });
+}));
+
+router.delete("/:id/notes/:noteId", authorize("hr_admin", "hr_manager"), wrap(async (req, res) => {
+  await deleteNote(req.params.noteId, req.user!.orgId);
+  res.json({ success: true, data: { deleted: true } });
 }));
 
 export { router as employeeRoutes };

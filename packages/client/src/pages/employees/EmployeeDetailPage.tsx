@@ -10,9 +10,9 @@ import { SelectField } from "@/components/ui/SelectField";
 import { Modal } from "@/components/ui/Modal";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useEmployee, useEmployeeSalary, useUpdateEmployee, useSalaryStructures } from "@/api/hooks";
-import { apiGet, apiPost } from "@/api/client";
+import { apiGet, apiPost, apiDelete } from "@/api/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Mail, Phone, Building2, Calendar, CreditCard, Shield, Loader2, Pencil, Wallet, History, Banknote } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Building2, Calendar, CreditCard, Shield, Loader2, Pencil, Wallet, History, Banknote, StickyNote, Send, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 export function EmployeeDetailPage() {
@@ -266,6 +266,9 @@ export function EmployeeDetailPage() {
         </Card>
       )}
 
+      {/* Notes & Documents */}
+      <EmployeeNotes employeeId={id!} />
+
       {/* Edit Modal */}
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Employee" className="max-w-lg">
         <form onSubmit={handleEdit} className="space-y-4">
@@ -309,6 +312,113 @@ export function EmployeeDetailPage() {
         />
       </Modal>
     </div>
+  );
+}
+
+function EmployeeNotes({ employeeId }: { employeeId: string }) {
+  const [content, setContent] = useState("");
+  const [category, setCategory] = useState("general");
+  const [submitting, setSubmitting] = useState(false);
+  const qc = useQueryClient();
+  const { data: notesRes, isLoading } = useQuery({
+    queryKey: ["employee-notes", employeeId],
+    queryFn: () => apiGet<any>(`/employees/${employeeId}/notes`),
+    enabled: !!employeeId,
+  });
+  const notes = notesRes?.data || [];
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!content.trim()) return;
+    setSubmitting(true);
+    try {
+      await apiPost(`/employees/${employeeId}/notes`, { content, category });
+      setContent("");
+      toast.success("Note added");
+      qc.invalidateQueries({ queryKey: ["employee-notes", employeeId] });
+    } catch {
+      toast.error("Failed to add note");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDelete(noteId: string) {
+    try {
+      await apiDelete(`/employees/${employeeId}/notes/${noteId}`);
+      qc.invalidateQueries({ queryKey: ["employee-notes", employeeId] });
+      toast.success("Note deleted");
+    } catch {
+      toast.error("Failed to delete");
+    }
+  }
+
+  const categoryColors: Record<string, string> = {
+    general: "bg-gray-100 text-gray-700",
+    performance: "bg-blue-100 text-blue-700",
+    hr: "bg-purple-100 text-purple-700",
+    finance: "bg-green-100 text-green-700",
+  };
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="flex items-center gap-2"><StickyNote className="h-5 w-5" /> Notes</CardTitle></CardHeader>
+      <CardContent>
+        <form onSubmit={handleAdd} className="mb-4 flex gap-2">
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+          >
+            <option value="general">General</option>
+            <option value="performance">Performance</option>
+            <option value="hr">HR</option>
+            <option value="finance">Finance</option>
+          </select>
+          <input
+            type="text"
+            placeholder="Add a note..."
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          />
+          <Button type="submit" size="sm" loading={submitting} disabled={!content.trim()}>
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
+
+        {isLoading ? (
+          <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>
+        ) : notes.length === 0 ? (
+          <p className="py-4 text-center text-sm text-gray-400">No notes yet</p>
+        ) : (
+          <div className="space-y-3">
+            {notes.map((note: any) => (
+              <div key={note.id} className="group flex items-start gap-3 rounded-lg border border-gray-100 p-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium text-gray-900">
+                      {note.author_first_name} {note.author_last_name}
+                    </span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${categoryColors[note.category] || categoryColors.general}`}>
+                      {note.category}
+                    </span>
+                    <span className="text-xs text-gray-400">{formatDate(note.created_at)}</span>
+                  </div>
+                  <p className="text-sm text-gray-700">{note.content}</p>
+                </div>
+                <button
+                  onClick={() => handleDelete(note.id)}
+                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

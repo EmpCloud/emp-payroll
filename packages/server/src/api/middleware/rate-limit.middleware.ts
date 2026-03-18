@@ -53,6 +53,7 @@ export function rateLimit(options: RateLimitOptions) {
 }
 
 // Pre-configured limiters
-export const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });  // 20 login attempts / 15 min
+const isDev = process.env.NODE_ENV !== "production";
+export const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: isDev ? 200 : 20 });
 export const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 100 });        // 100 req / min
 export const exportLimiter = rateLimit({ windowMs: 60 * 1000, max: 10 });      // 10 exports / min

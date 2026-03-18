@@ -5,7 +5,7 @@ export async function up(knex: Knex): Promise<void> {
     t.uuid("id").primary();
     t.uuid("employee_id").notNullable().references("id").inTable("employees").onDelete("CASCADE");
     t.string("leave_type", 30).notNullable(); // earned, casual, sick, privilege, maternity, paternity
-    t.string("financial_year", 7).notNullable();
+    t.string("financial_year", 10).notNullable();
     t.decimal("opening_balance", 5, 1).defaultTo(0);
     t.decimal("accrued", 5, 1).defaultTo(0);
     t.decimal("used", 5, 1).defaultTo(0);
