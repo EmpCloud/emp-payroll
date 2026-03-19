@@ -21,7 +21,9 @@ const columns = [
       <div className="flex items-center gap-3">
         <Avatar name={`${row.first_name} ${row.last_name}`} size="sm" />
         <div>
-          <p className="font-medium text-gray-900">{row.first_name} {row.last_name}</p>
+          <p className="font-medium text-gray-900">
+            {row.first_name} {row.last_name}
+          </p>
           <p className="text-xs text-gray-500">{row.employee_code}</p>
         </div>
       </div>
@@ -67,15 +69,21 @@ export function EmployeeListPage() {
   const [search, setSearch] = useState("");
 
   const allEmployees = res?.data?.data || [];
-  const departments = Array.from(new Set<string>(allEmployees.map((e: any) => e.department))).sort();
-  const filtered = deptFilter ? allEmployees.filter((e: any) => e.department === deptFilter) : allEmployees;
+  const departments = Array.from(
+    new Set<string>(allEmployees.map((e: any) => e.department)),
+  ).sort();
+  const filtered = deptFilter
+    ? allEmployees.filter((e: any) => e.department === deptFilter)
+    : allEmployees;
   const employees = search
     ? filtered.filter((e: any) => {
         const q = search.toLowerCase();
-        return `${e.first_name} ${e.last_name}`.toLowerCase().includes(q) ||
-               e.email?.toLowerCase().includes(q) ||
-               e.employee_code?.toLowerCase().includes(q) ||
-               e.designation?.toLowerCase().includes(q);
+        return (
+          `${e.first_name} ${e.last_name}`.toLowerCase().includes(q) ||
+          e.email?.toLowerCase().includes(q) ||
+          e.employee_code?.toLowerCase().includes(q) ||
+          e.designation?.toLowerCase().includes(q)
+        );
       })
     : filtered;
   const total = res?.data?.total || allEmployees.length;
@@ -84,22 +92,38 @@ export function EmployeeListPage() {
     <div className="space-y-6">
       <PageHeader
         title="Employees"
-        description={isLoading ? "Loading..." : `${employees.length}${deptFilter ? ` in ${deptFilter}` : ""} of ${total} employees`}
+        description={
+          isLoading
+            ? "Loading..."
+            : `${employees.length}${deptFilter ? ` in ${deptFilter}` : ""} of ${total} employees`
+        }
         actions={
           <>
             <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
               <Upload className="h-4 w-4" /> Import
             </Button>
-            <Button variant="outline" size="sm" onClick={async () => {
-              try {
-                const { data } = await api.get("/employees/export", { responseType: "blob" });
-                const url = URL.createObjectURL(new Blob([data]));
-                const a = document.createElement("a"); a.href = url; a.download = "employees.csv"; a.click();
-                URL.revokeObjectURL(url);
-                toast.success("Exported employees CSV");
-              } catch { toast.error("Export failed"); }
-            }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  const { data } = await api.get("/employees/export", { responseType: "blob" });
+                  const url = URL.createObjectURL(new Blob([data]));
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "employees.csv";
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success("Exported employees CSV");
+                } catch {
+                  toast.error("Export failed");
+                }
+              }}
+            >
               <Download className="h-4 w-4" /> Export
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => navigate("/employees/import")}>
+              <Upload className="h-4 w-4" /> Import CSV
             </Button>
             <Button size="sm" onClick={() => navigate("/employees/new")}>
               <Plus className="h-4 w-4" /> Add Employee
@@ -117,7 +141,7 @@ export function EmployeeListPage() {
             placeholder="Search by name, email, code, or designation..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+            className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
           />
         </div>
       )}
@@ -129,7 +153,9 @@ export function EmployeeListPage() {
           <button
             onClick={() => setDeptFilter("")}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              !deptFilter ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"
+              !deptFilter
+                ? "bg-brand-600 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"
             }`}
           >
             All
@@ -139,7 +165,9 @@ export function EmployeeListPage() {
               key={dept}
               onClick={() => setDeptFilter(deptFilter === dept ? "" : dept)}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                deptFilter === dept ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"
+                deptFilter === dept
+                  ? "bg-brand-600 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"
               }`}
             >
               {dept}
@@ -150,7 +178,7 @@ export function EmployeeListPage() {
 
       {isLoading ? (
         <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
+          <Loader2 className="text-brand-600 h-8 w-8 animate-spin" />
         </div>
       ) : (
         <DataTable

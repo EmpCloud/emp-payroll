@@ -32,6 +32,8 @@ import { healthRoutes } from "./api/routes/health.routes";
 import { uploadRoutes } from "./api/routes/upload.routes";
 import { adjustmentRoutes } from "./api/routes/adjustment.routes";
 import { webhookRoutes } from "./api/routes/webhook.routes";
+import { announcementRoutes } from "./api/routes/announcement.routes";
+import { exitRoutes } from "./api/routes/exit.routes";
 import path from "path";
 
 const app = express();
@@ -93,6 +95,8 @@ v1.use("/loans", loanRoutes);
 v1.use("/uploads", uploadRoutes);
 v1.use("/adjustments", adjustmentRoutes);
 v1.use("/webhooks", webhookRoutes);
+v1.use("/announcements", announcementRoutes);
+v1.use("/exits", exitRoutes);
 v1.get("/docs/openapi.json", apiDocsHandler);
 v1.get("/docs", swaggerUIHandler);
 
@@ -117,19 +121,15 @@ async function start() {
 
     // Initialize EmpCloud master database (users, orgs, auth)
     await initEmpCloudDB();
-    if (config.env === "development") {
-      await migrateEmpCloudDB();
-    }
+    await migrateEmpCloudDB();
 
     // Initialize payroll module database
     const db = await initDB();
     logger.info(`Payroll database connected (provider: ${config.db.provider})`);
 
-    // Run payroll migrations in development
-    if (config.env === "development") {
-      await db.migrate();
-      logger.info("Payroll database migrations applied");
-    }
+    // Run migrations (safe — uses IF NOT EXISTS)
+    await db.migrate();
+    logger.info("Payroll database migrations applied");
 
     // Start server
     app.listen(config.port, config.host, () => {

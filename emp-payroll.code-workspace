@@ -1,8 +1,8 @@
 {
   "folders": [
     {
-      "path": "."
-    }
+      "path": ".",
+    },
   ],
   "settings": {
     // -----------------------------------------------------------------------
@@ -12,7 +12,7 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.codeActionsOnSave": {
       "source.fixAll.eslint": "explicit",
-      "source.organizeImports": "explicit"
+      "source.organizeImports": "explicit",
     },
     "editor.tabSize": 2,
     "editor.rulers": [100],
@@ -31,7 +31,7 @@
       "**/node_modules": true,
       "**/dist": true,
       "**/.git": true,
-      "**/coverage": true
+      "**/coverage": true,
     },
 
     // -----------------------------------------------------------------------
@@ -39,7 +39,7 @@
     // -----------------------------------------------------------------------
     "terminal.integrated.defaultProfile.windows": "PowerShell",
     "terminal.integrated.env.windows": {
-      "NODE_ENV": "development"
+      "NODE_ENV": "development",
     },
     "terminal.integrated.cwd": "${workspaceFolder}",
 
@@ -63,24 +63,15 @@
     // -----------------------------------------------------------------------
     // ESLint
     // -----------------------------------------------------------------------
-    "eslint.workingDirectories": [
-      "packages/server",
-      "packages/client",
-      "packages/shared"
-    ],
-    "eslint.validate": [
-      "javascript",
-      "javascriptreact",
-      "typescript",
-      "typescriptreact"
-    ],
+    "eslint.workingDirectories": ["packages/server", "packages/client", "packages/shared"],
+    "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
 
     // -----------------------------------------------------------------------
     // Tailwind CSS IntelliSense
     // -----------------------------------------------------------------------
     "tailwindCSS.experimental.classRegex": [
       ["clsx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
-      ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+      ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
     ],
     "tailwindCSS.rootFontSize": 16,
 
@@ -93,19 +84,19 @@
     // File associations
     // -----------------------------------------------------------------------
     "[typescript]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
     },
     "[typescriptreact]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
     },
     "[json]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
     },
     "[css]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
     },
     "[markdown]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
     },
 
     // -----------------------------------------------------------------------
@@ -114,7 +105,8 @@
     "search.exclude": {
       "**/node_modules": true,
       "**/dist": true,
-      "**/package-lock.json": true
-    }
-  }
+      "**/package-lock.json": true,
+    },
+    "containers.composeCommand": "docker compose",
+  },
 }

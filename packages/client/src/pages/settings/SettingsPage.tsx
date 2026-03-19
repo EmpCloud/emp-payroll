@@ -13,18 +13,24 @@ import toast from "react-hot-toast";
 export function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const user = getUser();
-  const orgId = user?.orgId || "";
+  const orgId = user?.orgId ? String(user.orgId) : "";
   const { data: orgRes, isLoading } = useOrganization(orgId);
   const { data: settingsRes } = useOrgSettings(orgId);
 
   if (isLoading) {
-    return <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-brand-600" /></div>;
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="text-brand-600 h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   const org = orgRes?.data;
   const settings = settingsRes?.data;
   const address = org?.registered_address
-    ? (typeof org.registered_address === "string" ? JSON.parse(org.registered_address) : org.registered_address)
+    ? typeof org.registered_address === "string"
+      ? JSON.parse(org.registered_address)
+      : org.registered_address
     : {};
 
   async function handleSave() {
@@ -48,16 +54,27 @@ export function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Building2 className="h-5 w-5" /> Organization</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" /> Organization
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Input id="org_name" label="Company Name" defaultValue={org?.name || ""} />
-            <Input id="org_legal" label="Legal Name" defaultValue={org?.legal_name || ""} disabled />
+            <Input
+              id="org_legal"
+              label="Legal Name"
+              defaultValue={org?.legal_name || ""}
+              disabled
+            />
             <Input id="org_pan" label="PAN" defaultValue={org?.pan || ""} disabled />
             <Input id="org_tan" label="TAN" defaultValue={org?.tan || ""} disabled />
             <Input id="org_gstin" label="GSTIN" defaultValue={org?.gstin || ""} />
-            <Input id="org_address" label="Registered Address" defaultValue={`${address.line1 || ""}, ${address.city || ""}`} />
+            <Input
+              id="org_address"
+              label="Registered Address"
+              defaultValue={`${address.line1 || ""}, ${address.city || ""}`}
+            />
             <SelectField
               id="org_state"
               label="State (for PT)"
@@ -78,12 +95,22 @@ export function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" /> Statutory Registration</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" /> Statutory Registration
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Input id="pf_estab" label="PF Establishment Code" defaultValue={org?.pf_establishment_code || settings?.pfEstablishmentCode || ""} />
-            <Input id="esi_estab" label="ESI Code" defaultValue={org?.esi_establishment_code || settings?.esiEstablishmentCode || ""} />
+            <Input
+              id="pf_estab"
+              label="PF Establishment Code"
+              defaultValue={org?.pf_establishment_code || settings?.pfEstablishmentCode || ""}
+            />
+            <Input
+              id="esi_estab"
+              label="ESI Code"
+              defaultValue={org?.esi_establishment_code || settings?.esiEstablishmentCode || ""}
+            />
             <SelectField
               id="pf_restrict"
               label="PF Wage Ceiling"
@@ -99,7 +126,9 @@ export function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" /> Payment</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" /> Payment
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -121,20 +150,30 @@ export function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Bell className="h-5 w-5" /> Notifications</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" /> Notifications
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {[
-              { id: "notify_payslip", label: "Email payslips to employees after payroll approval", checked: true },
-              { id: "notify_tax", label: "Notify employees of tax regime selection deadline", checked: true },
+              {
+                id: "notify_payslip",
+                label: "Email payslips to employees after payroll approval",
+                checked: true,
+              },
+              {
+                id: "notify_tax",
+                label: "Notify employees of tax regime selection deadline",
+                checked: true,
+              },
               { id: "notify_pf", label: "Alert when PF/ESI filing is due", checked: false },
             ].map((item) => (
               <label key={item.id} className="flex items-center gap-3">
                 <input
                   type="checkbox"
                   defaultChecked={item.checked}
-                  className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                  className="text-brand-600 focus:ring-brand-500 rounded border-gray-300"
                 />
                 <span className="text-sm text-gray-700">{item.label}</span>
               </label>
@@ -144,7 +183,9 @@ export function SettingsPage() {
       </Card>
 
       <div className="flex justify-end">
-        <Button loading={saving} onClick={handleSave}>Save Settings</Button>
+        <Button loading={saving} onClick={handleSave}>
+          Save Settings
+        </Button>
       </div>
     </div>
   );

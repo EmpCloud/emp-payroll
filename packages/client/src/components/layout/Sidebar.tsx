@@ -23,6 +23,8 @@ import {
   User,
   IndianRupee,
   ClipboardList,
+  Megaphone,
+  UserMinus,
 } from "lucide-react";
 
 type Role = "hr_admin" | "hr_manager" | "employee";
@@ -37,20 +39,71 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   // Admin items
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["hr_admin", "hr_manager"] },
-  { to: "/employees", label: "Employees", icon: Users, roles: ["hr_admin", "hr_manager"], section: "People" },
-  { to: "/employees/org-chart", label: "Org Chart", icon: Network, roles: ["hr_admin", "hr_manager"] },
-  { to: "/payroll/structures", label: "Structures", icon: Wallet, roles: ["hr_admin", "hr_manager"], section: "Payroll" },
+  {
+    to: "/dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    roles: ["hr_admin", "hr_manager"],
+  },
+  {
+    to: "/employees",
+    label: "Employees",
+    icon: Users,
+    roles: ["hr_admin", "hr_manager"],
+    section: "People",
+  },
+  {
+    to: "/employees/org-chart",
+    label: "Org Chart",
+    icon: Network,
+    roles: ["hr_admin", "hr_manager"],
+  },
+  {
+    to: "/payroll/structures",
+    label: "Structures",
+    icon: Wallet,
+    roles: ["hr_admin", "hr_manager"],
+    section: "Payroll",
+  },
   { to: "/payroll/runs", label: "Payroll Runs", icon: Play, roles: ["hr_admin", "hr_manager"] },
-  { to: "/payroll/analytics", label: "Analytics", icon: BarChart3, roles: ["hr_admin", "hr_manager"] },
+  {
+    to: "/payroll/analytics",
+    label: "Analytics",
+    icon: BarChart3,
+    roles: ["hr_admin", "hr_manager"],
+  },
   { to: "/payslips", label: "Payslips", icon: FileText, roles: ["hr_admin", "hr_manager"] },
-  { to: "/tax", label: "Tax", icon: Calculator, roles: ["hr_admin", "hr_manager"], section: "Compliance" },
+  {
+    to: "/tax",
+    label: "Tax",
+    icon: Calculator,
+    roles: ["hr_admin", "hr_manager"],
+    section: "Compliance",
+  },
   { to: "/attendance", label: "Attendance", icon: CalendarDays, roles: ["hr_admin", "hr_manager"] },
   { to: "/leaves", label: "Leaves", icon: TreePalm, roles: ["hr_admin", "hr_manager"] },
-  { to: "/reimbursements", label: "Reimbursements", icon: Receipt, roles: ["hr_admin", "hr_manager"] },
+  {
+    to: "/reimbursements",
+    label: "Reimbursements",
+    icon: Receipt,
+    roles: ["hr_admin", "hr_manager"],
+  },
   { to: "/loans", label: "Loans", icon: Banknote, roles: ["hr_admin", "hr_manager"] },
   { to: "/holidays", label: "Holidays", icon: Calendar, roles: ["hr_admin", "hr_manager"] },
-  { to: "/reports", label: "Reports", icon: FileText, roles: ["hr_admin", "hr_manager"], section: "Admin" },
+  {
+    to: "/announcements",
+    label: "Announcements",
+    icon: Megaphone,
+    roles: ["hr_admin", "hr_manager"],
+  },
+  { to: "/exits", label: "Exits / FnF", icon: UserMinus, roles: ["hr_admin", "hr_manager"] },
+  {
+    to: "/reports",
+    label: "Reports",
+    icon: FileText,
+    roles: ["hr_admin", "hr_manager"],
+    section: "Admin",
+  },
   { to: "/audit", label: "Audit Log", icon: ScrollText, roles: ["hr_admin"] },
   { to: "/system", label: "System", icon: Activity, roles: ["hr_admin"] },
   { to: "/settings", label: "Settings", icon: Settings, roles: ["hr_admin"] },
@@ -81,12 +134,14 @@ export function Sidebar() {
     <aside className="flex h-screen w-64 flex-col border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 border-b border-gray-100 px-6 dark:border-gray-800">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600">
+        <div className="bg-brand-600 flex h-9 w-9 items-center justify-center rounded-lg">
           <DollarSign className="h-5 w-5 text-white" />
         </div>
         <div>
           <p className="text-sm font-bold text-gray-900 dark:text-white">EMP Payroll</p>
-          <p className="text-xs text-gray-400">{role === "hr_admin" ? "Admin" : role === "hr_manager" ? "Manager" : "Employee"}</p>
+          <p className="text-xs text-gray-400">
+            {role === "hr_admin" ? "Admin" : role === "hr_manager" ? "Manager" : "Employee"}
+          </p>
         </div>
       </div>
 
@@ -126,7 +181,9 @@ export function Sidebar() {
       <div className="border-t border-gray-100 p-3 dark:border-gray-800">
         {user && (
           <div className="mb-2 px-3 py-1">
-            <p className="text-sm font-medium text-gray-900 dark:text-white">{user.firstName} {user.lastName}</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">
+              {user.firstName} {user.lastName}
+            </p>
             <p className="text-xs text-gray-400">{user.email}</p>
           </div>
         )}

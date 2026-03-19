@@ -55,8 +55,89 @@ router.get(
 router.post(
   "/import",
   authorize("hr_admin"),
+  wrap(async (req, res) => {
+    const { employees } = req.body;
+    if (!Array.isArray(employees) || employees.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "INVALID_INPUT", message: "employees must be a non-empty array" },
+      });
+    }
+    if (employees.length > 500) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "TOO_MANY", message: "Maximum 500 employees per import" },
+      });
+    }
+
+    const results: { row: number; email: string; status: "created" | "error"; error?: string }[] =
+      [];
+
+    for (let i = 0; i < employees.length; i++) {
+      const emp = employees[i];
+      try {
+        if (!emp.email || !emp.firstName || !emp.lastName) {
+          results.push({
+            row: i + 1,
+            email: emp.email || "—",
+            status: "error",
+            error: "Missing required fields (email, firstName, lastName)",
+          });
+          continue;
+        }
+        await svc.create(req.user!.empcloudOrgId, emp);
+        results.push({ row: i + 1, email: emp.email, status: "created" });
+      } catch (err: any) {
+        results.push({
+          row: i + 1,
+          email: emp.email || "—",
+          status: "error",
+          error: err.message || "Unknown error",
+        });
+      }
+    }
+
+    const created = results.filter((r) => r.status === "created").length;
+    const errors = results.filter((r) => r.status === "error").length;
+    res.json({ success: true, data: { total: employees.length, created, errors, results } });
+  }),
+);
+
+// Download CSV template for import
+router.get(
+  "/import/template",
+  authorize("hr_admin"),
   wrap(async (_req, res) => {
-    res.json({ success: true, data: { message: "Bulk import — use CSV upload endpoint" } });
+    const headers = [
+      "firstName",
+      "lastName",
+      "email",
+      "phone",
+      "dateOfBirth",
+      "gender",
+      "dateOfJoining",
+      "employeeCode",
+      "designation",
+      "department",
+      "employmentType",
+    ];
+    const sample = [
+      "John",
+      "Doe",
+      "john@company.com",
+      "9876543210",
+      "1990-01-15",
+      "male",
+      "2026-04-01",
+      "",
+      "Software Engineer",
+      "Engineering",
+      "full_time",
+    ];
+    const csv = [headers.join(","), sample.join(",")].join("\n");
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", "attachment; filename=employee_import_template.csv");
+    res.send(csv);
   }),
 );
 
@@ -67,12 +148,10 @@ router.post(
   wrap(async (req, res) => {
     const { employeeIds, isActive } = req.body;
     if (!Array.isArray(employeeIds) || employeeIds.length === 0) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: { code: "INVALID_INPUT", message: "employeeIds must be a non-empty array" },
-        });
+      return res.status(400).json({
+        success: false,
+        error: { code: "INVALID_INPUT", message: "employeeIds must be a non-empty array" },
+      });
     }
     const data = await svc.bulkUpdateStatus(req.user!.empcloudOrgId, employeeIds, isActive);
     res.json({ success: true, data });
@@ -85,12 +164,10 @@ router.post(
   wrap(async (req, res) => {
     const { employeeIds, departmentId } = req.body;
     if (!Array.isArray(employeeIds) || !departmentId) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: { code: "INVALID_INPUT", message: "employeeIds and departmentId required" },
-        });
+      return res.status(400).json({
+        success: false,
+        error: { code: "INVALID_INPUT", message: "employeeIds and departmentId required" },
+      });
     }
     const data = await svc.bulkAssignDepartment(req.user!.empcloudOrgId, employeeIds, departmentId);
     res.json({ success: true, data });

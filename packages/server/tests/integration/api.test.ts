@@ -1,11 +1,20 @@
 import { describe, it, expect, beforeAll } from "vitest";
 
 const BASE = process.env.API_URL || "http://localhost:4000/api/v1";
+const BASE_ROOT = BASE.replace(/\/api\/v1$/, "");
 let token = "";
+let serverAvailable = false;
 
 describe("API Integration Tests", () => {
   beforeAll(async () => {
-    // Login to get token
+    // Check if server is reachable, then login to get token
+    try {
+      const ping = await fetch(`${BASE_ROOT}/health`, { signal: AbortSignal.timeout(3000) });
+      if (ping.ok) serverAvailable = true;
+    } catch {
+      // Server not running — all integration tests will skip
+      return;
+    }
     try {
       const res = await fetch(`${BASE}/auth/login`, {
         method: "POST",
@@ -15,7 +24,7 @@ describe("API Integration Tests", () => {
       const data = await res.json();
       if (data.success) token = data.data.tokens.accessToken;
     } catch {
-      // Server may not be running — tests will skip gracefully
+      // Login failed but server is up
     }
   });
 
@@ -25,13 +34,15 @@ describe("API Integration Tests", () => {
 
   describe("Health", () => {
     it("GET /health returns ok", async () => {
-      const res = await fetch("http://localhost:4000/health");
+      if (!serverAvailable) return;
+      const res = await fetch(`${BASE_ROOT}/health`);
       const data = await res.json();
       expect(data.status).toBe("ok");
     });
 
     it("GET /health/detailed returns diagnostics", async () => {
-      const res = await fetch("http://localhost:4000/health/detailed");
+      if (!serverAvailable) return;
+      const res = await fetch(`${BASE_ROOT}/health/detailed`);
       const data = await res.json();
       expect(data.checks).toBeDefined();
       expect(data.checks.database).toBeDefined();
@@ -41,6 +52,7 @@ describe("API Integration Tests", () => {
 
   describe("Auth", () => {
     it("POST /auth/login with valid credentials", async () => {
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -53,6 +65,7 @@ describe("API Integration Tests", () => {
     });
 
     it("POST /auth/login with invalid credentials returns error", async () => {
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -63,12 +76,13 @@ describe("API Integration Tests", () => {
     });
 
     it("rejects requests without token", async () => {
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/employees`);
       expect(res.status).toBe(401);
     });
 
     it("POST /auth/change-password works", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/auth/change-password`, {
         method: "POST",
         headers: authHeaders(),
@@ -79,7 +93,7 @@ describe("API Integration Tests", () => {
     });
 
     it("POST /auth/change-password rejects wrong current password", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/auth/change-password`, {
         method: "POST",
         headers: authHeaders(),
@@ -92,7 +106,7 @@ describe("API Integration Tests", () => {
 
   describe("Employees", () => {
     it("GET /employees returns list", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/employees`, { headers: authHeaders() });
       const data = await res.json();
       expect(data.success).toBe(true);
@@ -101,7 +115,7 @@ describe("API Integration Tests", () => {
     });
 
     it("GET /employees/:id returns employee detail", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const list = await fetch(`${BASE}/employees`, { headers: authHeaders() });
       const listData = await list.json();
       const empId = listData.data.data[0].id;
@@ -113,7 +127,7 @@ describe("API Integration Tests", () => {
     });
 
     it("GET /employees/export returns CSV", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/employees/export`, { headers: authHeaders() });
       expect(res.headers.get("content-type")).toContain("text/csv");
       const text = await res.text();
@@ -123,7 +137,7 @@ describe("API Integration Tests", () => {
 
   describe("Payroll", () => {
     it("GET /payroll returns runs", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/payroll`, { headers: authHeaders() });
       const data = await res.json();
       expect(data.success).toBe(true);
@@ -131,7 +145,7 @@ describe("API Integration Tests", () => {
     });
 
     it("GET /payroll/:id returns a specific run", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const list = await fetch(`${BASE}/payroll`, { headers: authHeaders() });
       const listData = await list.json();
       if (listData.data.data.length === 0) return;
@@ -144,7 +158,7 @@ describe("API Integration Tests", () => {
     });
 
     it("GET /payroll/:id/payslips returns enriched payslips", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const list = await fetch(`${BASE}/payroll`, { headers: authHeaders() });
       const listData = await list.json();
       if (listData.data.data.length === 0) return;
@@ -160,7 +174,7 @@ describe("API Integration Tests", () => {
     });
 
     it("POST /payroll creates a new run", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       // Use a unique month that doesn't already exist
       const res = await fetch(`${BASE}/payroll`, {
         method: "POST",
@@ -178,14 +192,14 @@ describe("API Integration Tests", () => {
 
   describe("Payslips", () => {
     it("GET /payslips returns list", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/payslips`, { headers: authHeaders() });
       const data = await res.json();
       expect(data.success).toBe(true);
     });
 
     it("GET /payslips/export/csv returns CSV", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/payslips/export/csv`, { headers: authHeaders() });
       expect(res.headers.get("content-type")).toContain("text/csv");
     });
@@ -193,7 +207,7 @@ describe("API Integration Tests", () => {
 
   describe("Salary Structures", () => {
     it("GET /salary-structures returns list", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/salary-structures`, { headers: authHeaders() });
       const data = await res.json();
       expect(data.success).toBe(true);
@@ -202,7 +216,7 @@ describe("API Integration Tests", () => {
 
   describe("Self-Service", () => {
     it("GET /self-service/dashboard returns user data", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/self-service/dashboard`, { headers: authHeaders() });
       const data = await res.json();
       expect(data.success).toBe(true);
@@ -210,7 +224,7 @@ describe("API Integration Tests", () => {
     });
 
     it("GET /self-service/profile returns profile", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/self-service/profile`, { headers: authHeaders() });
       const data = await res.json();
       expect(data.success).toBe(true);
@@ -222,7 +236,7 @@ describe("API Integration Tests", () => {
     let empId = "";
 
     it("creates and lists notes for an employee", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const list = await fetch(`${BASE}/employees`, { headers: authHeaders() });
       const listData = await list.json();
       empId = listData.data.data[0].id;
@@ -250,7 +264,7 @@ describe("API Integration Tests", () => {
 
   describe("Loans", () => {
     it("GET /loans returns list", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/loans`, { headers: authHeaders() });
       const data = await res.json();
       expect(data.success).toBe(true);
@@ -259,7 +273,7 @@ describe("API Integration Tests", () => {
 
   describe("Leaves", () => {
     it("GET /leaves returns org-wide balances", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/leaves`, { headers: authHeaders() });
       const data = await res.json();
       expect(data.success).toBe(true);
@@ -268,7 +282,7 @@ describe("API Integration Tests", () => {
 
   describe("Attendance", () => {
     it("POST /attendance/import marks attendance", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const empList = await fetch(`${BASE}/employees`, { headers: authHeaders() });
       const empData = await empList.json();
       const empId = empData.data.data[0].id;
@@ -287,7 +301,7 @@ describe("API Integration Tests", () => {
     });
 
     it("GET /attendance/summary/:empId returns summary", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const empList = await fetch(`${BASE}/employees`, { headers: authHeaders() });
       const empData = await empList.json();
       const empId = empData.data.data[0].id;
@@ -301,14 +315,14 @@ describe("API Integration Tests", () => {
 
   describe("Self-Service Salary", () => {
     it("GET /self-service/salary returns salary info", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/self-service/salary`, { headers: authHeaders() });
       const data = await res.json();
       expect(data.success).toBe(true);
     });
 
     it("GET /self-service/payslips returns my payslips", async () => {
-      if (!token) return;
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/self-service/payslips`, { headers: authHeaders() });
       const data = await res.json();
       expect(data.success).toBe(true);
@@ -317,6 +331,7 @@ describe("API Integration Tests", () => {
 
   describe("API Docs", () => {
     it("GET /docs/openapi.json returns spec", async () => {
+      if (!serverAvailable) return;
       const res = await fetch(`${BASE}/docs/openapi.json`);
       const data = await res.json();
       expect(data.openapi).toBe("3.0.3");

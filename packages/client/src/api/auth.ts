@@ -5,6 +5,7 @@ export interface AuthUser {
   id: number; // EmpCloud user ID
   empcloudUserId: number; // EmpCloud user ID
   empcloudOrgId: number; // EmpCloud organization ID
+  orgId: number; // alias for empcloudOrgId (used by dashboard/audit pages)
   payrollProfileId: string | null; // Payroll DB profile UUID
   role: string;
   email: string;
@@ -25,6 +26,7 @@ export function saveAuth(data: { user: any; tokens: any }) {
       id: data.user.id || data.user.empcloudUserId,
       empcloudUserId: data.user.empcloudUserId || data.user.id,
       empcloudOrgId: data.user.empcloudOrgId || data.user.orgId,
+      orgId: data.user.empcloudOrgId || data.user.orgId,
       payrollProfileId: data.user.payrollProfileId || null,
       role: data.user.role,
       email: data.user.email,
