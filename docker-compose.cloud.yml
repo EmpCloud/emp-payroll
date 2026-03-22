@@ -48,7 +48,7 @@ services:
     container_name: empcloud-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-empcloud_root_secret}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
     command: >
       --default-authentication-plugin=mysql_native_password
       --max-connections=300
@@ -124,16 +124,16 @@ services:
       DB_HOST: mysql
       DB_PORT: 3306
       DB_USER: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-empcloud_root_secret}
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       DB_NAME: emp_payroll
       EMPCLOUD_DB_HOST: mysql
       EMPCLOUD_DB_PORT: 3306
       EMPCLOUD_DB_USER: root
-      EMPCLOUD_DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-empcloud_root_secret}
+      EMPCLOUD_DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       EMPCLOUD_DB_NAME: empcloud
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       CORS_ORIGIN: "*"
       PAYROLL_COUNTRY: IN
     depends_on:
@@ -184,12 +184,12 @@ services:
       DB_HOST: mysql
       DB_PORT: 3306
       DB_USER: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-empcloud_root_secret}
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       DB_NAME: emp_billing
       DB_AUTO_MIGRATE: "true"
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
     expose:
       - "4001"
     volumes:
@@ -220,10 +220,10 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4002
-      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD:-empcloud_root_secret}@mysql:3306/emp_lms
+      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}@mysql:3306/emp_lms
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
       MINIO_ACCESS_KEY: ${MINIO_USER:-minioadmin}

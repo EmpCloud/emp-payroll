@@ -21,6 +21,9 @@ export function validateConfig(): void {
   }
 
   // CORS
+  if (config.env === "production" && config.cors.origin === "*") {
+    errors.push("CORS_ORIGIN must not be '*' in production");
+  }
   if (config.env === "production" && config.cors.origin.includes("localhost")) {
     warnings.push("CORS_ORIGIN contains localhost — change for production");
   }
