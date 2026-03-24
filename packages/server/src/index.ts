@@ -34,6 +34,11 @@ import { adjustmentRoutes } from "./api/routes/adjustment.routes";
 import { webhookRoutes } from "./api/routes/webhook.routes";
 import { announcementRoutes } from "./api/routes/announcement.routes";
 import { exitRoutes } from "./api/routes/exit.routes";
+import { benefitsRoutes } from "./api/routes/benefits.routes";
+import { glAccountingRoutes } from "./api/routes/gl-accounting.routes";
+import { payEquityRoutes } from "./api/routes/pay-equity.routes";
+import { compensationBenchmarkRoutes } from "./api/routes/compensation-benchmark.routes";
+import { totalRewardsRoutes } from "./api/routes/total-rewards.routes";
 import path from "path";
 
 const app = express();
@@ -99,6 +104,11 @@ v1.use("/adjustments", adjustmentRoutes);
 v1.use("/webhooks", webhookRoutes);
 v1.use("/announcements", announcementRoutes);
 v1.use("/exits", exitRoutes);
+v1.use("/benefits", benefitsRoutes);
+v1.use("/gl", glAccountingRoutes);
+v1.use("/pay-equity", payEquityRoutes);
+v1.use("/benchmarks", compensationBenchmarkRoutes);
+v1.use("/total-rewards", totalRewardsRoutes);
 v1.get("/docs/openapi.json", apiDocsHandler);
 v1.get("/docs", swaggerUIHandler);
 

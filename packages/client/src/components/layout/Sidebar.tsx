@@ -25,6 +25,11 @@ import {
   ClipboardList,
   Megaphone,
   UserMinus,
+  Heart,
+  BookOpen,
+  Scale,
+  Target,
+  Award,
 } from "lucide-react";
 
 type Role = "hr_admin" | "hr_manager" | "employee";
@@ -97,6 +102,17 @@ const navItems: NavItem[] = [
     roles: ["hr_admin", "hr_manager"],
   },
   { to: "/exits", label: "Exits / FnF", icon: UserMinus, roles: ["hr_admin", "hr_manager"] },
+  {
+    to: "/benefits",
+    label: "Benefits",
+    icon: Heart,
+    roles: ["hr_admin", "hr_manager"],
+    section: "Compensation",
+  },
+  { to: "/benchmarks", label: "Benchmarks", icon: Target, roles: ["hr_admin", "hr_manager"] },
+  { to: "/pay-equity", label: "Pay Equity", icon: Scale, roles: ["hr_admin"] },
+  { to: "/total-rewards", label: "Total Rewards", icon: Award, roles: ["hr_admin", "hr_manager"] },
+  { to: "/gl-accounting", label: "GL / Accounting", icon: BookOpen, roles: ["hr_admin"] },
   {
     to: "/reports",
     label: "Reports",

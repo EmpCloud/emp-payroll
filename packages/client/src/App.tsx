@@ -125,6 +125,21 @@ const MyReimbursementsPage = lazy(() =>
     default: m.MyReimbursementsPage,
   })),
 );
+const BenefitsPage = lazy(() =>
+  import("@/pages/benefits/BenefitsPage").then((m) => ({ default: m.BenefitsPage })),
+);
+const GLAccountingPage = lazy(() =>
+  import("@/pages/gl-accounting/GLAccountingPage").then((m) => ({ default: m.GLAccountingPage })),
+);
+const PayEquityPage = lazy(() =>
+  import("@/pages/pay-equity/PayEquityPage").then((m) => ({ default: m.PayEquityPage })),
+);
+const BenchmarksPage = lazy(() =>
+  import("@/pages/benchmarks/BenchmarksPage").then((m) => ({ default: m.BenchmarksPage })),
+);
+const TotalRewardsPage = lazy(() =>
+  import("@/pages/total-rewards/TotalRewardsPage").then((m) => ({ default: m.TotalRewardsPage })),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -267,6 +282,11 @@ export default function App() {
                     <Route path="/system" element={<SystemHealthPage />} />
                     <Route path="/announcements" element={<AnnouncementsPage />} />
                     <Route path="/exits" element={<ExitManagementPage />} />
+                    <Route path="/benefits" element={<BenefitsPage />} />
+                    <Route path="/gl-accounting" element={<GLAccountingPage />} />
+                    <Route path="/pay-equity" element={<PayEquityPage />} />
+                    <Route path="/benchmarks" element={<BenchmarksPage />} />
+                    <Route path="/total-rewards" element={<TotalRewardsPage />} />
                   </Route>
 
                   <Route

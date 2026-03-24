@@ -224,6 +224,98 @@ export const createOrgSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// Benefits Schemas
+// ---------------------------------------------------------------------------
+export const createBenefitPlanSchema = z.object({
+  body: z.object({
+    name: z.string().min(1).max(100),
+    type: z.enum(["health", "dental", "vision", "life", "disability", "retirement"]),
+    provider: z.string().max(255).optional(),
+    description: z.string().optional(),
+    premiumAmount: z.number().min(0).default(0),
+    employerContribution: z.number().min(0).default(0),
+    coverageDetails: z.record(z.any()).optional(),
+    enrollmentPeriodStart: z.string().optional(),
+    enrollmentPeriodEnd: z.string().optional(),
+  }),
+});
+
+export const enrollBenefitSchema = z.object({
+  body: z.object({
+    employeeId: z.union([z.string(), z.number()]).transform(String),
+    planId: z.string(),
+    coverageType: z.enum(["individual", "family", "individual_plus_spouse"]).default("individual"),
+    startDate: z.string(),
+    endDate: z.string().optional(),
+    status: z.enum(["enrolled", "pending"]).default("pending"),
+    premiumEmployeeShare: z.number().min(0).default(0),
+    premiumEmployerShare: z.number().min(0).optional(),
+    dependents: z
+      .array(
+        z.object({
+          name: z.string().min(1).max(255),
+          relationship: z.enum(["spouse", "child", "parent"]),
+          dateOfBirth: z.string().optional(),
+        }),
+      )
+      .optional(),
+  }),
+});
+
+// ---------------------------------------------------------------------------
+// GL Accounting Schemas
+// ---------------------------------------------------------------------------
+export const createGLMappingSchema = z.object({
+  body: z.object({
+    payComponent: z.string().min(1).max(50),
+    glAccountCode: z.string().min(1).max(50),
+    glAccountName: z.string().min(1).max(255),
+    description: z.string().optional(),
+  }),
+});
+
+export const generateJournalSchema = z.object({
+  body: z.object({
+    payrollRunId: z.string(),
+  }),
+});
+
+// ---------------------------------------------------------------------------
+// Compensation Benchmark Schemas
+// ---------------------------------------------------------------------------
+export const createBenchmarkSchema = z.object({
+  body: z.object({
+    jobTitle: z.string().min(1).max(255),
+    department: z.string().max(100).optional(),
+    location: z.string().max(255).optional(),
+    marketP25: z.number().min(0),
+    marketP50: z.number().min(0),
+    marketP75: z.number().min(0),
+    source: z.string().max(255).optional(),
+    effectiveDate: z.string(),
+  }),
+});
+
+export const importBenchmarksSchema = z.object({
+  body: z.object({
+    benchmarks: z
+      .array(
+        z.object({
+          jobTitle: z.string().min(1).max(255),
+          department: z.string().max(100).optional(),
+          location: z.string().max(255).optional(),
+          marketP25: z.number().min(0),
+          marketP50: z.number().min(0),
+          marketP75: z.number().min(0),
+          source: z.string().max(255).optional(),
+          effectiveDate: z.string(),
+        }),
+      )
+      .min(1),
+  }),
+});
+
+// ---------------------------------------------------------------------------
 // Pagination query params
 // ---------------------------------------------------------------------------
 export const paginationSchema = z.object({
