@@ -418,6 +418,17 @@ pnpm --filter @emp-payroll/client exec tsc --noEmit
 
 ---
 
+## Test Deployment
+
+| Environment | URL |
+|-------------|-----|
+| Frontend | https://testpayroll.empcloud.com |
+| API | https://testpayroll-api.empcloud.com |
+
+SSO integrated with EMP Cloud. HRMS proxy enabled (`USE_CLOUD_HRMS=true`) — attendance and leave data fetched from EMP Cloud.
+
+---
+
 ## Deployment
 
 ### Docker Compose (Development)
