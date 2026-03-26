@@ -109,7 +109,7 @@ router.get(
 router.get(
   "/:id/payslips",
   wrap(async (req, res) => {
-    const data = await svc.getRunPayslips(param(req, "id"));
+    const data = await svc.getRunPayslips(param(req, "id"), String(req.user!.empcloudOrgId));
     res.json({ success: true, data });
   }),
 );

@@ -49,7 +49,7 @@ router.get(
 router.get(
   "/:id",
   wrap(async (req, res) => {
-    const data = await svc.getById(param(req, "id"));
+    const data = await svc.getById(param(req, "id"), String(req.user!.empcloudOrgId));
     res.json({ success: true, data });
   }),
 );

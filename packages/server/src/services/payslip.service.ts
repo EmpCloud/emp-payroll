@@ -19,9 +19,19 @@ export class PayslipService {
     });
   }
 
-  async getById(id: string) {
+  async getById(id: string, orgId?: string) {
     const payslip = await this.db.findById<any>("payslips", id);
     if (!payslip) throw new AppError(404, "NOT_FOUND", "Payslip not found");
+
+    // If orgId provided, verify payslip belongs to this org via its payroll run
+    if (orgId) {
+      const run = await this.db.findOne<any>("payroll_runs", {
+        id: payslip.payroll_run_id,
+        empcloud_org_id: Number(orgId),
+      });
+      if (!run) throw new AppError(404, "NOT_FOUND", "Payslip not found");
+    }
+
     return payslip;
   }
 

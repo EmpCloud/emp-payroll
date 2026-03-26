@@ -95,6 +95,9 @@ export class PayrollService {
     let employeeCount = 0;
 
     for (const ecEmp of ecEmployees) {
+      // Reset per-employee employer contributions each iteration
+      let employeeEmployerContributions = 0;
+
       // Get payroll profile for this employee
       const profile = await this.db.findOne<any>("employee_payroll_profiles", {
         empcloud_user_id: ecEmp.id,
@@ -181,7 +184,7 @@ export class PayrollService {
         });
         deductions.push({ code: "EPF", name: "Employee PF", amount: pf.employeeEPF });
         totalDed += pf.employeeEPF;
-        totalEmployerContributions += pf.totalEmployer;
+        employeeEmployerContributions += pf.totalEmployer;
       }
 
       // ESI
@@ -194,7 +197,7 @@ export class PayrollService {
       if (esi) {
         deductions.push({ code: "ESI", name: "Employee ESI", amount: esi.employeeContribution });
         totalDed += esi.employeeContribution;
-        totalEmployerContributions += esi.employerContribution;
+        employeeEmployerContributions += esi.employerContribution;
       }
 
       // Professional Tax
@@ -263,13 +266,14 @@ export class PayrollService {
         gross_earnings: grossEarnings,
         total_deductions: totalDed,
         net_pay: netPay,
-        total_employer_cost: grossEarnings + totalEmployerContributions,
+        total_employer_cost: grossEarnings + employeeEmployerContributions,
         status: "generated",
       });
 
       totalGross += grossEarnings;
       totalDeductions += totalDed;
       totalNet += netPay;
+      totalEmployerContributions += employeeEmployerContributions;
       employeeCount++;
     }
 
@@ -351,7 +355,10 @@ export class PayrollService {
     };
   }
 
-  async getRunPayslips(runId: string) {
+  async getRunPayslips(runId: string, orgId: string) {
+    // Verify the run belongs to this org before returning payslips
+    await this.getRun(runId, orgId);
+
     // Get payslips from payroll DB
     const payslips = await this.db.findMany<any>("payslips", {
       filters: { payroll_run_id: runId },
