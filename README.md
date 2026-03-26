@@ -4,7 +4,7 @@
 
 India-first payroll engine with PF, ESI, TDS, and Professional Tax built in. Multi-country tax support (India, US, UK). Designed to be the open-source alternative to Zoho Payroll, Keka, and Razorpay Payroll.
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![License: GPL v3](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 [![Tests](https://img.shields.io/badge/tests-67%20passing-brightgreen.svg)]()
 
