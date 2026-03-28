@@ -435,6 +435,7 @@ export class AuthService {
   private mapRole(role: string): AuthPayload["role"] {
     const roleMap: Record<string, AuthPayload["role"]> = {
       super_admin: "super_admin",
+      org_admin: "org_admin",
       hr_admin: "hr_admin",
       hr_manager: "hr_manager",
       manager: "hr_manager",

@@ -249,7 +249,13 @@ export function Sidebar() {
         <div>
           <p className="text-sm font-bold text-gray-900 dark:text-white">EMP Payroll</p>
           <p className="text-xs text-gray-400">
-            {role === "hr_admin" ? "Admin" : role === "hr_manager" ? "Manager" : "Employee"}
+            {role === "org_admin"
+              ? "Org Admin"
+              : role === "hr_admin"
+                ? "Admin"
+                : role === "hr_manager"
+                  ? "Manager"
+                  : "Employee"}
           </p>
         </div>
       </div>

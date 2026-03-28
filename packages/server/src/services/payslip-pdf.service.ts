@@ -1,5 +1,6 @@
 import { getDB } from "../db/adapters";
 import { AppError } from "../api/middleware/error.middleware";
+import { findUserById, getUserDepartmentName } from "../db/empcloud";
 
 export class PayslipPDFService {
   private db = getDB();
@@ -8,27 +9,89 @@ export class PayslipPDFService {
     const payslip = await this.db.findById<any>("payslips", payslipId);
     if (!payslip) throw new AppError(404, "NOT_FOUND", "Payslip not found");
 
-    const employee = await this.db.findById<any>("employees", payslip.employee_id);
-    if (!employee) throw new AppError(404, "NOT_FOUND", "Employee not found");
+    // Look up employee from EmpCloud using empcloud_user_id (post-migration 010)
+    // Falls back to legacy employee_id for backward compatibility
+    let employee: any = null;
+    let bankDetails: any = {};
+    let org: any = null;
 
-    const org = await this.db.findById<any>("organizations", employee.org_id);
-    const bankDetails = typeof employee.bank_details === "string" ? JSON.parse(employee.bank_details) : employee.bank_details || {};
-    const earnings = typeof payslip.earnings === "string" ? JSON.parse(payslip.earnings) : payslip.earnings || [];
-    const deductions = typeof payslip.deductions === "string" ? JSON.parse(payslip.deductions) : payslip.deductions || [];
+    if (payslip.empcloud_user_id) {
+      const ecUser = await findUserById(Number(payslip.empcloud_user_id));
+      if (!ecUser) throw new AppError(404, "NOT_FOUND", "Employee not found");
 
-    const monthNames = ["", "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"];
+      const departmentName = await getUserDepartmentName(ecUser.department_id);
+
+      // Get payroll profile for bank details
+      const profile = await this.db.findOne<any>("employee_payroll_profiles", {
+        empcloud_user_id: Number(payslip.empcloud_user_id),
+      });
+      bankDetails = profile?.bank_details
+        ? typeof profile.bank_details === "string"
+          ? JSON.parse(profile.bank_details)
+          : profile.bank_details
+        : {};
+
+      employee = {
+        first_name: ecUser.first_name,
+        last_name: ecUser.last_name,
+        employee_code: ecUser.emp_code || profile?.employee_code || "N/A",
+        department: departmentName || "N/A",
+        designation: ecUser.designation || "N/A",
+      };
+
+      // Get org from payroll settings
+      const orgSettings = await this.db.findOne<any>("organization_payroll_settings", {
+        empcloud_org_id: Number(ecUser.organization_id),
+      });
+      org = orgSettings;
+    } else {
+      // Legacy fallback: employee_id references old employees table
+      employee = await this.db.findById<any>("employees", payslip.employee_id);
+      if (!employee) throw new AppError(404, "NOT_FOUND", "Employee not found");
+      org = await this.db.findById<any>("organizations", employee.org_id);
+      bankDetails =
+        typeof employee.bank_details === "string"
+          ? JSON.parse(employee.bank_details)
+          : employee.bank_details || {};
+    }
+    const earnings =
+      typeof payslip.earnings === "string" ? JSON.parse(payslip.earnings) : payslip.earnings || [];
+    const deductions =
+      typeof payslip.deductions === "string"
+        ? JSON.parse(payslip.deductions)
+        : payslip.deductions || [];
+
+    const monthNames = [
+      "",
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
     const period = `${monthNames[payslip.month]} ${payslip.year}`;
 
-    const fmt = (n: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+    const fmt = (n: number) =>
+      new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        maximumFractionDigits: 0,
+      }).format(n);
 
-    const earningsRows = earnings.map((e: any) =>
-      `<tr><td>${e.name || e.code}</td><td class="amt">${fmt(e.amount)}</td></tr>`
-    ).join("");
+    const earningsRows = earnings
+      .map((e: any) => `<tr><td>${e.name || e.code}</td><td class="amt">${fmt(e.amount)}</td></tr>`)
+      .join("");
 
-    const deductionsRows = deductions.map((d: any) =>
-      `<tr><td>${d.name || d.code}</td><td class="amt">${fmt(d.amount)}</td></tr>`
-    ).join("");
+    const deductionsRows = deductions
+      .map((d: any) => `<tr><td>${d.name || d.code}</td><td class="amt">${fmt(d.amount)}</td></tr>`)
+      .join("");
 
     return `<!DOCTYPE html>
 <html lang="en">
