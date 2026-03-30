@@ -170,7 +170,7 @@ describe("PayrollService", () => {
           id: i + 100,
           first_name: `Emp${i}`,
           last_name: `Test${i}`,
-        })),
+        })) as any,
       );
     }
 
@@ -254,7 +254,7 @@ describe("PayrollService", () => {
       // After computation
       mockDb.findOne.mockResolvedValueOnce({ id: "run-1", empcloud_org_id: 1, status: "computed" });
 
-      mockedFindUsers.mockResolvedValue([{ id: 100, first_name: "Emp", last_name: "Test" }]);
+      mockedFindUsers.mockResolvedValue([{ id: 100, first_name: "Emp", last_name: "Test" }] as any);
 
       await service.computePayroll("run-1", "1");
 

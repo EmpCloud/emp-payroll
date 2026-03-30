@@ -86,7 +86,7 @@ function SSOGate({ children }: { children: React.ReactNode }) {
 
         if (cancelled) return;
 
-        saveAuth(res.data);
+        saveAuth(res.data!);
 
         // Redirect to dashboard after SSO login
         if (window.location.pathname === "/" || window.location.pathname === "/login") {

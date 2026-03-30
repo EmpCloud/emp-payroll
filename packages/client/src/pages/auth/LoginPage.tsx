@@ -75,7 +75,7 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left panel — brand */}
-      <div className="hidden items-center justify-center bg-gradient-to-br from-emerald-600 to-emerald-800 p-12 lg:flex lg:w-1/2">
+      <div className="from-brand-600 to-brand-800 hidden items-center justify-center bg-gradient-to-br p-12 lg:flex lg:w-1/2">
         <div className="max-w-md text-white">
           <div className="mb-8 flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
@@ -84,7 +84,7 @@ export function LoginPage() {
             <span className="text-2xl font-bold">EMP Payroll</span>
           </div>
           <h2 className="mb-4 text-3xl font-bold leading-tight">Streamline payroll management</h2>
-          <p className="text-lg leading-relaxed text-emerald-100">
+          <p className="text-brand-100 text-lg leading-relaxed">
             Process salaries, manage tax compliance, generate payslips, handle reimbursements, and
             track loans -- all in one place.
           </p>
@@ -99,8 +99,8 @@ export function LoginPage() {
               "Reports",
               "Multi-currency",
             ].map((feature) => (
-              <div key={feature} className="flex items-center gap-2 text-sm text-emerald-100">
-                <div className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+              <div key={feature} className="text-brand-100 flex items-center gap-2 text-sm">
+                <div className="bg-brand-300 h-1.5 w-1.5 rounded-full" />
                 {feature}
               </div>
             ))}
@@ -112,7 +112,7 @@ export function LoginPage() {
       <div className="flex w-full items-center justify-center bg-gray-50 px-4 lg:w-1/2">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center justify-center gap-3 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600">
+            <div className="bg-brand-600 flex h-10 w-10 items-center justify-center rounded-xl">
               <DollarSign className="h-6 w-6 text-white" />
             </div>
             <span className="text-xl font-bold text-gray-900">EMP Payroll</span>
@@ -134,7 +134,7 @@ export function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="focus:border-brand-500 focus:ring-brand-500 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-1"
                 />
               </div>
 
@@ -150,7 +150,7 @@ export function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="block w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm shadow-sm placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="focus:border-brand-500 focus:ring-brand-500 block w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-1"
                   />
                   <button
                     type="button"
@@ -168,7 +168,7 @@ export function LoginPage() {
                   <input
                     type="checkbox"
                     defaultChecked
-                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    className="text-brand-600 focus:ring-brand-500 rounded border-gray-300"
                   />
                   <span className="text-gray-600">Remember me</span>
                 </label>
@@ -178,7 +178,7 @@ export function LoginPage() {
                     setForgotOpen(true);
                     setForgotStep("email");
                   }}
-                  className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
+                  className="text-brand-600 hover:text-brand-700 text-sm font-medium"
                 >
                   Forgot password?
                 </button>
@@ -187,7 +187,7 @@ export function LoginPage() {
               <button
                 type="submit"
                 disabled={loginMutation.isPending}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                className="bg-brand-600 hover:bg-brand-700 focus-visible:ring-brand-500 inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
               >
                 {loginMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Sign in
@@ -205,7 +205,7 @@ export function LoginPage() {
             <button
               type="button"
               onClick={() => setContactOpen(true)}
-              className="font-medium text-emerald-600 hover:text-emerald-700"
+              className="text-brand-600 hover:text-brand-700 font-medium"
             >
               Contact your HR admin
             </button>

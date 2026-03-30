@@ -63,7 +63,7 @@ beforeAll(async () => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: "ananya@technova.in", password: "Welcome@123" }),
   });
-  const json = await res.json();
+  const json: any = await res.json();
   token = json.data?.tokens?.accessToken || json.data?.token || json.data?.accessToken;
   userId = json.data?.user?.empcloudUserId || json.data?.user?.id;
   orgId = String(json.data?.user?.empcloudOrgId || json.data?.user?.organizationId || "");
@@ -942,7 +942,7 @@ describe("Health", () => {
     const healthBase = BASE.replace("/api/v1", "/health");
     const res = await fetch(healthBase);
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body: any = await res.json();
     expect(body.status).toBe("ok");
   });
 });

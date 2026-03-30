@@ -43,6 +43,24 @@ export class KnexAdapter implements IDBAdapter {
   }
 
   async connect(): Promise<void> {
+    // Ensure the database exists before connecting to it
+    const conn = this.config.connection as any;
+    if (conn?.database) {
+      const bootstrap = knex({
+        client: this.config.client,
+        connection: {
+          host: conn.host,
+          port: conn.port,
+          user: conn.user,
+          password: conn.password,
+        },
+      });
+      await bootstrap.raw(
+        `CREATE DATABASE IF NOT EXISTS \`${conn.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+      );
+      await bootstrap.destroy();
+    }
+
     this.db = knex(this.config);
     // Verify connection
     await this.db.raw("SELECT 1");
@@ -170,7 +188,11 @@ export class KnexAdapter implements IDBAdapter {
     return this.findById<T>(table, id) as Promise<T>;
   }
 
-  async updateMany(table: string, where: Record<string, any>, data: Record<string, any>): Promise<number> {
+  async updateMany(
+    table: string,
+    where: Record<string, any>,
+    data: Record<string, any>,
+  ): Promise<number> {
     return this.getDb()(table)
       .where(where)
       .update({ ...data, updated_at: new Date() });
@@ -205,8 +227,12 @@ export class KnexAdapter implements IDBAdapter {
     const db = this.getDb();
     return db.transaction(async (trx) => {
       const ctx: TransactionContext = {
-        commit: async () => { await trx.commit(); },
-        rollback: async () => { await trx.rollback(); },
+        commit: async () => {
+          await trx.commit();
+        },
+        rollback: async () => {
+          await trx.rollback();
+        },
       };
       return fn(ctx);
     });

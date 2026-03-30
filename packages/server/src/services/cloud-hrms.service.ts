@@ -75,7 +75,7 @@ export async function getMonthlyAttendance(
       return null;
     }
 
-    const json = await res.json();
+    const json: any = await res.json();
     // Cloud returns { success: true, data: { ... } } or paginated data
     const report = json.data;
 
@@ -129,7 +129,7 @@ export async function getLeaveBalances(
 
     if (!res.ok) return null;
 
-    const json = await res.json();
+    const json: any = await res.json();
     return json.data ?? null;
   } catch {
     return null;
@@ -158,7 +158,7 @@ export async function getLeaveApplications(
 
     if (!res.ok) return null;
 
-    const json = await res.json();
+    const json: any = await res.json();
     const applications: CloudLeaveApplication[] = json.data ?? [];
 
     // Filter to only those overlapping with the requested period

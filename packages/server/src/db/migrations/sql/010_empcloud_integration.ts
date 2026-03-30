@@ -35,7 +35,7 @@ export async function up(knex: Knex): Promise<void> {
     t.integer("financial_year_start").defaultTo(4);
     t.string("currency", 3).defaultTo("INR");
     t.string("country", 2).defaultTo("IN");
-    t.string("state", 5).nullable();
+    t.string("state", 100).nullable();
     t.boolean("is_active").defaultTo(true);
     t.timestamps(true, true);
 
