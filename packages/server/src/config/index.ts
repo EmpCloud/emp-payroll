@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import path from "path";
+import fs from "fs";
 dotenv.config({ path: path.resolve(process.cwd(), "../../.env") });
 
 export const config = {
@@ -44,7 +45,18 @@ export const config = {
     accessExpiry: process.env.JWT_ACCESS_EXPIRY || "15m",
     refreshExpiry: process.env.JWT_REFRESH_EXPIRY || "7d",
     // RS256 public key from EMP Cloud — used to verify SSO tokens
-    empcloudPublicKey: process.env.EMPCLOUD_PUBLIC_KEY || "",
+    // Reads from file path if EMPCLOUD_PUBLIC_KEY points to a .pem file, otherwise uses raw value
+    empcloudPublicKey: (() => {
+      const val = process.env.EMPCLOUD_PUBLIC_KEY || "";
+      if (val && (val.endsWith(".pem") || val.endsWith(".pub"))) {
+        try {
+          return fs.readFileSync(path.resolve(process.cwd(), val), "utf-8");
+        } catch {
+          return "";
+        }
+      }
+      return val;
+    })(),
   },
 
   // Email (payslip delivery)
