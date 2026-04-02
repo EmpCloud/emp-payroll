@@ -13,16 +13,14 @@ import { apiGet } from "@/api/client";
 export function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
-
-  if (!isLoggedIn()) return <Navigate to="/login" replace />;
+  const user = getUser();
 
   // Close mobile sidebar on navigation
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
 
-  const user = getUser();
+  if (!isLoggedIn()) return <Navigate to="/login" replace />;
   const displayName = user ? `${user.firstName} ${user.lastName}` : "User";
   const roleLabel =
     user?.role === "hr_admin"

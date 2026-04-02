@@ -64,6 +64,7 @@ export class OrgService {
           : payrollSettings.registered_address
         : null,
       payFrequency: payrollSettings?.pay_frequency || "monthly",
+      payDay: payrollSettings?.pay_day ?? 7,
       financialYearStart: payrollSettings?.financial_year_start || 4,
       currency: payrollSettings?.currency || "INR",
     };
@@ -168,6 +169,7 @@ export class OrgService {
     const org = await this.getById(empcloudOrgId);
     return {
       payFrequency: org.payFrequency,
+      payDay: (org as any).payDay ?? 7,
       financialYearStart: org.financialYearStart,
       currency: org.currency,
       country: org.country,
@@ -192,6 +194,7 @@ export class OrgService {
 
     const updates: any = {};
     if (data.payFrequency) updates.pay_frequency = data.payFrequency;
+    if (data.payDay !== undefined) updates.pay_day = data.payDay;
     if (data.state) updates.state = data.state;
     if (data.pfEstablishmentCode) updates.pf_establishment_code = data.pfEstablishmentCode;
     if (data.esiEstablishmentCode) updates.esi_establishment_code = data.esiEstablishmentCode;

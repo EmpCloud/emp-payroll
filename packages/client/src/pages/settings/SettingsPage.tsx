@@ -36,10 +36,24 @@ export function SettingsPage() {
   async function handleSave() {
     setSaving(true);
     try {
-      // In a full implementation this would collect form data and PUT to the API
-      await apiPut(`/organizations/${orgId}/settings`, {
-        payFrequency: settings?.payFrequency || "monthly",
-      });
+      const formData: Record<string, any> = {};
+
+      // Collect form field values
+      const payFreq = (document.getElementById("pay_frequency") as HTMLSelectElement)?.value;
+      const pfEstab = (document.getElementById("pf_estab") as HTMLInputElement)?.value;
+      const esiEstab = (document.getElementById("esi_estab") as HTMLInputElement)?.value;
+      const pfRestrict = (document.getElementById("pf_restrict") as HTMLSelectElement)?.value;
+      const orgState = (document.getElementById("org_state") as HTMLSelectElement)?.value;
+
+      const payDay = (document.getElementById("pay_day") as HTMLInputElement)?.value;
+
+      if (payFreq) formData.payFrequency = payFreq;
+      if (payDay) formData.payDay = parseInt(payDay, 10);
+      if (pfEstab) formData.pfEstablishmentCode = pfEstab;
+      if (esiEstab) formData.esiEstablishmentCode = esiEstab;
+      if (orgState) formData.state = orgState;
+
+      await apiPut(`/organizations/${orgId}/settings`, formData);
       toast.success("Settings saved");
     } catch {
       toast.error("Failed to save settings");
@@ -142,7 +156,12 @@ export function SettingsPage() {
                 { value: "weekly", label: "Weekly" },
               ]}
             />
-            <Input id="pay_day" label="Pay Day" type="number" defaultValue="7" />
+            <Input
+              id="pay_day"
+              label="Pay Day (day of month)"
+              type="number"
+              defaultValue={settings?.payDay?.toString() || "7"}
+            />
             <Input id="currency" label="Currency" defaultValue={org?.currency || "INR"} disabled />
           </div>
         </CardContent>

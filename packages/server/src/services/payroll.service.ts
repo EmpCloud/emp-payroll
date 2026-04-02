@@ -31,7 +31,7 @@ export class PayrollService {
   async createRun(
     orgId: string,
     userId: string,
-    data: { month: number; year: number; payDate: string; notes?: string },
+    data: { month: number; year: number; payDate?: string; notes?: string },
   ) {
     const existing = await this.db.findOne<any>("payroll_runs", {
       empcloud_org_id: Number(orgId),
@@ -44,6 +44,21 @@ export class PayrollService {
         "DUPLICATE_RUN",
         `Payroll for ${data.month}/${data.year} already exists`,
       );
+
+    // Auto-calculate pay date from org settings if not provided
+    let payDate = data.payDate;
+    if (!payDate) {
+      const orgSettings = await this.db.findOne<any>("organization_payroll_settings", {
+        empcloud_org_id: Number(orgId),
+      });
+      const payDay = orgSettings?.pay_day ?? 7;
+      // Clamp pay day to valid range for the given month
+      const maxDay = new Date(data.year, data.month, 0).getDate();
+      const day = Math.min(payDay, maxDay);
+      payDate = dayjs(
+        `${data.year}-${String(data.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+      ).format("YYYY-MM-DD");
+    }
 
     const monthNames = [
       "",
@@ -67,7 +82,7 @@ export class PayrollService {
       name: `${monthNames[data.month]} ${data.year} Payroll`,
       month: data.month,
       year: data.year,
-      pay_date: data.payDate,
+      pay_date: payDate,
       status: "draft",
       processed_by: userId,
       notes: data.notes || null,
