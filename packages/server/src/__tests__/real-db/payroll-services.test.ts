@@ -19,6 +19,12 @@ const cleanupIds: { table: string; id: string }[] = [];
 const TEST_ORG_ID = "99999";
 const TEST_TIMESTAMP = Date.now();
 
+// Helper: safely parse JSON columns (MySQL JSON columns return objects, not strings)
+function safeJsonParse(val: any): any {
+  if (typeof val === "string") return JSON.parse(val);
+  return val;
+}
+
 function addCleanup(table: string, id: string) {
   cleanupIds.push({ table, id });
 }
@@ -87,13 +93,14 @@ async function createTestEmployee(orgId: string): Promise<string> {
   await db("employees").insert({
     id,
     org_id: orgId,
-    empcloud_user_id: 900000 + Math.floor(Math.random() * 10000),
     first_name: "Test",
     last_name: `Employee_${TEST_TIMESTAMP}`,
-    email: `test-${TEST_TIMESTAMP}@test.com`,
-    employee_code: `EMP-${TEST_TIMESTAMP}`,
+    email: `test-${TEST_TIMESTAMP}-${Math.floor(Math.random() * 100000)}@test.com`,
+    employee_code: `EMP-${TEST_TIMESTAMP}-${Math.floor(Math.random() * 100000)}`,
     department: "Engineering",
     designation: "Developer",
+    date_of_birth: "1995-01-01",
+    gender: "male",
     date_of_joining: "2025-01-01",
     is_active: true,
     tax_info: JSON.stringify({ pan: "ABCDE1234F", uan: "100012345678" }),
@@ -114,14 +121,15 @@ async function createTestPayrollRun(orgId: string, status = "computed"): Promise
     id,
     org_id: orgId,
     empcloud_org_id: Number(orgId) || 99999,
+    name: `Test Run ${TEST_TIMESTAMP}`,
     month: 3,
     year: 2026,
+    pay_date: "2026-03-31",
     status,
     employee_count: 1,
     total_gross: 50000,
     total_deductions: 10000,
     total_net: 40000,
-    created_by: "test-user",
     created_at: now,
     updated_at: now,
   });
@@ -141,7 +149,9 @@ async function createTestPayslip(runId: string, employeeId: string): Promise<str
     gross_earnings: 50000,
     total_deductions: 10000,
     net_pay: 40000,
+    total_employer_cost: 55000,
     paid_days: 22,
+    total_days: 30,
     lop_days: 0,
     earnings: JSON.stringify([
       { code: "BASIC", name: "Basic Salary", amount: 25000 },
@@ -154,6 +164,11 @@ async function createTestPayslip(runId: string, employeeId: string): Promise<str
       { code: "PT", name: "Professional Tax", amount: 200 },
       { code: "ESI", name: "ESI", amount: 1800 },
     ]),
+    employer_contributions: JSON.stringify([
+      { code: "EPF_ER", name: "Employer PF", amount: 3000 },
+      { code: "ESI_ER", name: "Employer ESI", amount: 2000 },
+    ]),
+    reimbursements: JSON.stringify([]),
     status: "generated",
     created_at: now,
     updated_at: now,
@@ -275,14 +290,15 @@ describe("GL Accounting Service (real DB)", () => {
       id: runId,
       org_id: TEST_ORG_ID,
       empcloud_org_id: 99999,
+      name: `GL Test Run ${Date.now()}`,
       month: 3,
       year: 2026,
+      pay_date: "2026-03-31",
       status: "computed",
       employee_count: 1,
       total_gross: 50000,
       total_deductions: 10000,
       total_net: 40000,
-      created_by: "test",
       created_at: now,
       updated_at: now,
     });
@@ -348,14 +364,15 @@ describe("GL Accounting Service (real DB)", () => {
       id: runId,
       org_id: TEST_ORG_ID,
       empcloud_org_id: 99999,
+      name: `GL Export Run ${Date.now()}`,
       month: 2,
       year: 2026,
+      pay_date: "2026-02-28",
       status: "paid",
       employee_count: 1,
       total_gross: 50000,
       total_deductions: 10000,
       total_net: 40000,
-      created_by: "test",
       created_at: now,
       updated_at: now,
     });
@@ -399,7 +416,7 @@ describe("Reports Service (real DB)", () => {
     expect(payslips.length).toBe(1);
 
     const ps = payslips[0];
-    const earnings = JSON.parse(ps.earnings);
+    const earnings = safeJsonParse(ps.earnings);
     const basic = earnings.find((e: any) => e.code === "BASIC");
     expect(basic).toBeTruthy();
     expect(basic.amount).toBe(25000);
@@ -415,8 +432,8 @@ describe("Reports Service (real DB)", () => {
     const emp = await db("employees").where({ id: empId }).first();
 
     const tdsData = payslips.map((ps: any) => {
-      const taxInfo = JSON.parse(emp.tax_info);
-      const deductions = JSON.parse(ps.deductions);
+      const taxInfo = safeJsonParse(emp.tax_info);
+      const deductions = safeJsonParse(ps.deductions);
       const tds = deductions.find((d: any) => d.code === "TDS");
       return {
         employeeCode: emp.employee_code,
@@ -443,7 +460,7 @@ describe("Reports Service (real DB)", () => {
 
     const ptData = payslips
       .map((ps: any) => {
-        const deductions = JSON.parse(ps.deductions);
+        const deductions = safeJsonParse(ps.deductions);
         const pt = deductions.find((d: any) => d.code === "PT");
         return { code: emp.employee_code, pt: pt?.amount || 0 };
       })
@@ -497,7 +514,7 @@ describe("Bank File Service (real DB)", () => {
 
     for (const ps of payslips) {
       const emp = await db("employees").where({ id: ps.employee_id }).first();
-      const bank = JSON.parse(emp.bank_details);
+      const bank = safeJsonParse(emp.bank_details);
       lines.push(
         [
           bank.accountNumber,
@@ -541,7 +558,7 @@ describe("Govt Formats Service (real DB)", () => {
 
     const payslips = await db("payslips").where({ payroll_run_id: runId });
     const emp = await db("employees").where({ id: empId }).first();
-    const taxInfo = JSON.parse(emp.tax_info);
+    const taxInfo = safeJsonParse(emp.tax_info);
 
     const ps = payslips[0];
     const grossWages = Number(ps.gross_earnings);
@@ -566,11 +583,11 @@ describe("Govt Formats Service (real DB)", () => {
 
     const payslips = await db("payslips").where({ payroll_run_id: runId });
     const emp = await db("employees").where({ id: empId }).first();
-    const taxInfo = JSON.parse(emp.tax_info);
+    const taxInfo = safeJsonParse(emp.tax_info);
 
     let totalTDS = 0;
     for (const ps of payslips) {
-      const deds = JSON.parse(ps.deductions);
+      const deds = safeJsonParse(ps.deductions);
       const tds = deds.find((d: any) => d.code === "TDS" || d.code === "INCOME_TAX");
       totalTDS += tds?.amount || 0;
     }
@@ -629,14 +646,19 @@ describe("Notification Service (real DB)", () => {
     await db("employees").insert({
       id: adminId,
       org_id: orgId,
-      empcloud_user_id: 800000 + Math.floor(Math.random() * 10000),
       first_name: "HR",
       last_name: "Admin",
-      email: `hr-admin-${TEST_TIMESTAMP}@test.com`,
-      employee_code: `HR-${TEST_TIMESTAMP}`,
+      email: `hr-admin-${TEST_TIMESTAMP}-${Math.floor(Math.random() * 100000)}@test.com`,
+      employee_code: `HR-${TEST_TIMESTAMP}-${Math.floor(Math.random() * 100000)}`,
       role: "hr_admin",
       is_active: true,
+      date_of_birth: "1990-01-01",
+      gender: "female",
+      date_of_joining: "2024-01-01",
+      department: "HR",
+      designation: "HR Admin",
       tax_info: "{}",
+      pf_details: "{}",
       bank_details: "{}",
       created_at: now,
       updated_at: now,
@@ -672,8 +694,8 @@ describe("Email Service (real DB)", () => {
     expect(Number(payslip.net_pay)).toBe(40000);
     expect(employee.first_name).toBe("Test");
 
-    const earnings = JSON.parse(payslip.earnings);
-    const deductions = JSON.parse(payslip.deductions);
+    const earnings = safeJsonParse(payslip.earnings);
+    const deductions = safeJsonParse(payslip.deductions);
     expect(earnings.length).toBe(3);
     expect(deductions.length).toBe(4);
   });
@@ -731,7 +753,7 @@ describe("Form 16 Service (real DB)", () => {
     let totalTDS = 0;
     for (const ps of fyPayslips) {
       totalGross += Number(ps.gross_earnings);
-      const deds = JSON.parse(ps.deductions);
+      const deds = safeJsonParse(ps.deductions);
       const tds = deds.find((d: any) => d.code === "TDS");
       totalTDS += tds?.amount || 0;
     }
