@@ -294,6 +294,159 @@ describe("computeIncomeTax", () => {
     });
   });
 
+  // ── Marginal Relief ────────────────────────────────────────────────────
+
+  describe("marginal relief (new regime)", () => {
+    it("should apply marginal relief when taxable income between 12L and 12.75L", () => {
+      // Gross 1325000 - 75000 = 1250000 taxable
+      const result = computeIncomeTax(
+        makeTaxInput({
+          annualGross: 1325000,
+          employeePfAnnual: 0,
+        }),
+      );
+      expect(result.taxableIncome).toBe(1250000);
+      // Excess over 12L = 50000
+      // Without relief, slab tax = 0 + 20000 + 40000 + 15%(50000)= 67500
+      // Relief caps at 50000
+      expect(result.taxOnIncome).toBe(50000);
+    });
+
+    it("should not apply marginal relief above 12.75L threshold", () => {
+      // Gross 1400000 - 75000 = 1325000 taxable (above 1275000)
+      const result = computeIncomeTax(
+        makeTaxInput({
+          annualGross: 1400000,
+          employeePfAnnual: 0,
+        }),
+      );
+      expect(result.taxableIncome).toBe(1325000);
+      // Full slab tax applies: 0 + 20000 + 40000 + 15%(125000) = 78750
+      expect(result.taxOnIncome).toBe(78750);
+    });
+  });
+
+  // ── Additional Deduction Sections ──────────────────────────────────────
+
+  describe("additional deduction sections (old regime)", () => {
+    it("should apply 80CCD(1B) NPS deduction capped at 50000", () => {
+      const result = computeIncomeTax(
+        makeTaxInput({
+          regime: TaxRegime.OLD,
+          declarations: [{ section: "80CCD_1B", amount: 70000 }],
+        }),
+      );
+      const nps = result.deductions.find((d) => d.section === "80CCD(1B)");
+      expect(nps).toBeDefined();
+      expect(nps!.allowedAmount).toBe(50000);
+    });
+
+    it("should apply 80D medical insurance capped at 25000", () => {
+      const result = computeIncomeTax(
+        makeTaxInput({
+          regime: TaxRegime.OLD,
+          declarations: [{ section: "80D", amount: 35000 }],
+        }),
+      );
+      const med = result.deductions.find((d) => d.section === "80D");
+      expect(med).toBeDefined();
+      expect(med!.allowedAmount).toBe(25000);
+    });
+
+    it("should pass through other sections (80E, 80G) at face value", () => {
+      const result = computeIncomeTax(
+        makeTaxInput({
+          regime: TaxRegime.OLD,
+          declarations: [
+            { section: "80E", amount: 40000 },
+            { section: "80G", amount: 10000 },
+          ],
+        }),
+      );
+      const sec80E = result.deductions.find((d) => d.section === "80E");
+      const sec80G = result.deductions.find((d) => d.section === "80G");
+      expect(sec80E!.allowedAmount).toBe(40000);
+      expect(sec80G!.allowedAmount).toBe(10000);
+    });
+  });
+
+  // ── HRA Exemption Details ─────────────────────────────────────────────
+
+  describe("HRA exemption details (old regime)", () => {
+    it("should pick min of 3 HRA components for metro", () => {
+      // basic 600000, HRA 300000, rent 180000, metro
+      // (a) actual HRA = 300000
+      // (b) rent - 10% basic = 180000 - 60000 = 120000
+      // (c) 50% basic = 300000
+      // min = 120000
+      const result = computeIncomeTax(
+        makeTaxInput({
+          regime: TaxRegime.OLD,
+          annualGross: 1200000,
+          basicAnnual: 600000,
+          hraAnnual: 300000,
+          rentPaidAnnual: 180000,
+          isMetroCity: true,
+        }),
+      );
+      const hra = result.exemptions.find((e) => e.code === "HRA");
+      expect(hra!.amount).toBe(120000);
+    });
+
+    it("should use 40% basic for non-metro HRA", () => {
+      // basic 600000, HRA 200000, rent 180000, non-metro
+      // (a) 200000
+      // (b) 180000 - 60000 = 120000
+      // (c) 40% of 600000 = 240000
+      // min = 120000
+      const result = computeIncomeTax(
+        makeTaxInput({
+          regime: TaxRegime.OLD,
+          annualGross: 1200000,
+          basicAnnual: 600000,
+          hraAnnual: 200000,
+          rentPaidAnnual: 180000,
+          isMetroCity: false,
+        }),
+      );
+      const hra = result.exemptions.find((e) => e.code === "HRA");
+      expect(hra!.amount).toBe(120000);
+    });
+
+    it("should not add negative HRA exemption", () => {
+      // rent very low so rent - 10% basic is negative
+      const result = computeIncomeTax(
+        makeTaxInput({
+          regime: TaxRegime.OLD,
+          annualGross: 1200000,
+          basicAnnual: 600000,
+          hraAnnual: 300000,
+          rentPaidAnnual: 10000, // 10000 - 60000 = -50000
+          isMetroCity: true,
+        }),
+      );
+      const hra = result.exemptions.find((e) => e.code === "HRA");
+      // min(300000, -50000, 300000) = -50000 which is negative, so no HRA exemption
+      expect(hra).toBeUndefined();
+    });
+  });
+
+  // ── monthsWorked edge ─────────────────────────────────────────────────
+
+  describe("monthsWorked edge cases", () => {
+    it("should clamp monthsWorked=0 to 1", () => {
+      const result = computeIncomeTax(
+        makeTaxInput({
+          annualGross: 1500000,
+          monthsWorked: 0,
+          taxAlreadyPaid: 0,
+        }),
+      );
+      // All tax in 1 month
+      expect(result.monthlyTds).toBe(result.totalTax);
+    });
+  });
+
   // ── Output structure ──────────────────────────────────────────────────
 
   describe("output structure", () => {
@@ -313,6 +466,18 @@ describe("computeIncomeTax", () => {
       expect(result).toHaveProperty("totalTax");
       expect(result).toHaveProperty("monthlyTds");
       expect(result).toHaveProperty("computedAt");
+    });
+
+    it("should set grossIncome to annualGross", () => {
+      const result = computeIncomeTax(makeTaxInput({ annualGross: 987654 }));
+      expect(result.grossIncome).toBe(987654);
+    });
+
+    it("totalTax should equal taxOnIncome + surcharge + cess", () => {
+      const result = computeIncomeTax(makeTaxInput({ annualGross: 2000000 }));
+      expect(result.totalTax).toBe(
+        result.taxOnIncome + result.surcharge + result.healthAndEducationCess,
+      );
     });
   });
 });
