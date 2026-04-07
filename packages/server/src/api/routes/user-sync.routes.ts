@@ -106,24 +106,9 @@ router.delete("/sync/:empcloudUserId", async (req: Request, res: Response) => {
       updated_at: new Date(),
     });
 
-    // Notify EmpCloud
-    try {
-      const empcloudUrl = config.cloudHrms.apiUrl || "http://localhost:3000/api/v1";
-      const expectedKey = process.env.MODULE_SYNC_API_KEY || process.env.EMPCLOUD_API_KEY || "";
-      await fetch(`${empcloudUrl}/subscriptions/seat-webhook`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": expectedKey },
-        body: JSON.stringify({
-          module_slug: "emp-payroll",
-          empcloud_user_id: empcloudUserId,
-          organization_id: profile.empcloud_org_id,
-          action: "removed",
-        }),
-        signal: AbortSignal.timeout(5000),
-      });
-    } catch (err: any) {
-      console.error("Failed to notify EmpCloud:", err.message);
-    }
+    // No webhook callback here — EmpCloud already handles seat removal
+    // when it calls this DELETE endpoint. Webhook only fires when users
+    // are removed directly inside Payroll (not via EmpCloud sync).
 
     return res.json({ success: true, message: "Profile deactivated" });
   } catch (error: any) {
