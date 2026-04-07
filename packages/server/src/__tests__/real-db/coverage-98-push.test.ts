@@ -763,7 +763,7 @@ describe("employee.service — dual-DB employee management", () => {
     };
     await db("employee_payroll_profiles")
       .where({ id: profile.id })
-      .update({ bank_details: JSON.stringify(newBankDetails) });
+      .update({ bank_details: db.raw("CAST(? AS JSON)", [JSON.stringify(newBankDetails)]) });
 
     const updated = await db("employee_payroll_profiles").where({ id: profile.id }).first();
     const parsed =
@@ -775,7 +775,13 @@ describe("employee.service — dual-DB employee management", () => {
     // Revert
     await db("employee_payroll_profiles")
       .where({ id: profile.id })
-      .update({ bank_details: profile.bank_details });
+      .update({
+        bank_details: db.raw("CAST(? AS JSON)", [
+          typeof profile.bank_details === "string"
+            ? profile.bank_details
+            : JSON.stringify(profile.bank_details),
+        ]),
+      });
   });
 
   it("should get tax info from payroll profile", async () => {
@@ -798,7 +804,7 @@ describe("employee.service — dual-DB employee management", () => {
     const newTaxInfo = { pan: "ABCDE1234F", regime: "old" };
     await db("employee_payroll_profiles")
       .where({ id: profile.id })
-      .update({ tax_info: JSON.stringify(newTaxInfo) });
+      .update({ tax_info: db.raw("CAST(? AS JSON)", [JSON.stringify(newTaxInfo)]) });
 
     const updated = await db("employee_payroll_profiles").where({ id: profile.id }).first();
     const parsed =
@@ -808,7 +814,13 @@ describe("employee.service — dual-DB employee management", () => {
     // Revert
     await db("employee_payroll_profiles")
       .where({ id: profile.id })
-      .update({ tax_info: profile.tax_info });
+      .update({
+        tax_info: db.raw("CAST(? AS JSON)", [
+          typeof profile.tax_info === "string"
+            ? profile.tax_info
+            : JSON.stringify(profile.tax_info),
+        ]),
+      });
   });
 
   it("should get PF details from payroll profile", async () => {
@@ -831,7 +843,7 @@ describe("employee.service — dual-DB employee management", () => {
     const newPf = { uanNumber: "100012345678", isOptedOut: false };
     await db("employee_payroll_profiles")
       .where({ id: profile.id })
-      .update({ pf_details: JSON.stringify(newPf) });
+      .update({ pf_details: db.raw("CAST(? AS JSON)", [JSON.stringify(newPf)]) });
 
     const updated = await db("employee_payroll_profiles").where({ id: profile.id }).first();
     const parsed =
@@ -841,7 +853,13 @@ describe("employee.service — dual-DB employee management", () => {
     // Revert
     await db("employee_payroll_profiles")
       .where({ id: profile.id })
-      .update({ pf_details: profile.pf_details });
+      .update({
+        pf_details: db.raw("CAST(? AS JSON)", [
+          typeof profile.pf_details === "string"
+            ? profile.pf_details
+            : JSON.stringify(profile.pf_details),
+        ]),
+      });
   });
 
   it("should count active employees in org", async () => {
