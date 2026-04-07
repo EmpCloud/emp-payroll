@@ -68,6 +68,8 @@ export function EmployeeDetailPage() {
   const [salaryAssigning, setSalaryAssigning] = useState(false);
   const [statutoryOpen, setStatutoryOpen] = useState(false);
   const [statutorySaving, setStatutorySaving] = useState(false);
+  const [bankOpen, setBankOpen] = useState(false);
+  const [bankSaving, setBankSaving] = useState(false);
 
   if (isLoading) {
     return (
@@ -199,20 +201,21 @@ export function EmployeeDetailPage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" /> Bank & Tax
+              <CreditCard className="h-5 w-5" /> Bank Details
             </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => setBankOpen(true)}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
           </CardHeader>
           <CardContent>
             <dl className="space-y-3">
               {[
-                ["Bank", bankDetails.bankName || "—"],
-                ["Account", bankDetails.accountNumber || "—"],
-                ["IFSC", bankDetails.ifscCode || "—"],
-                ["PAN", taxInfo.pan || "—"],
-                ["PF Number", pfDetails.pfNumber || "N/A"],
-                ["Tax Regime", taxInfo.regime === "old" ? "Old Regime" : "New Regime"],
+                ["Bank Name", bankDetails.bankName || "—"],
+                ["Account Number", bankDetails.accountNumber || "—"],
+                ["IFSC Code", bankDetails.ifscCode || "—"],
+                ["Account Type", bankDetails.accountType || "Savings"],
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between text-sm">
                   <dt className="text-gray-500">{label}</dt>
@@ -503,6 +506,82 @@ export function EmployeeDetailPage() {
           }}
           onCancel={() => setSalaryOpen(false)}
         />
+      </Modal>
+
+      {/* Bank Details Modal */}
+      <Modal
+        open={bankOpen}
+        onClose={() => setBankOpen(false)}
+        title="Edit Bank Details"
+        className="max-w-lg"
+      >
+        <form
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setBankSaving(true);
+            const fd = new FormData(e.currentTarget);
+            try {
+              await apiPut(`/employees/${id}/bank-details`, {
+                bankName: fd.get("bankName") as string,
+                accountNumber: fd.get("accountNumber") as string,
+                ifscCode: fd.get("ifscCode") as string,
+                accountType: fd.get("accountType") as string,
+              });
+              toast.success("Bank details updated");
+              setBankOpen(false);
+              qc.invalidateQueries({ queryKey: ["employee", id] });
+            } catch (err: any) {
+              toast.error(err.response?.data?.error?.message || "Update failed");
+            } finally {
+              setBankSaving(false);
+            }
+          }}
+        >
+          <Input
+            id="bankName"
+            name="bankName"
+            label="Bank Name"
+            defaultValue={bankDetails.bankName || ""}
+            placeholder="e.g. HDFC Bank"
+            required
+          />
+          <Input
+            id="accountNumber"
+            name="accountNumber"
+            label="Account Number"
+            defaultValue={bankDetails.accountNumber || ""}
+            placeholder="e.g. 1234567890"
+            required
+          />
+          <Input
+            id="ifscCode"
+            name="ifscCode"
+            label="IFSC Code"
+            defaultValue={bankDetails.ifscCode || ""}
+            placeholder="e.g. HDFC0001234"
+            required
+          />
+          <SelectField
+            id="accountType"
+            name="accountType"
+            label="Account Type"
+            defaultValue={bankDetails.accountType || "savings"}
+            options={[
+              { value: "savings", label: "Savings" },
+              { value: "current", label: "Current" },
+              { value: "salary", label: "Salary Account" },
+            ]}
+          />
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" type="button" onClick={() => setBankOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={bankSaving}>
+              Save Bank Details
+            </Button>
+          </div>
+        </form>
       </Modal>
 
       {/* Statutory Config Modal */}

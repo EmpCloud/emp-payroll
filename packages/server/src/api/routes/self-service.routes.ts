@@ -205,4 +205,28 @@ router.put(
   }),
 );
 
+// --- Bank Update Requests (employee submits, admin approves) ---
+import { BankUpdateRequestService } from "../../services/bank-update-request.service";
+const bankReqSvc = new BankUpdateRequestService();
+
+router.post(
+  "/bank-update-request",
+  wrap(async (req, res) => {
+    const data = await bankReqSvc.submit(req.user!.empcloudUserId, req.user!.empcloudOrgId, {
+      currentDetails: req.body.currentDetails,
+      requestedDetails: req.body.requestedDetails,
+      reason: req.body.reason,
+    });
+    res.status(201).json({ success: true, data });
+  }),
+);
+
+router.get(
+  "/bank-update-requests",
+  wrap(async (req, res) => {
+    const data = await bankReqSvc.getMyRequests(req.user!.empcloudUserId);
+    res.json({ success: true, data });
+  }),
+);
+
 export { router as selfServiceRoutes };

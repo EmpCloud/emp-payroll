@@ -337,4 +337,63 @@ router.delete(
   }),
 );
 
+// --- Bank Update Requests (admin view) ---
+import { BankUpdateRequestService } from "../../services/bank-update-request.service";
+import { getEmpCloudDB } from "../../db/empcloud";
+const bankReqSvc = new BankUpdateRequestService();
+
+router.get(
+  "/bank-update-requests",
+  authorize("hr_admin", "hr_manager", "org_admin"),
+  wrap(async (req, res) => {
+    const result = await bankReqSvc.getOrgRequests(
+      req.user!.empcloudOrgId,
+      req.query.status as string,
+    );
+    // Enrich with employee names
+    const ecDb = getEmpCloudDB();
+    const enriched = [];
+    for (const r of result.data) {
+      const parsed = {
+        ...r,
+        current_details:
+          typeof r.current_details === "string" ? JSON.parse(r.current_details) : r.current_details,
+        requested_details:
+          typeof r.requested_details === "string"
+            ? JSON.parse(r.requested_details)
+            : r.requested_details,
+      };
+      const user = await ecDb("users").where({ id: r.empcloud_user_id }).first();
+      enriched.push({
+        ...parsed,
+        employee_name: user ? `${user.first_name} ${user.last_name}` : "Unknown",
+        emp_code: user?.emp_code || "",
+      });
+    }
+    res.json({ success: true, data: { ...result, data: enriched } });
+  }),
+);
+
+router.post(
+  "/bank-update-requests/:id/approve",
+  authorize("hr_admin", "hr_manager", "org_admin"),
+  wrap(async (req, res) => {
+    const data = await bankReqSvc.approve(param(req, "id"), req.user!.empcloudUserId);
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  "/bank-update-requests/:id/reject",
+  authorize("hr_admin", "hr_manager", "org_admin"),
+  wrap(async (req, res) => {
+    const data = await bankReqSvc.reject(
+      param(req, "id"),
+      req.user!.empcloudUserId,
+      req.body.remarks,
+    );
+    res.json({ success: true, data });
+  }),
+);
+
 export { router as employeeRoutes };
