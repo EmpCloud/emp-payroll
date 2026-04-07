@@ -62,6 +62,11 @@ router.get(
     const pdfSvc = new PayslipPDFService();
     const html = await pdfSvc.generateHTML(param(req, "id"));
     res.setHeader("Content-Type", "text/html");
+    // Allow inline scripts for print/download buttons on this standalone HTML page
+    res.setHeader(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'",
+    );
     res.send(html);
   }),
 );
