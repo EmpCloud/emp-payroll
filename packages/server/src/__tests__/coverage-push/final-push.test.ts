@@ -24,6 +24,22 @@ const mockDB: any = {
   query: vi.fn().mockResolvedValue([]),
 };
 
+function resetMockDB() {
+  mockDB.findOne.mockReset().mockResolvedValue(null);
+  mockDB.findMany.mockReset().mockResolvedValue({ data: [], total: 0 });
+  mockDB.findById.mockReset().mockResolvedValue(null);
+  mockDB.create
+    .mockReset()
+    .mockImplementation((_table: string, data: any) => Promise.resolve({ id: "test-id", ...data }));
+  mockDB.update.mockReset().mockResolvedValue({ id: "test-id" });
+  mockDB.updateMany.mockReset().mockResolvedValue(1);
+  mockDB.delete.mockReset().mockResolvedValue(1);
+  mockDB.deleteMany.mockReset().mockResolvedValue(1);
+  mockDB.count.mockReset().mockResolvedValue(0);
+  mockDB.raw.mockReset().mockResolvedValue([[{ total: 0 }]]);
+  mockDB.query.mockReset().mockResolvedValue([]);
+}
+
 vi.mock("../../db/adapters", () => ({
   getDB: vi.fn(() => mockDB),
 }));
@@ -1262,7 +1278,7 @@ describe("PayrollService", () => {
   let PayrollService: any;
 
   beforeEach(async () => {
-    vi.clearAllMocks();
+    resetMockDB();
     const mod = await import("../../services/payroll.service");
     PayrollService = mod.PayrollService;
   });
@@ -1435,7 +1451,7 @@ describe("LeaveService", () => {
   let LeaveService: any;
 
   beforeEach(async () => {
-    vi.clearAllMocks();
+    resetMockDB();
     const mod = await import("../../services/leave.service");
     LeaveService = mod.LeaveService;
   });
@@ -1469,7 +1485,7 @@ describe("LeaveService", () => {
     it("throws when insufficient balance", async () => {
       mockDB.findOne.mockResolvedValueOnce({ id: "b1", closing_balance: 1 });
       const svc = new LeaveService();
-      await expect(svc.recordLeave("emp-1", "earned", 5)).rejects.toThrow("INSUFFICIENT");
+      await expect(svc.recordLeave("emp-1", "earned", 5)).rejects.toThrow("leaves available");
     });
 
     it("records leave successfully", async () => {
@@ -1564,7 +1580,7 @@ describe("LeaveService", () => {
     it("throws when not pending", async () => {
       mockDB.findOne.mockResolvedValueOnce({ id: "r1", status: "approved" });
       const svc = new LeaveService();
-      await expect(svc.approveLeave("r1", "mgr1", "hr_admin")).rejects.toThrow("INVALID_STATUS");
+      await expect(svc.approveLeave("r1", "mgr1", "hr_admin")).rejects.toThrow("Cannot approve");
     });
 
     it("throws when not authorized", async () => {
@@ -1575,7 +1591,7 @@ describe("LeaveService", () => {
         employee_id: "emp1",
       });
       const svc = new LeaveService();
-      await expect(svc.approveLeave("r1", "mgr1", "employee")).rejects.toThrow("NOT_AUTHORIZED");
+      await expect(svc.approveLeave("r1", "mgr1", "employee")).rejects.toThrow("reporting manager");
     });
   });
 
@@ -1589,7 +1605,7 @@ describe("LeaveService", () => {
     it("throws when not pending", async () => {
       mockDB.findOne.mockResolvedValueOnce({ id: "r1", status: "rejected" });
       const svc = new LeaveService();
-      await expect(svc.rejectLeave("r1", "mgr1", "hr_admin")).rejects.toThrow("INVALID_STATUS");
+      await expect(svc.rejectLeave("r1", "mgr1", "hr_admin")).rejects.toThrow("Cannot reject");
     });
   });
 
@@ -1603,13 +1619,13 @@ describe("LeaveService", () => {
     it("throws when not own request", async () => {
       mockDB.findOne.mockResolvedValueOnce({ id: "r1", employee_id: "emp2" });
       const svc = new LeaveService();
-      await expect(svc.cancelLeave("r1", "emp1", "reason")).rejects.toThrow("FORBIDDEN");
+      await expect(svc.cancelLeave("r1", "emp1", "reason")).rejects.toThrow("Not your leave");
     });
 
     it("throws when already cancelled", async () => {
       mockDB.findOne.mockResolvedValueOnce({ id: "r1", employee_id: "emp1", status: "cancelled" });
       const svc = new LeaveService();
-      await expect(svc.cancelLeave("r1", "emp1", "reason")).rejects.toThrow("ALREADY_CANCELLED");
+      await expect(svc.cancelLeave("r1", "emp1", "reason")).rejects.toThrow("Already cancelled");
     });
 
     it("throws when rejected", async () => {
