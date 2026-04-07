@@ -472,7 +472,7 @@ describe("payroll.service — run lifecycle", () => {
 
     const run = await db("payroll_runs").where({ id: revertRunId }).first();
     expect(run.status).toBe("draft");
-    expect(run.total_gross).toBe(0);
+    expect(Number(run.total_gross)).toBe(0);
   });
 
   it("should reject revert for already-draft run", async () => {
@@ -766,7 +766,10 @@ describe("employee.service — dual-DB employee management", () => {
       .update({ bank_details: JSON.stringify(newBankDetails) });
 
     const updated = await db("employee_payroll_profiles").where({ id: profile.id }).first();
-    const parsed = JSON.parse(updated.bank_details);
+    const parsed =
+      typeof updated.bank_details === "string"
+        ? JSON.parse(updated.bank_details)
+        : updated.bank_details;
     expect(parsed.accountNumber).toBe("TEST123");
 
     // Revert
@@ -798,7 +801,8 @@ describe("employee.service — dual-DB employee management", () => {
       .update({ tax_info: JSON.stringify(newTaxInfo) });
 
     const updated = await db("employee_payroll_profiles").where({ id: profile.id }).first();
-    const parsed = JSON.parse(updated.tax_info);
+    const parsed =
+      typeof updated.tax_info === "string" ? JSON.parse(updated.tax_info) : updated.tax_info;
     expect(parsed.regime).toBe("old");
 
     // Revert
@@ -830,7 +834,8 @@ describe("employee.service — dual-DB employee management", () => {
       .update({ pf_details: JSON.stringify(newPf) });
 
     const updated = await db("employee_payroll_profiles").where({ id: profile.id }).first();
-    const parsed = JSON.parse(updated.pf_details);
+    const parsed =
+      typeof updated.pf_details === "string" ? JSON.parse(updated.pf_details) : updated.pf_details;
     expect(parsed.uanNumber).toBe("100012345678");
 
     // Revert
