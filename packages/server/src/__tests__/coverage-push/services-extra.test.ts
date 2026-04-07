@@ -8,17 +8,15 @@ vi.mock("../../db/empcloud", () => {
   const chainable: any = {
     where: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
-    first: vi
-      .fn()
-      .mockResolvedValue({
-        id: 1,
-        first_name: "John",
-        last_name: "Doe",
-        email: "j@t.com",
-        emp_code: "E1",
-        designation: "Eng",
-        date_of_joining: "2020-01-01",
-      }),
+    first: vi.fn().mockResolvedValue({
+      id: 1,
+      first_name: "John",
+      last_name: "Doe",
+      email: "j@t.com",
+      emp_code: "E1",
+      designation: "Eng",
+      date_of_joining: "2020-01-01",
+    }),
     insert: vi.fn().mockResolvedValue([1]),
     update: vi.fn().mockResolvedValue(1),
   };
@@ -188,7 +186,7 @@ describe("GlobalPayrollService", () => {
       total: 1,
     });
     db.findById.mockResolvedValue({ id: "c1", code: "IN", compliance_notes: null, name: "India" });
-    db.findOne.mockResolvedValue({ id: "r1" }); // getPayrollRun
+    db.findOne.mockResolvedValue(null); // no duplicate run
     await svc.createPayrollRun("1", "c1", 3, 2026);
     expect(db.create).toHaveBeenCalled();
   });
@@ -276,9 +274,11 @@ describe("TaxDeclarationService", () => {
   });
 
   it("computeTax — computes tax", async () => {
+    db.findById.mockResolvedValue({ id: "e1", tax_info: '{"regime":"new"}' });
     db.findOne.mockResolvedValue({
       id: "s1",
       base_salary: 100000,
+      is_active: true,
       components: '[{"code":"BASIC","monthlyAmount":50000}]',
     });
     db.findMany.mockResolvedValue({ data: [], total: 0 });
@@ -299,26 +299,27 @@ describe("TaxDeclarationService", () => {
   });
 
   it("updateDeclaration — updates", async () => {
-    db.findById.mockResolvedValue({ id: "d1" });
+    db.findOne.mockResolvedValue({ id: "d1", employee_id: "e1" });
     await svc.updateDeclaration("e1", "d1", { amount: 200000 });
     expect(db.update).toHaveBeenCalled();
   });
 
   it("approveDeclarations — approves", async () => {
-    db.findMany.mockResolvedValue({ data: [{ id: "d1" }], total: 1 });
+    db.findMany.mockResolvedValue({ data: [{ id: "d1", declared_amount: 150000 }], total: 1 });
     await svc.approveDeclarations("e1", "u1");
-    expect(db.updateMany).toHaveBeenCalled();
+    expect(db.update).toHaveBeenCalled();
   });
 
   it("getRegime — returns regime", async () => {
-    db.findOne.mockResolvedValue({ regime: "new" });
+    db.findById.mockResolvedValue({ id: "e1", tax_info: '{"regime":"new"}' });
     const r = await svc.getRegime("e1");
     expect(r).toBeDefined();
   });
 
   it("updateRegime — updates regime", async () => {
+    db.findById.mockResolvedValue({ id: "e1", tax_info: '{"regime":"new"}' });
     await svc.updateRegime("e1", "old");
-    expect(db.update || db.updateMany || db.create).toBeDefined(); // at least one DB call
+    expect(db.update).toHaveBeenCalled();
   });
 });
 
@@ -371,7 +372,10 @@ describe("InsuranceService", () => {
   });
 
   it("enrollEmployee — creates enrollment", async () => {
-    await svc.enrollEmployee("1", { policy_id: "p1", employee_id: "e1", dependents: [] });
+    db.findOne
+      .mockResolvedValueOnce({ id: "p1", status: "active", coverage_amount: 500000 }) // getPolicy
+      .mockResolvedValueOnce(null); // no duplicate enrollment
+    await svc.enrollEmployee("1", { policyId: "p1", employeeId: "e1", dependents: [] });
     expect(db.create).toHaveBeenCalled();
   });
 
@@ -387,10 +391,12 @@ describe("InsuranceService", () => {
   });
 
   it("submitClaim — creates claim", async () => {
+    db.findOne.mockResolvedValue({ id: "en1", policy_id: "p1", employee_id: 1, status: "active" }); // enrollment check
+    db.count.mockResolvedValue(0);
     await svc.submitClaim("1", "e1", {
-      enrollment_id: "en1",
-      claim_type: "hospitalization",
-      amount: 25000,
+      policyId: "p1",
+      claimType: "hospitalization",
+      amountClaimed: 25000,
     });
     expect(db.create).toHaveBeenCalled();
   });
@@ -462,10 +468,34 @@ describe("EarnedWageService", () => {
   });
 
   it("requestAdvance — creates advance request", async () => {
-    db.findOne.mockResolvedValue({ base_salary: 100000 });
+    db.findOne
+      .mockResolvedValueOnce({
+        id: "s1",
+        is_enabled: true,
+        max_percentage: 50,
+        min_amount: 0,
+        max_amount: 0,
+        fee_percentage: 0,
+        fee_flat: 0,
+        auto_approve_below: 0,
+        requires_manager_approval: false,
+        cooldown_days: 0,
+      }) // getSettings
+      .mockResolvedValueOnce({
+        id: "s1",
+        is_enabled: true,
+        max_percentage: 50,
+        min_amount: 0,
+        max_amount: 0,
+        fee_percentage: 0,
+        fee_flat: 0,
+        auto_approve_below: 0,
+        requires_manager_approval: false,
+        cooldown_days: 0,
+      }) // getSettings in calculateAvailable
+      .mockResolvedValueOnce({ id: "sa1", ctc: 1200000, employee_id: "e1", org_id: 1 }); // salary_assignments
     db.findMany.mockResolvedValue({ data: [], total: 0 });
-    db.raw.mockResolvedValue([[{ total: 0 }]]);
-    await svc.requestAdvance("1", "e1", 20000, "Emergency");
+    await svc.requestAdvance("1", "e1", 5000, "Emergency");
     expect(db.create).toHaveBeenCalled();
   });
 
