@@ -185,20 +185,30 @@ export class PayrollService {
       let grossEarnings = 0;
       let basicMonthly = 0;
 
-      for (const comp of components) {
-        const amount = Math.round(comp.monthlyAmount * proRatio);
-        earnings.push({
-          code: comp.code,
-          name: comp.code === "BASIC" ? "Basic Salary" : comp.code,
-          amount,
-        });
-        grossEarnings += amount;
-        if (comp.code === "BASIC") basicMonthly = amount;
-      }
-
-      // Statutory deductions
+      // Separate earnings from custom deductions defined in salary structure
       const deductions: any[] = [];
       let totalDed = 0;
+
+      for (const comp of components) {
+        if (comp.type === "deduction") {
+          // Custom deduction from salary structure (canteen, welfare fund, etc.)
+          const amount = Math.round(comp.monthlyAmount * proRatio);
+          if (amount > 0) {
+            deductions.push({ code: comp.code, name: comp.name || comp.code, amount });
+            totalDed += amount;
+          }
+        } else {
+          // Earning component
+          const amount = Math.round(comp.monthlyAmount * proRatio);
+          earnings.push({
+            code: comp.code,
+            name: comp.code === "BASIC" ? "Basic Salary" : comp.name || comp.code,
+            amount,
+          });
+          grossEarnings += amount;
+          if (comp.code === "BASIC") basicMonthly = amount;
+        }
+      }
 
       // PF
       const pfDetails = profile?.pf_details

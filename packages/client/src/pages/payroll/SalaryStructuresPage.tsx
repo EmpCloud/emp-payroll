@@ -7,12 +7,21 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { SelectField } from "@/components/ui/SelectField";
 import { useSalaryStructures } from "@/api/hooks";
-import { apiGet, apiPost } from "@/api/client";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/api/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, ChevronDown, ChevronUp, Loader2, Trash2 } from "lucide-react";
+import {
+  Plus,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Trash2,
+  Pencil,
+  Copy,
+  GripVertical,
+} from "lucide-react";
 import toast from "react-hot-toast";
 
-interface NewComponent {
+interface ComponentRow {
   name: string;
   code: string;
   type: "earning" | "deduction" | "reimbursement";
@@ -21,24 +30,70 @@ interface NewComponent {
   percentageOf: string;
 }
 
-const defaultComponents: NewComponent[] = [
-  { name: "Basic Salary", code: "BASIC", type: "earning", calculationType: "percentage", value: 40, percentageOf: "CTC" },
-  { name: "House Rent Allowance", code: "HRA", type: "earning", calculationType: "percentage", value: 50, percentageOf: "BASIC" },
-  { name: "Special Allowance", code: "SA", type: "earning", calculationType: "fixed", value: 0, percentageOf: "" },
+const DEFAULT_COMPONENTS: ComponentRow[] = [
+  {
+    name: "Basic Salary",
+    code: "BASIC",
+    type: "earning",
+    calculationType: "percentage",
+    value: 40,
+    percentageOf: "CTC",
+  },
+  {
+    name: "House Rent Allowance",
+    code: "HRA",
+    type: "earning",
+    calculationType: "percentage",
+    value: 50,
+    percentageOf: "BASIC",
+  },
+  {
+    name: "Special Allowance",
+    code: "SA",
+    type: "earning",
+    calculationType: "fixed",
+    value: 0,
+    percentageOf: "",
+  },
+];
+
+const PRESET_COMPONENTS = [
+  { name: "Basic Salary", code: "BASIC", type: "earning" as const },
+  { name: "House Rent Allowance", code: "HRA", type: "earning" as const },
+  { name: "Special Allowance", code: "SA", type: "earning" as const },
+  { name: "Conveyance Allowance", code: "CA", type: "earning" as const },
+  { name: "Medical Allowance", code: "MA", type: "earning" as const },
+  { name: "Leave Travel Allowance", code: "LTA", type: "earning" as const },
+  { name: "Performance Bonus", code: "BONUS", type: "earning" as const },
+  { name: "Canteen Deduction", code: "CANTEEN", type: "deduction" as const },
+  { name: "Welfare Fund", code: "WELFARE", type: "deduction" as const },
+  { name: "Advance Recovery", code: "ADV_REC", type: "deduction" as const },
 ];
 
 export function SalaryStructuresPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [components, setComponents] = useState<NewComponent[]>(defaultComponents);
-  const [creating, setCreating] = useState(false);
+  const [editingStructure, setEditingStructure] = useState<any>(null);
+  const [components, setComponents] = useState<ComponentRow[]>(DEFAULT_COMPONENTS);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const { data: res, isLoading } = useSalaryStructures();
   const qc = useQueryClient();
 
   const structures = res?.data?.data || [];
 
-  function addComponent() {
-    setComponents([...components, { name: "", code: "", type: "earning", calculationType: "fixed", value: 0, percentageOf: "" }]);
+  function addComponent(preset?: (typeof PRESET_COMPONENTS)[0]) {
+    setComponents([
+      ...components,
+      {
+        name: preset?.name || "",
+        code: preset?.code || "",
+        type: preset?.type || "earning",
+        calculationType: "fixed",
+        value: 0,
+        percentageOf: "",
+      },
+    ]);
   }
 
   function removeComponent(i: number) {
@@ -51,55 +106,153 @@ export function SalaryStructuresPage() {
     setComponents(updated);
   }
 
-  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
+  function openCreate() {
+    setEditingStructure(null);
+    setComponents(DEFAULT_COMPONENTS);
+    setShowCreate(true);
+  }
+
+  function openEdit(ss: any, comps: any[]) {
+    setEditingStructure(ss);
+    setComponents(
+      comps.map((c: any) => ({
+        name: c.name,
+        code: c.code,
+        type: c.type || "earning",
+        calculationType: c.calculation_type || "fixed",
+        value: Number(c.value) || 0,
+        percentageOf: c.percentage_of || "",
+      })),
+    );
+    setShowCreate(true);
+  }
+
+  function closeModal() {
+    setShowCreate(false);
+    setEditingStructure(null);
+    setComponents(DEFAULT_COMPONENTS);
+  }
+
+  async function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    setCreating(true);
+    setSaving(true);
+
+    const payload = {
+      name: fd.get("name") as string,
+      description: fd.get("description") as string,
+      isDefault: false,
+      components: components
+        .filter((c) => c.name && c.code)
+        .map((c, i) => ({
+          name: c.name,
+          code: c.code,
+          type: c.type,
+          calculationType: c.calculationType,
+          value: c.value,
+          percentageOf: c.percentageOf || undefined,
+          isTaxable: c.type === "earning",
+          isStatutory: false,
+          isProratable: true,
+          sortOrder: i,
+        })),
+    };
+
     try {
-      await apiPost("/salary-structures", {
-        name: fd.get("name") as string,
-        description: fd.get("description") as string,
-        isDefault: false,
-        components: components
-          .filter((c) => c.name && c.code)
-          .map((c, i) => ({
-            name: c.name,
-            code: c.code,
-            type: c.type,
-            calculationType: c.calculationType,
-            value: c.value,
-            percentageOf: c.percentageOf || undefined,
-            isTaxable: c.type === "earning",
-            isStatutory: false,
-            isProratable: true,
-            sortOrder: i,
-          })),
-      });
-      toast.success("Salary structure created");
-      setShowCreate(false);
-      setComponents(defaultComponents);
+      if (editingStructure) {
+        await apiPut(`/salary-structures/${editingStructure.id}`, payload);
+        toast.success("Salary structure updated");
+      } else {
+        await apiPost("/salary-structures", payload);
+        toast.success("Salary structure created");
+      }
+      closeModal();
       qc.invalidateQueries({ queryKey: ["salary-structures"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to create structure");
+      toast.error(err.response?.data?.error?.message || "Failed to save");
     } finally {
-      setCreating(false);
+      setSaving(false);
     }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Delete this salary structure? Employees assigned to it will not be affected."))
+      return;
+    setDeleting(id);
+    try {
+      await apiDelete(`/salary-structures/${id}`);
+      toast.success("Salary structure deleted");
+      qc.invalidateQueries({ queryKey: ["salary-structures"] });
+    } catch (err: any) {
+      toast.error(err.response?.data?.error?.message || "Failed to delete");
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  async function handleDuplicate(ss: any) {
+    try {
+      const compRes = await apiGet<any>(`/salary-structures/${ss.id}/components`);
+      const comps = compRes?.data?.data || [];
+      await apiPost("/salary-structures", {
+        name: `${ss.name} (Copy)`,
+        description: ss.description,
+        isDefault: false,
+        components: comps.map((c: any, i: number) => ({
+          name: c.name,
+          code: c.code,
+          type: c.type,
+          calculationType: c.calculation_type,
+          value: c.value,
+          percentageOf: c.percentage_of,
+          isTaxable: c.is_taxable,
+          isStatutory: c.is_statutory,
+          isProratable: c.is_proratable,
+          sortOrder: i,
+        })),
+      });
+      toast.success("Structure duplicated");
+      qc.invalidateQueries({ queryKey: ["salary-structures"] });
+    } catch {
+      toast.error("Failed to duplicate");
+    }
+  }
+
+  // Compute preview totals for the modal
+  const earningTotal = components
+    .filter((c) => c.type !== "deduction")
+    .reduce((s, c) => s + c.value, 0);
+  const deductionTotal = components
+    .filter((c) => c.type === "deduction")
+    .reduce((s, c) => s + c.value, 0);
+  const unusedPresets = PRESET_COMPONENTS.filter((p) => !components.find((c) => c.code === p.code));
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="text-brand-600 h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Salary Structures"
-        description="Define how CTC is broken down into components"
+        description={`${structures.length} structure${structures.length !== 1 ? "s" : ""} configured`}
         actions={
-          <Button size="sm" onClick={() => setShowCreate(true)}>
+          <Button size="sm" onClick={openCreate}>
             <Plus className="h-4 w-4" /> New Structure
           </Button>
         }
       />
 
-      {isLoading ? (
-        <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-brand-600" /></div>
+      {structures.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-gray-400">
+            No salary structures yet. Create one to get started.
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
           {structures.map((ss: any) => (
@@ -108,107 +261,178 @@ export function SalaryStructuresPage() {
               structure={ss}
               expanded={expanded === ss.id}
               onToggle={() => setExpanded(expanded === ss.id ? null : ss.id)}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+              onDuplicate={handleDuplicate}
+              isDeleting={deleting === ss.id}
             />
           ))}
-          {structures.length === 0 && (
-            <p className="py-12 text-center text-gray-400">No salary structures yet. Create one to get started.</p>
-          )}
         </div>
       )}
 
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New Salary Structure" className="max-w-2xl">
-        <form onSubmit={handleCreate} className="space-y-5">
+      {/* Create / Edit Modal */}
+      <Modal
+        open={showCreate}
+        onClose={closeModal}
+        title={editingStructure ? "Edit Salary Structure" : "New Salary Structure"}
+        className="max-w-3xl"
+      >
+        <form className="space-y-5" onSubmit={handleSave}>
           <div className="grid grid-cols-2 gap-4">
-            <Input id="name" name="name" label="Structure Name" placeholder="e.g. Standard - Engineering" required />
-            <Input id="description" name="description" label="Description" placeholder="Default structure for..." />
+            <Input
+              id="name"
+              name="name"
+              label="Structure Name"
+              placeholder="e.g. Standard India CTC"
+              defaultValue={editingStructure?.name || ""}
+              required
+            />
+            <Input
+              id="description"
+              name="description"
+              label="Description"
+              placeholder="For full-time employees"
+              defaultValue={editingStructure?.description || ""}
+            />
           </div>
 
+          {/* Components */}
           <div>
             <div className="mb-3 flex items-center justify-between">
               <h4 className="text-sm font-semibold text-gray-700">Components</h4>
-              <Button type="button" variant="outline" size="sm" onClick={addComponent}>
-                <Plus className="h-3 w-3" /> Add
-              </Button>
+              <div className="flex gap-2">
+                {unusedPresets.length > 0 && (
+                  <SelectField
+                    id="add-preset"
+                    label=""
+                    value=""
+                    onChange={(e) => {
+                      const preset = PRESET_COMPONENTS.find((p) => p.code === e.target.value);
+                      if (preset) addComponent(preset);
+                      e.target.value = "";
+                    }}
+                    options={[
+                      { value: "", label: "+ Add preset..." },
+                      ...unusedPresets.map((p) => ({
+                        value: p.code,
+                        label: `${p.name} (${p.type})`,
+                      })),
+                    ]}
+                  />
+                )}
+                <Button type="button" variant="outline" size="sm" onClick={() => addComponent()}>
+                  <Plus className="h-3.5 w-3.5" /> Custom
+                </Button>
+              </div>
             </div>
-            <div className="space-y-3">
-              {components.map((c, i) => (
-                <div key={i} className="flex items-end gap-2 rounded-lg border border-gray-100 bg-gray-50 p-3">
-                  <div className="flex-1">
-                    <Input
-                      id={`c-name-${i}`}
-                      label={i === 0 ? "Name" : undefined}
+
+            <div className="overflow-hidden rounded-lg border border-gray-200">
+              {/* Header */}
+              <div className="grid grid-cols-[1fr_80px_100px_90px_70px_90px_36px] gap-2 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500">
+                <span>Name</span>
+                <span>Code</span>
+                <span>Type</span>
+                <span>Calc</span>
+                <span>Value</span>
+                <span>% Of</span>
+                <span></span>
+              </div>
+
+              {/* Rows */}
+              <div className="divide-y divide-gray-100">
+                {components.map((c, i) => (
+                  <div
+                    key={i}
+                    className="grid grid-cols-[1fr_80px_100px_90px_70px_90px_36px] items-center gap-2 px-3 py-2"
+                  >
+                    <input
+                      className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-1"
                       placeholder="Component name"
                       value={c.name}
                       onChange={(e) => updateComponent(i, "name", e.target.value)}
                       required
                     />
-                  </div>
-                  <div className="w-24">
-                    <Input
-                      id={`c-code-${i}`}
-                      label={i === 0 ? "Code" : undefined}
+                    <input
+                      className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 font-mono text-sm focus:outline-none focus:ring-1"
                       placeholder="CODE"
                       value={c.code}
                       onChange={(e) => updateComponent(i, "code", e.target.value.toUpperCase())}
                       required
                     />
-                  </div>
-                  <div className="w-28">
-                    <SelectField
-                      id={`c-type-${i}`}
-                      label={i === 0 ? "Type" : undefined}
+                    <select
+                      className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-1 py-1.5 text-sm focus:outline-none focus:ring-1"
                       value={c.type}
                       onChange={(e) => updateComponent(i, "type", e.target.value)}
-                      options={[
-                        { value: "earning", label: "Earning" },
-                        { value: "deduction", label: "Deduction" },
-                        { value: "reimbursement", label: "Reimb." },
-                      ]}
-                    />
-                  </div>
-                  <div className="w-28">
-                    <SelectField
-                      id={`c-calc-${i}`}
-                      label={i === 0 ? "Calc" : undefined}
+                    >
+                      <option value="earning">Earning</option>
+                      <option value="deduction">Deduction</option>
+                      <option value="reimbursement">Reimb.</option>
+                    </select>
+                    <select
+                      className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-1 py-1.5 text-sm focus:outline-none focus:ring-1"
                       value={c.calculationType}
                       onChange={(e) => updateComponent(i, "calculationType", e.target.value)}
-                      options={[
-                        { value: "percentage", label: "%" },
-                        { value: "fixed", label: "Fixed" },
-                      ]}
-                    />
-                  </div>
-                  <div className="w-20">
-                    <Input
-                      id={`c-val-${i}`}
-                      label={i === 0 ? "Value" : undefined}
+                    >
+                      <option value="percentage">%</option>
+                      <option value="fixed">Fixed</option>
+                    </select>
+                    <input
+                      className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-1"
                       type="number"
                       value={c.value}
                       onChange={(e) => updateComponent(i, "value", Number(e.target.value))}
                     />
+                    <input
+                      className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 font-mono text-sm focus:outline-none focus:ring-1 disabled:bg-gray-50 disabled:text-gray-300"
+                      placeholder="CTC"
+                      value={c.percentageOf}
+                      onChange={(e) =>
+                        updateComponent(i, "percentageOf", e.target.value.toUpperCase())
+                      }
+                      disabled={c.calculationType !== "percentage"}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeComponent(i)}
+                      className="flex h-8 w-8 items-center justify-center rounded text-red-400 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                  {c.calculationType === "percentage" && (
-                    <div className="w-24">
-                      <Input
-                        id={`c-of-${i}`}
-                        label={i === 0 ? "Of" : undefined}
-                        placeholder="BASIC"
-                        value={c.percentageOf}
-                        onChange={(e) => updateComponent(i, "percentageOf", e.target.value.toUpperCase())}
-                      />
-                    </div>
-                  )}
-                  <Button type="button" variant="ghost" size="sm" onClick={() => removeComponent(i)} className="text-red-400 hover:text-red-600">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
+
+            {/* Summary */}
+            {components.length > 0 && (
+              <div className="mt-3 flex gap-4 text-xs text-gray-500">
+                <span>{components.filter((c) => c.type === "earning").length} earnings</span>
+                {components.filter((c) => c.type === "deduction").length > 0 && (
+                  <span>{components.filter((c) => c.type === "deduction").length} deductions</span>
+                )}
+                {components.filter((c) => c.type === "reimbursement").length > 0 && (
+                  <span>
+                    {components.filter((c) => c.type === "reimbursement").length} reimbursements
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Info box */}
+          <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+            <strong>Note:</strong> Statutory deductions (EPF, ESI, PT, TDS) are computed
+            automatically during payroll and do not need to be added here. Use "Deduction" type for
+            recurring non-statutory deductions like canteen fees or welfare fund.
           </div>
 
           <div className="flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={() => { setShowCreate(false); setComponents(defaultComponents); }}>Cancel</Button>
-            <Button type="submit" loading={creating}>Create Structure</Button>
+            <Button variant="outline" type="button" onClick={closeModal}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={saving}>
+              {editingStructure ? "Update Structure" : "Create Structure"}
+            </Button>
           </div>
         </form>
       </Modal>
@@ -216,7 +440,23 @@ export function SalaryStructuresPage() {
   );
 }
 
-function StructureCard({ structure: ss, expanded, onToggle }: { structure: any; expanded: boolean; onToggle: () => void }) {
+function StructureCard({
+  structure: ss,
+  expanded,
+  onToggle,
+  onEdit,
+  onDelete,
+  onDuplicate,
+  isDeleting,
+}: {
+  structure: any;
+  expanded: boolean;
+  onToggle: () => void;
+  onEdit: (ss: any, comps: any[]) => void;
+  onDelete: (id: string) => void;
+  onDuplicate: (ss: any) => void;
+  isDeleting: boolean;
+}) {
   const { data: compRes } = useQuery({
     queryKey: ["structure-components", ss.id],
     queryFn: () => apiGet<any>(`/salary-structures/${ss.id}/components`),
@@ -224,21 +464,56 @@ function StructureCard({ structure: ss, expanded, onToggle }: { structure: any; 
   });
 
   const components = compRes?.data?.data || [];
+  const earningCount = components.filter((c: any) => c.type === "earning").length;
+  const deductionCount = components.filter((c: any) => c.type === "deduction").length;
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex cursor-pointer items-center gap-3" onClick={onToggle}>
             <CardTitle>{ss.name}</CardTitle>
             <Badge variant={ss.is_active ? "active" : "inactive"}>
               {ss.is_active ? "Active" : "Inactive"}
             </Badge>
             {ss.is_default && <Badge variant="approved">Default</Badge>}
+            <span className="text-xs text-gray-400">
+              {earningCount > 0 && `${earningCount} earnings`}
+              {deductionCount > 0 && ` · ${deductionCount} deductions`}
+            </span>
           </div>
-          <Button variant="ghost" size="sm" onClick={onToggle}>
-            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </Button>
+          <div className="flex items-center gap-1">
+            {expanded && components.length > 0 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEdit(ss, components)}
+                  title="Edit"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => onDuplicate(ss)} title="Duplicate">
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+                {!ss.is_default && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDelete(ss.id)}
+                    loading={isDeleting}
+                    className="text-red-400 hover:text-red-600"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </>
+            )}
+            <Button variant="ghost" size="sm" onClick={onToggle}>
+              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
         {ss.description && <p className="text-sm text-gray-500">{ss.description}</p>}
       </CardHeader>
@@ -261,7 +536,15 @@ function StructureCard({ structure: ss, expanded, onToggle }: { structure: any; 
                     <td className="py-2 text-gray-900">{c.name}</td>
                     <td className="py-2 font-mono text-xs text-gray-500">{c.code}</td>
                     <td className="py-2">
-                      <Badge variant={c.type === "earning" ? "approved" : c.type === "deduction" ? "pending" : "draft"}>
+                      <Badge
+                        variant={
+                          c.type === "earning"
+                            ? "approved"
+                            : c.type === "deduction"
+                              ? "pending"
+                              : "draft"
+                        }
+                      >
                         {c.type}
                       </Badge>
                     </td>
@@ -269,8 +552,8 @@ function StructureCard({ structure: ss, expanded, onToggle }: { structure: any; 
                       {c.calculation_type === "percentage" && c.percentage_of
                         ? `${c.value}% of ${c.percentage_of}`
                         : c.calculation_type === "fixed" && Number(c.value) > 0
-                        ? `Fixed ₹${c.value}`
-                        : "Balancing"}
+                          ? `Fixed ₹${Number(c.value).toLocaleString("en-IN")}`
+                          : "Balancing"}
                     </td>
                   </tr>
                 ))}
@@ -279,6 +562,12 @@ function StructureCard({ structure: ss, expanded, onToggle }: { structure: any; 
           ) : (
             <p className="text-sm text-gray-400">No components defined</p>
           )}
+
+          {/* Statutory note */}
+          <div className="mt-4 rounded bg-gray-50 p-3 text-xs text-gray-500 dark:bg-gray-800">
+            EPF, ESI, Professional Tax, and TDS are computed automatically during payroll — they are
+            not part of the salary structure.
+          </div>
         </CardContent>
       )}
     </Card>
