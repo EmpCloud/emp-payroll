@@ -67,8 +67,12 @@ export class BankUpdateRequestService {
       empcloud_user_id: req.empcloud_user_id,
     });
     if (profile) {
+      const details =
+        typeof req.requested_details === "string"
+          ? req.requested_details
+          : JSON.stringify(req.requested_details);
       await this.db.update("employee_payroll_profiles", profile.id, {
-        bank_details: req.requested_details,
+        bank_details: details,
       });
     }
 
