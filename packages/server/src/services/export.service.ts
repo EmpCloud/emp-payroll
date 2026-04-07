@@ -1,4 +1,5 @@
 import { getDB } from "../db/adapters";
+import { getEmpCloudDB } from "../db/empcloud";
 import { EmployeeService } from "./employee.service";
 
 export class ExportService {
@@ -66,9 +67,8 @@ export class ExportService {
       });
       payslips = result.data;
     } else {
-      // Get all runs for org, then all payslips
       const runs = await this.db.findMany<any>("payroll_runs", {
-        filters: { org_id: orgId },
+        filters: { empcloud_org_id: Number(orgId) },
         limit: 100,
       });
       const runIds = runs.data.map((r: any) => r.id);
@@ -80,12 +80,15 @@ export class ExportService {
       payslips = result.data;
     }
 
-    // Get employee names
-    const empIds = [...new Set(payslips.map((p: any) => p.employee_id))];
-    const empMap: Record<string, any> = {};
-    for (const empId of empIds) {
-      const emp = await this.db.findById<any>("employees", empId);
-      if (emp) empMap[empId] = emp;
+    // Get employee names from EmpCloud
+    const ecDb = getEmpCloudDB();
+    const userIds = [...new Set(payslips.map((p: any) => p.empcloud_user_id).filter(Boolean))];
+    const empMap: Record<number, any> = {};
+    if (userIds.length > 0) {
+      const users = await ecDb("users")
+        .whereIn("id", userIds)
+        .select("id", "first_name", "last_name", "emp_code", "email");
+      for (const u of users) empMap[u.id] = u;
     }
 
     const headers = [
@@ -104,12 +107,12 @@ export class ExportService {
     ];
 
     const rows = payslips.map((ps: any) => {
-      const emp = empMap[ps.employee_id] || {};
+      const emp = empMap[ps.empcloud_user_id] || {};
       return [
         ps.month,
         ps.year,
-        emp.employee_code || "",
-        `${emp.first_name || ""} ${emp.last_name || ""}`,
+        emp.emp_code || "",
+        `${emp.first_name || ""} ${emp.last_name || ""}`.trim(),
         emp.email || "",
         ps.paid_days,
         ps.total_days,

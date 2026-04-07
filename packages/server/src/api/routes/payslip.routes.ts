@@ -16,7 +16,9 @@ router.get(
   wrap(async (req, res) => {
     const data = await svc.list(String(req.user!.empcloudOrgId), {
       page: Number(req.query.page) || 1,
-      limit: Number(req.query.limit) || 20,
+      limit: Number(req.query.limit) || 200,
+      month: req.query.month ? Number(req.query.month) : undefined,
+      year: req.query.year ? Number(req.query.year) : undefined,
     });
     res.json({ success: true, data });
   }),
