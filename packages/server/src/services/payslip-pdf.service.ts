@@ -192,8 +192,13 @@ export class PayslipPDFService {
   </div>
   <script>
     function downloadHTML() {
+      var btns = document.querySelectorAll('.no-print');
+      var script = document.querySelector('script');
+      btns.forEach(function(el) { el.remove(); });
+      if (script) script.remove();
+      var html = document.documentElement.outerHTML;
       var a = document.createElement('a');
-      a.href = 'data:text/html;charset=utf-8,' + encodeURIComponent(document.documentElement.outerHTML);
+      a.href = 'data:text/html;charset=utf-8,' + encodeURIComponent('<!DOCTYPE html>' + html);
       a.download = 'payslip-${employee.first_name}-${employee.last_name}-${period.replace(/ /g, "-")}.html';
       a.click();
     }
