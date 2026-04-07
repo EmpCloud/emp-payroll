@@ -48,7 +48,7 @@ export function AttendancePage() {
       });
       const records = res.data?.data || [];
       // Enrich with employee names from employees list
-      const empMap = new Map(employees.map((e: any) => [e.id, e]));
+      const empMap = new Map<number, any>(employees.map((e: any) => [e.id, e]));
       return records.map((r: any) => {
         const emp = empMap.get(r.empcloud_user_id);
         return {
