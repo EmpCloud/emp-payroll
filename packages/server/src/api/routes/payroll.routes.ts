@@ -117,6 +117,8 @@ router.get(
 router.post(
   "/:id/send-payslips",
   wrap(async (req, res) => {
+    // Verify run belongs to this org before sending
+    await svc.getRun(param(req, "id"), String(req.user!.empcloudOrgId));
     const emailSvc = new EmailService();
     const result = await emailSvc.sendPayslipsForRun(param(req, "id"));
     res.json({

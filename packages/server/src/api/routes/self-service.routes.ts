@@ -87,7 +87,7 @@ router.get(
 router.get(
   "/salary",
   wrap(async (req, res) => {
-    const data = await salSvc.getEmployeeSalary(uid(req));
+    const data = await salSvc.getEmployeeSalary(uid(req)).catch(() => null);
     res.json({ success: true, data });
   }),
 );
@@ -95,8 +95,11 @@ router.get(
 router.get(
   "/salary/ctc",
   wrap(async (req, res) => {
-    const salary = await salSvc.getEmployeeSalary(uid(req));
-    res.json({ success: true, data: { ctc: salary.ctc, components: salary.components } });
+    const salary = await salSvc.getEmployeeSalary(uid(req)).catch(() => null);
+    res.json({
+      success: true,
+      data: salary ? { ctc: salary.ctc, components: salary.components } : null,
+    });
   }),
 );
 
