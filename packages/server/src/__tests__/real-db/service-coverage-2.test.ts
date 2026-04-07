@@ -25,6 +25,28 @@ process.env.SLACK_WEBHOOK_URL = "";
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { initDB, closeDB, getDB } from "../../db/adapters";
+import knex from "knex";
+
+// Probe DB connectivity at module level so describe.skipIf works
+let dbAvailable = false;
+try {
+  const probe = knex({
+    client: "mysql2",
+    connection: {
+      host: "localhost",
+      port: 3306,
+      user: "empcloud",
+      password: "EmpCloud2026",
+      database: "emp_payroll",
+    },
+    pool: { min: 0, max: 1 },
+  });
+  await probe.raw("SELECT 1");
+  await probe.destroy();
+  dbAvailable = true;
+} catch {
+  /* MySQL not available */
+}
 
 // Payroll uses UUIDs for org_id in its own DB, but integer for empcloud org
 const ORG_UUID = "00000000-0000-0000-0000-000000000000";
@@ -34,6 +56,7 @@ const U = String(Date.now()).slice(-6);
 let db: ReturnType<typeof getDB>;
 
 beforeAll(async () => {
+  if (!dbAvailable) return;
   await initDB();
   db = getDB();
   // Initialize empcloud DB connection if available
@@ -46,6 +69,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (!dbAvailable) return;
   try {
     await db.deleteWhere("webhook_registrations", {
       url: `https://test-cov2-${U}.example.com/hook`,
@@ -60,7 +84,7 @@ afterAll(async () => {
 // ============================================================================
 // REPORTS SERVICE — deeper method coverage
 // ============================================================================
-describe("Reports coverage-2", () => {
+describe.skipIf(!dbAvailable)("Reports coverage-2", () => {
   let reports: any;
 
   beforeAll(async () => {
@@ -103,7 +127,7 @@ describe("Reports coverage-2", () => {
 // ============================================================================
 // BANK FILE SERVICE
 // ============================================================================
-describe("BankFile coverage-2", () => {
+describe.skipIf(!dbAvailable)("BankFile coverage-2", () => {
   let bankFile: any;
 
   beforeAll(async () => {
@@ -124,7 +148,7 @@ describe("BankFile coverage-2", () => {
 // ============================================================================
 // GOVT FORMATS SERVICE
 // ============================================================================
-describe("GovtFormats coverage-2", () => {
+describe.skipIf(!dbAvailable)("GovtFormats coverage-2", () => {
   let govtFormats: any;
 
   beforeAll(async () => {
@@ -166,7 +190,7 @@ describe("GovtFormats coverage-2", () => {
 // ============================================================================
 // GL ACCOUNTING SERVICE — deeper methods
 // ============================================================================
-describe("GLAccounting coverage-2", () => {
+describe.skipIf(!dbAvailable)("GLAccounting coverage-2", () => {
   let gl: any;
   let mappingId: string;
 
@@ -240,7 +264,7 @@ describe("GLAccounting coverage-2", () => {
 // ============================================================================
 // EMAIL TEMPLATE SERVICE
 // ============================================================================
-describe("EmailTemplate coverage-2", () => {
+describe.skipIf(!dbAvailable)("EmailTemplate coverage-2", () => {
   let tmplSvc: any;
 
   beforeAll(async () => {
@@ -288,7 +312,7 @@ describe("EmailTemplate coverage-2", () => {
 // ============================================================================
 // EXPORT SERVICE
 // ============================================================================
-describe("Export coverage-2", () => {
+describe.skipIf(!dbAvailable)("Export coverage-2", () => {
   let exportSvc: any;
 
   beforeAll(async () => {
@@ -319,7 +343,7 @@ describe("Export coverage-2", () => {
 // ============================================================================
 // WEBHOOK SERVICE
 // ============================================================================
-describe("Webhook coverage-2", () => {
+describe.skipIf(!dbAvailable)("Webhook coverage-2", () => {
   let webhookSvc: any;
   let webhookId: string;
 
@@ -368,7 +392,7 @@ describe("Webhook coverage-2", () => {
 // ============================================================================
 // SLACK SERVICE
 // ============================================================================
-describe("PayrollSlack coverage-2", () => {
+describe.skipIf(!dbAvailable)("PayrollSlack coverage-2", () => {
   let slackSvc: any;
 
   beforeAll(async () => {
@@ -405,7 +429,7 @@ describe("PayrollSlack coverage-2", () => {
 // ============================================================================
 // AUDIT SERVICE
 // ============================================================================
-describe("Audit coverage-2", () => {
+describe.skipIf(!dbAvailable)("Audit coverage-2", () => {
   let auditSvc: any;
 
   beforeAll(async () => {
@@ -427,7 +451,7 @@ describe("Audit coverage-2", () => {
 // ============================================================================
 // NOTES SERVICE
 // ============================================================================
-describe("Notes coverage-2", () => {
+describe.skipIf(!dbAvailable)("Notes coverage-2", () => {
   let noteId: string;
 
   it("createNote", async () => {
@@ -459,7 +483,7 @@ describe("Notes coverage-2", () => {
 // ============================================================================
 // TWO-FACTOR SERVICE
 // ============================================================================
-describe("TwoFA coverage-2", () => {
+describe.skipIf(!dbAvailable)("TwoFA coverage-2", () => {
   let tfaSvc: any;
 
   beforeAll(async () => {
@@ -476,7 +500,7 @@ describe("TwoFA coverage-2", () => {
 // ============================================================================
 // BACKUP SERVICE
 // ============================================================================
-describe("Backup coverage-2", () => {
+describe.skipIf(!dbAvailable)("Backup coverage-2", () => {
   let backupSvc: any;
 
   beforeAll(async () => {
@@ -503,7 +527,7 @@ describe("Backup coverage-2", () => {
 // ============================================================================
 // NOTIFICATION SERVICE
 // ============================================================================
-describe("Notification coverage-2", () => {
+describe.skipIf(!dbAvailable)("Notification coverage-2", () => {
   let notifSvc: any;
 
   beforeAll(async () => {

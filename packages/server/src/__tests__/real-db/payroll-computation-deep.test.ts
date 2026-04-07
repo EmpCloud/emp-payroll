@@ -3,6 +3,28 @@ import knex, { Knex } from "knex";
 import { v4 as uuidv4 } from "uuid";
 
 let db: Knex;
+let dbAvailable = false;
+
+// Probe DB connectivity at module level so describe.skipIf works
+try {
+  const probe = knex({
+    client: "mysql2",
+    connection: {
+      host: "localhost",
+      port: 3306,
+      user: "empcloud",
+      password: "EmpCloud2026",
+      database: "emp_payroll",
+    },
+    pool: { min: 0, max: 1 },
+  });
+  await probe.raw("SELECT 1");
+  await probe.destroy();
+  dbAvailable = true;
+} catch {
+  // MySQL not available — all tests will skip
+}
+
 const TEST_ORG_ID = uuidv4(); // org_id for FK references (char(36))
 const TEST_ORG_NUM = 88801; // empcloud_org_id (bigint)
 const TEST_TS = Date.now();
@@ -12,6 +34,7 @@ function track(table: string, id: string) {
 }
 
 beforeAll(async () => {
+  if (!dbAvailable) return;
   db = knex({
     client: "mysql2",
     connection: {
@@ -26,6 +49,7 @@ beforeAll(async () => {
   await db.raw("SELECT 1");
 });
 afterEach(async () => {
+  if (!dbAvailable) return;
   for (const item of [...cleanupIds].reverse()) {
     try {
       await db(item.table).where({ id: item.id }).del();
@@ -34,6 +58,7 @@ afterEach(async () => {
   cleanupIds.length = 0;
 });
 afterAll(async () => {
+  if (!dbAvailable) return;
   await db.destroy();
 });
 
@@ -137,7 +162,7 @@ async function createPayslip(runId: string, empId: string, month: number, year: 
   return id;
 }
 
-describe("Gross Calculation", () => {
+describe.skipIf(!dbAvailable)("Gross Calculation", () => {
   it("should store salary with CTC breakdown components", async () => {
     const empId = await createEmployee(1);
     const structId = await createStructure();
@@ -204,7 +229,7 @@ describe("Gross Calculation", () => {
   });
 });
 
-describe("Deduction Sequencing", () => {
+describe.skipIf(!dbAvailable)("Deduction Sequencing", () => {
   it("should store payslip with ordered deductions", async () => {
     const empId = await createEmployee(4);
     const runId = await createPayrollRun(3, 2026, "computed");
@@ -266,7 +291,7 @@ describe("Deduction Sequencing", () => {
   });
 });
 
-describe("Net Pay Computation", () => {
+describe.skipIf(!dbAvailable)("Net Pay Computation", () => {
   it("should calculate net = gross - deductions", async () => {
     const empId = await createEmployee(7);
     const runId = await createPayrollRun(6, 2026, "computed");
@@ -387,7 +412,7 @@ describe("Net Pay Computation", () => {
   });
 });
 
-describe("Payroll Run Lifecycle", () => {
+describe.skipIf(!dbAvailable)("Payroll Run Lifecycle", () => {
   it("should transition: draft -> computed -> approved -> paid", async () => {
     const runId = await createPayrollRun(9, 2026, "draft");
     await db("payroll_runs").where({ id: runId }).update({ status: "computed" });

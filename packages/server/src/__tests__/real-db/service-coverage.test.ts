@@ -23,6 +23,27 @@ process.env.NODE_ENV = "test";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { initDB, closeDB, getDB } from "../../db/adapters";
 import { initEmpCloudDB } from "../../db/empcloud";
+import knex from "knex";
+
+let dbAvailable = false;
+try {
+  const probe = knex({
+    client: "mysql2",
+    connection: {
+      host: "localhost",
+      port: 3306,
+      user: "empcloud",
+      password: "EmpCloud2026",
+      database: "emp_payroll",
+    },
+    pool: { min: 0, max: 1 },
+  });
+  await probe.raw("SELECT 1");
+  await probe.destroy();
+  dbAvailable = true;
+} catch {
+  /* MySQL not available */
+}
 import { ReportsService } from "../../services/reports.service";
 import { BankFileService } from "../../services/bank-file.service";
 import { GovtFormatsService } from "../../services/govt-formats.service";
@@ -68,11 +89,17 @@ let salaryHistory: SalaryHistoryService;
 let reimbursement: ReimbursementService;
 let expensePolicy: ExpensePolicyService;
 
-const db = getDB();
+let db: any;
 
 beforeAll(async () => {
+  if (!dbAvailable) return;
   await initDB();
-  try { await initEmpCloudDB(); } catch { /* may already be initialized */ }
+  db = getDB();
+  try {
+    await initEmpCloudDB();
+  } catch {
+    /* may already be initialized */
+  }
   reports = new ReportsService();
   bankFile = new BankFileService();
   govtFormats = new GovtFormatsService();
@@ -94,12 +121,13 @@ beforeAll(async () => {
 }, 30000);
 
 afterAll(async () => {
+  if (!dbAvailable) return;
   await closeDB();
 }, 10000);
 
 // -- ReportsService -----------------------------------------------------------
 
-describe("ReportsService", () => {
+describe.skipIf(!dbAvailable)("ReportsService", () => {
   it("generateTDSSummary returns array for a paid run", async () => {
     const result = await reports.generateTDSSummary(PAID_RUN_ID, ORG_ID);
     expect(Array.isArray(result)).toBe(true);
@@ -107,7 +135,10 @@ describe("ReportsService", () => {
 
   it("generateTDSChallan returns challan structure or throws on missing org", async () => {
     try {
-      const result = await reports.generateTDSChallan(ORG_ID, { quarter: 4, financialYear: "2025-2026" });
+      const result = await reports.generateTDSChallan(ORG_ID, {
+        quarter: 4,
+        financialYear: "2025-2026",
+      });
       expect(result).toHaveProperty("form", "26Q");
     } catch (e: any) {
       // Service was invoked; org may not exist by UUID
@@ -141,7 +172,7 @@ describe("ReportsService", () => {
 
 // -- BankFileService ----------------------------------------------------------
 
-describe("BankFileService", () => {
+describe.skipIf(!dbAvailable)("BankFileService", () => {
   it("generateBankFile returns CSV content for a paid run", async () => {
     const result = await bankFile.generateBankFile(PAID_RUN_ID, ORG_ID);
     expect(result).toHaveProperty("filename");
@@ -157,7 +188,7 @@ describe("BankFileService", () => {
 
 // -- GovtFormatsService -------------------------------------------------------
 
-describe("GovtFormatsService", () => {
+describe.skipIf(!dbAvailable)("GovtFormatsService", () => {
   it("generateEPFOFile returns file content", async () => {
     const result = await govtFormats.generateEPFOFile(PAID_RUN_ID, ORG_ID);
     expect(result).toHaveProperty("filename");
@@ -166,7 +197,10 @@ describe("GovtFormatsService", () => {
 
   it("generateForm24Q invokes service", async () => {
     try {
-      const result = await govtFormats.generateForm24Q(ORG_ID, { quarter: 4, financialYear: "2025-2026" });
+      const result = await govtFormats.generateForm24Q(ORG_ID, {
+        quarter: 4,
+        financialYear: "2025-2026",
+      });
       expect(result).toHaveProperty("filename");
     } catch (e: any) {
       expect(e.message).toBeDefined();
@@ -186,7 +220,7 @@ describe("GovtFormatsService", () => {
 
 // -- Form16Service ------------------------------------------------------------
 
-describe("Form16Service", () => {
+describe.skipIf(!dbAvailable)("Form16Service", () => {
   it("generateHTML returns HTML string for employee from paid run", async () => {
     // Get an employee that exists in the employees table
     const employees = await db.findMany<any>("employees", { limit: 1 });
@@ -209,7 +243,7 @@ describe("Form16Service", () => {
 
 // -- GlobalPayrollService -----------------------------------------------------
 
-describe("GlobalPayrollService", () => {
+describe.skipIf(!dbAvailable)("GlobalPayrollService", () => {
   it("listCountries returns data", async () => {
     const result = await globalPayroll.listCountries();
     expect(result).toBeDefined();
@@ -268,7 +302,7 @@ describe("GlobalPayrollService", () => {
 
 // -- CompensationBenchmarkService ---------------------------------------------
 
-describe("CompensationBenchmarkService", () => {
+describe.skipIf(!dbAvailable)("CompensationBenchmarkService", () => {
   it("listBenchmarks returns paginated data", async () => {
     const result = await compBenchmark.listBenchmarks(EMPCLOUD_ORG_ID);
     expect(result).toHaveProperty("data");
@@ -300,7 +334,7 @@ describe("CompensationBenchmarkService", () => {
 
 // -- EarnedWageService --------------------------------------------------------
 
-describe("EarnedWageService", () => {
+describe.skipIf(!dbAvailable)("EarnedWageService", () => {
   it("getSettings returns settings object", async () => {
     const result = await earnedWage.getSettings(EMPCLOUD_ORG_ID);
     expect(result).toBeDefined();
@@ -319,7 +353,7 @@ describe("EarnedWageService", () => {
 
 // -- InsuranceService ---------------------------------------------------------
 
-describe("InsuranceService", () => {
+describe.skipIf(!dbAvailable)("InsuranceService", () => {
   it("listPolicies returns array", async () => {
     const result = await insurance.listPolicies(EMPCLOUD_ORG_ID);
     expect(result).toHaveProperty("data");
@@ -345,7 +379,7 @@ describe("InsuranceService", () => {
 
 // -- BenefitsService ----------------------------------------------------------
 
-describe("BenefitsService", () => {
+describe.skipIf(!dbAvailable)("BenefitsService", () => {
   it("listPlans returns array", async () => {
     const result = await benefits.listPlans(EMPCLOUD_ORG_ID);
     expect(result).toHaveProperty("data");
@@ -368,7 +402,7 @@ describe("BenefitsService", () => {
 
 // -- PayEquityService ---------------------------------------------------------
 
-describe("PayEquityService", () => {
+describe.skipIf(!dbAvailable)("PayEquityService", () => {
   it("analyzePayEquity returns analysis object", async () => {
     const result = await payEquity.analyzePayEquity(EMPCLOUD_ORG_ID);
     expect(result).toBeDefined();
@@ -382,7 +416,7 @@ describe("PayEquityService", () => {
 
 // -- TotalRewardsService ------------------------------------------------------
 
-describe("TotalRewardsService", () => {
+describe.skipIf(!dbAvailable)("TotalRewardsService", () => {
   it("generateStatement returns statement for empcloud user", async () => {
     // TotalRewards needs empcloud_user_id (integer), not payroll employee UUID
     // Use empcloud user ID 522 (ananya from TechNova)
@@ -393,7 +427,7 @@ describe("TotalRewardsService", () => {
 
 // -- AccountingExportService --------------------------------------------------
 
-describe("AccountingExportService", () => {
+describe.skipIf(!dbAvailable)("AccountingExportService", () => {
   it("exportJournalCSV returns CSV content", async () => {
     const result = await accountingExport.exportJournalCSV(PAID_RUN_ID, ORG_ID);
     expect(result).toHaveProperty("filename");
@@ -414,7 +448,7 @@ describe("AccountingExportService", () => {
 
 // -- GLAccountingService ------------------------------------------------------
 
-describe("GLAccountingService", () => {
+describe.skipIf(!dbAvailable)("GLAccountingService", () => {
   it("listMappings returns paginated data", async () => {
     const result = await glAccounting.listMappings(EMPCLOUD_ORG_ID);
     expect(result).toHaveProperty("data");
@@ -440,7 +474,7 @@ describe("GLAccountingService", () => {
 
 // -- CustomFieldsService ------------------------------------------------------
 
-describe("CustomFieldsService", () => {
+describe.skipIf(!dbAvailable)("CustomFieldsService", () => {
   it("getDefinitions returns array", async () => {
     const result = await customFields.getDefinitions(ORG_ID);
     expect(Array.isArray(result)).toBe(true);
@@ -460,7 +494,7 @@ describe("CustomFieldsService", () => {
 
 // -- PayslipService -----------------------------------------------------------
 
-describe("PayslipService", () => {
+describe.skipIf(!dbAvailable)("PayslipService", () => {
   it("list returns payslips for org", async () => {
     const result = await payslip.list(EMPCLOUD_ORG_ID);
     expect(result).toBeDefined();
@@ -479,7 +513,7 @@ describe("PayslipService", () => {
 
 // -- SalaryHistoryService -----------------------------------------------------
 
-describe("SalaryHistoryService", () => {
+describe.skipIf(!dbAvailable)("SalaryHistoryService", () => {
   it("getHistory returns array", async () => {
     const payslips = await db.findMany<any>("payslips", {
       filters: { payroll_run_id: PAID_RUN_ID },
@@ -493,7 +527,7 @@ describe("SalaryHistoryService", () => {
 
 // -- ReimbursementService -----------------------------------------------------
 
-describe("ReimbursementService", () => {
+describe.skipIf(!dbAvailable)("ReimbursementService", () => {
   it("list returns paginated result", async () => {
     const result = await reimbursement.list(ORG_ID);
     expect(result).toBeDefined();
@@ -503,7 +537,7 @@ describe("ReimbursementService", () => {
 
 // -- ExpensePolicyService -----------------------------------------------------
 
-describe("ExpensePolicyService", () => {
+describe.skipIf(!dbAvailable)("ExpensePolicyService", () => {
   it("evaluate returns policy result", async () => {
     const result = await expensePolicy.evaluate({
       employeeId: "test-emp-id",

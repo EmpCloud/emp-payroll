@@ -3,6 +3,26 @@ import knex, { Knex } from "knex";
 import { v4 as uuidv4 } from "uuid";
 
 let db: Knex;
+let dbAvailable = false;
+try {
+  const probe = knex({
+    client: "mysql2",
+    connection: {
+      host: "localhost",
+      port: 3306,
+      user: "empcloud",
+      password: "EmpCloud2026",
+      database: "emp_payroll",
+    },
+    pool: { min: 0, max: 1 },
+  });
+  await probe.raw("SELECT 1");
+  await probe.destroy();
+  dbAvailable = true;
+} catch {
+  /* MySQL not available */
+}
+
 const TEST_ORG_ID = uuidv4();
 const TEST_ORG = 88804;
 const TEST_TS = Date.now();
@@ -12,6 +32,7 @@ function track(table: string, id: string) {
 }
 
 beforeAll(async () => {
+  if (!dbAvailable) return;
   db = knex({
     client: "mysql2",
     connection: {
@@ -26,6 +47,7 @@ beforeAll(async () => {
   await db.raw("SELECT 1");
 });
 afterEach(async () => {
+  if (!dbAvailable) return;
   for (const item of [...cleanupIds].reverse()) {
     try {
       await db(item.table).where({ id: item.id }).del();
@@ -34,6 +56,7 @@ afterEach(async () => {
   cleanupIds.length = 0;
 });
 afterAll(async () => {
+  if (!dbAvailable) return;
   await db.destroy();
 });
 
@@ -61,7 +84,7 @@ async function createEmployee(suffix: number) {
   return id;
 }
 
-describe("Insurance Policies", () => {
+describe.skipIf(!dbAvailable)("Insurance Policies", () => {
   it("should create an insurance policy", async () => {
     const id = uuidv4();
     await db("insurance_policies").insert({
@@ -144,21 +167,19 @@ describe("Insurance Policies", () => {
       description: "Surgery",
     });
     track("insurance_claims", claimId);
-    await db("insurance_claims")
-      .where({ id: claimId })
-      .update({
-        status: "approved",
-        amount_approved: 70000,
-        reviewed_by: 88999,
-        reviewed_at: new Date(),
-      });
+    await db("insurance_claims").where({ id: claimId }).update({
+      status: "approved",
+      amount_approved: 70000,
+      reviewed_by: 88999,
+      reviewed_at: new Date(),
+    });
     const updated = await db("insurance_claims").where({ id: claimId }).first();
     expect(updated.status).toBe("approved");
     expect(Number(updated.amount_approved)).toBe(70000);
   });
 });
 
-describe("Benefit Plans", () => {
+describe.skipIf(!dbAvailable)("Benefit Plans", () => {
   it("should create and enroll in a benefit plan", async () => {
     const planId = uuidv4();
     await db("benefit_plans").insert({
@@ -210,7 +231,7 @@ describe("Benefit Plans", () => {
   });
 });
 
-describe("Tax Declarations", () => {
+describe.skipIf(!dbAvailable)("Tax Declarations", () => {
   it("should submit and approve tax declarations", async () => {
     const empId = await createEmployee(4);
     const decls = [
@@ -238,14 +259,12 @@ describe("Tax Declarations", () => {
       track("tax_declarations", d.id);
     }
     for (const d of decls) {
-      await db("tax_declarations")
-        .where({ id: d.id })
-        .update({
-          approval_status: "approved",
-          approved_amount: d.declared_amount,
-          approved_by: uuidv4(),
-          approved_at: new Date(),
-        });
+      await db("tax_declarations").where({ id: d.id }).update({
+        approval_status: "approved",
+        approved_amount: d.declared_amount,
+        approved_by: uuidv4(),
+        approved_at: new Date(),
+      });
     }
     const approved = await db("tax_declarations").where({
       employee_id: empId,
@@ -284,7 +303,7 @@ describe("Tax Declarations", () => {
   });
 });
 
-describe("Earned Wage Access", () => {
+describe.skipIf(!dbAvailable)("Earned Wage Access", () => {
   it("should create and manage EWA settings", async () => {
     const id = uuidv4();
     await db("earned_wage_settings").insert({
@@ -346,7 +365,7 @@ describe("Earned Wage Access", () => {
   });
 });
 
-describe("Global Employees", () => {
+describe.skipIf(!dbAvailable)("Global Employees", () => {
   it("should create a global employee record", async () => {
     const geId = uuidv4();
     // Use existing country from seed data
@@ -373,7 +392,7 @@ describe("Global Employees", () => {
   });
 });
 
-describe("Compensation Benchmarks", () => {
+describe.skipIf(!dbAvailable)("Compensation Benchmarks", () => {
   it("should create and query benchmark data", async () => {
     const benchmarks = [
       {
@@ -417,7 +436,7 @@ describe("Compensation Benchmarks", () => {
   });
 });
 
-describe("Payroll Adjustments", () => {
+describe.skipIf(!dbAvailable)("Payroll Adjustments", () => {
   it("should create one-time adjustments", async () => {
     const empId = await createEmployee(10);
     const adjId = uuidv4();
@@ -439,7 +458,7 @@ describe("Payroll Adjustments", () => {
   });
 });
 
-describe("Salary Structures", () => {
+describe.skipIf(!dbAvailable)("Salary Structures", () => {
   it("should create a salary structure with components", async () => {
     const structId = uuidv4();
     await db("salary_structures").insert({

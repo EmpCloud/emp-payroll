@@ -2473,13 +2473,11 @@ describe("PayslipPDFService", () => {
       department_id: 1,
     } as any);
     vi.mocked(mod2.getEmpCloudDB).mockReturnValue(
-      vi
-        .fn()
-        .mockReturnValue({
-          where: vi.fn().mockReturnThis(),
-          select: vi.fn().mockReturnThis(),
-          first: vi.fn().mockResolvedValue({ name: "Engineering" }),
-        }) as any,
+      vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue({ name: "Engineering" }),
+      }) as any,
     );
     mockDb.findOne.mockResolvedValue({ name: "Test Corp", legal_name: "Test Corp Pvt Ltd" }); // org settings
     try {
@@ -2884,13 +2882,14 @@ describe("CustomFieldsService", () => {
   });
 
   it("defineField", async () => {
-    await svc.defineField("1", {
+    const r = await svc.defineField("1", {
       name: "custom_1",
       label: "Custom",
       fieldType: "text",
       isRequired: false,
     });
-    expect(mockDb.create).toHaveBeenCalled();
+    expect(r).toBeDefined();
+    expect(r.name).toBe("custom_1");
   });
   it("getDefinitions", async () => {
     mockDb.findMany.mockResolvedValue({ data: [], total: 0 });
