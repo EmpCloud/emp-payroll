@@ -1,6 +1,6 @@
 import { getDB } from "../db/adapters";
 import { AppError } from "../api/middleware/error.middleware";
-import { findUserById, getUserDepartmentName } from "../db/empcloud";
+import { findUserById, findOrgById, getUserDepartmentName } from "../db/empcloud";
 
 export class PayslipPDFService {
   private db = getDB();
@@ -51,11 +51,17 @@ export class PayslipPDFService {
           designation: ecUser.designation || "N/A",
         };
 
-        // Get org from payroll settings
+        // Get org from payroll settings + EmpCloud org for name fallback
         const orgSettings = await this.db.findOne<any>("organization_payroll_settings", {
           empcloud_org_id: Number(ecUser.organization_id),
         });
-        org = orgSettings;
+        const ecOrg = await findOrgById(ecUser.organization_id);
+        org = {
+          name: orgSettings?.name || ecOrg?.name || "Company",
+          legal_name: orgSettings?.legal_name || ecOrg?.legal_name || "",
+          pan: orgSettings?.pan || "",
+          tan: orgSettings?.tan || "",
+        };
       } else {
         // Employee record missing from EmpCloud (e.g. after DB re-seed).
         // Use whatever data is available from the payroll profile.
