@@ -172,12 +172,26 @@ export class PayslipPDFService {
   .days-info { display: flex; gap: 24px; justify-content: center; margin-bottom: 24px; }
   .days-info span { background: #f3f4f6; padding: 6px 14px; border-radius: 6px; font-size: 12px; }
   @media print { body { padding: 20px; } .no-print { display: none; } }
-  .print-btn { display: block; margin: 0 auto 24px; padding: 10px 32px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
+  .actions { display: flex; gap: 12px; justify-content: center; margin-bottom: 24px; }
+  .print-btn { padding: 10px 32px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
   .print-btn:hover { background: #4338ca; }
+  .print-btn.secondary { background: #6b7280; }
+  .print-btn.secondary:hover { background: #4b5563; }
 </style>
 </head>
 <body>
-  <button class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>
+  <div class="actions no-print">
+    <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+    <button class="print-btn secondary" onclick="downloadHTML()">Download as File</button>
+  </div>
+  <script>
+    function downloadHTML() {
+      var a = document.createElement('a');
+      a.href = 'data:text/html;charset=utf-8,' + encodeURIComponent(document.documentElement.outerHTML);
+      a.download = 'payslip-${employee.first_name}-${employee.last_name}-${period.replace(/ /g, "-")}.html';
+      a.click();
+    }
+  </script>
 
   <div class="header">
     <div>
