@@ -74,6 +74,25 @@ beforeAll(async () => {
     await db.raw("SELECT 1");
     await ecDb.raw("SELECT 1");
     dbAvailable = true;
+    // Pre-cleanup: remove leftover test runs from previous failed test executions
+    try {
+      const staleRuns = await db("payroll_runs")
+        .where({ org_id: "00000000-0000-0000-0000-000000000000", empcloud_org_id: ORG })
+        .whereIn("name", [
+          "Test April 2026 Payroll",
+          "Draft Run for Reject Test",
+          "To Cancel Run",
+          "To Revert Run",
+        ]);
+      for (const run of staleRuns) {
+        try {
+          await db("payslips").where("payroll_run_id", run.id).delete();
+        } catch {}
+        try {
+          await db("payroll_runs").where("id", run.id).delete();
+        } catch {}
+      }
+    } catch {}
   } catch {
     dbAvailable = false;
   }
@@ -236,7 +255,9 @@ describe("payroll.service — run lifecycle", () => {
     expect(earnings.length).toBeGreaterThanOrEqual(1);
 
     // Create payslip in DB
+    const payslipId = uuidv4();
     await db("payslips").insert({
+      id: payslipId,
       payroll_run_id: runId,
       employee_id: "00000000-0000-0000-0000-000000000000",
       empcloud_user_id: ecEmp.id,
