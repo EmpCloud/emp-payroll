@@ -81,12 +81,16 @@ beforeAll(async () => {
     await ecDb.raw("SELECT 1");
     dbAvailable = true;
 
-    // Pre-cleanup old test data
+    // Pre-cleanup old test data (payslips first due to FK)
     try {
-      await db("payroll_runs")
+      const oldRunIds = await db("payroll_runs")
         .where("name", "like", `%CovFinal%`)
         .orWhere("name", "like", `%${TS}%`)
-        .del();
+        .pluck("id");
+      if (oldRunIds.length > 0) {
+        await db("payslips").whereIn("payroll_run_id", oldRunIds).del();
+        await db("payroll_runs").whereIn("id", oldRunIds).del();
+      }
     } catch {}
   } catch {
     dbAvailable = false;
@@ -520,7 +524,7 @@ describe("employee.service — coverage gaps", () => {
       .first();
     if (!user || !user.department_id) return;
 
-    const dept = await ecDb("departments").where({ id: user.department_id }).first();
+    const dept = await ecDb("organization_departments").where({ id: user.department_id }).first();
     if (dept) {
       expect(dept.name).toBeTruthy();
     }
@@ -568,7 +572,7 @@ describe("employee.service — coverage gaps", () => {
     await db("employee_payroll_profiles")
       .where({ id: profile.id })
       .update({
-        bank_details: JSON.stringify(newBankDetails),
+        bank_details: db.raw("CAST(? AS JSON)", [JSON.stringify(newBankDetails)]),
       });
 
     const updated = await db("employee_payroll_profiles").where({ id: profile.id }).first();
@@ -579,9 +583,15 @@ describe("employee.service — coverage gaps", () => {
     expect(bankDetails.accountNumber).toBe("TEST123456");
 
     // Restore
-    await db("employee_payroll_profiles").where({ id: profile.id }).update({
-      bank_details: profile.bank_details,
-    });
+    await db("employee_payroll_profiles")
+      .where({ id: profile.id })
+      .update({
+        bank_details: db.raw("CAST(? AS JSON)", [
+          typeof profile.bank_details === "string"
+            ? profile.bank_details
+            : JSON.stringify(profile.bank_details),
+        ]),
+      });
   });
 
   it("should update tax info in payroll profile", async () => {
@@ -592,7 +602,7 @@ describe("employee.service — coverage gaps", () => {
     await db("employee_payroll_profiles")
       .where({ id: profile.id })
       .update({
-        tax_info: JSON.stringify(newTaxInfo),
+        tax_info: db.raw("CAST(? AS JSON)", [JSON.stringify(newTaxInfo)]),
       });
 
     const updated = await db("employee_payroll_profiles").where({ id: profile.id }).first();
@@ -601,9 +611,15 @@ describe("employee.service — coverage gaps", () => {
     expect(taxInfo.pan).toBe("ABCDE1234F");
 
     // Restore
-    await db("employee_payroll_profiles").where({ id: profile.id }).update({
-      tax_info: profile.tax_info,
-    });
+    await db("employee_payroll_profiles")
+      .where({ id: profile.id })
+      .update({
+        tax_info: db.raw("CAST(? AS JSON)", [
+          typeof profile.tax_info === "string"
+            ? profile.tax_info
+            : JSON.stringify(profile.tax_info),
+        ]),
+      });
   });
 
   it("should update PF details in payroll profile", async () => {
@@ -614,7 +630,7 @@ describe("employee.service — coverage gaps", () => {
     await db("employee_payroll_profiles")
       .where({ id: profile.id })
       .update({
-        pf_details: JSON.stringify(newPfDetails),
+        pf_details: db.raw("CAST(? AS JSON)", [JSON.stringify(newPfDetails)]),
       });
 
     const updated = await db("employee_payroll_profiles").where({ id: profile.id }).first();
@@ -623,9 +639,15 @@ describe("employee.service — coverage gaps", () => {
     expect(pfDetails.uanNumber).toBe("UAN123456789");
 
     // Restore
-    await db("employee_payroll_profiles").where({ id: profile.id }).update({
-      pf_details: profile.pf_details,
-    });
+    await db("employee_payroll_profiles")
+      .where({ id: profile.id })
+      .update({
+        pf_details: db.raw("CAST(? AS JSON)", [
+          typeof profile.pf_details === "string"
+            ? profile.pf_details
+            : JSON.stringify(profile.pf_details),
+        ]),
+      });
   });
 
   it("should handle deactivation of an employee", async () => {
