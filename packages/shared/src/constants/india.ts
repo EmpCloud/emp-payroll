@@ -145,8 +145,115 @@ export const PT_SLABS: Record<string, PTSlab[]> = {
     { min: 9000, max: 11999, tax: 150 },
     { min: 12000, max: Infinity, tax: 200 },
   ],
+  // Andhra Pradesh
+  AP: [
+    { min: 0, max: 15000, tax: 0 },
+    { min: 15001, max: 20000, tax: 150 },
+    { min: 20001, max: Infinity, tax: 200 },
+  ],
+  // Kerala
+  KL: [
+    { min: 0, max: 11999, tax: 0 },
+    { min: 12000, max: 17999, tax: 120 },
+    { min: 18000, max: 24999, tax: 180 },
+    { min: 25000, max: 29999, tax: 250 },
+    { min: 30000, max: Infinity, tax: 250 },
+  ],
+  // Madhya Pradesh
+  MP: [
+    { min: 0, max: 18750, tax: 0 },
+    { min: 18751, max: 25000, tax: 125 },
+    { min: 25001, max: 33333, tax: 167 },
+    { min: 33334, max: Infinity, tax: 208 },
+  ],
+  // Rajasthan
+  RJ: [
+    { min: 0, max: 12000, tax: 0 },
+    { min: 12001, max: 15000, tax: 100 },
+    { min: 15001, max: 25000, tax: 150 },
+    { min: 25001, max: Infinity, tax: 200 },
+  ],
+  // Odisha
+  OD: [
+    { min: 0, max: 13304, tax: 0 },
+    { min: 13305, max: 25000, tax: 125 },
+    { min: 25001, max: Infinity, tax: 200 },
+  ],
+  // Punjab
+  PB: [
+    { min: 0, max: 12000, tax: 0 },
+    { min: 12001, max: 15000, tax: 100 },
+    { min: 15001, max: 25000, tax: 150 },
+    { min: 25001, max: Infinity, tax: 200 },
+  ],
+  // Assam
+  AS: [
+    { min: 0, max: 10000, tax: 0 },
+    { min: 10001, max: 15000, tax: 150 },
+    { min: 15001, max: 25000, tax: 180 },
+    { min: 25001, max: Infinity, tax: 208 },
+  ],
+  // Bihar
+  BR: [
+    { min: 0, max: 25000, tax: 0 },
+    { min: 25001, max: 41666, tax: 100 },
+    { min: 41667, max: 83333, tax: 167 },
+    { min: 83334, max: Infinity, tax: 208 },
+  ],
+  // Jharkhand
+  JH: [
+    { min: 0, max: 25000, tax: 0 },
+    { min: 25001, max: 41666, tax: 100 },
+    { min: 41667, max: 83333, tax: 150 },
+    { min: 83334, max: Infinity, tax: 200 },
+  ],
+  // Chhattisgarh
+  CG: [
+    { min: 0, max: 12500, tax: 0 },
+    { min: 12501, max: 16666, tax: 125 },
+    { min: 16667, max: 20833, tax: 150 },
+    { min: 20834, max: Infinity, tax: 200 },
+  ],
+  // Meghalaya
+  ML: [
+    { min: 0, max: 12500, tax: 0 },
+    { min: 12501, max: 16666, tax: 125 },
+    { min: 16667, max: Infinity, tax: 200 },
+  ],
+  // Tripura
+  TR: [
+    { min: 0, max: 7500, tax: 0 },
+    { min: 7501, max: 15000, tax: 100 },
+    { min: 15001, max: Infinity, tax: 150 },
+  ],
+  // Manipur
+  MN: [
+    { min: 0, max: 8333, tax: 0 },
+    { min: 8334, max: 16666, tax: 100 },
+    { min: 16667, max: Infinity, tax: 200 },
+  ],
+  // Sikkim
+  SK: [
+    { min: 0, max: 20000, tax: 0 },
+    { min: 20001, max: Infinity, tax: 200 },
+  ],
+  // Goa
+  GA: [
+    { min: 0, max: 15000, tax: 0 },
+    { min: 15001, max: Infinity, tax: 200 },
+  ],
   // Delhi (no PT)
   DL: [],
+  // Haryana (no PT)
+  HR: [],
+  // Uttarakhand (no PT)
+  UK: [],
+  // Himachal Pradesh (no PT)
+  HP: [],
+  // Jammu & Kashmir (no PT)
+  JK: [],
+  // Uttar Pradesh (no PT)
+  UP: [],
 };
 
 // ---------------------------------------------------------------------------

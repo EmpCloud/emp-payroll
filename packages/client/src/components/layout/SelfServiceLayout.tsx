@@ -35,13 +35,14 @@ export function SelfServiceLayout() {
   const user = getUser();
   const displayName = user ? `${user.firstName} ${user.lastName}` : "User";
   const subtitle = user ? `${user.department}` : "";
+  const isAdmin = user && ["org_admin", "hr_admin", "hr_manager"].includes(user.role);
 
   return (
     <div className="flex h-screen bg-gray-50">
       <aside className="flex h-screen w-64 flex-col border-r border-gray-200 bg-white">
         {/* Logo */}
         <div className="flex h-16 items-center gap-2.5 border-b border-gray-100 px-6">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600">
+          <div className="bg-brand-600 flex h-9 w-9 items-center justify-center rounded-lg">
             <DollarSign className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -85,13 +86,15 @@ export function SelfServiceLayout() {
 
         {/* Footer */}
         <div className="space-y-1 border-t border-gray-100 p-3">
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            Admin Panel
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              Admin Panel
+            </button>
+          )}
           <button
             onClick={logout}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"

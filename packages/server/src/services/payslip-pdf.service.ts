@@ -1,6 +1,6 @@
 import { getDB } from "../db/adapters";
 import { AppError } from "../api/middleware/error.middleware";
-import { findUserById, getUserDepartmentName } from "../db/empcloud";
+import { findUserById, findOrgById, getUserDepartmentName } from "../db/empcloud";
 
 export class PayslipPDFService {
   private db = getDB();
@@ -51,11 +51,17 @@ export class PayslipPDFService {
           designation: ecUser.designation || "N/A",
         };
 
-        // Get org from payroll settings
+        // Get org from payroll settings + EmpCloud org for name fallback
         const orgSettings = await this.db.findOne<any>("organization_payroll_settings", {
           empcloud_org_id: Number(ecUser.organization_id),
         });
-        org = orgSettings;
+        const ecOrg = await findOrgById(ecUser.organization_id);
+        org = {
+          name: orgSettings?.name || ecOrg?.name || "Company",
+          legal_name: orgSettings?.legal_name || ecOrg?.legal_name || "",
+          pan: orgSettings?.pan || "",
+          tan: orgSettings?.tan || "",
+        };
       } else {
         // Employee record missing from EmpCloud (e.g. after DB re-seed).
         // Use whatever data is available from the payroll profile.
@@ -172,12 +178,31 @@ export class PayslipPDFService {
   .days-info { display: flex; gap: 24px; justify-content: center; margin-bottom: 24px; }
   .days-info span { background: #f3f4f6; padding: 6px 14px; border-radius: 6px; font-size: 12px; }
   @media print { body { padding: 20px; } .no-print { display: none; } }
-  .print-btn { display: block; margin: 0 auto 24px; padding: 10px 32px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
+  .actions { display: flex; gap: 12px; justify-content: center; margin-bottom: 24px; }
+  .print-btn { padding: 10px 32px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
   .print-btn:hover { background: #4338ca; }
+  .print-btn.secondary { background: #6b7280; }
+  .print-btn.secondary:hover { background: #4b5563; }
 </style>
 </head>
 <body>
-  <button class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>
+  <div class="actions no-print">
+    <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+    <button class="print-btn secondary" onclick="downloadHTML()">Download as File</button>
+  </div>
+  <script>
+    function downloadHTML() {
+      var btns = document.querySelectorAll('.no-print');
+      var script = document.querySelector('script');
+      btns.forEach(function(el) { el.remove(); });
+      if (script) script.remove();
+      var html = document.documentElement.outerHTML;
+      var a = document.createElement('a');
+      a.href = 'data:text/html;charset=utf-8,' + encodeURIComponent('<!DOCTYPE html>' + html);
+      a.download = 'payslip-${employee.first_name}-${employee.last_name}-${period.replace(/ /g, "-")}.html';
+      a.click();
+    }
+  </script>
 
   <div class="header">
     <div>

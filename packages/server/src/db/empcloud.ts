@@ -180,6 +180,63 @@ export async function countUsersByOrgId(orgId: number): Promise<number> {
 }
 
 /**
+ * Find users who have a seat for a specific module (via org_module_seats).
+ * Returns only employees assigned to this module.
+ */
+export async function findSeatedUsersForModule(
+  orgId: number,
+  moduleSlug: string,
+  options?: { limit?: number; offset?: number },
+): Promise<EmpCloudUser[]> {
+  const db = getEmpCloudDB();
+  let query = db("users as u")
+    .join("org_module_seats as s", "u.id", "s.user_id")
+    .join("modules as m", "s.module_id", "m.id")
+    .where({ "u.organization_id": orgId, "u.status": 1, "m.slug": moduleSlug })
+    .select("u.*");
+  if (options?.limit) query = query.limit(options.limit);
+  if (options?.offset) query = query.offset(options.offset);
+  return query;
+}
+
+/**
+ * Count seated users for a specific module.
+ */
+export async function countSeatedUsersForModule(
+  orgId: number,
+  moduleSlug: string,
+): Promise<number> {
+  const db = getEmpCloudDB();
+  const [{ count }] = await db("users as u")
+    .join("org_module_seats as s", "u.id", "s.user_id")
+    .join("modules as m", "s.module_id", "m.id")
+    .where({ "u.organization_id": orgId, "u.status": 1, "m.slug": moduleSlug })
+    .count("* as count");
+  return Number(count);
+}
+
+/**
+ * Find users who do NOT have a seat for a specific module (available for import).
+ */
+export async function findUnseatedUsersForModule(
+  orgId: number,
+  moduleSlug: string,
+): Promise<EmpCloudUser[]> {
+  const db = getEmpCloudDB();
+  const moduleRow = await db("modules").where({ slug: moduleSlug }).first();
+  if (!moduleRow) return [];
+
+  return db("users")
+    .where({ organization_id: orgId, status: 1 })
+    .whereNotIn("id", function () {
+      this.select("user_id")
+        .from("org_module_seats")
+        .where({ module_id: moduleRow.id, organization_id: orgId });
+    })
+    .whereNot("role", "super_admin");
+}
+
+/**
  * Update user password in EmpCloud.
  */
 export async function updateUserPassword(userId: number, passwordHash: string): Promise<void> {

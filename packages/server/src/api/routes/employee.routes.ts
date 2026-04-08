@@ -40,6 +40,94 @@ router.get(
   }),
 );
 
+// GET /employees/available-from-empcloud — List EmpCloud employees not yet in payroll
+router.get(
+  "/available-from-empcloud",
+  authorize("hr_admin", "hr_manager"),
+  wrap(async (req, res) => {
+    const data = await svc.listAvailableForImport(req.user!.empcloudOrgId);
+    res.json({ success: true, data });
+  }),
+);
+
+// POST /employees/import-from-empcloud — Import selected EmpCloud employees into payroll
+router.post(
+  "/import-from-empcloud",
+  authorize("hr_admin"),
+  wrap(async (req, res) => {
+    const { user_ids } = req.body;
+    if (!Array.isArray(user_ids) || user_ids.length === 0) {
+      return res.status(400).json({ success: false, message: "user_ids[] required" });
+    }
+
+    const { getEmpCloudDB } = await import("../../db/empcloud");
+    const { getDB } = await import("../../db/adapters/index");
+    const empcloudDb = getEmpCloudDB();
+    const payrollDb = getDB();
+    const orgId = req.user!.empcloudOrgId;
+
+    const results: { user_id: number; status: string; error?: string }[] = [];
+
+    for (const userId of user_ids) {
+      try {
+        const user = await empcloudDb("users")
+          .where({ id: userId, organization_id: orgId, status: 1 })
+          .first();
+        if (!user) {
+          results.push({ user_id: userId, status: "skipped", error: "User not found" });
+          continue;
+        }
+
+        // Create payroll profile
+        const existing = await payrollDb.findOne<any>("employee_payroll_profiles", {
+          empcloud_user_id: userId,
+          empcloud_org_id: orgId,
+        });
+        if (!existing) {
+          await payrollDb.create<any>("employee_payroll_profiles", {
+            empcloud_user_id: userId,
+            empcloud_org_id: orgId,
+          });
+        }
+
+        // Create seat in EmpCloud
+        const module = await empcloudDb("modules").where({ slug: "emp-payroll" }).first();
+        if (module) {
+          const seatExists = await empcloudDb("org_module_seats")
+            .where({ organization_id: orgId, module_id: module.id, user_id: userId })
+            .first();
+          if (!seatExists) {
+            const sub = await empcloudDb("org_subscriptions")
+              .where({ organization_id: orgId, module_id: module.id })
+              .whereIn("status", ["active", "trial"])
+              .first();
+            if (sub) {
+              await empcloudDb("org_module_seats").insert({
+                subscription_id: sub.id,
+                organization_id: orgId,
+                module_id: module.id,
+                user_id: userId,
+                assigned_by: req.user!.empcloudUserId || userId,
+                assigned_at: new Date(),
+              });
+              await empcloudDb("org_subscriptions")
+                .where({ id: sub.id })
+                .increment("used_seats", 1);
+            }
+          }
+        }
+
+        results.push({ user_id: userId, status: "imported" });
+      } catch (err: any) {
+        results.push({ user_id: userId, status: "error", error: err.message });
+      }
+    }
+
+    const imported = results.filter((r) => r.status === "imported").length;
+    res.json({ success: true, data: { total: user_ids.length, imported, results } });
+  }),
+);
+
 router.get(
   "/export",
   authorize("hr_admin", "hr_manager"),
@@ -195,6 +283,64 @@ router.post(
   }),
 );
 
+// --- Bank Update Requests (admin view) — MUST be before /:id ---
+import { BankUpdateRequestService } from "../../services/bank-update-request.service";
+import { getEmpCloudDB } from "../../db/empcloud";
+const bankReqSvc = new BankUpdateRequestService();
+
+router.get(
+  "/bank-update-requests",
+  authorize("hr_admin", "hr_manager", "org_admin"),
+  wrap(async (req, res) => {
+    const result = await bankReqSvc.getOrgRequests(
+      req.user!.empcloudOrgId,
+      req.query.status as string,
+    );
+    const ecDb = getEmpCloudDB();
+    const enriched = [];
+    for (const r of result.data) {
+      const parsed = {
+        ...r,
+        current_details:
+          typeof r.current_details === "string" ? JSON.parse(r.current_details) : r.current_details,
+        requested_details:
+          typeof r.requested_details === "string"
+            ? JSON.parse(r.requested_details)
+            : r.requested_details,
+      };
+      const user = await ecDb("users").where({ id: r.empcloud_user_id }).first();
+      enriched.push({
+        ...parsed,
+        employee_name: user ? `${user.first_name} ${user.last_name}` : "Unknown",
+        emp_code: user?.emp_code || "",
+      });
+    }
+    res.json({ success: true, data: { ...result, data: enriched } });
+  }),
+);
+
+router.post(
+  "/bank-update-requests/:id/approve",
+  authorize("hr_admin", "hr_manager", "org_admin"),
+  wrap(async (req, res) => {
+    const data = await bankReqSvc.approve(param(req, "id"), req.user!.empcloudUserId);
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  "/bank-update-requests/:id/reject",
+  authorize("hr_admin", "hr_manager", "org_admin"),
+  wrap(async (req, res) => {
+    const data = await bankReqSvc.reject(
+      param(req, "id"),
+      req.user!.empcloudUserId,
+      req.body.remarks,
+    );
+    res.json({ success: true, data });
+  }),
+);
+
 router.get(
   "/:id",
   wrap(async (req, res) => {
@@ -283,6 +429,23 @@ router.put(
   authorize("hr_admin", "hr_manager"),
   wrap(async (req, res) => {
     const data = await svc.updatePfDetails(numParam(req, "id"), req.user!.empcloudOrgId, req.body);
+    res.json({ success: true, data });
+  }),
+);
+
+router.get(
+  "/:id/esi-details",
+  wrap(async (req, res) => {
+    const data = await svc.getEsiDetails(numParam(req, "id"), req.user!.empcloudOrgId);
+    res.json({ success: true, data });
+  }),
+);
+
+router.put(
+  "/:id/esi-details",
+  authorize("hr_admin", "hr_manager", "org_admin"),
+  wrap(async (req, res) => {
+    const data = await svc.updateEsiDetails(numParam(req, "id"), req.user!.empcloudOrgId, req.body);
     res.json({ success: true, data });
   }),
 );

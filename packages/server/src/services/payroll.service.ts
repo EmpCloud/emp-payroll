@@ -124,40 +124,56 @@ export class PayrollService {
       });
       if (!salary) continue;
 
-      // Get attendance — from Cloud HRMS when enabled, else from local DB
-      let attendance: any = null;
+      // Get attendance from EmpCloud DB directly
+      const empcloudDb = getEmpCloudDB();
+      const startDate = `${run.year}-${String(run.month).padStart(2, "0")}-01`;
+      const endDate = new Date(run.year, run.month, 0).toISOString().slice(0, 10);
+      const daysInMonth = new Date(run.year, run.month, 0).getDate();
 
-      if (config.cloudHrms.enabled) {
-        // Fetch from EMP Cloud's HRMS attendance API.
-        // Uses the system JWT (same token the request came in with, forwarded
-        // via the payroll run's processed_by user context). For service-to-service
-        // calls we use a placeholder token; in production this should be a
-        // machine-to-machine token or the HR admin's token stored on the run.
-        const systemToken = authToken || "";
-        const cloudData = await cloudHRMS.getMonthlyAttendance(
-          Number(orgId),
-          ecEmp.id,
-          run.month,
-          run.year,
-          systemToken,
+      // Count working days (exclude weekends)
+      let workingDays = 0;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const day = new Date(run.year, run.month - 1, d).getDay();
+        if (day !== 0 && day !== 6) workingDays++;
+      }
+
+      const [attRecord] = await empcloudDb("attendance_records")
+        .where("user_id", ecEmp.id)
+        .where("organization_id", Number(orgId))
+        .whereBetween("date", [startDate, endDate])
+        .select(
+          empcloudDb.raw(
+            "SUM(CASE WHEN status IN ('present','checked_in') THEN 1 WHEN status = 'half_day' THEN 0.5 ELSE 0 END) as present_days",
+          ),
+          empcloudDb.raw("SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_days"),
+          empcloudDb.raw("SUM(CASE WHEN status = 'on_leave' THEN 1 ELSE 0 END) as leave_days"),
         );
-        if (cloudData) {
-          attendance = cloudHRMS.toLocalAttendanceFormat(cloudData);
-        }
-      }
 
-      // Fallback: local attendance_summaries table
-      if (!attendance) {
-        attendance = await this.db.findOne<any>("attendance_summaries", {
-          empcloud_user_id: ecEmp.id,
-          month: run.month,
-          year: run.year,
-        });
-      }
+      // Get approved paid leave days from EmpCloud
+      const leaveResult = await empcloudDb("leave_applications as la")
+        .join("leave_types as lt", "la.leave_type_id", "lt.id")
+        .where("la.user_id", ecEmp.id)
+        .where("la.organization_id", Number(orgId))
+        .where("la.status", "approved")
+        .where("la.start_date", "<=", endDate)
+        .where("la.end_date", ">=", startDate)
+        .select(
+          empcloudDb.raw(
+            "SUM(CASE WHEN lt.is_paid = 1 THEN la.days_count ELSE 0 END) as paid_leave",
+          ),
+          empcloudDb.raw(
+            "SUM(CASE WHEN lt.is_paid = 0 THEN la.days_count ELSE 0 END) as unpaid_leave",
+          ),
+        )
+        .first();
 
-      const totalDays = attendance?.total_days || 30;
-      const paidDays = attendance ? totalDays - (attendance.lop_days || 0) : totalDays;
-      const lopDays = attendance?.lop_days || 0;
+      const presentDays = Number(attRecord?.present_days || 0);
+      const paidLeaveDays = Number(leaveResult?.paid_leave || 0);
+      const unpaidLeaveDays = Number(leaveResult?.unpaid_leave || 0);
+
+      const totalDays = workingDays;
+      const paidDays = presentDays + paidLeaveDays;
+      const lopDays = Math.max(0, totalDays - paidDays);
 
       // Parse salary components
       const components =
@@ -169,20 +185,30 @@ export class PayrollService {
       let grossEarnings = 0;
       let basicMonthly = 0;
 
-      for (const comp of components) {
-        const amount = Math.round(comp.monthlyAmount * proRatio);
-        earnings.push({
-          code: comp.code,
-          name: comp.code === "BASIC" ? "Basic Salary" : comp.code,
-          amount,
-        });
-        grossEarnings += amount;
-        if (comp.code === "BASIC") basicMonthly = amount;
-      }
-
-      // Statutory deductions
+      // Separate earnings from custom deductions defined in salary structure
       const deductions: any[] = [];
       let totalDed = 0;
+
+      for (const comp of components) {
+        if (comp.type === "deduction") {
+          // Custom deduction from salary structure (canteen, welfare fund, etc.)
+          const amount = Math.round(comp.monthlyAmount * proRatio);
+          if (amount > 0) {
+            deductions.push({ code: comp.code, name: comp.name || comp.code, amount });
+            totalDed += amount;
+          }
+        } else {
+          // Earning component
+          const amount = Math.round(comp.monthlyAmount * proRatio);
+          earnings.push({
+            code: comp.code,
+            name: comp.code === "BASIC" ? "Basic Salary" : comp.name || comp.code,
+            amount,
+          });
+          grossEarnings += amount;
+          if (comp.code === "BASIC") basicMonthly = amount;
+        }
+      }
 
       // PF
       const pfDetails = profile?.pf_details
@@ -196,23 +222,33 @@ export class PayrollService {
           month: run.month,
           year: run.year,
           basicSalary: basicMonthly,
+          contributionRate: pfDetails?.contributionRate || undefined,
+          isVoluntaryPF: !!pfDetails?.vpfRate,
+          vpfRate: pfDetails?.vpfRate || 0,
         });
         deductions.push({ code: "EPF", name: "Employee PF", amount: pf.employeeEPF });
         totalDed += pf.employeeEPF;
         employeeEmployerContributions += pf.totalEmployer;
       }
 
-      // ESI
-      const esi = computeESI({
-        employeeId: String(ecEmp.id),
-        month: run.month,
-        year: run.year,
-        grossSalary: grossEarnings,
-      });
-      if (esi) {
-        deductions.push({ code: "ESI", name: "Employee ESI", amount: esi.employeeContribution });
-        totalDed += esi.employeeContribution;
-        employeeEmployerContributions += esi.employerContribution;
+      // ESI — check eligibility from profile
+      const esiDetails = profile?.esi_details
+        ? typeof profile.esi_details === "string"
+          ? JSON.parse(profile.esi_details)
+          : profile.esi_details
+        : {};
+      if (esiDetails?.isEligible !== false) {
+        const esi = computeESI({
+          employeeId: String(ecEmp.id),
+          month: run.month,
+          year: run.year,
+          grossSalary: grossEarnings,
+        });
+        if (esi) {
+          deductions.push({ code: "ESI", name: "Employee ESI", amount: esi.employeeContribution });
+          totalDed += esi.employeeContribution;
+          employeeEmployerContributions += esi.employerContribution;
+        }
       }
 
       // Professional Tax
@@ -260,6 +296,34 @@ export class PayrollService {
       if (taxResult.monthlyTds > 0) {
         deductions.push({ code: "TDS", name: "Income Tax (TDS)", amount: taxResult.monthlyTds });
         totalDed += taxResult.monthlyTds;
+      }
+
+      // Loan EMI auto-deduction — find active loans for this employee
+      // Loans reference the local employees table; try both empcloud user id and profile id
+      const loanFilters = [
+        { employee_id: String(ecEmp.id), status: "active" },
+        ...(profile ? [{ employee_id: profile.id, status: "active" }] : []),
+      ];
+      for (const lf of loanFilters) {
+        const activeLoans = await this.db.findMany<any>("loans", { filters: lf });
+        for (const loan of activeLoans.data) {
+          const emi = Math.round(Number(loan.emi_amount));
+          if (emi > 0) {
+            deductions.push({
+              code: "LOAN",
+              name: `Loan EMI — ${loan.type || "Loan"}`,
+              amount: emi,
+            });
+            totalDed += emi;
+            // Update loan tracking
+            await this.db.update("loans", loan.id, {
+              installments_paid: (Number(loan.installments_paid) || 0) + 1,
+              outstanding_amount: Math.max(0, Number(loan.outstanding_amount) - emi),
+              ...(Number(loan.outstanding_amount) - emi <= 0 ? { status: "completed" } : {}),
+            });
+          }
+        }
+        if (activeLoans.data.length > 0) break; // Found loans, don't query again
       }
 
       const netPay = grossEarnings - totalDed;
@@ -347,6 +411,9 @@ export class PayrollService {
     if (run.status === "draft") {
       throw new AppError(400, "ALREADY_DRAFT", "Payroll run is already in draft status");
     }
+    if (run.status === "cancelled") {
+      return this.db.update("payroll_runs", runId, { status: "draft" });
+    }
     await this.db.deleteMany("payslips", { payroll_run_id: runId });
     return this.db.update("payroll_runs", runId, {
       status: "draft",
@@ -394,12 +461,21 @@ export class PayrollService {
             .first()) || {};
       }
 
+      let deptName: string | null = null;
+      if (empInfo.department_id) {
+        const dept = await ecDb("organization_departments")
+          .where({ id: empInfo.department_id })
+          .first();
+        deptName = dept?.name || null;
+      }
+
       data.push({
         ...p,
         first_name: empInfo.first_name || null,
         last_name: empInfo.last_name || null,
         employee_code: empInfo.emp_code || null,
         designation: empInfo.designation || null,
+        department: deptName,
         earnings: typeof p.earnings === "string" ? JSON.parse(p.earnings) : p.earnings,
         deductions: typeof p.deductions === "string" ? JSON.parse(p.deductions) : p.deductions,
         employer_contributions:

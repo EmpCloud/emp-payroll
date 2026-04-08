@@ -9,168 +9,180 @@ export async function up(knex: Knex): Promise<void> {
   // -------------------------------------------------------------------------
   // Countries — reference data with compliance rules
   // -------------------------------------------------------------------------
-  await knex.schema.createTable("countries", (t) => {
-    t.uuid("id").primary();
-    t.string("code", 3).notNullable().unique(); // ISO 3166-1 alpha-2
-    t.string("name", 100).notNullable();
-    t.string("currency", 3).notNullable();
-    t.string("currency_symbol", 5).notNullable();
-    t.string("region", 20).notNullable(); // asia, europe, americas, africa, oceania, middle_east
-    t.bigInteger("min_wage_monthly").nullable(); // smallest currency unit
-    t.string("payroll_frequency", 20).notNullable().defaultTo("monthly"); // monthly, biweekly, weekly
-    t.string("tax_year_start", 5).notNullable().defaultTo("01-01"); // "01-01" or "04-01"
-    t.boolean("has_social_security").defaultTo(true);
-    t.boolean("has_pension").defaultTo(true);
-    t.boolean("has_health_insurance").defaultTo(true);
-    t.integer("notice_period_days").defaultTo(30);
-    t.integer("probation_months").defaultTo(3);
-    t.integer("max_work_hours_week").defaultTo(40);
-    t.integer("annual_leave_days").defaultTo(20);
-    t.integer("public_holidays").defaultTo(10);
-    t.boolean("is_active").defaultTo(true);
-    t.text("compliance_notes").nullable(); // JSON with tax/social security rates
-    t.timestamps(true, true);
-  });
+  if (!(await knex.schema.hasTable("countries"))) {
+    await knex.schema.createTable("countries", (t) => {
+      t.uuid("id").primary();
+      t.string("code", 3).notNullable().unique(); // ISO 3166-1 alpha-2
+      t.string("name", 100).notNullable();
+      t.string("currency", 3).notNullable();
+      t.string("currency_symbol", 5).notNullable();
+      t.string("region", 20).notNullable(); // asia, europe, americas, africa, oceania, middle_east
+      t.bigInteger("min_wage_monthly").nullable(); // smallest currency unit
+      t.string("payroll_frequency", 20).notNullable().defaultTo("monthly"); // monthly, biweekly, weekly
+      t.string("tax_year_start", 5).notNullable().defaultTo("01-01"); // "01-01" or "04-01"
+      t.boolean("has_social_security").defaultTo(true);
+      t.boolean("has_pension").defaultTo(true);
+      t.boolean("has_health_insurance").defaultTo(true);
+      t.integer("notice_period_days").defaultTo(30);
+      t.integer("probation_months").defaultTo(3);
+      t.integer("max_work_hours_week").defaultTo(40);
+      t.integer("annual_leave_days").defaultTo(20);
+      t.integer("public_holidays").defaultTo(10);
+      t.boolean("is_active").defaultTo(true);
+      t.text("compliance_notes").nullable(); // JSON with tax/social security rates
+      t.timestamps(true, true);
+    });
+  }
 
   // -------------------------------------------------------------------------
   // Global Employees — EOR, contractors, direct hires in any country
   // -------------------------------------------------------------------------
-  await knex.schema.createTable("global_employees", (t) => {
-    t.uuid("id").primary();
-    t.bigInteger("empcloud_org_id").unsigned().notNullable();
-    t.bigInteger("empcloud_user_id").unsigned().nullable(); // link to empcloud user if exists
-    t.string("first_name", 100).notNullable();
-    t.string("last_name", 100).notNullable();
-    t.string("email", 128).notNullable();
-    t.uuid("country_id").notNullable().references("id").inTable("countries").onDelete("RESTRICT");
-    t.string("employment_type", 20).notNullable(); // eor, contractor, direct_hire
-    t.string("contract_type", 20).notNullable(); // full_time, part_time, fixed_term
-    t.string("job_title", 200).notNullable();
-    t.string("department", 100).nullable();
-    t.date("start_date").notNullable();
-    t.date("end_date").nullable();
-    t.bigInteger("salary_amount").notNullable(); // smallest currency unit
-    t.string("salary_currency", 3).notNullable();
-    t.string("salary_frequency", 20).notNullable().defaultTo("monthly"); // monthly, biweekly, weekly, annual
-    t.string("status", 20).notNullable().defaultTo("onboarding"); // active, onboarding, offboarding, terminated
-    t.string("tax_id", 50).nullable(); // local tax identifier
-    t.string("bank_name", 100).nullable();
-    t.string("bank_account", 50).nullable();
-    t.string("bank_routing", 50).nullable();
-    t.text("contract_document_url").nullable();
-    t.text("notes").nullable();
-    t.timestamps(true, true);
+  if (!(await knex.schema.hasTable("global_employees"))) {
+    await knex.schema.createTable("global_employees", (t) => {
+      t.uuid("id").primary();
+      t.bigInteger("empcloud_org_id").unsigned().notNullable();
+      t.bigInteger("empcloud_user_id").unsigned().nullable(); // link to empcloud user if exists
+      t.string("first_name", 100).notNullable();
+      t.string("last_name", 100).notNullable();
+      t.string("email", 128).notNullable();
+      t.uuid("country_id").notNullable().references("id").inTable("countries").onDelete("RESTRICT");
+      t.string("employment_type", 20).notNullable(); // eor, contractor, direct_hire
+      t.string("contract_type", 20).notNullable(); // full_time, part_time, fixed_term
+      t.string("job_title", 200).notNullable();
+      t.string("department", 100).nullable();
+      t.date("start_date").notNullable();
+      t.date("end_date").nullable();
+      t.bigInteger("salary_amount").notNullable(); // smallest currency unit
+      t.string("salary_currency", 3).notNullable();
+      t.string("salary_frequency", 20).notNullable().defaultTo("monthly"); // monthly, biweekly, weekly, annual
+      t.string("status", 20).notNullable().defaultTo("onboarding"); // active, onboarding, offboarding, terminated
+      t.string("tax_id", 50).nullable(); // local tax identifier
+      t.string("bank_name", 100).nullable();
+      t.string("bank_account", 50).nullable();
+      t.string("bank_routing", 50).nullable();
+      t.text("contract_document_url").nullable();
+      t.text("notes").nullable();
+      t.timestamps(true, true);
 
-    t.index(["empcloud_org_id", "status"]);
-    t.index(["empcloud_org_id", "country_id"]);
-  });
+      t.index(["empcloud_org_id", "status"]);
+      t.index(["empcloud_org_id", "country_id"]);
+    });
+  }
 
   // -------------------------------------------------------------------------
   // Global Payroll Runs — per country per month
   // -------------------------------------------------------------------------
-  await knex.schema.createTable("global_payroll_runs", (t) => {
-    t.uuid("id").primary();
-    t.bigInteger("empcloud_org_id").unsigned().notNullable();
-    t.uuid("country_id").notNullable().references("id").inTable("countries").onDelete("RESTRICT");
-    t.integer("period_month").notNullable(); // 1-12
-    t.integer("period_year").notNullable();
-    t.string("status", 20).notNullable().defaultTo("draft"); // draft, processing, approved, paid, cancelled
-    t.bigInteger("total_gross").defaultTo(0);
-    t.bigInteger("total_deductions").defaultTo(0);
-    t.bigInteger("total_employer_cost").defaultTo(0);
-    t.bigInteger("total_net").defaultTo(0);
-    t.string("currency", 3).notNullable();
-    t.decimal("exchange_rate_to_base", 15, 6).defaultTo(1); // rate to org's base currency
-    t.bigInteger("approved_by").unsigned().nullable();
-    t.datetime("paid_at").nullable();
-    t.timestamps(true, true);
+  if (!(await knex.schema.hasTable("global_payroll_runs"))) {
+    await knex.schema.createTable("global_payroll_runs", (t) => {
+      t.uuid("id").primary();
+      t.bigInteger("empcloud_org_id").unsigned().notNullable();
+      t.uuid("country_id").notNullable().references("id").inTable("countries").onDelete("RESTRICT");
+      t.integer("period_month").notNullable(); // 1-12
+      t.integer("period_year").notNullable();
+      t.string("status", 20).notNullable().defaultTo("draft"); // draft, processing, approved, paid, cancelled
+      t.bigInteger("total_gross").defaultTo(0);
+      t.bigInteger("total_deductions").defaultTo(0);
+      t.bigInteger("total_employer_cost").defaultTo(0);
+      t.bigInteger("total_net").defaultTo(0);
+      t.string("currency", 3).notNullable();
+      t.decimal("exchange_rate_to_base", 15, 6).defaultTo(1); // rate to org's base currency
+      t.bigInteger("approved_by").unsigned().nullable();
+      t.datetime("paid_at").nullable();
+      t.timestamps(true, true);
 
-    t.index(["empcloud_org_id", "period_year", "period_month"]);
-  });
+      t.index(["empcloud_org_id", "period_year", "period_month"], "gpr_org_period_idx");
+    });
+  }
 
   // -------------------------------------------------------------------------
   // Global Payroll Items — per employee per run
   // -------------------------------------------------------------------------
-  await knex.schema.createTable("global_payroll_items", (t) => {
-    t.uuid("id").primary();
-    t.uuid("payroll_run_id")
-      .notNullable()
-      .references("id")
-      .inTable("global_payroll_runs")
-      .onDelete("CASCADE");
-    t.bigInteger("empcloud_org_id").unsigned().notNullable();
-    t.uuid("global_employee_id")
-      .notNullable()
-      .references("id")
-      .inTable("global_employees")
-      .onDelete("CASCADE");
-    t.bigInteger("gross_salary").notNullable();
-    t.bigInteger("tax_amount").defaultTo(0);
-    t.bigInteger("social_security_employee").defaultTo(0);
-    t.bigInteger("social_security_employer").defaultTo(0);
-    t.bigInteger("pension_employee").defaultTo(0);
-    t.bigInteger("pension_employer").defaultTo(0);
-    t.bigInteger("health_insurance_employee").defaultTo(0);
-    t.bigInteger("health_insurance_employer").defaultTo(0);
-    t.bigInteger("other_deductions").defaultTo(0);
-    t.bigInteger("net_salary").notNullable();
-    t.bigInteger("total_employer_cost").notNullable(); // gross + employer contributions
-    t.string("currency", 3).notNullable();
-    t.text("notes").nullable();
-    t.timestamp("created_at").defaultTo(knex.fn.now());
+  if (!(await knex.schema.hasTable("global_payroll_items"))) {
+    await knex.schema.createTable("global_payroll_items", (t) => {
+      t.uuid("id").primary();
+      t.uuid("payroll_run_id")
+        .notNullable()
+        .references("id")
+        .inTable("global_payroll_runs")
+        .onDelete("CASCADE");
+      t.bigInteger("empcloud_org_id").unsigned().notNullable();
+      t.uuid("global_employee_id")
+        .notNullable()
+        .references("id")
+        .inTable("global_employees")
+        .onDelete("CASCADE");
+      t.bigInteger("gross_salary").notNullable();
+      t.bigInteger("tax_amount").defaultTo(0);
+      t.bigInteger("social_security_employee").defaultTo(0);
+      t.bigInteger("social_security_employer").defaultTo(0);
+      t.bigInteger("pension_employee").defaultTo(0);
+      t.bigInteger("pension_employer").defaultTo(0);
+      t.bigInteger("health_insurance_employee").defaultTo(0);
+      t.bigInteger("health_insurance_employer").defaultTo(0);
+      t.bigInteger("other_deductions").defaultTo(0);
+      t.bigInteger("net_salary").notNullable();
+      t.bigInteger("total_employer_cost").notNullable(); // gross + employer contributions
+      t.string("currency", 3).notNullable();
+      t.text("notes").nullable();
+      t.timestamp("created_at").defaultTo(knex.fn.now());
 
-    t.index(["payroll_run_id"]);
-    t.index(["empcloud_org_id", "global_employee_id"]);
-  });
+      t.index(["payroll_run_id"]);
+      t.index(["empcloud_org_id", "global_employee_id"]);
+    });
+  }
 
   // -------------------------------------------------------------------------
   // Contractor Invoices
   // -------------------------------------------------------------------------
-  await knex.schema.createTable("contractor_invoices", (t) => {
-    t.uuid("id").primary();
-    t.bigInteger("empcloud_org_id").unsigned().notNullable();
-    t.uuid("global_employee_id")
-      .notNullable()
-      .references("id")
-      .inTable("global_employees")
-      .onDelete("CASCADE");
-    t.string("invoice_number", 50).notNullable();
-    t.bigInteger("amount").notNullable();
-    t.string("currency", 3).notNullable();
-    t.text("description").nullable();
-    t.date("period_start").notNullable();
-    t.date("period_end").notNullable();
-    t.string("status", 20).notNullable().defaultTo("pending"); // pending, approved, paid, rejected
-    t.datetime("submitted_at").notNullable();
-    t.bigInteger("approved_by").unsigned().nullable();
-    t.datetime("paid_at").nullable();
-    t.timestamps(true, true);
+  if (!(await knex.schema.hasTable("contractor_invoices"))) {
+    await knex.schema.createTable("contractor_invoices", (t) => {
+      t.uuid("id").primary();
+      t.bigInteger("empcloud_org_id").unsigned().notNullable();
+      t.uuid("global_employee_id")
+        .notNullable()
+        .references("id")
+        .inTable("global_employees")
+        .onDelete("CASCADE");
+      t.string("invoice_number", 50).notNullable();
+      t.bigInteger("amount").notNullable();
+      t.string("currency", 3).notNullable();
+      t.text("description").nullable();
+      t.date("period_start").notNullable();
+      t.date("period_end").notNullable();
+      t.string("status", 20).notNullable().defaultTo("pending"); // pending, approved, paid, rejected
+      t.datetime("submitted_at").notNullable();
+      t.bigInteger("approved_by").unsigned().nullable();
+      t.datetime("paid_at").nullable();
+      t.timestamps(true, true);
 
-    t.index(["empcloud_org_id", "status"]);
-    t.index(["global_employee_id"]);
-  });
+      t.index(["empcloud_org_id", "status"]);
+      t.index(["global_employee_id"]);
+    });
+  }
 
   // -------------------------------------------------------------------------
   // Compliance Checklist — per global employee
   // -------------------------------------------------------------------------
-  await knex.schema.createTable("compliance_checklist", (t) => {
-    t.uuid("id").primary();
-    t.bigInteger("empcloud_org_id").unsigned().notNullable();
-    t.uuid("global_employee_id")
-      .notNullable()
-      .references("id")
-      .inTable("global_employees")
-      .onDelete("CASCADE");
-    t.string("item", 255).notNullable(); // "Employment contract signed", "Tax ID collected", etc.
-    t.boolean("is_completed").defaultTo(false);
-    t.datetime("completed_at").nullable();
-    t.bigInteger("completed_by").unsigned().nullable();
-    t.date("due_date").nullable();
-    t.string("category", 20).notNullable(); // legal, tax, payroll, benefits, immigration
-    t.timestamp("created_at").defaultTo(knex.fn.now());
+  if (!(await knex.schema.hasTable("compliance_checklist"))) {
+    await knex.schema.createTable("compliance_checklist", (t) => {
+      t.uuid("id").primary();
+      t.bigInteger("empcloud_org_id").unsigned().notNullable();
+      t.uuid("global_employee_id")
+        .notNullable()
+        .references("id")
+        .inTable("global_employees")
+        .onDelete("CASCADE");
+      t.string("item", 255).notNullable(); // "Employment contract signed", "Tax ID collected", etc.
+      t.boolean("is_completed").defaultTo(false);
+      t.datetime("completed_at").nullable();
+      t.bigInteger("completed_by").unsigned().nullable();
+      t.date("due_date").nullable();
+      t.string("category", 20).notNullable(); // legal, tax, payroll, benefits, immigration
+      t.timestamp("created_at").defaultTo(knex.fn.now());
 
-    t.index(["empcloud_org_id", "global_employee_id"]);
-  });
+      t.index(["empcloud_org_id", "global_employee_id"]);
+    });
+  }
 
   // -------------------------------------------------------------------------
   // Seed Countries (30 countries with compliance data)
@@ -962,15 +974,18 @@ export async function up(knex: Knex): Promise<void> {
     },
   ];
 
-  // Insert countries — use raw for uuid generation compatibility
-  for (const country of countries) {
-    await knex("countries").insert({
-      id: knex.raw("(UUID())"),
-      ...country,
-      is_active: true,
-      created_at: knex.fn.now(),
-      updated_at: knex.fn.now(),
-    });
+  // Insert countries — skip if already seeded (handles partial migration reruns)
+  const existingCount = await knex("countries").count("* as cnt").first();
+  if (!existingCount || Number(existingCount.cnt) === 0) {
+    for (const country of countries) {
+      await knex("countries").insert({
+        id: knex.raw("(UUID())"),
+        ...country,
+        is_active: true,
+        created_at: knex.fn.now(),
+        updated_at: knex.fn.now(),
+      });
+    }
   }
 }
 

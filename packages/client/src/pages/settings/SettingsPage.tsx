@@ -94,13 +94,33 @@ export function SettingsPage() {
               label="State (for PT)"
               defaultValue={org?.state || "KA"}
               options={[
+                { value: "AP", label: "Andhra Pradesh" },
+                { value: "AS", label: "Assam" },
+                { value: "BR", label: "Bihar" },
+                { value: "CG", label: "Chhattisgarh" },
+                { value: "DL", label: "Delhi (No PT)" },
+                { value: "GA", label: "Goa" },
+                { value: "GJ", label: "Gujarat" },
+                { value: "HR", label: "Haryana (No PT)" },
+                { value: "HP", label: "Himachal Pradesh (No PT)" },
+                { value: "JH", label: "Jharkhand" },
+                { value: "JK", label: "Jammu & Kashmir (No PT)" },
                 { value: "KA", label: "Karnataka" },
+                { value: "KL", label: "Kerala" },
+                { value: "MP", label: "Madhya Pradesh" },
                 { value: "MH", label: "Maharashtra" },
+                { value: "MN", label: "Manipur" },
+                { value: "ML", label: "Meghalaya" },
+                { value: "OD", label: "Odisha" },
+                { value: "PB", label: "Punjab" },
+                { value: "RJ", label: "Rajasthan" },
+                { value: "SK", label: "Sikkim" },
                 { value: "TN", label: "Tamil Nadu" },
                 { value: "TS", label: "Telangana" },
+                { value: "TR", label: "Tripura" },
+                { value: "UP", label: "Uttar Pradesh (No PT)" },
+                { value: "UK", label: "Uttarakhand (No PT)" },
                 { value: "WB", label: "West Bengal" },
-                { value: "GJ", label: "Gujarat" },
-                { value: "DL", label: "Delhi" },
               ]}
             />
           </div>

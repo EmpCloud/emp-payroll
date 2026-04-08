@@ -7,53 +7,56 @@ import { Input } from "@/components/ui/Input";
 import { SelectField } from "@/components/ui/SelectField";
 import { Modal } from "@/components/ui/Modal";
 import { DataTable } from "@/components/ui/DataTable";
-import { Plus, Calendar, Trash2 } from "lucide-react";
-
-// Local state holidays — in a full app these would come from the API
-const DEFAULT_HOLIDAYS = [
-  { id: "1", name: "Republic Day", date: "2026-01-26", type: "national", day: "Monday" },
-  { id: "2", name: "Holi", date: "2026-03-10", type: "national", day: "Tuesday" },
-  { id: "3", name: "Good Friday", date: "2026-04-03", type: "national", day: "Friday" },
-  { id: "4", name: "Eid ul-Fitr", date: "2026-04-01", type: "national", day: "Wednesday" },
-  { id: "5", name: "May Day", date: "2026-05-01", type: "national", day: "Friday" },
-  { id: "6", name: "Independence Day", date: "2026-08-15", type: "national", day: "Saturday" },
-  { id: "7", name: "Ganesh Chaturthi", date: "2026-08-27", type: "regional", day: "Thursday" },
-  { id: "8", name: "Gandhi Jayanti", date: "2026-10-02", type: "national", day: "Friday" },
-  { id: "9", name: "Dussehra", date: "2026-10-12", type: "national", day: "Monday" },
-  { id: "10", name: "Diwali", date: "2026-11-08", type: "national", day: "Sunday" },
-  { id: "11", name: "Christmas", date: "2026-12-25", type: "national", day: "Friday" },
-];
+import { Plus, Calendar, Trash2, Loader2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiGet, apiPost, apiDelete } from "@/api/client";
+import toast from "react-hot-toast";
 
 export function HolidaysPage() {
-  const [holidays, setHolidays] = useState(DEFAULT_HOLIDAYS);
+  const qc = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
   const [year] = useState(new Date().getFullYear());
 
+  const { data: holidayRes, isLoading } = useQuery({
+    queryKey: ["holidays", year],
+    queryFn: () => apiGet<any>("/holidays", { year }),
+  });
+
+  const holidays = holidayRes?.data || [];
+
   const upcoming = holidays
-    .filter((h) => new Date(h.date) >= new Date())
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .filter((h: any) => new Date(h.date) >= new Date())
+    .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const past = holidays
-    .filter((h) => new Date(h.date) < new Date())
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .filter((h: any) => new Date(h.date) < new Date())
+    .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  function addHoliday(e: React.FormEvent<HTMLFormElement>) {
+  async function addHoliday(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const date = fd.get("date") as string;
-    const dayName = new Date(date).toLocaleDateString("en-US", { weekday: "long" });
-    setHolidays([...holidays, {
-      id: String(Date.now()),
-      name: fd.get("name") as string,
-      date,
-      type: fd.get("type") as string,
-      day: dayName,
-    }]);
-    setShowAdd(false);
+    try {
+      await apiPost("/holidays", {
+        name: fd.get("name") as string,
+        date: fd.get("date") as string,
+        type: fd.get("type") as string,
+      });
+      toast.success("Holiday added");
+      qc.invalidateQueries({ queryKey: ["holidays"] });
+      setShowAdd(false);
+    } catch {
+      toast.error("Failed to add holiday");
+    }
   }
 
-  function removeHoliday(id: string) {
-    setHolidays(holidays.filter((h) => h.id !== id));
+  async function removeHoliday(id: string) {
+    try {
+      await apiDelete(`/holidays/${id}`);
+      toast.success("Holiday removed");
+      qc.invalidateQueries({ queryKey: ["holidays"] });
+    } catch {
+      toast.error("Failed to remove holiday");
+    }
   }
 
   const columns = [
@@ -66,7 +69,13 @@ export function HolidaysPage() {
       key: "date",
       header: "Date",
       render: (r: any) => (
-        <span>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+        <span>
+          {new Date(r.date).toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })}
+        </span>
       ),
     },
     {
@@ -77,7 +86,9 @@ export function HolidaysPage() {
       key: "type",
       header: "Type",
       render: (r: any) => (
-        <Badge variant={r.type === "national" ? "approved" : r.type === "regional" ? "pending" : "draft"}>
+        <Badge
+          variant={r.type === "national" ? "approved" : r.type === "regional" ? "pending" : "draft"}
+        >
           {r.type}
         </Badge>
       ),
@@ -86,15 +97,27 @@ export function HolidaysPage() {
       key: "actions",
       header: "",
       render: (r: any) => (
-        <Button variant="ghost" size="sm" onClick={() => removeHoliday(r.id)} className="text-red-400 hover:text-red-600">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => removeHoliday(r.id)}
+          className="text-red-400 hover:text-red-600"
+        >
           <Trash2 className="h-4 w-4" />
         </Button>
       ),
     },
   ];
 
-  // Calendar mini view
   const months = Array.from({ length: 12 }, (_, i) => i);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="text-brand-600 h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -111,7 +134,7 @@ export function HolidaysPage() {
       {/* Calendar overview */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {months.map((month) => {
-          const monthHolidays = holidays.filter((h) => new Date(h.date).getMonth() === month);
+          const monthHolidays = holidays.filter((h: any) => new Date(h.date).getMonth() === month);
           const monthName = new Date(year, month).toLocaleString("en-US", { month: "long" });
           return (
             <Card key={month} className={monthHolidays.length > 0 ? "border-brand-200" : ""}>
@@ -119,9 +142,9 @@ export function HolidaysPage() {
                 <p className="text-xs font-semibold text-gray-500">{monthName}</p>
                 {monthHolidays.length > 0 ? (
                   <div className="mt-2 space-y-1">
-                    {monthHolidays.map((h) => (
+                    {monthHolidays.map((h: any) => (
                       <div key={h.id} className="flex items-center gap-1.5">
-                        <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+                        <span className="bg-brand-500 h-1.5 w-1.5 rounded-full" />
                         <span className="text-xs text-gray-700">{h.name}</span>
                       </div>
                     ))}
@@ -138,7 +161,11 @@ export function HolidaysPage() {
       {/* Upcoming */}
       {upcoming.length > 0 && (
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><Calendar className="h-5 w-5" /> Upcoming Holidays</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" /> Upcoming Holidays
+            </CardTitle>
+          </CardHeader>
           <CardContent className="p-0">
             <DataTable columns={columns} data={upcoming} />
           </CardContent>
@@ -148,7 +175,9 @@ export function HolidaysPage() {
       {/* Past */}
       {past.length > 0 && (
         <Card>
-          <CardHeader><CardTitle>Past Holidays</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Past Holidays</CardTitle>
+          </CardHeader>
           <CardContent className="p-0">
             <DataTable columns={columns} data={past} />
           </CardContent>
@@ -159,13 +188,20 @@ export function HolidaysPage() {
         <form onSubmit={addHoliday} className="space-y-4">
           <Input id="name" name="name" label="Holiday Name" placeholder="e.g. Diwali" required />
           <Input id="date" name="date" label="Date" type="date" required />
-          <SelectField id="type" name="type" label="Type" options={[
-            { value: "national", label: "National" },
-            { value: "regional", label: "Regional" },
-            { value: "optional", label: "Optional / Restricted" },
-          ]} />
+          <SelectField
+            id="type"
+            name="type"
+            label="Type"
+            options={[
+              { value: "national", label: "National" },
+              { value: "regional", label: "Regional" },
+              { value: "optional", label: "Optional / Restricted" },
+            ]}
+          />
           <div className="flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={() => setShowAdd(false)}>Cancel</Button>
+            <Button variant="outline" type="button" onClick={() => setShowAdd(false)}>
+              Cancel
+            </Button>
             <Button type="submit">Add Holiday</Button>
           </div>
         </form>

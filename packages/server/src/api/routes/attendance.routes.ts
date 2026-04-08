@@ -14,19 +14,6 @@ const svc = new AttendanceService();
 router.use(authenticate);
 
 router.get(
-  "/summary/:empId",
-  wrap(async (req, res) => {
-    const { month, year } = req.query as any;
-    const data = await svc.getSummary(
-      param(req, "empId"),
-      Number(month) || undefined,
-      Number(year) || undefined,
-    );
-    res.json({ success: true, data });
-  }),
-);
-
-router.get(
   "/summary/bulk",
   authorize("hr_admin", "hr_manager"),
   wrap(async (req, res) => {
@@ -35,6 +22,19 @@ router.get(
       String(req.user!.empcloudOrgId),
       Number(month),
       Number(year),
+    );
+    res.json({ success: true, data });
+  }),
+);
+
+router.get(
+  "/summary/:empId",
+  wrap(async (req, res) => {
+    const { month, year } = req.query as any;
+    const data = await svc.getSummary(
+      param(req, "empId"),
+      Number(month) || undefined,
+      Number(year) || undefined,
     );
     res.json({ success: true, data });
   }),

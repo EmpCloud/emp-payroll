@@ -15,7 +15,21 @@ import toast from "react-hot-toast";
 const now = new Date();
 const currentMonth = now.getMonth() + 1;
 const currentYear = now.getFullYear();
-const MONTHS = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTHS = [
+  "",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 export function AttendancePage() {
   const qc = useQueryClient();
@@ -24,22 +38,27 @@ export function AttendancePage() {
   const [markOpen, setMarkOpen] = useState(false);
   const [marking, setMarking] = useState(false);
 
-  // Fetch attendance for each employee for current month
+  // Fetch attendance for all employees in bulk
   const { data: attendanceData, isLoading: attLoading } = useQuery({
     queryKey: ["attendance-all", currentMonth, currentYear],
     queryFn: async () => {
-      const results = [];
-      for (const emp of employees) {
-        try {
-          const res = await apiGet<any>(`/attendance/summary/${emp.id}`, { month: currentMonth, year: currentYear });
-          if (res.data) {
-            results.push({ ...res.data, employee_name: `${emp.first_name} ${emp.last_name}` });
-          }
-        } catch {
-          // No attendance record for this employee
-        }
-      }
-      return results;
+      const res = await apiGet<any>("/attendance/summary/bulk", {
+        month: currentMonth,
+        year: currentYear,
+      });
+      const records = res.data?.data || [];
+      // Enrich with employee names from employees list
+      const empMap = new Map<number, any>(employees.map((e: any) => [e.id, e]));
+      return records.map((r: any) => {
+        const emp = empMap.get(r.empcloud_user_id);
+        return {
+          ...r,
+          employee_name: emp
+            ? `${emp.first_name} ${emp.last_name}`
+            : `${r.first_name || ""} ${r.last_name || ""}`.trim() ||
+              `Employee #${r.empcloud_user_id}`,
+        };
+      });
     },
     enabled: employees.length > 0,
   });
@@ -72,26 +91,32 @@ export function AttendancePage() {
       key: "absent_days",
       header: "Absent",
       render: (row: any) => (
-        <span className={Number(row.absent_days) > 0 ? "font-medium text-red-600" : "text-gray-400"}>{row.absent_days}</span>
+        <span
+          className={Number(row.absent_days) > 0 ? "font-medium text-red-600" : "text-gray-400"}
+        >
+          {row.absent_days}
+        </span>
       ),
     },
     {
       key: "lop_days",
       header: "LOP Days",
-      render: (row: any) => (
-        Number(row.lop_days) > 0
-          ? <Badge variant="danger">{row.lop_days} LOP</Badge>
-          : <span className="text-gray-400">0</span>
-      ),
+      render: (row: any) =>
+        Number(row.lop_days) > 0 ? (
+          <Badge variant="danger">{row.lop_days} LOP</Badge>
+        ) : (
+          <span className="text-gray-400">0</span>
+        ),
     },
     {
       key: "overtime_hours",
       header: "Overtime (hrs)",
-      render: (row: any) => (
-        Number(row.overtime_hours) > 0
-          ? <span className="font-medium text-blue-600">{row.overtime_hours}h</span>
-          : <span className="text-gray-400">—</span>
-      ),
+      render: (row: any) =>
+        Number(row.overtime_hours) > 0 ? (
+          <span className="font-medium text-blue-600">{row.overtime_hours}h</span>
+        ) : (
+          <span className="text-gray-400">—</span>
+        ),
     },
   ];
 
@@ -121,40 +146,55 @@ export function AttendancePage() {
 
       {isLoading ? (
         <div className="flex h-32 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
+          <Loader2 className="text-brand-600 h-8 w-8 animate-spin" />
         </div>
       ) : (
         <DataTable columns={columns} data={attendance} />
       )}
 
       {/* Mark Attendance Modal */}
-      <Modal open={markOpen} onClose={() => setMarkOpen(false)} title="Mark Attendance" description={`${MONTHS[currentMonth]} ${currentYear}`} className="max-w-lg">
-        <form onSubmit={async (e) => {
-          e.preventDefault();
-          const fd = new FormData(e.currentTarget);
-          const totalDays = Number(fd.get("totalDays"));
-          setMarking(true);
-          try {
-            const records = employees.map((emp: any) => ({
-              employeeId: emp.id,
-              totalDays,
-              presentDays: totalDays,
-              absentDays: 0,
-              lopDays: 0,
-              overtimeHours: 0,
-              holidays: 0,
-              weekoffs: 0,
-            }));
-            await apiPost("/attendance/import", { month: currentMonth, year: currentYear, records });
-            toast.success(`Marked ${employees.length} employees as present for ${totalDays} days`);
-            setMarkOpen(false);
-            qc.invalidateQueries({ queryKey: ["attendance-all"] });
-          } catch (err: any) {
-            toast.error(err.response?.data?.error?.message || "Failed to mark attendance");
-          } finally {
-            setMarking(false);
-          }
-        }} className="space-y-4">
+      <Modal
+        open={markOpen}
+        onClose={() => setMarkOpen(false)}
+        title="Mark Attendance"
+        description={`${MONTHS[currentMonth]} ${currentYear}`}
+        className="max-w-lg"
+      >
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const totalDays = Number(fd.get("totalDays"));
+            setMarking(true);
+            try {
+              const records = employees.map((emp: any) => ({
+                employeeId: emp.id,
+                totalDays,
+                presentDays: totalDays,
+                absentDays: 0,
+                lopDays: 0,
+                overtimeHours: 0,
+                holidays: 0,
+                weekoffs: 0,
+              }));
+              await apiPost("/attendance/import", {
+                month: currentMonth,
+                year: currentYear,
+                records,
+              });
+              toast.success(
+                `Marked ${employees.length} employees as present for ${totalDays} days`,
+              );
+              setMarkOpen(false);
+              qc.invalidateQueries({ queryKey: ["attendance-all"] });
+            } catch (err: any) {
+              toast.error(err.response?.data?.error?.message || "Failed to mark attendance");
+            } finally {
+              setMarking(false);
+            }
+          }}
+          className="space-y-4"
+        >
           <Input
             id="totalDays"
             name="totalDays"
@@ -168,8 +208,12 @@ export function AttendancePage() {
             You can edit individual records afterwards.
           </p>
           <div className="flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={() => setMarkOpen(false)}>Cancel</Button>
-            <Button type="submit" loading={marking}>Mark All Present</Button>
+            <Button variant="outline" type="button" onClick={() => setMarkOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={marking}>
+              Mark All Present
+            </Button>
           </div>
         </form>
       </Modal>

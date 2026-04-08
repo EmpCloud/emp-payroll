@@ -1,21 +1,6 @@
 import { getDB } from "../db/adapters";
+import { getEmpCloudDB } from "../db/empcloud";
 import { AppError } from "../api/middleware/error.middleware";
-
-const DEFAULT_LEAVE_POLICY = [
-  { leaveType: "earned", annual: 15, carryForward: true },
-  { leaveType: "casual", annual: 7, carryForward: false },
-  { leaveType: "sick", annual: 7, carryForward: false },
-];
-
-const LEAVE_TYPE_LABELS: Record<string, string> = {
-  earned: "Earned Leave",
-  casual: "Casual Leave",
-  sick: "Sick Leave",
-  privilege: "Privilege Leave",
-  maternity: "Maternity Leave",
-  paternity: "Paternity Leave",
-  comp_off: "Compensatory Off",
-};
 
 // Leaves that count as paid leave in attendance
 const PAID_LEAVE_TYPES = ["earned", "casual", "sick", "privilege", "maternity", "paternity"];
@@ -24,420 +9,410 @@ export class LeaveService {
   private db = getDB();
 
   // -------------------------------------------------------------------------
-  // Balances
+  // Balances — read from EmpCloud's leave_balances
   // -------------------------------------------------------------------------
   async getBalances(employeeId: string, financialYear?: string) {
-    const fy = financialYear || this.currentFY();
-    const result = await this.db.findMany<any>("leave_balances", {
-      filters: { employee_id: employeeId, financial_year: fy },
-    });
+    const empcloudDb = getEmpCloudDB();
+    const year = financialYear ? Number(financialYear.split("-")[0]) : this.currentFYYear();
 
-    if (result.data.length === 0) {
-      const balances = [];
-      for (const policy of DEFAULT_LEAVE_POLICY) {
-        const balance = await this.db.create("leave_balances", {
-          employee_id: employeeId,
-          leave_type: policy.leaveType,
-          financial_year: fy,
-          opening_balance: 0,
-          accrued: policy.annual,
-          used: 0,
-          lapsed: 0,
-          closing_balance: policy.annual,
-        });
-        balances.push(balance);
-      }
-      return { data: balances, total: balances.length, page: 1, limit: 20, totalPages: 1 };
+    const balances = await empcloudDb("leave_balances as lb")
+      .join("leave_types as lt", "lb.leave_type_id", "lt.id")
+      .where("lb.user_id", Number(employeeId))
+      .where("lb.year", year)
+      .select(
+        "lb.id",
+        "lb.user_id as employee_id",
+        "lt.code as leave_type",
+        "lt.name as leave_type_name",
+        "lt.is_paid",
+        empcloudDb.raw("? as financial_year", [financialYear || this.currentFY()]),
+        "lb.total_carry_forward as opening_balance",
+        "lb.total_allocated as accrued",
+        "lb.total_used as used",
+        empcloudDb.raw("0 as lapsed"),
+        "lb.balance as closing_balance",
+      );
+
+    if (balances.length === 0) {
+      // Fall back to local leave_balances
+      const fy = financialYear || this.currentFY();
+      return this.db.findMany<any>("leave_balances", {
+        filters: { employee_id: employeeId, financial_year: fy },
+      });
     }
 
-    return result;
+    return { data: balances, total: balances.length, page: 1, limit: 20, totalPages: 1 };
   }
 
   async getOrgBalances(orgId: string, financialYear?: string) {
-    const fy = financialYear || this.currentFY();
-    const employees = await this.db.findMany<any>("employees", {
-      filters: { org_id: orgId, is_active: true },
-      limit: 1000,
-    });
+    const empcloudDb = getEmpCloudDB();
+    const orgIdNum = Number(orgId);
+    const year = financialYear ? Number(financialYear.split("-")[0]) : this.currentFYYear();
+
+    // Get all active users in the org
+    const users = await empcloudDb("users")
+      .where({ organization_id: orgIdNum, status: 1 })
+      .whereNot("role", "super_admin")
+      .select("id", "first_name", "last_name", "emp_code")
+      .limit(1000);
 
     const results = [];
-    for (const emp of employees.data) {
-      const balances = await this.getBalances(emp.id, fy);
+    for (const user of users) {
+      const balances = await this.getBalances(String(user.id), financialYear);
       results.push({
-        employeeId: emp.id,
-        employeeName: `${emp.first_name} ${emp.last_name}`,
-        employeeCode: emp.employee_code,
-        department: emp.department,
+        employeeId: String(user.id),
+        employeeName: `${user.first_name} ${user.last_name}`,
+        employeeCode: user.emp_code,
+        department: "",
         balances: balances.data,
       });
     }
     return results;
   }
 
-  async recordLeave(employeeId: string, leaveType: string, days: number, fy?: string) {
-    const financialYear = fy || this.currentFY();
-    const balance = await this.db.findOne<any>("leave_balances", {
-      employee_id: employeeId,
-      leave_type: leaveType,
-      financial_year: financialYear,
-    });
+  // -------------------------------------------------------------------------
+  // Leave Requests — read from EmpCloud's leave_applications
+  // -------------------------------------------------------------------------
+  async getMyRequests(employeeId: string, status?: string) {
+    const empcloudDb = getEmpCloudDB();
+    let query = empcloudDb("leave_applications as la")
+      .join("leave_types as lt", "la.leave_type_id", "lt.id")
+      .leftJoin("users as approver", "la.current_approver_id", "approver.id")
+      .where("la.user_id", Number(employeeId));
 
-    if (!balance) throw new AppError(404, "NOT_FOUND", "Leave balance not found");
-    if (Number(balance.closing_balance) < days) {
-      throw new AppError(400, "INSUFFICIENT_BALANCE", `Only ${balance.closing_balance} ${leaveType} leaves available`);
-    }
+    if (status) query = query.where("la.status", status);
 
-    return this.db.update("leave_balances", balance.id, {
-      used: Number(balance.used) + days,
-      closing_balance: Number(balance.closing_balance) - days,
-    });
+    const requests = await query
+      .select(
+        "la.id",
+        "la.user_id as employee_id",
+        "lt.code as leave_type",
+        "lt.name as leave_type_name",
+        "la.start_date",
+        "la.end_date",
+        "la.days_count as days",
+        "la.is_half_day",
+        "la.half_day_type as half_day_period",
+        "la.reason",
+        "la.status",
+        "la.current_approver_id as assigned_to",
+        empcloudDb.raw(
+          "CONCAT(COALESCE(approver.first_name, ''), ' ', COALESCE(approver.last_name, '')) as assignedToName",
+        ),
+        "la.created_at",
+        "la.updated_at",
+      )
+      .orderBy("la.created_at", "desc")
+      .limit(100);
+
+    return { data: requests, total: requests.length };
   }
 
-  async adjustBalance(employeeId: string, leaveType: string, adjustment: number, fy?: string) {
-    const financialYear = fy || this.currentFY();
-    const balance = await this.db.findOne<any>("leave_balances", {
-      employee_id: employeeId,
-      leave_type: leaveType,
-      financial_year: financialYear,
-    });
+  async getTeamRequests(managerId: string, status?: string) {
+    const empcloudDb = getEmpCloudDB();
+    let query = empcloudDb("leave_applications as la")
+      .join("leave_types as lt", "la.leave_type_id", "lt.id")
+      .join("users as emp", "la.user_id", "emp.id")
+      .where("la.current_approver_id", Number(managerId));
 
-    if (!balance) throw new AppError(404, "NOT_FOUND", "Leave balance not found");
+    if (status) query = query.where("la.status", status);
 
-    // If positive adjustment (restoring days on cancellation), decrease used count
-    const updates: any = {
-      closing_balance: Number(balance.closing_balance) + adjustment,
-    };
-    if (adjustment > 0) {
-      updates.used = Math.max(0, Number(balance.used) - adjustment);
-    } else {
-      updates.accrued = Number(balance.accrued) + adjustment;
-    }
+    const requests = await query
+      .select(
+        "la.id",
+        "la.user_id as employee_id",
+        empcloudDb.raw("CONCAT(emp.first_name, ' ', emp.last_name) as employeeName"),
+        "emp.emp_code as employeeCode",
+        "lt.code as leave_type",
+        "lt.name as leave_type_name",
+        "la.start_date",
+        "la.end_date",
+        "la.days_count as days",
+        "la.is_half_day",
+        "la.reason",
+        "la.status",
+        "la.created_at",
+      )
+      .orderBy("la.created_at", "desc")
+      .limit(200);
 
-    return this.db.update("leave_balances", balance.id, updates);
+    return { data: requests, total: requests.length };
+  }
+
+  async getOrgRequests(orgId: string, status?: string) {
+    const empcloudDb = getEmpCloudDB();
+    let query = empcloudDb("leave_applications as la")
+      .join("leave_types as lt", "la.leave_type_id", "lt.id")
+      .join("users as emp", "la.user_id", "emp.id")
+      .leftJoin("users as approver", "la.current_approver_id", "approver.id")
+      .where("la.organization_id", Number(orgId));
+
+    if (status) query = query.where("la.status", status);
+
+    const requests = await query
+      .select(
+        "la.id",
+        "la.user_id as employee_id",
+        empcloudDb.raw("CONCAT(emp.first_name, ' ', emp.last_name) as employeeName"),
+        "emp.emp_code as employeeCode",
+        "lt.code as leave_type",
+        "lt.name as leave_type_name",
+        "la.start_date",
+        "la.end_date",
+        "la.days_count as days",
+        "la.is_half_day",
+        "la.reason",
+        "la.status",
+        "la.current_approver_id as assigned_to",
+        empcloudDb.raw(
+          "CONCAT(COALESCE(approver.first_name, ''), ' ', COALESCE(approver.last_name, '')) as assignedToName",
+        ),
+        "la.created_at",
+      )
+      .orderBy("la.created_at", "desc")
+      .limit(200);
+
+    return { data: requests, total: requests.length };
   }
 
   // -------------------------------------------------------------------------
-  // Leave Requests (Application workflow)
+  // Leave Actions — proxy to EmpCloud's leave_applications
   // -------------------------------------------------------------------------
-  async applyLeave(employeeId: string, orgId: string, data: {
-    leaveType: string;
-    startDate: string;
-    endDate: string;
-    reason: string;
-    isHalfDay?: boolean;
-    halfDayPeriod?: "first_half" | "second_half";
-  }) {
-    const days = this.calculateDays(data.startDate, data.endDate, data.isHalfDay);
+  async applyLeave(
+    employeeId: string,
+    orgId: string,
+    data: {
+      leaveType: string;
+      startDate: string;
+      endDate: string;
+      reason: string;
+      isHalfDay?: boolean;
+      halfDayPeriod?: "first_half" | "second_half";
+    },
+  ) {
+    const empcloudDb = getEmpCloudDB();
+    const orgIdNum = Number(orgId);
+    const userIdNum = Number(employeeId);
+
+    // Find the leave type
+    const leaveType = await empcloudDb("leave_types")
+      .where({ organization_id: orgIdNum, code: data.leaveType, is_active: true })
+      .first();
+    if (!leaveType)
+      throw new AppError(400, "INVALID_TYPE", `Leave type '${data.leaveType}' not found`);
+
+    const days = data.isHalfDay ? 0.5 : this.calculateDays(data.startDate, data.endDate);
 
     // Check balance
-    const balances = await this.getBalances(employeeId);
-    const bal = balances.data.find((b: any) => b.leave_type === data.leaveType);
-    if (!bal) throw new AppError(400, "INVALID_TYPE", `Leave type '${data.leaveType}' not found`);
-    if (Number(bal.closing_balance) < days) {
-      throw new AppError(400, "INSUFFICIENT_BALANCE",
-        `Insufficient ${LEAVE_TYPE_LABELS[data.leaveType] || data.leaveType} balance. Available: ${bal.closing_balance}, Requested: ${days}`);
+    const year =
+      new Date(data.startDate).getMonth() >= 3
+        ? new Date(data.startDate).getFullYear()
+        : new Date(data.startDate).getFullYear() - 1;
+    const balance = await empcloudDb("leave_balances")
+      .where({ user_id: userIdNum, leave_type_id: leaveType.id, year })
+      .first();
+    if (balance && Number(balance.balance) < days) {
+      throw new AppError(
+        400,
+        "INSUFFICIENT_BALANCE",
+        `Insufficient ${leaveType.name} balance. Available: ${balance.balance}, Requested: ${days}`,
+      );
     }
 
-    // Check for overlapping requests (pending or approved)
-    const existing = await this.db.findMany<any>("leave_requests", {
-      filters: { employee_id: employeeId },
-    });
-    const overlap = existing.data.find((r: any) => {
-      if (r.status === "rejected" || r.status === "cancelled") return false;
-      const rStart = new Date(r.start_date).getTime();
-      const rEnd = new Date(r.end_date).getTime();
-      const newStart = new Date(data.startDate).getTime();
-      const newEnd = new Date(data.endDate).getTime();
-      return newStart <= rEnd && newEnd >= rStart;
-    });
-    if (overlap) throw new AppError(400, "OVERLAP", "You already have a pending/approved leave for overlapping dates");
+    // Check overlapping applications
+    const overlap = await empcloudDb("leave_applications")
+      .where("user_id", userIdNum)
+      .whereIn("status", ["pending", "approved"])
+      .where("start_date", "<=", data.endDate)
+      .where("end_date", ">=", data.startDate)
+      .first();
+    if (overlap)
+      throw new AppError(
+        400,
+        "OVERLAP",
+        "You already have a pending/approved leave for overlapping dates",
+      );
 
-    // Route to reporting manager per org chart
-    const employee = await this.db.findOne<any>("employees", { id: employeeId });
-    const assignedTo = employee?.reporting_manager_id || null;
+    // Get reporting manager
+    const user = await empcloudDb("users").where({ id: userIdNum }).first();
+    const approverId = user?.reporting_manager_id || null;
 
-    return this.db.create("leave_requests", {
-      employee_id: employeeId,
-      org_id: orgId,
-      leave_type: data.leaveType,
+    const [id] = await empcloudDb("leave_applications").insert({
+      organization_id: orgIdNum,
+      user_id: userIdNum,
+      leave_type_id: leaveType.id,
       start_date: data.startDate,
       end_date: data.endDate,
-      days,
+      days_count: days,
       is_half_day: data.isHalfDay || false,
-      half_day_period: data.isHalfDay ? (data.halfDayPeriod || "first_half") : null,
+      half_day_type: data.isHalfDay ? data.halfDayPeriod || "first_half" : null,
       reason: data.reason,
       status: "pending",
-      assigned_to: assignedTo,
-    });
-  }
-
-  async getMyRequests(employeeId: string, status?: string) {
-    const filters: any = { employee_id: employeeId };
-    if (status) filters.status = status;
-    const result = await this.db.findMany<any>("leave_requests", {
-      filters,
-      sort: { field: "created_at", order: "desc" },
-      limit: 100,
+      current_approver_id: approverId,
+      created_at: new Date(),
+      updated_at: new Date(),
     });
 
-    // Enrich with approver name
-    const enriched = [];
-    for (const req of result.data) {
-      const mgr = req.assigned_to ? await this.db.findOne<any>("employees", { id: req.assigned_to }) : null;
-      enriched.push({
-        ...req,
-        assignedToName: mgr ? `${mgr.first_name} ${mgr.last_name}` : "HR Admin",
-      });
-    }
-
-    return { data: enriched, total: result.total };
+    return { id, status: "pending", days };
   }
 
-  /**
-   * Get leaves assigned to a specific manager (their direct reports).
-   */
-  async getTeamRequests(managerId: string, status?: string) {
-    const filters: any = { assigned_to: managerId };
-    if (status) filters.status = status;
-    const requests = await this.db.findMany<any>("leave_requests", {
-      filters,
-      sort: { field: "created_at", order: "desc" },
-      limit: 200,
-    });
+  async approveLeave(
+    requestId: string,
+    approverId: string,
+    approverRole: string,
+    remarks?: string,
+  ) {
+    const empcloudDb = getEmpCloudDB();
+    const app = await empcloudDb("leave_applications")
+      .where({ id: Number(requestId) })
+      .first();
+    if (!app) throw new AppError(404, "NOT_FOUND", "Leave request not found");
+    if (app.status !== "pending")
+      throw new AppError(400, "INVALID_STATUS", `Cannot approve a ${app.status} request`);
 
-    return { data: await this.enrichRequests(requests.data), total: requests.total };
-  }
-
-  /**
-   * Get all org-wide leave requests (HR admin view).
-   */
-  async getOrgRequests(orgId: string, status?: string) {
-    const filters: any = { org_id: orgId };
-    if (status) filters.status = status;
-    const requests = await this.db.findMany<any>("leave_requests", {
-      filters,
-      sort: { field: "created_at", order: "desc" },
-      limit: 200,
-    });
-
-    return { data: await this.enrichRequests(requests.data), total: requests.total };
-  }
-
-  /**
-   * Approve leave — only the assigned manager or HR admin can approve.
-   */
-  async approveLeave(requestId: string, approverId: string, approverRole: string, remarks?: string) {
-    const request = await this.db.findOne<any>("leave_requests", { id: requestId });
-    if (!request) throw new AppError(404, "NOT_FOUND", "Leave request not found");
-    if (request.status !== "pending") throw new AppError(400, "INVALID_STATUS", `Cannot approve a ${request.status} request`);
-
-    // Authorization: must be the assigned manager or HR admin
-    this.checkApproverAuth(request, approverId, approverRole);
+    this.checkApproverAuth(app, Number(approverId), approverRole);
 
     // Deduct from balance
-    await this.recordLeave(request.employee_id, request.leave_type, Number(request.days));
-
-    // Sync with attendance
-    await this.syncAttendanceOnApprove(request);
-
-    return this.db.update("leave_requests", requestId, {
-      status: "approved",
-      approved_by: approverId,
-      approver_remarks: remarks || null,
-      approved_at: new Date(),
-    });
-  }
-
-  /**
-   * Reject leave — only the assigned manager or HR admin can reject.
-   */
-  async rejectLeave(requestId: string, approverId: string, approverRole: string, remarks?: string) {
-    const request = await this.db.findOne<any>("leave_requests", { id: requestId });
-    if (!request) throw new AppError(404, "NOT_FOUND", "Leave request not found");
-    if (request.status !== "pending") throw new AppError(400, "INVALID_STATUS", `Cannot reject a ${request.status} request`);
-
-    this.checkApproverAuth(request, approverId, approverRole);
-
-    return this.db.update("leave_requests", requestId, {
-      status: "rejected",
-      approved_by: approverId,
-      approver_remarks: remarks || null,
-      approved_at: new Date(),
-    });
-  }
-
-  /**
-   * Check if the approver is authorized: must be assigned_to OR hr_admin.
-   */
-  private checkApproverAuth(request: any, approverId: string, approverRole: string) {
-    const isAssigned = request.assigned_to === approverId;
-    const isHrAdmin = approverRole === "hr_admin";
-    if (!isAssigned && !isHrAdmin) {
-      throw new AppError(403, "NOT_AUTHORIZED",
-        "Only the reporting manager or HR admin can approve/reject this leave");
-    }
-  }
-
-  private async enrichRequests(requests: any[]) {
-    const enriched = [];
-    for (const req of requests) {
-      const emp = await this.db.findOne<any>("employees", { id: req.employee_id });
-      const mgr = req.assigned_to ? await this.db.findOne<any>("employees", { id: req.assigned_to }) : null;
-      enriched.push({
-        ...req,
-        employeeName: emp ? `${emp.first_name} ${emp.last_name}` : "Unknown",
-        employeeCode: emp?.employee_code,
-        department: emp?.department,
-        assignedToName: mgr ? `${mgr.first_name} ${mgr.last_name}` : "HR Admin",
-      });
-    }
-    return enriched;
-  }
-
-  // -------------------------------------------------------------------------
-  // Leave Cancellation (two-step for approved leaves)
-  // -------------------------------------------------------------------------
-
-  /**
-   * Employee cancels a pending or approved leave.
-   * - Pending: cancelled immediately
-   * - Approved: cancelled immediately, balance restored, attendance reversed
-   * No admin approval needed.
-   */
-  async cancelLeave(requestId: string, employeeId: string, reason: string) {
-    const request = await this.db.findOne<any>("leave_requests", { id: requestId });
-    if (!request) throw new AppError(404, "NOT_FOUND", "Leave request not found");
-    if (request.employee_id !== employeeId) throw new AppError(403, "FORBIDDEN", "Not your leave request");
-
-    if (request.status === "cancelled") {
-      throw new AppError(400, "ALREADY_CANCELLED", "Already cancelled");
-    }
-    if (request.status === "rejected") {
-      throw new AppError(400, "INVALID_STATUS", "Cannot cancel a rejected request");
-    }
-
-    // If approved: restore balance and reverse attendance
-    if (request.status === "approved") {
-      await this.adjustBalance(request.employee_id, request.leave_type, Number(request.days));
-      await this.syncAttendanceOnCancel(request);
-    }
-
-    return this.db.update("leave_requests", requestId, {
-      status: "cancelled",
-      cancellation_reason: reason,
-      cancellation_requested_at: new Date(),
-    });
-  }
-
-  // -------------------------------------------------------------------------
-  // Attendance <-> Leave Sync
-  // -------------------------------------------------------------------------
-
-  /**
-   * When a leave is approved, update/create attendance_summaries for each
-   * month covered by the leave to reflect paid_leave / present_days.
-   */
-  private async syncAttendanceOnApprove(request: any) {
-    const months = this.getMonthsCovered(request.start_date, request.end_date);
-    const isPaid = PAID_LEAVE_TYPES.includes(request.leave_type);
-
-    for (const { month, year, days } of months) {
-      const existing = await this.db.findOne<any>("attendance_summaries", {
-        employee_id: request.employee_id,
-        month,
-        year,
-      });
-
-      if (existing) {
-        const updates: any = {};
-        if (isPaid) {
-          updates.paid_leave = Number(existing.paid_leave || 0) + days;
-        } else {
-          updates.unpaid_leave = Number(existing.unpaid_leave || 0) + days;
-          updates.lop_days = Number(existing.lop_days || 0) + days;
-        }
-        // Reduce present_days
-        updates.present_days = Math.max(0, Number(existing.present_days || 0) - days);
-        await this.db.update("attendance_summaries", existing.id, updates);
-      } else {
-        // Create attendance record with leave data
-        const totalDays = this.getWorkingDaysInMonth(month, year);
-        await this.db.create("attendance_summaries", {
-          employee_id: request.employee_id,
-          month,
-          year,
-          total_days: totalDays,
-          present_days: totalDays - days,
-          absent_days: 0,
-          half_days: request.is_half_day ? 1 : 0,
-          paid_leave: isPaid ? days : 0,
-          unpaid_leave: isPaid ? 0 : days,
-          holidays: 0,
-          weekoffs: 0,
-          lop_days: isPaid ? 0 : days,
-          overtime_hours: 0,
-          overtime_rate: 0,
-          overtime_amount: 0,
+    const balance = await empcloudDb("leave_balances")
+      .where({ user_id: app.user_id, leave_type_id: app.leave_type_id })
+      .where(
+        "year",
+        new Date(app.start_date).getMonth() >= 3
+          ? new Date(app.start_date).getFullYear()
+          : new Date(app.start_date).getFullYear() - 1,
+      )
+      .first();
+    if (balance) {
+      await empcloudDb("leave_balances")
+        .where({ id: balance.id })
+        .update({
+          total_used: Number(balance.total_used) + Number(app.days_count),
+          balance: Number(balance.balance) - Number(app.days_count),
+          updated_at: new Date(),
         });
-      }
     }
-  }
 
-  /**
-   * When an approved leave is cancelled, reverse the attendance changes.
-   */
-  private async syncAttendanceOnCancel(request: any) {
-    const months = this.getMonthsCovered(request.start_date, request.end_date);
-    const isPaid = PAID_LEAVE_TYPES.includes(request.leave_type);
-
-    for (const { month, year, days } of months) {
-      const existing = await this.db.findOne<any>("attendance_summaries", {
-        employee_id: request.employee_id,
-        month,
-        year,
+    await empcloudDb("leave_applications")
+      .where({ id: Number(requestId) })
+      .update({
+        status: "approved",
+        updated_at: new Date(),
       });
 
-      if (existing) {
-        const updates: any = {};
-        if (isPaid) {
-          updates.paid_leave = Math.max(0, Number(existing.paid_leave || 0) - days);
-        } else {
-          updates.unpaid_leave = Math.max(0, Number(existing.unpaid_leave || 0) - days);
-          updates.lop_days = Math.max(0, Number(existing.lop_days || 0) - days);
-        }
-        // Restore present_days
-        updates.present_days = Number(existing.present_days || 0) + days;
-        await this.db.update("attendance_summaries", existing.id, updates);
-      }
-    }
+    // Insert approval record
+    await empcloudDb("leave_approvals").insert({
+      leave_application_id: Number(requestId),
+      approver_id: Number(approverId),
+      status: "approved",
+      remarks: remarks || null,
+      created_at: new Date(),
+    });
+
+    return { id: requestId, status: "approved" };
   }
 
-  /**
-   * Get leave summary for attendance page: per employee, per month.
-   * Returns approved leaves that fall within the given month.
-   */
+  async rejectLeave(requestId: string, approverId: string, approverRole: string, remarks?: string) {
+    const empcloudDb = getEmpCloudDB();
+    const app = await empcloudDb("leave_applications")
+      .where({ id: Number(requestId) })
+      .first();
+    if (!app) throw new AppError(404, "NOT_FOUND", "Leave request not found");
+    if (app.status !== "pending")
+      throw new AppError(400, "INVALID_STATUS", `Cannot reject a ${app.status} request`);
+
+    this.checkApproverAuth(app, Number(approverId), approverRole);
+
+    await empcloudDb("leave_applications")
+      .where({ id: Number(requestId) })
+      .update({
+        status: "rejected",
+        updated_at: new Date(),
+      });
+
+    await empcloudDb("leave_approvals").insert({
+      leave_application_id: Number(requestId),
+      approver_id: Number(approverId),
+      status: "rejected",
+      remarks: remarks || null,
+      created_at: new Date(),
+    });
+
+    return { id: requestId, status: "rejected" };
+  }
+
+  async cancelLeave(requestId: string, employeeId: string, reason: string) {
+    const empcloudDb = getEmpCloudDB();
+    const app = await empcloudDb("leave_applications")
+      .where({ id: Number(requestId) })
+      .first();
+    if (!app) throw new AppError(404, "NOT_FOUND", "Leave request not found");
+    if (app.user_id !== Number(employeeId))
+      throw new AppError(403, "FORBIDDEN", "Not your leave request");
+    if (app.status === "cancelled")
+      throw new AppError(400, "ALREADY_CANCELLED", "Already cancelled");
+    if (app.status === "rejected")
+      throw new AppError(400, "INVALID_STATUS", "Cannot cancel a rejected request");
+
+    // If approved: restore balance
+    if (app.status === "approved") {
+      const balance = await empcloudDb("leave_balances")
+        .where({ user_id: app.user_id, leave_type_id: app.leave_type_id })
+        .where(
+          "year",
+          new Date(app.start_date).getMonth() >= 3
+            ? new Date(app.start_date).getFullYear()
+            : new Date(app.start_date).getFullYear() - 1,
+        )
+        .first();
+      if (balance) {
+        await empcloudDb("leave_balances")
+          .where({ id: balance.id })
+          .update({
+            total_used: Math.max(0, Number(balance.total_used) - Number(app.days_count)),
+            balance: Number(balance.balance) + Number(app.days_count),
+            updated_at: new Date(),
+          });
+      }
+    }
+
+    await empcloudDb("leave_applications")
+      .where({ id: Number(requestId) })
+      .update({
+        status: "cancelled",
+        updated_at: new Date(),
+      });
+
+    return { id: requestId, status: "cancelled" };
+  }
+
+  // -------------------------------------------------------------------------
+  // Leave Summary for Attendance Page
+  // -------------------------------------------------------------------------
   async getLeaveSummaryForMonth(orgId: string, month: number, year: number) {
-    const startOfMonth = new Date(year, month - 1, 1).toISOString().split("T")[0];
-    const endOfMonth = new Date(year, month, 0).toISOString().split("T")[0];
+    const empcloudDb = getEmpCloudDB();
+    const startOfMonth = `${year}-${String(month).padStart(2, "0")}-01`;
+    const endOfMonth = new Date(year, month, 0).toISOString().slice(0, 10);
 
-    // Get all approved leaves for this org
-    const allLeaves = await this.db.findMany<any>("leave_requests", {
-      filters: { org_id: orgId, status: "approved" },
-      limit: 1000,
-    });
+    const leaves = await empcloudDb("leave_applications as la")
+      .join("leave_types as lt", "la.leave_type_id", "lt.id")
+      .where("la.organization_id", Number(orgId))
+      .where("la.status", "approved")
+      .where("la.start_date", "<=", endOfMonth)
+      .where("la.end_date", ">=", startOfMonth)
+      .select(
+        "la.user_id",
+        "lt.code as leave_type",
+        "la.start_date",
+        "la.end_date",
+        "la.days_count as days",
+        "la.is_half_day",
+      );
 
-    // Filter to those overlapping with the target month
-    const monthLeaves = allLeaves.data.filter((l: any) => {
-      const lStart = l.start_date.split("T")[0];
-      const lEnd = l.end_date.split("T")[0];
-      return lStart <= endOfMonth && lEnd >= startOfMonth;
-    });
-
-    // Group by employee
     const byEmployee: Record<string, any[]> = {};
-    for (const leave of monthLeaves) {
-      if (!byEmployee[leave.employee_id]) byEmployee[leave.employee_id] = [];
-      byEmployee[leave.employee_id].push({
+    for (const leave of leaves) {
+      const key = String(leave.user_id);
+      if (!byEmployee[key]) byEmployee[key] = [];
+      byEmployee[key].push({
         leaveType: leave.leave_type,
         startDate: leave.start_date,
         endDate: leave.end_date,
@@ -445,51 +420,66 @@ export class LeaveService {
         isHalfDay: leave.is_half_day,
       });
     }
-
     return byEmployee;
+  }
+
+  // -------------------------------------------------------------------------
+  // Record/Adjust (kept for backward compatibility with local tables)
+  // -------------------------------------------------------------------------
+  async recordLeave(employeeId: string, leaveType: string, days: number) {
+    const fy = this.currentFY();
+    const balance = await this.db.findOne<any>("leave_balances", {
+      employee_id: employeeId,
+      leave_type: leaveType,
+      financial_year: fy,
+    });
+    if (!balance) throw new AppError(404, "NOT_FOUND", "Leave balance not found");
+    if (Number(balance.closing_balance) < days) {
+      throw new AppError(
+        400,
+        "INSUFFICIENT_BALANCE",
+        `Only ${balance.closing_balance} ${leaveType} leaves available`,
+      );
+    }
+    return this.db.update("leave_balances", balance.id, {
+      used: Number(balance.used) + days,
+      closing_balance: Number(balance.closing_balance) - days,
+    });
+  }
+
+  async adjustBalance(employeeId: string, leaveType: string, adjustment: number) {
+    const fy = this.currentFY();
+    const balance = await this.db.findOne<any>("leave_balances", {
+      employee_id: employeeId,
+      leave_type: leaveType,
+      financial_year: fy,
+    });
+    if (!balance) throw new AppError(404, "NOT_FOUND", "Leave balance not found");
+    const updates: any = { closing_balance: Number(balance.closing_balance) + adjustment };
+    if (adjustment > 0) {
+      updates.used = Math.max(0, Number(balance.used) - adjustment);
+    } else {
+      updates.accrued = Number(balance.accrued) + adjustment;
+    }
+    return this.db.update("leave_balances", balance.id, updates);
   }
 
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
-
-  /**
-   * Break a leave period into per-month day counts.
-   * E.g., leave from Mar 28 to Apr 3 → [{month:3, year:2026, days:2}, {month:4, year:2026, days:3}]
-   */
-  private getMonthsCovered(startDate: string, endDate: string): { month: number; year: number; days: number }[] {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const months: Map<string, { month: number; year: number; days: number }> = new Map();
-
-    const current = new Date(start);
-    while (current <= end) {
-      const day = current.getDay();
-      if (day !== 0 && day !== 6) { // Skip weekends
-        const key = `${current.getFullYear()}-${current.getMonth() + 1}`;
-        if (!months.has(key)) {
-          months.set(key, { month: current.getMonth() + 1, year: current.getFullYear(), days: 0 });
-        }
-        months.get(key)!.days++;
-      }
-      current.setDate(current.getDate() + 1);
+  private checkApproverAuth(app: any, approverId: number, approverRole: string) {
+    const isAssigned = app.current_approver_id === approverId;
+    const isHrAdmin = approverRole === "hr_admin" || approverRole === "org_admin";
+    if (!isAssigned && !isHrAdmin) {
+      throw new AppError(
+        403,
+        "NOT_AUTHORIZED",
+        "Only the reporting manager or HR admin can approve/reject this leave",
+      );
     }
-
-    return Array.from(months.values());
   }
 
-  private getWorkingDaysInMonth(month: number, year: number): number {
-    let days = 0;
-    const daysInMonth = new Date(year, month, 0).getDate();
-    for (let d = 1; d <= daysInMonth; d++) {
-      const day = new Date(year, month - 1, d).getDay();
-      if (day !== 0 && day !== 6) days++;
-    }
-    return days;
-  }
-
-  private calculateDays(startDate: string, endDate: string, isHalfDay?: boolean): number {
-    if (isHalfDay) return 0.5;
+  private calculateDays(startDate: string, endDate: string): number {
     const start = new Date(startDate);
     const end = new Date(endDate);
     let days = 0;
@@ -506,5 +496,10 @@ export class LeaveService {
     const now = new Date();
     const year = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
     return `${year}-${year + 1}`;
+  }
+
+  private currentFYYear(): number {
+    const now = new Date();
+    return now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
   }
 }

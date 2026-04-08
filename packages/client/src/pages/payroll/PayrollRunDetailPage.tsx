@@ -26,6 +26,7 @@ import {
   Download,
   Mail,
   AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { api, apiPost } from "@/api/client";
@@ -41,18 +42,52 @@ const columns = [
         <p className="font-medium text-gray-900">
           {row.first_name ? `${row.first_name} ${row.last_name}` : row.employee_id?.slice(0, 8)}
         </p>
-        {row.employee_code && (
+        {(row.employee_code || row.department) && (
           <p className="text-xs text-gray-500">
-            {row.employee_code} &middot; {row.department}
+            {[row.employee_code, row.department].filter(Boolean).join(" · ")}
           </p>
         )}
       </div>
     ),
   },
   {
+    key: "attendance",
+    header: "Days Worked",
+    render: (row: any) => {
+      const paid = Number(row.paid_days || 0);
+      const total = Number(row.total_days || 0);
+      const lop = Number(row.lop_days || 0);
+      return (
+        <div>
+          <p className="font-medium text-gray-900">
+            {paid} / {total}
+          </p>
+          {lop > 0 && <p className="text-xs text-red-500">LOP: {lop} days</p>}
+        </div>
+      );
+    },
+  },
+  {
     key: "gross",
     header: "Gross",
-    render: (row: any) => formatCurrency(row.gross_earnings),
+    render: (row: any) => (
+      <div>
+        <p>{formatCurrency(row.gross_earnings)}</p>
+        {(() => {
+          const earns =
+            typeof row.earnings === "string" ? JSON.parse(row.earnings) : row.earnings || [];
+          return earns.length > 0 ? (
+            <div className="mt-0.5 text-xs text-gray-400">
+              {earns.map((e: any) => (
+                <span key={e.code} className="mr-1.5">
+                  {e.code}: {formatCurrency(e.amount)}
+                </span>
+              ))}
+            </div>
+          ) : null;
+        })()}
+      </div>
+    ),
   },
   {
     key: "deductions",
@@ -60,13 +95,17 @@ const columns = [
     render: (row: any) => {
       const deds =
         typeof row.deductions === "string" ? JSON.parse(row.deductions) : row.deductions || [];
+      const total = deds.reduce((s: number, d: any) => s + Number(d.amount), 0);
       return (
-        <div className="text-xs">
-          {deds.map((d: any) => (
-            <span key={d.code} className="mr-2">
-              {d.code}: {formatCurrency(d.amount)}
-            </span>
-          ))}
+        <div>
+          <p>{formatCurrency(total)}</p>
+          <div className="mt-0.5 text-xs text-gray-400">
+            {deds.map((d: any) => (
+              <span key={d.code} className="mr-1.5">
+                {d.code}: {formatCurrency(d.amount)}
+              </span>
+            ))}
+          </div>
         </div>
       );
     },
@@ -100,6 +139,45 @@ const columns = [
     ),
   },
 ];
+
+function exportPayrollCSV(payslips: any[], run: any) {
+  const headers = [
+    "Employee",
+    "Emp Code",
+    "Department",
+    "Working Days",
+    "Paid Days",
+    "LOP Days",
+    "Gross Earnings",
+    "Deductions",
+    "Net Pay",
+    "Status",
+  ];
+  const rows = payslips.map((p: any) => {
+    const deds = typeof p.deductions === "string" ? JSON.parse(p.deductions) : p.deductions || [];
+    const totalDed = deds.reduce((s: number, d: any) => s + Number(d.amount), 0);
+    return [
+      `${p.first_name || ""} ${p.last_name || ""}`.trim(),
+      p.employee_code || "",
+      p.department || "",
+      p.total_days || 0,
+      p.paid_days || 0,
+      p.lop_days || 0,
+      p.gross_earnings || 0,
+      totalDed,
+      p.net_pay || 0,
+      p.status || "",
+    ].join(",");
+  });
+  const csv = [headers.join(","), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `payroll-${run.month}-${run.year}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export function PayrollRunDetailPage() {
   const { id } = useParams();
@@ -198,6 +276,28 @@ export function PayrollRunDetailPage() {
                 }}
               >
                 Revert to Draft
+              </Button>
+            )}
+            {run.status === "cancelled" && (
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  if (
+                    !confirm(
+                      "Rerun this payroll? It will be reverted to draft so you can recompute.",
+                    )
+                  )
+                    return;
+                  try {
+                    await apiPost(`/payroll/${id}/revert`);
+                    toast.success("Payroll run restored to draft — you can now recompute");
+                    window.location.reload();
+                  } catch (err: any) {
+                    toast.error(err.response?.data?.error?.message || "Failed to rerun");
+                  }
+                }}
+              >
+                <RotateCcw className="h-4 w-4" /> Rerun Payroll
               </Button>
             )}
             {run.status === "draft" && (
@@ -394,8 +494,13 @@ export function PayrollRunDetailPage() {
         })()}
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Employee Payslips</CardTitle>
+          {payslips.length > 0 && (
+            <Button variant="outline" size="sm" onClick={() => exportPayrollCSV(payslips, run)}>
+              <Download className="h-4 w-4" /> Export CSV
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           <DataTable columns={columns} data={payslips} emptyMessage="Payroll not yet computed" />

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -9,8 +9,8 @@ import { DataTable } from "@/components/ui/DataTable";
 import { CSVImportModal } from "@/components/ui/CSVImportModal";
 import { formatCurrency } from "@/lib/utils";
 import { useEmployees } from "@/api/hooks";
-import { api } from "@/api/client";
-import { Plus, Download, Upload, Loader2, Search } from "lucide-react";
+import { api, apiGet, apiPost } from "@/api/client";
+import { Plus, Download, Upload, Loader2, Search, AlertCircle, Check, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 const columns = [
@@ -88,8 +88,74 @@ export function EmployeeListPage() {
     : filtered;
   const total = res?.data?.total || allEmployees.length;
 
+  // Pending bank update requests
+  const { data: bankReqRes } = useQuery({
+    queryKey: ["bank-update-requests", "pending"],
+    queryFn: () => apiGet<any>("/employees/bank-update-requests", { status: "pending" }),
+  });
+  const pendingBankReqs = bankReqRes?.data?.data || [];
+
+  async function handleBankReqAction(reqId: string, action: "approve" | "reject") {
+    try {
+      await apiPost(`/employees/bank-update-requests/${reqId}/${action}`, {});
+      toast.success(action === "approve" ? "Bank details updated" : "Request rejected");
+      qc.invalidateQueries({ queryKey: ["bank-update-requests"] });
+    } catch (err: any) {
+      toast.error(err.response?.data?.error?.message || `Failed to ${action}`);
+    }
+  }
+
   return (
     <div className="space-y-6">
+      {/* Pending Bank Update Requests */}
+      {pendingBankReqs.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
+          <div className="mb-3 flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-amber-600" />
+            <h3 className="font-semibold text-amber-800 dark:text-amber-200">
+              Pending Bank Update Requests ({pendingBankReqs.length})
+            </h3>
+          </div>
+          <div className="space-y-2">
+            {pendingBankReqs.map((r: any) => (
+              <div
+                key={r.id}
+                className="flex items-center justify-between rounded-lg bg-white p-3 text-sm dark:bg-gray-800"
+              >
+                <div>
+                  <span className="font-medium text-gray-900">{r.employee_name}</span>
+                  <span className="ml-2 text-gray-500">{r.emp_code}</span>
+                  <span className="mx-2 text-gray-300">|</span>
+                  <span className="text-gray-600">
+                    {r.requested_details?.bankName} — A/C {r.requested_details?.accountNumber} —
+                    IFSC {r.requested_details?.ifscCode}
+                  </span>
+                  {r.reason && <span className="ml-2 text-xs text-gray-400">({r.reason})</span>}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleBankReqAction(r.id, "approve")}
+                    className="text-green-600 hover:text-green-700"
+                  >
+                    <Check className="h-3.5 w-3.5" /> Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleBankReqAction(r.id, "reject")}
+                    className="text-red-500 hover:text-red-600"
+                  >
+                    <X className="h-3.5 w-3.5" /> Reject
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <PageHeader
         title="Employees"
         description={

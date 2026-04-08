@@ -43,10 +43,12 @@ function PageLoader() {
   );
 }
 
+const ADMIN_ROLES = ["org_admin", "hr_admin", "hr_manager"];
+
 function RoleRedirect() {
   const user = getUser();
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role === "hr_admin" || user.role === "hr_manager") {
+  if (ADMIN_ROLES.includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
   }
   return <Navigate to="/my" replace />;
@@ -55,7 +57,7 @@ function RoleRedirect() {
 function AdminGuard({ children }: { children: React.ReactNode }) {
   const user = getUser();
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== "hr_admin" && user.role !== "hr_manager") {
+  if (!ADMIN_ROLES.includes(user.role)) {
     return <Navigate to="/my" replace />;
   }
   return <>{children}</>;

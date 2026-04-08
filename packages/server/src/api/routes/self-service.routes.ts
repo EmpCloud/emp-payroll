@@ -87,7 +87,7 @@ router.get(
 router.get(
   "/salary",
   wrap(async (req, res) => {
-    const data = await salSvc.getEmployeeSalary(uid(req));
+    const data = await salSvc.getEmployeeSalary(uid(req)).catch(() => null);
     res.json({ success: true, data });
   }),
 );
@@ -95,8 +95,11 @@ router.get(
 router.get(
   "/salary/ctc",
   wrap(async (req, res) => {
-    const salary = await salSvc.getEmployeeSalary(uid(req));
-    res.json({ success: true, data: { ctc: salary.ctc, components: salary.components } });
+    const salary = await salSvc.getEmployeeSalary(uid(req)).catch(() => null);
+    res.json({
+      success: true,
+      data: salary ? { ctc: salary.ctc, components: salary.components } : null,
+    });
   }),
 );
 
@@ -201,6 +204,30 @@ router.put(
       req.user!.empcloudOrgId,
       req.body,
     );
+    res.json({ success: true, data });
+  }),
+);
+
+// --- Bank Update Requests (employee submits, admin approves) ---
+import { BankUpdateRequestService } from "../../services/bank-update-request.service";
+const bankReqSvc = new BankUpdateRequestService();
+
+router.post(
+  "/bank-update-request",
+  wrap(async (req, res) => {
+    const data = await bankReqSvc.submit(req.user!.empcloudUserId, req.user!.empcloudOrgId, {
+      currentDetails: req.body.currentDetails,
+      requestedDetails: req.body.requestedDetails,
+      reason: req.body.reason,
+    });
+    res.status(201).json({ success: true, data });
+  }),
+);
+
+router.get(
+  "/bank-update-requests",
+  wrap(async (req, res) => {
+    const data = await bankReqSvc.getMyRequests(req.user!.empcloudUserId);
     res.json({ success: true, data });
   }),
 );
