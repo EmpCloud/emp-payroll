@@ -273,7 +273,7 @@ describe("payroll.service — coverage gaps", () => {
 
     const run = await db("payroll_runs").where({ id: revertRunId }).first();
     expect(run.status).toBe("draft");
-    expect(run.total_gross).toBe(0);
+    expect(Number(run.total_gross)).toBe(0);
   });
 
   it("should reject reverting an already draft run", async () => {
@@ -368,7 +368,7 @@ describe("payroll.service — coverage gaps", () => {
 
     const payslip = await db("payslips").where({ id: psId }).first();
     expect(payslip).toBeTruthy();
-    expect(payslip.net_pay).toBe(45000);
+    expect(Number(payslip.net_pay)).toBe(45000);
 
     const earnings =
       typeof payslip.earnings === "string" ? JSON.parse(payslip.earnings) : payslip.earnings;
