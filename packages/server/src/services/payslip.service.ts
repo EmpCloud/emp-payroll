@@ -78,7 +78,9 @@ export class PayslipService {
 
   private async enrichPayslips(result: any) {
     const ecDb = getEmpCloudDB();
-    const userIds = [...new Set(result.data.map((p: any) => p.empcloud_user_id).filter(Boolean))];
+    const userIds = [
+      ...new Set(result.data.map((p: any) => p.empcloud_user_id).filter(Boolean)),
+    ] as (string | number)[];
 
     if (userIds.length === 0) return result;
 
