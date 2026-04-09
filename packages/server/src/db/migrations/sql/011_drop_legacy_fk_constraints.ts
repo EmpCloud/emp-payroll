@@ -5,7 +5,7 @@
 // constraints must be removed since data now lives in the EmpCloud database.
 // ============================================================================
 
-import { Knex } from "knex";
+import type { Knex } from "knex";
 
 export async function up(knex: Knex): Promise<void> {
   // Helper: drop FK if it exists (MySQL-specific)

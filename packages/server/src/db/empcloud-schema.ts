@@ -5,7 +5,7 @@
 // Module databases (EmpPayroll, EmpMonitor) reference these IDs.
 // ============================================================================
 
-import { Knex } from "knex";
+import type { Knex } from "knex";
 
 export async function up(knex: Knex): Promise<void> {
   // -------------------------------------------------------------------------

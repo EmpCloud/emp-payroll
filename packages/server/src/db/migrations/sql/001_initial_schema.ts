@@ -3,7 +3,7 @@
 // Works with both MySQL and PostgreSQL via Knex
 // ============================================================================
 
-import { Knex } from "knex";
+import type { Knex } from "knex";
 
 export async function up(knex: Knex): Promise<void> {
   // -------------------------------------------------------------------------
@@ -84,7 +84,11 @@ export async function up(knex: Knex): Promise<void> {
   // -------------------------------------------------------------------------
   await knex.schema.createTable("salary_components", (t) => {
     t.uuid("id").primary();
-    t.uuid("structure_id").notNullable().references("id").inTable("salary_structures").onDelete("CASCADE");
+    t.uuid("structure_id")
+      .notNullable()
+      .references("id")
+      .inTable("salary_structures")
+      .onDelete("CASCADE");
     t.string("name", 100).notNullable();
     t.string("code", 20).notNullable();
     t.string("type", 20).notNullable(); // earning, deduction, reimbursement, benefit
@@ -152,7 +156,11 @@ export async function up(knex: Knex): Promise<void> {
   // -------------------------------------------------------------------------
   await knex.schema.createTable("payslips", (t) => {
     t.uuid("id").primary();
-    t.uuid("payroll_run_id").notNullable().references("id").inTable("payroll_runs").onDelete("CASCADE");
+    t.uuid("payroll_run_id")
+      .notNullable()
+      .references("id")
+      .inTable("payroll_runs")
+      .onDelete("CASCADE");
     t.uuid("employee_id").notNullable().references("id").inTable("employees");
     t.integer("month").notNullable();
     t.integer("year").notNullable();
