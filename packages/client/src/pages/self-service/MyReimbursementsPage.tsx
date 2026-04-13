@@ -28,14 +28,21 @@ export function MyReimbursementsPage() {
   const [submitting, setSubmitting] = useState(false);
   const qc = useQueryClient();
 
+  // #1358 — Request a large page so client-side pagination has all records
+  // to paginate through. Without per_page, backend caps at 20 and anything
+  // past page 2 of the DataTable had no data to render.
   const { data: res, isLoading } = useQuery({
     queryKey: ["my-reimbursements"],
-    queryFn: () => apiGet<any>("/self-service/reimbursements"),
+    queryFn: () => apiGet<any>("/self-service/reimbursements", { params: { per_page: 500 } }),
   });
 
   const claims = res?.data?.data || [];
-  const totalPending = claims.filter((c: any) => c.status === "pending").reduce((s: number, c: any) => s + Number(c.amount), 0);
-  const totalApproved = claims.filter((c: any) => c.status === "approved" || c.status === "paid").reduce((s: number, c: any) => s + Number(c.amount), 0);
+  const totalPending = claims
+    .filter((c: any) => c.status === "pending")
+    .reduce((s: number, c: any) => s + Number(c.amount), 0);
+  const totalApproved = claims
+    .filter((c: any) => c.status === "approved" || c.status === "paid")
+    .reduce((s: number, c: any) => s + Number(c.amount), 0);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -53,7 +60,9 @@ export function MyReimbursementsPage() {
       qc.invalidateQueries({ queryKey: ["my-reimbursements"] });
     } catch (err: any) {
       toast.error(err.response?.data?.error?.message || "Failed to submit");
-    } finally { setSubmitting(false); }
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -69,13 +78,30 @@ export function MyReimbursementsPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card><CardContent className="py-4"><p className="text-sm text-gray-500">Total Claims</p><p className="text-xl font-bold">{claims.length}</p></CardContent></Card>
-        <Card><CardContent className="py-4"><p className="text-sm text-gray-500">Pending</p><p className="text-xl font-bold text-orange-600">{formatCurrency(totalPending)}</p></CardContent></Card>
-        <Card><CardContent className="py-4"><p className="text-sm text-gray-500">Approved / Paid</p><p className="text-xl font-bold text-green-600">{formatCurrency(totalApproved)}</p></CardContent></Card>
+        <Card>
+          <CardContent className="py-4">
+            <p className="text-sm text-gray-500">Total Claims</p>
+            <p className="text-xl font-bold">{claims.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4">
+            <p className="text-sm text-gray-500">Pending</p>
+            <p className="text-xl font-bold text-orange-600">{formatCurrency(totalPending)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4">
+            <p className="text-sm text-gray-500">Approved / Paid</p>
+            <p className="text-xl font-bold text-green-600">{formatCurrency(totalApproved)}</p>
+          </CardContent>
+        </Card>
       </div>
 
       {isLoading ? (
-        <div className="flex h-32 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-brand-600" /></div>
+        <div className="flex h-32 items-center justify-center">
+          <Loader2 className="text-brand-600 h-6 w-6 animate-spin" />
+        </div>
       ) : claims.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
@@ -87,10 +113,18 @@ export function MyReimbursementsPage() {
       ) : (
         <DataTable
           columns={[
-            { key: "category", header: "Category", render: (r: any) => <Badge variant="draft">{r.category}</Badge> },
+            {
+              key: "category",
+              header: "Category",
+              render: (r: any) => <Badge variant="draft">{r.category}</Badge>,
+            },
             { key: "description", header: "Description" },
             { key: "amount", header: "Amount", render: (r: any) => formatCurrency(r.amount) },
-            { key: "expense_date", header: "Date", render: (r: any) => new Date(r.expense_date).toLocaleDateString("en-IN") },
+            {
+              key: "expense_date",
+              header: "Date",
+              render: (r: any) => new Date(r.expense_date).toLocaleDateString("en-IN"),
+            },
             {
               key: "status",
               header: "Status",
@@ -104,8 +138,11 @@ export function MyReimbursementsPage() {
                         <div
                           key={step}
                           className={`h-1.5 w-5 rounded-full ${
-                            r.status === "rejected" ? "bg-red-400" :
-                            i <= idx ? "bg-green-500" : "bg-gray-200"
+                            r.status === "rejected"
+                              ? "bg-red-400"
+                              : i <= idx
+                                ? "bg-green-500"
+                                : "bg-gray-200"
                           }`}
                         />
                       ))}
@@ -123,14 +160,31 @@ export function MyReimbursementsPage() {
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Submit Expense Claim">
         <form onSubmit={handleSubmit} className="space-y-4">
           <SelectField id="category" name="category" label="Category" options={CATEGORIES} />
-          <Input id="description" name="description" label="Description" placeholder="e.g. Client meeting taxi" required />
+          <Input
+            id="description"
+            name="description"
+            label="Description"
+            placeholder="e.g. Client meeting taxi"
+            required
+          />
           <div className="grid grid-cols-2 gap-4">
-            <Input id="amount" name="amount" label="Amount (₹)" type="number" placeholder="1500" required />
+            <Input
+              id="amount"
+              name="amount"
+              label="Amount (₹)"
+              type="number"
+              placeholder="1500"
+              required
+            />
             <Input id="date" name="date" label="Expense Date" type="date" required />
           </div>
           <div className="flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={() => setShowAdd(false)}>Cancel</Button>
-            <Button type="submit" loading={submitting}>Submit Claim</Button>
+            <Button variant="outline" type="button" onClick={() => setShowAdd(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={submitting}>
+              Submit Claim
+            </Button>
           </div>
         </form>
       </Modal>
