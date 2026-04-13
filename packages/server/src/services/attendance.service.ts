@@ -197,7 +197,7 @@ export class AttendanceService {
     }
   }
 
-  async importRecords(orgId: string, month: number, year: number, records: any[]) {
+  async importRecords(_orgId: string, month: number, year: number, records: any[]) {
     const results = [];
     for (const record of records) {
       const empcloudUserId = Number(record.employeeId);
@@ -207,8 +207,14 @@ export class AttendanceService {
         year,
       });
 
+      // employee_id is a legacy UUID column from the pre-EmpCloud schema.
+      // It's nullable since migration 011 (drop_legacy_fk_constraints) and
+      // should stay NULL for empcloud-sourced records. The old unique index
+      // (employee_id, month, year) still exists, but MySQL treats NULL as
+      // distinct in unique indexes so multiple NULL rows don't collide.
+      // Uniqueness per empcloud user is enforced by the findOne upsert above.
       const data = {
-        employee_id: "00000000-0000-0000-0000-000000000000",
+        employee_id: null,
         empcloud_user_id: empcloudUserId,
         month,
         year,
