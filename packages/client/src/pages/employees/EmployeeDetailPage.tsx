@@ -634,6 +634,12 @@ export function EmployeeDetailPage() {
                 label="PAN"
                 defaultValue={taxInfo.pan || ""}
                 placeholder="ABCDE1234F"
+                maxLength={10}
+                pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}"
+                title="PAN must be 10 characters: 5 letters, 4 digits, 1 letter (e.g., ABCDE1234F)"
+                onChange={(e) => {
+                  e.currentTarget.value = e.currentTarget.value.toUpperCase();
+                }}
               />
               <SelectField
                 id="regime"
