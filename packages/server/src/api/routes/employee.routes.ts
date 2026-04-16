@@ -178,8 +178,7 @@ router.post(
       if (!emp.lastName) emp.lastName = emp["Last Name"] || emp.last_name || "";
       if (!emp.email) emp.email = emp["Email"] || "";
       if (!emp.phone) emp.phone = emp["Phone"] || emp.contact_number || "";
-      if (!emp.dateOfBirth)
-        emp.dateOfBirth = emp["Date of Birth"] || emp.date_of_birth || "1990-01-01";
+      if (!emp.dateOfBirth) emp.dateOfBirth = emp["Date of Birth"] || emp.date_of_birth || "";
       if (!emp.gender) emp.gender = (emp["Gender"] || "other").toLowerCase();
       if (!emp.dateOfJoining)
         emp.dateOfJoining =
@@ -196,6 +195,31 @@ router.post(
             email: emp.email || "—",
             status: "error",
             error: "Missing required fields (email, firstName, lastName)",
+          });
+          continue;
+        }
+        // DOB must be present AND strictly in the past — issue #21 / #8.
+        // Previously this path silently defaulted to "1990-01-01" which
+        // let rows with a future or missing DOB sneak through and then
+        // become hard to spot in the directory.
+        if (!emp.dateOfBirth) {
+          results.push({
+            row: i + 1,
+            email: emp.email,
+            status: "error",
+            error: "Date of birth is required",
+          });
+          continue;
+        }
+        const dob = new Date(emp.dateOfBirth);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (Number.isNaN(dob.getTime()) || dob.getTime() >= today.getTime()) {
+          results.push({
+            row: i + 1,
+            email: emp.email,
+            status: "error",
+            error: "Date of birth must be a valid past date",
           });
           continue;
         }
