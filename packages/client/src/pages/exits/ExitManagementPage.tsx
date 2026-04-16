@@ -90,15 +90,30 @@ export function ExitManagementPage() {
       toast.error("Select an employee");
       return;
     }
+    // Employee search results may come back with `id` (current server shape)
+    // or `empcloudUserId` (legacy camelCase shape) — accept either so the
+    // outbound payload always carries a real employeeId.
+    const employeeId = selectedEmp.id ?? selectedEmp.empcloudUserId ?? selectedEmp.empcloud_user_id;
+    if (!employeeId) {
+      toast.error("Invalid employee selection");
+      return;
+    }
     const fd = new FormData(e.currentTarget);
+    // FormData.get returns FormDataEntryValue | null — coerce to string and
+    // fall back to the first exit-type option so a native <select> that
+    // hasn't been touched still sends a valid value.
+    const exitType = (fd.get("exitType") as string | null) || EXIT_TYPES[0].value;
+    const resignationDate = (fd.get("resignationDate") as string | null) || undefined;
+    const lastWorkingDate = (fd.get("lastWorkingDate") as string | null) || undefined;
+    const reason = (fd.get("reason") as string | null) || undefined;
     setSubmitting(true);
     try {
       await apiPost("/exits", {
-        employeeId: selectedEmp.id,
-        exitType: fd.get("exitType"),
-        resignationDate: fd.get("resignationDate"),
-        lastWorkingDate: fd.get("lastWorkingDate"),
-        reason: fd.get("reason"),
+        employeeId,
+        exitType,
+        resignationDate,
+        lastWorkingDate,
+        reason,
       });
       toast.success("Exit initiated");
       setCreateOpen(false);

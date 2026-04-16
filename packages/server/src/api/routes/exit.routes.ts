@@ -42,18 +42,25 @@ router.post(
   "/",
   authorize("hr_admin", "hr_manager"),
   wrap(async (req, res) => {
-    const { employeeId, exitType, resignationDate, lastWorkingDate, reason } = req.body;
+    // Accept both camelCase (primary) and snake_case keys so form submissions
+    // from any client naming convention work. Fixes #28 — the Initiate Exit
+    // form was rejecting valid payloads because different UI components
+    // (search results + native <select>) mix snake_case and camelCase.
+    const body = req.body || {};
+    const employeeId = body.employeeId ?? body.employee_id;
+    const exitType = body.exitType ?? body.exit_type;
+    const resignationDate = body.resignationDate ?? body.resignation_date;
+    const lastWorkingDate = body.lastWorkingDate ?? body.last_working_date;
+    const reason = body.reason;
     if (!employeeId || !exitType) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: { code: "INVALID_INPUT", message: "employeeId and exitType are required" },
-        });
+      return res.status(400).json({
+        success: false,
+        error: { code: "INVALID_INPUT", message: "employeeId and exitType are required" },
+      });
     }
     const data = await initiateExit({
       orgId: req.user!.empcloudOrgId,
-      employeeId,
+      employeeId: Number(employeeId),
       exitType,
       resignationDate,
       lastWorkingDate,
