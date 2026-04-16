@@ -179,17 +179,21 @@ export class EmployeeService {
       .orderBy("first_name")
       .limit(limit);
 
-    // Enrich with department names
+    // Enrich with department names. Returns snake_case to match the rest of
+    // the employee API shape — the header search bar navigates on `emp.id`
+    // and displays `emp.first_name` / `emp.last_name` etc, so camelCase here
+    // was landing users on /employees/undefined (issue #23).
     const results = await Promise.all(
       rows.map(async (r: any) => ({
-        empcloudUserId: r.id,
-        empCode: r.emp_code,
-        firstName: r.first_name,
-        lastName: r.last_name,
+        id: r.id,
+        emp_code: r.emp_code,
+        employee_code: r.emp_code, // some UIs still read this legacy key
+        first_name: r.first_name,
+        last_name: r.last_name,
         email: r.email,
         designation: r.designation,
         department: await getUserDepartmentName(r.department_id),
-        isActive: r.status === 1,
+        is_active: r.status === 1,
       })),
     );
 
