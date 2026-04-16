@@ -265,6 +265,42 @@ export class EmployeeService {
       is_active: true,
     });
 
+    // Seat the new user on the emp-payroll module so the Payroll Employees
+    // list (which filters on org_module_seats via findSeatedUsersForModule)
+    // actually shows them. Without this the user exists in EmpCloud and has
+    // a payroll profile, but is invisible to every list in this module —
+    // which is exactly what #7 reported. Same logic as the
+    // /employees/import-from-empcloud route already uses.
+    try {
+      const module = await db("modules").where({ slug: "emp-payroll" }).first();
+      if (module) {
+        const sub = await db("org_subscriptions")
+          .where({ organization_id: empcloudOrgId, module_id: module.id })
+          .whereIn("status", ["active", "trial"])
+          .first();
+        if (sub) {
+          const seatExists = await db("org_module_seats")
+            .where({ organization_id: empcloudOrgId, module_id: module.id, user_id: userId })
+            .first();
+          if (!seatExists) {
+            await db("org_module_seats").insert({
+              subscription_id: sub.id,
+              organization_id: empcloudOrgId,
+              module_id: module.id,
+              user_id: userId,
+              assigned_by: userId, // no caller context here; self-assigned is fine for audit
+              assigned_at: new Date(),
+            });
+            await db("org_subscriptions").where({ id: sub.id }).increment("used_seats", 1);
+          }
+        }
+      }
+    } catch {
+      // Don't fail the whole create over a seat hiccup; the employee still
+      // exists in EmpCloud. The list returning empty for them will be a
+      // visible signal in dev, and we'll already have logged above.
+    }
+
     const ecUser = await findUserById(userId);
     return mergeUserWithProfile(ecUser!, this.payrollDb);
   }
