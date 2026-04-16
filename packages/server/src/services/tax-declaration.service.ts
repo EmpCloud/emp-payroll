@@ -26,8 +26,10 @@ export class TaxDeclarationService {
     });
     if (!salary) throw new AppError(404, "NOT_FOUND", "No active salary for employee");
 
-    const taxInfo = typeof employee.tax_info === "string" ? JSON.parse(employee.tax_info) : employee.tax_info;
-    const components = typeof salary.components === "string" ? JSON.parse(salary.components) : salary.components;
+    const taxInfo =
+      typeof employee.tax_info === "string" ? JSON.parse(employee.tax_info) : employee.tax_info;
+    const components =
+      typeof salary.components === "string" ? JSON.parse(salary.components) : salary.components;
 
     const basicAnnual = (components.find((c: any) => c.code === "BASIC")?.monthlyAmount || 0) * 12;
     const hraAnnual = (components.find((c: any) => c.code === "HRA")?.monthlyAmount || 0) * 12;
@@ -50,7 +52,8 @@ export class TaxDeclarationService {
     });
     let taxAlreadyPaid = 0;
     for (const ps of paidPayslips.data) {
-      const deductions = typeof ps.deductions === "string" ? JSON.parse(ps.deductions) : ps.deductions;
+      const deductions =
+        typeof ps.deductions === "string" ? JSON.parse(ps.deductions) : ps.deductions;
       const tds = deductions.find((d: any) => d.code === "TDS");
       if (tds) taxAlreadyPaid += tds.amount;
     }
@@ -116,22 +119,120 @@ export class TaxDeclarationService {
   }
 
   async submitDeclarations(employeeId: string, fy: string, declarations: any[]) {
+    // Input validation — surface a meaningful 400 instead of a cryptic DB error.
+    if (!employeeId) {
+      throw new AppError(400, "INVALID_EMPLOYEE", "Employee ID is required");
+    }
+    if (!fy || typeof fy !== "string") {
+      throw new AppError(400, "INVALID_FY", "Financial year is required");
+    }
+    if (!Array.isArray(declarations) || declarations.length === 0) {
+      throw new AppError(400, "INVALID_DECLARATIONS", "At least one declaration is required");
+    }
+
+    const normalized: Array<{
+      section: string;
+      description: string;
+      declaredAmount: number;
+    }> = [];
+    for (let i = 0; i < declarations.length; i++) {
+      const decl = declarations[i];
+      if (!decl || typeof decl !== "object") {
+        throw new AppError(400, "INVALID_DECLARATION", `Declaration #${i + 1} is invalid`);
+      }
+      const section = typeof decl.section === "string" ? decl.section.trim() : "";
+      const description = typeof decl.description === "string" ? decl.description.trim() : "";
+      // Accept either `declaredAmount` (client payload) or `amount` (legacy).
+      const rawAmount = decl.declaredAmount ?? decl.amount;
+      const amount = Number(rawAmount);
+      if (!section) {
+        throw new AppError(400, "INVALID_SECTION", `Declaration #${i + 1}: section is required`);
+      }
+      if (!description) {
+        throw new AppError(
+          400,
+          "INVALID_DESCRIPTION",
+          `Declaration #${i + 1}: description is required`,
+        );
+      }
+      if (!Number.isFinite(amount) || amount < 0) {
+        throw new AppError(
+          400,
+          "INVALID_AMOUNT",
+          `Declaration #${i + 1}: amount must be a non-negative number`,
+        );
+      }
+      normalized.push({ section, description, declaredAmount: amount });
+    }
+
+    // Resolve employee: callers may pass either the payroll employees.id (UUID)
+    // or the EmpCloud user id. The tax_declarations table stores both — the FK
+    // employee_id must be a valid employees.id UUID, so we resolve it here.
+    const { empcloudUserId, employeeRowId } = await this.resolveEmployeeIds(employeeId);
+
     const results = [];
-    for (const decl of declarations) {
-      results.push(await this.db.create("tax_declarations", {
-        employee_id: employeeId,
-        financial_year: fy,
-        section: decl.section,
-        description: decl.description,
-        declared_amount: decl.declaredAmount,
-        approval_status: "pending",
-      }));
+    for (const decl of normalized) {
+      try {
+        results.push(
+          await this.db.create("tax_declarations", {
+            employee_id: employeeRowId,
+            empcloud_user_id: empcloudUserId,
+            financial_year: fy,
+            section: decl.section,
+            description: decl.description,
+            declared_amount: decl.declaredAmount,
+            approval_status: "pending",
+          }),
+        );
+      } catch (err: any) {
+        throw new AppError(
+          500,
+          "DECLARATION_SAVE_FAILED",
+          `Failed to save declaration for section ${decl.section}: ${err?.message || "unknown error"}`,
+        );
+      }
     }
     return results;
   }
 
+  /**
+   * Accepts either a payroll employees.id (UUID) or an EmpCloud user id (numeric
+   * string) and returns both identifiers. Falls back gracefully when the row
+   * cannot be resolved so that the caller can still persist via
+   * empcloud_user_id only.
+   */
+  private async resolveEmployeeIds(
+    employeeId: string,
+  ): Promise<{ empcloudUserId: number | null; employeeRowId: string | null }> {
+    // Try direct lookup by employees.id
+    const byId = await this.db.findById<any>("employees", employeeId).catch(() => null);
+    if (byId) {
+      return {
+        empcloudUserId: byId.empcloud_user_id ?? null,
+        employeeRowId: byId.id,
+      };
+    }
+
+    // Try numeric empcloud_user_id
+    const numeric = Number(employeeId);
+    if (Number.isFinite(numeric)) {
+      const byEmpcloud = await this.db
+        .findOne<any>("employees", { empcloud_user_id: numeric })
+        .catch(() => null);
+      if (byEmpcloud) {
+        return { empcloudUserId: numeric, employeeRowId: byEmpcloud.id };
+      }
+      return { empcloudUserId: numeric, employeeRowId: null };
+    }
+
+    return { empcloudUserId: null, employeeRowId: employeeId };
+  }
+
   async updateDeclaration(employeeId: string, declId: string, data: any) {
-    const decl = await this.db.findOne<any>("tax_declarations", { id: declId, employee_id: employeeId });
+    const decl = await this.db.findOne<any>("tax_declarations", {
+      id: declId,
+      employee_id: employeeId,
+    });
     if (!decl) throw new AppError(404, "NOT_FOUND", "Declaration not found");
     return this.db.update("tax_declarations", declId, data);
   }
@@ -139,7 +240,11 @@ export class TaxDeclarationService {
   async approveDeclarations(employeeId: string, approverId: string, fy?: string) {
     const financialYear = fy || this.currentFY();
     const pending = await this.db.findMany<any>("tax_declarations", {
-      filters: { employee_id: employeeId, financial_year: financialYear, approval_status: "pending" },
+      filters: {
+        employee_id: employeeId,
+        financial_year: financialYear,
+        approval_status: "pending",
+      },
       limit: 100,
     });
 
