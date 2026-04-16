@@ -9,7 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import { DataTable } from "@/components/ui/DataTable";
 import { StatCard } from "@/components/ui/StatCard";
 import { formatCurrency } from "@/lib/utils";
-import { apiGet, apiPost, apiPut } from "@/api/client";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/api/client";
 import { useEmployees } from "@/api/hooks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -24,6 +24,8 @@ import {
   CheckCircle,
   XCircle,
   CreditCard,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -63,6 +65,8 @@ export function InsurancePage() {
   const [showEnroll, setShowEnroll] = useState(false);
   const [showSubmitClaim, setShowSubmitClaim] = useState(false);
   const [saving, setSaving] = useState(false);
+  // When set, the policy modal acts as Edit (#14).
+  const [editingPolicy, setEditingPolicy] = useState<any>(null);
   const qc = useQueryClient();
   const { data: empRes } = useEmployees({ limit: 200 });
 
@@ -94,32 +98,62 @@ export function InsurancePage() {
   const employees = empRes?.data?.data || [];
 
   // --- Handlers ---
-  async function handleCreatePolicy(e: React.FormEvent<HTMLFormElement>) {
+  function closePolicyModal() {
+    setShowCreatePolicy(false);
+    setEditingPolicy(null);
+  }
+
+  async function handlePolicySubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSaving(true);
     const fd = new FormData(e.currentTarget);
+    const start = String(fd.get("startDate") || "");
+    const end = String(fd.get("endDate") || "");
+    // Client-side guard for #13 — server rejects too but we fail fast.
+    if (start && end && new Date(end).getTime() < new Date(start).getTime()) {
+      toast.error("Policy end date cannot be before start date");
+      return;
+    }
+    setSaving(true);
+    const payload = {
+      name: fd.get("name"),
+      policyNumber: fd.get("policyNumber") || undefined,
+      provider: fd.get("provider"),
+      type: fd.get("type"),
+      premiumTotal: Number(fd.get("premiumTotal") || 0),
+      premiumPerEmployee: Number(fd.get("premiumPerEmployee") || 0),
+      coverageAmount: Number(fd.get("coverageAmount") || 0),
+      startDate: start,
+      endDate: end || undefined,
+      renewalDate: fd.get("renewalDate") || undefined,
+      terms: fd.get("terms") || undefined,
+    };
     try {
-      await apiPost("/insurance/policies", {
-        name: fd.get("name"),
-        policyNumber: fd.get("policyNumber") || undefined,
-        provider: fd.get("provider"),
-        type: fd.get("type"),
-        premiumTotal: Number(fd.get("premiumTotal") || 0),
-        premiumPerEmployee: Number(fd.get("premiumPerEmployee") || 0),
-        coverageAmount: Number(fd.get("coverageAmount") || 0),
-        startDate: fd.get("startDate"),
-        endDate: fd.get("endDate") || undefined,
-        renewalDate: fd.get("renewalDate") || undefined,
-        terms: fd.get("terms") || undefined,
-      });
-      toast.success("Insurance policy created");
-      setShowCreatePolicy(false);
+      if (editingPolicy) {
+        await apiPut(`/insurance/policies/${editingPolicy.id}`, payload);
+        toast.success("Insurance policy updated");
+      } else {
+        await apiPost("/insurance/policies", payload);
+        toast.success("Insurance policy created");
+      }
+      closePolicyModal();
       qc.invalidateQueries({ queryKey: ["insurance-policies"] });
       qc.invalidateQueries({ queryKey: ["insurance-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to create policy");
+      toast.error(err.response?.data?.error?.message || "Failed to save policy");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function deletePolicy(id: string) {
+    if (!confirm("Deactivate this insurance policy? Existing enrollments are unaffected.")) return;
+    try {
+      await apiDelete(`/insurance/policies/${id}`);
+      toast.success("Insurance policy deactivated");
+      qc.invalidateQueries({ queryKey: ["insurance-policies"] });
+      qc.invalidateQueries({ queryKey: ["insurance-dashboard"] });
+    } catch (err: any) {
+      toast.error(err.response?.data?.error?.message || "Failed to deactivate policy");
     }
   }
 
@@ -250,6 +284,36 @@ export function InsurancePage() {
       key: "status",
       header: "Status",
       render: (r: any) => <Badge variant={STATUS_BADGE[r.status] || "draft"}>{r.status}</Badge>,
+    },
+    {
+      key: "actions",
+      header: "",
+      render: (r: any) => (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            title="Edit"
+            onClick={() => {
+              setEditingPolicy(r);
+              setShowCreatePolicy(true);
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          {r.status === "active" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              title="Deactivate"
+              onClick={() => deletePolicy(r.id)}
+              className="text-red-600"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      ),
     },
   ];
 
@@ -485,42 +549,114 @@ export function InsurancePage() {
         </Card>
       )}
 
-      {/* Create Policy Modal */}
+      {/* Create / Edit Policy Modal — one form serves both flows (#14).
+          End-date input has a dynamic `min` based on the picked start date
+          so the native date picker blocks invalid earlier choices (#13). */}
       <Modal
         open={showCreatePolicy}
-        onClose={() => setShowCreatePolicy(false)}
-        title="Create Insurance Policy"
+        onClose={closePolicyModal}
+        title={editingPolicy ? "Edit Insurance Policy" : "Create Insurance Policy"}
+        key={editingPolicy?.id || "new-policy"}
       >
-        <form onSubmit={handleCreatePolicy} className="space-y-4">
-          <Input label="Policy Name" name="name" required />
+        <form onSubmit={handlePolicySubmit} className="space-y-4">
+          <Input
+            label="Policy Name"
+            name="name"
+            defaultValue={editingPolicy?.name || ""}
+            required
+          />
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Policy Number" name="policyNumber" />
-            <Input label="Provider" name="provider" required />
+            <Input
+              label="Policy Number"
+              name="policyNumber"
+              defaultValue={editingPolicy?.policy_number || ""}
+            />
+            <Input
+              label="Provider"
+              name="provider"
+              defaultValue={editingPolicy?.provider || ""}
+              required
+            />
           </div>
-          <SelectField label="Type" name="type" options={POLICY_TYPES} required />
+          <SelectField
+            label="Type"
+            name="type"
+            options={POLICY_TYPES}
+            defaultValue={editingPolicy?.type || ""}
+            required
+          />
           <div className="grid grid-cols-3 gap-4">
-            <Input label="Total Premium" name="premiumTotal" type="number" defaultValue="0" />
+            <Input
+              label="Total Premium"
+              name="premiumTotal"
+              type="number"
+              min={0}
+              defaultValue={editingPolicy?.premium_total ?? "0"}
+            />
             <Input
               label="Premium / Employee"
               name="premiumPerEmployee"
               type="number"
-              defaultValue="0"
+              min={0}
+              defaultValue={editingPolicy?.premium_per_employee ?? "0"}
             />
-            <Input label="Coverage Amount" name="coverageAmount" type="number" defaultValue="0" />
+            <Input
+              label="Coverage Amount"
+              name="coverageAmount"
+              type="number"
+              min={0}
+              defaultValue={editingPolicy?.coverage_amount ?? "0"}
+            />
           </div>
           <div className="grid grid-cols-3 gap-4">
-            <Input label="Start Date" name="startDate" type="date" required />
-            <Input label="End Date" name="endDate" type="date" />
-            <Input label="Renewal Date" name="renewalDate" type="date" />
+            <Input
+              label="Start Date"
+              name="startDate"
+              type="date"
+              defaultValue={
+                editingPolicy?.start_date ? String(editingPolicy.start_date).slice(0, 10) : ""
+              }
+              required
+              onChange={(e) => {
+                const form = (e.currentTarget as HTMLInputElement).form;
+                const endInput = form?.elements.namedItem("endDate") as HTMLInputElement | null;
+                if (endInput) endInput.min = e.currentTarget.value;
+              }}
+            />
+            <Input
+              label="End Date"
+              name="endDate"
+              type="date"
+              defaultValue={
+                editingPolicy?.end_date ? String(editingPolicy.end_date).slice(0, 10) : ""
+              }
+              min={
+                editingPolicy?.start_date
+                  ? String(editingPolicy.start_date).slice(0, 10)
+                  : undefined
+              }
+            />
+            <Input
+              label="Renewal Date"
+              name="renewalDate"
+              type="date"
+              defaultValue={
+                editingPolicy?.renewal_date ? String(editingPolicy.renewal_date).slice(0, 10) : ""
+              }
+            />
           </div>
-          <Input label="Terms & Conditions" name="terms" />
+          <Input
+            label="Terms & Conditions"
+            name="terms"
+            defaultValue={editingPolicy?.terms || ""}
+          />
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setShowCreatePolicy(false)}>
+            <Button type="button" variant="ghost" onClick={closePolicyModal}>
               Cancel
             </Button>
             <Button type="submit" disabled={saving}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Create Policy
+              {editingPolicy ? "Update Policy" : "Create Policy"}
             </Button>
           </div>
         </form>

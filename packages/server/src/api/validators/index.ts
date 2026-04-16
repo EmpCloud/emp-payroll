@@ -493,20 +493,49 @@ export const earnedWageRejectSchema = z.object({
 // Insurance Schemas
 // ---------------------------------------------------------------------------
 export const createInsurancePolicySchema = z.object({
-  body: z.object({
-    name: z.string().min(1).max(255),
-    policyNumber: z.string().max(100).optional(),
-    provider: z.string().min(1).max(255),
-    type: z.enum(["group_health", "group_life", "disability", "accidental", "travel"]),
-    premiumTotal: z.number().min(0).default(0),
-    premiumPerEmployee: z.number().min(0).default(0),
-    coverageAmount: z.number().min(0).default(0),
-    startDate: z.string(),
-    endDate: z.string().optional(),
-    renewalDate: z.string().optional(),
-    documentUrl: z.string().optional(),
-    terms: z.string().optional(),
-  }),
+  body: refineDateRange(
+    z.object({
+      name: z.string().min(1).max(255),
+      policyNumber: z.string().max(100).optional(),
+      provider: z.string().min(1).max(255),
+      type: z.enum(["group_health", "group_life", "disability", "accidental", "travel"]),
+      premiumTotal: z.number().min(0).default(0),
+      premiumPerEmployee: z.number().min(0).default(0),
+      coverageAmount: z.number().min(0).default(0),
+      startDate: z.string(),
+      endDate: z.string().optional(),
+      renewalDate: z.string().optional(),
+      documentUrl: z.string().optional(),
+      terms: z.string().optional(),
+    }),
+    "startDate",
+    "endDate",
+    "Policy",
+  ),
+});
+
+export const updateInsurancePolicySchema = z.object({
+  params: z.object({ id: z.string() }),
+  body: refineDateRange(
+    z.object({
+      name: z.string().min(1).max(255).optional(),
+      policyNumber: z.string().max(100).optional().nullable(),
+      provider: z.string().min(1).max(255).optional(),
+      type: z.enum(["group_health", "group_life", "disability", "accidental", "travel"]).optional(),
+      premiumTotal: z.number().min(0).optional(),
+      premiumPerEmployee: z.number().min(0).optional(),
+      coverageAmount: z.number().min(0).optional(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional().nullable(),
+      renewalDate: z.string().optional().nullable(),
+      documentUrl: z.string().optional().nullable(),
+      terms: z.string().optional().nullable(),
+      status: z.enum(["active", "expired", "cancelled"]).optional(),
+    }),
+    "startDate",
+    "endDate",
+    "Policy",
+  ),
 });
 
 export const enrollInsuranceSchema = z.object({

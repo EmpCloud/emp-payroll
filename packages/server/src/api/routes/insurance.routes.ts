@@ -4,6 +4,7 @@ import { authenticate, authorize } from "../middleware/auth.middleware";
 import {
   validate,
   createInsurancePolicySchema,
+  updateInsurancePolicySchema,
   enrollInsuranceSchema,
   submitInsuranceClaimSchema,
   reviewInsuranceClaimSchema,
@@ -66,6 +67,7 @@ router.post(
 router.put(
   "/policies/:id",
   authorize("hr_admin"),
+  validate(updateInsurancePolicySchema),
   wrap(async (req, res) => {
     const data = await svc.updatePolicy(
       param(req, "id"),
