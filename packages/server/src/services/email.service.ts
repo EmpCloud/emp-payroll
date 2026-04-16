@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { config } from "../config";
 import { getDB } from "../db/adapters";
+import { findUserById, findOrgById } from "../db/empcloud";
 import { logger } from "../utils/logger";
 import { PayslipPDFService } from "./payslip-pdf.service";
 
@@ -24,6 +25,15 @@ export class EmailService {
         pass: config.email.password,
       } : undefined,
     });
+  }
+
+  /**
+   * Returns true when the SMTP transport has enough config to actually send mail.
+   * Used by callers (e.g. the payroll routes) to surface a clear "email provider
+   * not configured" error instead of the generic "Failed to send emails".
+   */
+  isConfigured(): boolean {
+    return Boolean(config.email.host && config.email.user && config.email.password);
   }
 
   async sendEmail(options: EmailOptions): Promise<boolean> {
@@ -50,10 +60,52 @@ export class EmailService {
     const payslip = await this.db.findById<any>("payslips", payslipId);
     if (!payslip) return false;
 
-    const employee = await this.db.findById<any>("employees", payslip.employee_id);
-    if (!employee) return false;
+    // Resolve employee identity. The payroll DB no longer owns the employees
+    // table — identity lives in EmpCloud. Newly-created payslips stamp
+    // `employee_id = '00000000-...'` as a placeholder and carry the real user
+    // reference in `empcloud_user_id`. Old payslips may have a real UUID in
+    // `employee_id` that points at the legacy payroll employees table.
+    const placeholderUuid = "00000000-0000-0000-0000-000000000000";
+    let employee: { first_name?: string; email?: string; org_id?: string | number } | null =
+      null;
+    let orgIdForOrgLookup: string | number | null = null;
 
-    const org = await this.db.findById<any>("organizations", employee.org_id);
+    if (payslip.empcloud_user_id) {
+      const ecUser = await findUserById(Number(payslip.empcloud_user_id));
+      if (ecUser) {
+        employee = {
+          first_name: ecUser.first_name,
+          email: ecUser.email,
+          org_id: ecUser.organization_id,
+        };
+        orgIdForOrgLookup = ecUser.organization_id;
+      }
+    }
+
+    if (!employee && payslip.employee_id && payslip.employee_id !== placeholderUuid) {
+      // Fallback to legacy local employees table (pre-EmpCloud migration)
+      const legacy = await this.db.findById<any>("employees", payslip.employee_id);
+      if (legacy) {
+        employee = legacy;
+        orgIdForOrgLookup = legacy.org_id;
+      }
+    }
+
+    if (!employee || !employee.email) {
+      logger.warn(
+        `sendPayslipEmail: no employee/email resolved for payslip ${payslipId} (empcloud_user_id=${payslip.empcloud_user_id}, employee_id=${payslip.employee_id})`,
+      );
+      return false;
+    }
+
+    // Resolve org — may live in EmpCloud (bigint id) or the legacy local table
+    let org: any = null;
+    if (typeof orgIdForOrgLookup === "number") {
+      org = await findOrgById(orgIdForOrgLookup);
+    } else if (orgIdForOrgLookup) {
+      org = await this.db.findById<any>("organizations", String(orgIdForOrgLookup));
+    }
+
     const monthNames = ["", "January", "February", "March", "April", "May", "June",
       "July", "August", "September", "October", "November", "December"];
     const period = `${monthNames[payslip.month]} ${payslip.year}`;

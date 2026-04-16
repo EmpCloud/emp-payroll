@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -65,6 +66,7 @@ const columns = [
 
 export function PayrollRunsPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { data: res, isLoading } = usePayrollRuns();
   const createMutation = useCreatePayrollRun();
   const [showCreate, setShowCreate] = useState(false);
@@ -77,17 +79,60 @@ export function PayrollRunsPage() {
     const fd = new FormData(e.currentTarget);
     const month = Number(fd.get("month"));
     const year = Number(fd.get("year"));
-    const payDate = fd.get("pay_date") as string;
+    const payDateRaw = fd.get("pay_date");
+    const payDate = typeof payDateRaw === "string" ? payDateRaw : "";
+
+    // Guard against silent failures: validate inputs on the client before
+    // hitting the server. Without this, NaN/empty values get serialized as
+    // `null` in JSON, which the server rejects with a 400 that the user may
+    // miss (#22 "submit appears to succeed").
+    if (!Number.isInteger(month) || month < 1 || month > 12) {
+      toast.error("Please select a valid month");
+      return;
+    }
+    if (!Number.isInteger(year) || year < 2020 || year > 2100) {
+      toast.error("Please enter a valid year (2020–2100)");
+      return;
+    }
+    if (!payDate) {
+      toast.error("Please choose a pay date");
+      return;
+    }
 
     try {
       const result = await createMutation.mutateAsync({ month, year, payDate });
+      // Explicitly force a refetch of the runs list. The hook already
+      // invalidates the query, but we await it here so the list is fresh
+      // before the user lands back on this page via the Back button.
+      await qc.invalidateQueries({ queryKey: ["payroll-runs"] });
       toast.success("Payroll run created");
       setShowCreate(false);
       if (result?.data?.id) {
         navigate(`/payroll/runs/${result.data.id}`);
+      } else {
+        // No id in response — something is off server-side. Surface it rather
+        // than silently claiming success.
+        // eslint-disable-next-line no-console
+        console.error("createPayrollRun: server returned no run id", result);
+        toast.error(
+          "Payroll run submitted but the server did not return an id. Refresh the list to verify.",
+        );
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to create payroll run");
+      // Log full error to aid debugging silent server-side failures (#22).
+      // eslint-disable-next-line no-console
+      console.error("createPayrollRun failed:", err?.response?.data || err);
+      const serverErr = err?.response?.data?.error;
+      const detailsMsg = serverErr?.details
+        ? Object.entries(serverErr.details as Record<string, string[]>)
+            .map(([k, v]) => `${k}: ${v.join(", ")}`)
+            .join("; ")
+        : "";
+      toast.error(
+        detailsMsg
+          ? `${serverErr?.message || "Failed to create payroll run"} — ${detailsMsg}`
+          : serverErr?.message || "Failed to create payroll run",
+      );
     }
   }
 

@@ -346,9 +346,18 @@ export function PayrollRunDetailPage() {
                   setEmailing(true);
                   try {
                     const res = await apiPost<any>(`/payroll/${id}/send-payslips`);
-                    toast.success(res.data?.message || "Payslip emails sent");
-                  } catch {
-                    toast.error("Failed to send emails");
+                    const msg = res.data?.message || "Payslip emails sent";
+                    // Server reports partial failure — surface as warning, not success
+                    if (res.data?.failed && res.data.failed > 0) {
+                      toast.error(msg);
+                    } else {
+                      toast.success(msg);
+                    }
+                  } catch (err: any) {
+                    // Prefer the server-provided error message (e.g. "Email provider
+                    // is not configured…") over a generic "Failed to send".
+                    const serverMsg = err?.response?.data?.error?.message;
+                    toast.error(serverMsg || "Failed to send payslip emails");
                   } finally {
                     setEmailing(false);
                   }

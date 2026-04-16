@@ -9,6 +9,7 @@ import { authenticate, authorize } from "../middleware/auth.middleware";
 import { enforcePayrollLock } from "../middleware/payroll-lock.middleware";
 import { validate, createPayrollRunSchema } from "../validators";
 import { wrap, param } from "../helpers";
+import { AppError } from "../middleware/error.middleware";
 
 const router = Router();
 const svc = new PayrollService();
@@ -120,10 +121,39 @@ router.post(
     // Verify run belongs to this org before sending
     await svc.getRun(param(req, "id"), String(req.user!.empcloudOrgId));
     const emailSvc = new EmailService();
+
+    // Surface config issues up-front with a clear message instead of silently
+    // failing every send and reporting "Sent 0 payslip emails (N failed)".
+    if (!emailSvc.isConfigured()) {
+      throw new AppError(
+        503,
+        "EMAIL_NOT_CONFIGURED",
+        "Email provider is not configured on the server (SMTP host / user / password missing). Contact your admin to set SMTP_HOST, SMTP_USER and SMTP_PASSWORD.",
+      );
+    }
+
     const result = await emailSvc.sendPayslipsForRun(param(req, "id"));
+
+    // If there were payslips but every single send failed, treat that as a
+    // hard error rather than returning a cheerful success toast.
+    if (result.sent === 0 && result.failed > 0) {
+      throw new AppError(
+        502,
+        "EMAIL_SEND_FAILED",
+        `Unable to send any payslip emails (${result.failed} failed). Check SMTP credentials and that employees have email addresses on file.`,
+        { sent: [String(result.sent)], failed: [String(result.failed)] },
+      );
+    }
+
     res.json({
       success: true,
-      data: { message: `Sent ${result.sent} payslip emails (${result.failed} failed)`, ...result },
+      data: {
+        message:
+          result.failed > 0
+            ? `Sent ${result.sent} payslip emails (${result.failed} failed — check server logs)`
+            : `Sent ${result.sent} payslip emails`,
+        ...result,
+      },
     });
   }),
 );
