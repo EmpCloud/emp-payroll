@@ -5,21 +5,50 @@ export class Form16Service {
   private db = getDB();
 
   async generateHTML(employeeId: string, financialYear?: string): Promise<string> {
-    const employee = await this.db.findById<any>("employees", employeeId);
+    // Resolve employee — support lookup by (a) internal employee PK (legacy/tests),
+    // (b) empcloud_user_id numeric (self-service routes pass this).
+    let employee = await this.db.findById<any>("employees", employeeId);
+    if (!employee) {
+      // Try lookup by empcloud_user_id (self-service path) — payroll profile holds it
+      const numericId = Number(employeeId);
+      if (Number.isFinite(numericId)) {
+        const profile = await this.db.findOne<any>("employee_payroll_profiles", {
+          empcloud_user_id: numericId,
+        });
+        if (profile) {
+          employee = {
+            id: profile.id,
+            first_name: profile.first_name || "",
+            last_name: profile.last_name || "",
+            employee_code: profile.employee_code || "",
+            org_id: profile.empcloud_org_id,
+            tax_info: profile.tax_info,
+            pf_details: profile.pf_details,
+            empcloud_user_id: profile.empcloud_user_id,
+          };
+        }
+      }
+    }
     if (!employee) throw new AppError(404, "NOT_FOUND", "Employee not found");
 
     const org = await this.db.findById<any>("organizations", employee.org_id);
-    const taxInfo = this.parseJSON(employee.tax_info);
-    const pfDetails = this.parseJSON(employee.pf_details);
+    const taxInfo = this.parseObject(employee.tax_info);
+    const pfDetails = this.parseObject(employee.pf_details);
 
     const fy = financialYear || this.currentFY();
     const [fyStart, fyEnd] = fy.split("-").map(Number);
 
-    // Get all payslips for this FY
-    const allPayslips = await this.db.findMany<any>("payslips", {
+    // Get all payslips for this FY — filter by employee_id (legacy) OR empcloud_user_id
+    let allPayslips = await this.db.findMany<any>("payslips", {
       filters: { employee_id: employeeId },
       limit: 100,
     });
+    if ((!allPayslips.data || allPayslips.data.length === 0) && employee.empcloud_user_id) {
+      allPayslips = await this.db.findMany<any>("payslips", {
+        filters: { empcloud_user_id: Number(employee.empcloud_user_id) },
+        limit: 100,
+      });
+    }
 
     const fyPayslips = allPayslips.data.filter((ps: any) => {
       if (ps.year === fyStart && ps.month >= 4) return true;
@@ -28,11 +57,14 @@ export class Form16Service {
     });
 
     // Aggregate
-    let totalGross = 0, totalTDS = 0, totalPF = 0, totalPT = 0;
+    let totalGross = 0,
+      totalTDS = 0,
+      totalPF = 0,
+      totalPT = 0;
     const monthlyBreakdown: any[] = [];
 
     for (const ps of fyPayslips) {
-      const deductions = this.parseJSON(ps.deductions);
+      const deductions = this.parseArray(ps.deductions);
       const tds = deductions.find((d: any) => d.code === "TDS")?.amount || 0;
       const pf = deductions.find((d: any) => d.code === "EPF")?.amount || 0;
       const pt = deductions.find((d: any) => d.code === "PT")?.amount || 0;
@@ -42,7 +74,21 @@ export class Form16Service {
       totalPF += pf;
       totalPT += pt;
 
-      const monthNames = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const monthNames = [
+        "",
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
       monthlyBreakdown.push({
         month: `${monthNames[ps.month]} ${ps.year}`,
         gross: Number(ps.gross_earnings),
@@ -56,11 +102,19 @@ export class Form16Service {
       financial_year: fy,
     });
 
-    const fmt = (n: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+    const fmt = (n: number) =>
+      new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        maximumFractionDigits: 0,
+      }).format(n);
 
-    const monthlyRows = monthlyBreakdown.map((m) =>
-      `<tr><td>${m.month}</td><td class="r">${fmt(m.gross)}</td><td class="r">${fmt(m.tds)}</td></tr>`
-    ).join("");
+    const monthlyRows = monthlyBreakdown
+      .map(
+        (m) =>
+          `<tr><td>${m.month}</td><td class="r">${fmt(m.gross)}</td><td class="r">${fmt(m.tds)}</td></tr>`,
+      )
+      .join("");
 
     const salary = await this.db.findOne<any>("employee_salaries", {
       employee_id: employeeId,
@@ -127,10 +181,10 @@ export class Form16Service {
         <tr><th>Quarter</th><th>Amount of TDS (₹)</th></tr>
       </thead>
       <tbody>
-        <tr><td>Q1 (Apr-Jun ${fyStart})</td><td class="r">${fmt(fyPayslips.filter((p: any) => p.month >= 4 && p.month <= 6 && p.year === fyStart).reduce((s: number, p: any) => s + (this.parseJSON(p.deductions).find((d: any) => d.code === "TDS")?.amount || 0), 0))}</td></tr>
-        <tr><td>Q2 (Jul-Sep ${fyStart})</td><td class="r">${fmt(fyPayslips.filter((p: any) => p.month >= 7 && p.month <= 9 && p.year === fyStart).reduce((s: number, p: any) => s + (this.parseJSON(p.deductions).find((d: any) => d.code === "TDS")?.amount || 0), 0))}</td></tr>
-        <tr><td>Q3 (Oct-Dec ${fyStart})</td><td class="r">${fmt(fyPayslips.filter((p: any) => p.month >= 10 && p.month <= 12 && p.year === fyStart).reduce((s: number, p: any) => s + (this.parseJSON(p.deductions).find((d: any) => d.code === "TDS")?.amount || 0), 0))}</td></tr>
-        <tr><td>Q4 (Jan-Mar ${fyEnd})</td><td class="r">${fmt(fyPayslips.filter((p: any) => p.month >= 1 && p.month <= 3 && p.year === fyEnd).reduce((s: number, p: any) => s + (this.parseJSON(p.deductions).find((d: any) => d.code === "TDS")?.amount || 0), 0))}</td></tr>
+        <tr><td>Q1 (Apr-Jun ${fyStart})</td><td class="r">${fmt(fyPayslips.filter((p: any) => p.month >= 4 && p.month <= 6 && p.year === fyStart).reduce((s: number, p: any) => s + (this.parseArray(p.deductions).find((d: any) => d.code === "TDS")?.amount || 0), 0))}</td></tr>
+        <tr><td>Q2 (Jul-Sep ${fyStart})</td><td class="r">${fmt(fyPayslips.filter((p: any) => p.month >= 7 && p.month <= 9 && p.year === fyStart).reduce((s: number, p: any) => s + (this.parseArray(p.deductions).find((d: any) => d.code === "TDS")?.amount || 0), 0))}</td></tr>
+        <tr><td>Q3 (Oct-Dec ${fyStart})</td><td class="r">${fmt(fyPayslips.filter((p: any) => p.month >= 10 && p.month <= 12 && p.year === fyStart).reduce((s: number, p: any) => s + (this.parseArray(p.deductions).find((d: any) => d.code === "TDS")?.amount || 0), 0))}</td></tr>
+        <tr><td>Q4 (Jan-Mar ${fyEnd})</td><td class="r">${fmt(fyPayslips.filter((p: any) => p.month >= 1 && p.month <= 3 && p.year === fyEnd).reduce((s: number, p: any) => s + (this.parseArray(p.deductions).find((d: any) => d.code === "TDS")?.amount || 0), 0))}</td></tr>
         <tr class="total-row"><td>Total TDS</td><td class="r">${fmt(totalTDS)}</td></tr>
       </tbody>
     </table>
@@ -145,16 +199,20 @@ export class Form16Service {
         <tr><td>2. Less: Standard Deduction u/s 16(ia)</td><td class="r">${fmt(75000)}</td></tr>
         <tr><td>3. Less: Professional Tax u/s 16(iii)</td><td class="r">${fmt(totalPT)}</td></tr>
         <tr><td>4. Income chargeable under "Salaries"</td><td class="r">${fmt(Math.max(0, totalGross - 75000 - totalPT))}</td></tr>
-        ${taxComp ? `
+        ${
+          taxComp
+            ? `
         <tr><td>5. Less: Deductions under Chapter VI-A</td><td class="r">${fmt(Number(taxComp.total_deductions))}</td></tr>
         <tr class="total-row"><td>6. Total Taxable Income</td><td class="r">${fmt(Number(taxComp.taxable_income))}</td></tr>
         <tr><td>7. Tax on Total Income</td><td class="r">${fmt(Number(taxComp.tax_on_income))}</td></tr>
         <tr><td>8. Surcharge</td><td class="r">${fmt(Number(taxComp.surcharge))}</td></tr>
         <tr><td>9. Health & Education Cess (4%)</td><td class="r">${fmt(Number(taxComp.health_and_education_cess))}</td></tr>
         <tr class="total-row"><td>10. Total Tax Liability</td><td class="r">${fmt(Number(taxComp.total_tax))}</td></tr>
-        ` : `
+        `
+            : `
         <tr class="total-row"><td>5. Taxable Income (estimated)</td><td class="r">${fmt(Math.max(0, totalGross - 75000 - totalPT - totalPF))}</td></tr>
-        `}
+        `
+        }
         <tr class="total-row"><td>11. Tax Deducted at Source (TDS)</td><td class="r">${fmt(totalTDS)}</td></tr>
       </tbody>
     </table>
@@ -189,8 +247,43 @@ export class Form16Service {
 
   private parseJSON(val: any): any {
     if (!val) return {};
-    if (typeof val === "string") try { return JSON.parse(val); } catch { return {}; }
+    if (typeof val === "string")
+      try {
+        return JSON.parse(val);
+      } catch {
+        return {};
+      }
     return val;
+  }
+
+  /** Parse a JSON value that is expected to be an array — always returns an array. */
+  private parseArray(val: any): any[] {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    if (typeof val === "string") {
+      try {
+        const parsed = JSON.parse(val);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
+
+  /** Parse a JSON value that is expected to be an object — always returns an object. */
+  private parseObject(val: any): Record<string, any> {
+    if (!val) return {};
+    if (typeof val === "string") {
+      try {
+        const parsed = JSON.parse(val);
+        return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+    if (typeof val === "object" && !Array.isArray(val)) return val;
+    return {};
   }
 
   private currentFY(): string {

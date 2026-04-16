@@ -37,7 +37,8 @@ export function GLAccountingPage() {
 
   const mappings = mappingsRes?.data || [];
   const journals = journalsRes?.data || [];
-  const runs = runsRes?.data || [];
+  // /payroll returns { success, data: { data: [...], total } } — one extra level of nesting
+  const runs = runsRes?.data?.data || [];
 
   async function handleCreateMapping(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
