@@ -27,6 +27,34 @@ export function validate(schema: z.ZodObject<any> | z.ZodEffects<any>) {
 }
 
 // ---------------------------------------------------------------------------
+// Shared field schemas — defined here so they're in scope for every other
+// schema further down in the file. ES `const` is not hoisted, so order
+// matters: defining these below would fail at module load time.
+// ---------------------------------------------------------------------------
+
+// Person name (first / last) — letters (inc. accented / i18n), spaces,
+// apostrophes, hyphens, periods. Rejects digits and other symbols. (#11)
+const personNameRegex = /^[\p{L}\s.'-]+$/u;
+const firstNameSchema = z
+  .string()
+  .min(1)
+  .max(100)
+  .regex(personNameRegex, "First name must not contain numbers or special characters");
+const lastNameSchema = z
+  .string()
+  .min(1)
+  .max(100)
+  .regex(personNameRegex, "Last name must not contain numbers or special characters");
+
+// Phone — digits, +, spaces, hyphens, parentheses. Rejects alphabets. (#11)
+// Must start with a digit or + so leading letters / whitespace don't pass.
+const phoneRegex = /^[+\d][\d\s()-]{0,19}$/;
+const phoneSchema = z
+  .string()
+  .max(20)
+  .regex(phoneRegex, "Phone must only contain digits, spaces, and + - ( )");
+
+// ---------------------------------------------------------------------------
 // Auth Schemas
 // ---------------------------------------------------------------------------
 export const loginSchema = z.object({
@@ -40,8 +68,8 @@ export const registerSchema = z.object({
   body: z.object({
     email: z.string().email(),
     password: z.string().min(8),
-    firstName: z.string().min(1).max(100),
-    lastName: z.string().min(1).max(100),
+    firstName: firstNameSchema,
+    lastName: lastNameSchema,
     orgId: z.string().uuid().optional(),
   }),
 });
@@ -78,10 +106,10 @@ const bankNameSchema = z
 export const createEmployeeSchema = z.object({
   body: z.object({
     employeeCode: z.string().min(1).max(50).optional(),
-    firstName: z.string().min(1).max(100),
-    lastName: z.string().min(1).max(100),
+    firstName: firstNameSchema,
+    lastName: lastNameSchema,
     email: z.string().email(),
-    phone: z.string().max(20).optional(),
+    phone: phoneSchema.optional(),
     dateOfBirth: pastDateOfBirth,
     gender: z.enum(["male", "female", "other"]),
     dateOfJoining: z.string(),
@@ -165,9 +193,9 @@ export const bankUpdateRequestSchema = z.object({
 export const updateEmployeeSchema = z.object({
   params: z.object({ id: z.string() }),
   body: z.object({
-    firstName: z.string().min(1).max(100).optional(),
-    lastName: z.string().min(1).max(100).optional(),
-    phone: z.string().max(20).optional(),
+    firstName: firstNameSchema.optional(),
+    lastName: lastNameSchema.optional(),
+    phone: phoneSchema.optional(),
     department: z.string().max(100).optional(),
     designation: z.string().max(100).optional(),
     reportingManagerId: z.string().uuid().nullable().optional(),
@@ -573,8 +601,8 @@ export const reviewInsuranceClaimSchema = z.object({
 // ---------------------------------------------------------------------------
 export const addGlobalEmployeeSchema = z.object({
   body: z.object({
-    firstName: z.string().min(1).max(100),
-    lastName: z.string().min(1).max(100),
+    firstName: firstNameSchema,
+    lastName: lastNameSchema,
     email: z.string().email(),
     countryId: z.string().min(1),
     employmentType: z.enum(["eor", "contractor", "direct_hire"]),
@@ -599,8 +627,8 @@ export const addGlobalEmployeeSchema = z.object({
 export const updateGlobalEmployeeSchema = z.object({
   params: z.object({ id: z.string() }),
   body: z.object({
-    firstName: z.string().min(1).max(100).optional(),
-    lastName: z.string().min(1).max(100).optional(),
+    firstName: firstNameSchema.optional(),
+    lastName: lastNameSchema.optional(),
     email: z.string().email().optional(),
     countryId: z.string().optional(),
     employmentType: z.enum(["eor", "contractor", "direct_hire"]).optional(),

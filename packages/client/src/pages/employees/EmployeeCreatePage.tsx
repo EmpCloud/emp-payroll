@@ -21,6 +21,11 @@ function todayISO() {
 // Pure numeric or any embedded digit is rejected.
 const BANK_NAME_REGEX = /^[\p{L}\s.,&-]+$/u;
 
+// Person name — letters, spaces, apostrophes, hyphens, periods. No digits. (#11)
+const PERSON_NAME_REGEX = /^[\p{L}\s.'-]+$/u;
+// Phone — digits, +, spaces, hyphens, parentheses. No alphabets. (#11)
+const PHONE_REGEX = /^[+\d][\d\s()-]{0,19}$/;
+
 export function EmployeeCreatePage() {
   const navigate = useNavigate();
   const mutation = useCreateEmployee();
@@ -47,6 +52,23 @@ export function EmployeeCreatePage() {
     const bankName = get("bank_name");
     if (bankName && !BANK_NAME_REGEX.test(bankName)) {
       toast.error("Bank name must only contain letters, spaces, and . , & -");
+      return;
+    }
+
+    // Name + phone validation — mirrors the server schemas so we fail fast (#11).
+    const firstName = get("first_name");
+    const lastName = get("last_name");
+    if (firstName && !PERSON_NAME_REGEX.test(firstName)) {
+      toast.error("First name must not contain numbers or special characters");
+      return;
+    }
+    if (lastName && !PERSON_NAME_REGEX.test(lastName)) {
+      toast.error("Last name must not contain numbers or special characters");
+      return;
+    }
+    const phone = get("phone");
+    if (phone && !PHONE_REGEX.test(phone)) {
+      toast.error("Phone must only contain digits, spaces, and + - ( )");
       return;
     }
 
@@ -112,6 +134,10 @@ export function EmployeeCreatePage() {
                 label="First Name"
                 placeholder="Arjun"
                 required
+                // HTML5 pattern only supports ASCII ranges; the handleSubmit
+                // guard uses \p{L} regex for full i18n coverage.
+                pattern="[A-Za-z\u00C0-\u024F\s.'\-]+"
+                title="Letters, spaces, apostrophes, hyphens and periods only"
               />
               <Input
                 id="last_name"
@@ -119,6 +145,8 @@ export function EmployeeCreatePage() {
                 label="Last Name"
                 placeholder="Sharma"
                 required
+                pattern="[A-Za-z\u00C0-\u024F\s.'\-]+"
+                title="Letters, spaces, apostrophes, hyphens and periods only"
               />
               <Input
                 id="email"
@@ -128,7 +156,14 @@ export function EmployeeCreatePage() {
                 placeholder="arjun@company.com"
                 required
               />
-              <Input id="phone" name="phone" label="Phone" placeholder="+91 98765 43210" />
+              <Input
+                id="phone"
+                name="phone"
+                label="Phone"
+                placeholder="+91 98765 43210"
+                pattern="[+0-9][0-9\s()\-]{0,19}"
+                title="Digits, spaces, + - ( ) only"
+              />
               <Input id="dob" name="dob" label="Date of Birth" type="date" max={maxDob} required />
               <SelectField
                 id="gender"
