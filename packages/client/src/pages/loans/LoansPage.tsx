@@ -1,6 +1,6 @@
 import { useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -18,7 +18,10 @@ import toast from "react-hot-toast";
 export function LoansPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [filter, setFilter] = useState("");
+  // Filter state lives in the URL so the top stat cards can deep-link into a
+  // filtered list via `?status=...` (#71).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filter = searchParams.get("status") || "";
   const qc = useQueryClient();
   const { data: empRes } = useEmployees({ limit: 100 });
 
@@ -27,6 +30,13 @@ export function LoansPage() {
     queryFn: () => apiGet<any>("/loans", filter ? { status: filter } : {}),
   });
 
+  function setFilter(next: string) {
+    const params = new URLSearchParams(searchParams);
+    if (next) params.set("status", next);
+    else params.delete("status");
+    setSearchParams(params, { replace: true });
+  }
+
   const loans = res?.data?.data || [];
   const active = loans.filter((l: any) => l.status === "active");
   const totalOutstanding = active.reduce((s: number, l: any) => s + Number(l.outstanding_amount), 0);
@@ -34,16 +44,36 @@ export function LoansPage() {
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setCreating(true);
+
     const fd = new FormData(e.currentTarget);
+    const amount = Number(fd.get("amount"));
+    const tenure = Number(fd.get("tenure"));
+    const interest = Number(fd.get("interest") || 0);
+
+    // Client-side guard: amount, tenure, and interest must be non-negative.
+    // Tenure must additionally be at least 1 so EMI math stays finite. (#70)
+    if (!Number.isFinite(amount) || amount < 0) {
+      toast.error("Amount must be zero or greater");
+      return;
+    }
+    if (!Number.isFinite(tenure) || tenure < 1) {
+      toast.error("Tenure must be at least 1 month");
+      return;
+    }
+    if (!Number.isFinite(interest) || interest < 0) {
+      toast.error("Interest rate must be zero or greater");
+      return;
+    }
+
+    setCreating(true);
     try {
       await apiPost("/loans", {
         employeeId: fd.get("employeeId"),
         type: fd.get("type"),
         description: fd.get("description"),
-        principalAmount: Number(fd.get("amount")),
-        tenureMonths: Number(fd.get("tenure")),
-        interestRate: Number(fd.get("interest") || 0),
+        principalAmount: amount,
+        tenureMonths: tenure,
+        interestRate: interest,
         startDate: fd.get("startDate"),
         notes: fd.get("notes"),
       });
@@ -64,6 +94,7 @@ export function LoansPage() {
   }
 
   const employees = empRes?.data?.data || [];
+  const hasEmployees = employees.length > 0;
 
   const columns = [
     {
@@ -100,6 +131,11 @@ export function LoansPage() {
     ) : null },
   ];
 
+  // Each stat card deep-links into the list with a relevant status filter
+  // (#71). "All" is represented by omitting the query param.
+  const cardLinkCls =
+    "block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 transition hover:-translate-y-0.5 hover:shadow-md";
+
   return (
     <div className="space-y-6">
       <PageHeader title="Loans & Advances" description="Track employee loans, advances, and EMI deductions"
@@ -107,10 +143,18 @@ export function LoansPage() {
       />
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Active Loans" value={String(active.length)} icon={Banknote} />
-        <StatCard title="Outstanding" value={formatCurrency(totalOutstanding)} icon={Clock} />
-        <StatCard title="Monthly EMI" value={formatCurrency(totalEMI)} subtitle="total across all" icon={Banknote} />
-        <StatCard title="Completed" value={String(loans.filter((l: any) => l.status === "completed").length)} icon={CheckCircle2} />
+        <Link to="/loans?status=active" className={cardLinkCls}>
+          <StatCard title="Active Loans" value={String(active.length)} icon={Banknote} />
+        </Link>
+        <Link to="/loans?status=active" className={cardLinkCls}>
+          <StatCard title="Outstanding" value={formatCurrency(totalOutstanding)} icon={Clock} />
+        </Link>
+        <Link to="/loans?status=active" className={cardLinkCls}>
+          <StatCard title="Monthly EMI" value={formatCurrency(totalEMI)} subtitle="total across all" icon={Banknote} />
+        </Link>
+        <Link to="/loans?status=completed" className={cardLinkCls}>
+          <StatCard title="Completed" value={String(loans.filter((l: any) => l.status === "completed").length)} icon={CheckCircle2} />
+        </Link>
       </div>
 
       <div className="flex gap-2">
@@ -130,8 +174,28 @@ export function LoansPage() {
 
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create Loan / Advance" className="max-w-lg">
         <form onSubmit={handleCreate} className="space-y-4">
-          <SelectField id="employeeId" name="employeeId" label="Employee"
-            options={employees.map((e: any) => ({ value: e.id, label: `${e.first_name} ${e.last_name} (${e.employee_code})` }))} />
+          {hasEmployees ? (
+            <SelectField
+              id="employeeId"
+              name="employeeId"
+              label="Employee"
+              required
+              options={employees.map((e: any) => ({
+                value: e.id,
+                label: `${e.first_name} ${e.last_name} (${e.employee_code})`,
+              }))}
+            />
+          ) : (
+            // When the org has no employees the picker would otherwise render
+            // as an empty / frozen dropdown; show a disabled state with a
+            // helpful message instead. (#70)
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">Employee</label>
+              <div className="block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500">
+                There is no employee
+              </div>
+            </div>
+          )}
           <SelectField id="type" name="type" label="Type" options={[
             { value: "salary_advance", label: "Salary Advance" },
             { value: "loan", label: "Loan" },
@@ -139,17 +203,17 @@ export function LoansPage() {
           ]} />
           <Input id="description" name="description" label="Description" placeholder="e.g. Medical emergency" required />
           <div className="grid grid-cols-2 gap-4">
-            <Input id="amount" name="amount" label="Amount (₹)" type="number" placeholder="50000" required />
-            <Input id="tenure" name="tenure" label="Tenure (months)" type="number" placeholder="6" required />
+            <Input id="amount" name="amount" label="Amount (₹)" type="number" min="0" step="1" placeholder="50000" required />
+            <Input id="tenure" name="tenure" label="Tenure (months)" type="number" min="1" step="1" placeholder="6" required />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input id="interest" name="interest" label="Interest Rate (%)" type="number" placeholder="0" defaultValue="0" />
+            <Input id="interest" name="interest" label="Interest Rate (%)" type="number" min="0" step="0.01" placeholder="0" defaultValue="0" />
             <Input id="startDate" name="startDate" label="Start Date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
           </div>
           <Input id="notes" name="notes" label="Notes (optional)" placeholder="Any additional notes" />
           <div className="flex justify-end gap-3">
             <Button variant="outline" type="button" onClick={() => setShowCreate(false)}>Cancel</Button>
-            <Button type="submit" loading={creating}>Create Loan</Button>
+            <Button type="submit" loading={creating} disabled={!hasEmployees}>Create Loan</Button>
           </div>
         </form>
       </Modal>

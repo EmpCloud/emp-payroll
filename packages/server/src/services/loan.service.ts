@@ -1,5 +1,28 @@
+import { z } from "zod";
 import { getDB } from "../db/adapters";
 import { AppError } from "../api/middleware/error.middleware";
+
+// Zod schema for loan creation — lives in the service so we don't have to
+// fight with parallel agents over packages/server/src/api/validators/index.ts.
+// `principalAmount` is `.nonnegative()` (0 is allowed for edge cases like a
+// zero-value advance correction); `tenureMonths` must be at least 1 so EMI
+// math stays finite; `interestRate` defaults to 0 and must be non-negative.
+// (#70)
+export const createLoanInputSchema = z.object({
+  employeeId: z.string().min(1, "Employee is required"),
+  type: z.string().min(1, "Type is required"),
+  description: z.string().min(1, "Description is required"),
+  principalAmount: z.number().nonnegative("Amount must be zero or greater"),
+  tenureMonths: z
+    .number()
+    .int("Tenure must be a whole number of months")
+    .min(1, "Tenure must be at least 1 month"),
+  interestRate: z.number().nonnegative("Interest rate must be zero or greater").optional(),
+  startDate: z.string().min(1, "Start date is required"),
+  notes: z.string().optional(),
+});
+
+export type CreateLoanInput = z.infer<typeof createLoanInputSchema>;
 
 export class LoanService {
   private db = getDB();
@@ -43,16 +66,21 @@ export class LoanService {
     });
   }
 
-  async create(orgId: string, approverId: string, data: {
-    employeeId: string;
-    type: string;
-    description: string;
-    principalAmount: number;
-    tenureMonths: number;
-    interestRate?: number;
-    startDate: string;
-    notes?: string;
-  }) {
+  async create(orgId: string, approverId: string, input: CreateLoanInput) {
+    // Validate input server-side. Throws a 400 AppError with per-field
+    // details so the UI can surface them inline. (#70)
+    const parsed = createLoanInputSchema.safeParse(input);
+    if (!parsed.success) {
+      const details: Record<string, string[]> = {};
+      for (const issue of parsed.error.issues) {
+        const path = issue.path.join(".") || "_";
+        if (!details[path]) details[path] = [];
+        details[path].push(issue.message);
+      }
+      throw new AppError(400, "VALIDATION_ERROR", "Invalid loan input", details);
+    }
+    const data = parsed.data;
+
     const rate = data.interestRate || 0;
     const emi = rate > 0
       ? Math.round((data.principalAmount * (1 + rate / 100 * data.tenureMonths / 12)) / data.tenureMonths)
