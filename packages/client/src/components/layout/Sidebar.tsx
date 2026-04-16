@@ -265,6 +265,14 @@ export function Sidebar() {
         {visibleItems.map((item) => {
           const showSection = item.section && item.section !== lastSection;
           if (item.section) lastSection = item.section;
+          // NavLink's default isActive matches any URL that starts with
+          // `to` + "/". So clicking /employees/org-chart also lit up the
+          // Employees entry ("/employees") — issue #42. Mark `end` on any
+          // item whose `to` is a prefix of another item's `to`, so the
+          // broader route only highlights on its exact match.
+          const hasMoreSpecificSibling = visibleItems.some(
+            (other) => other.to !== item.to && other.to.startsWith(item.to + "/"),
+          );
           return (
             <div key={item.to}>
               {showSection && (
@@ -274,7 +282,7 @@ export function Sidebar() {
               )}
               <NavLink
                 to={item.to}
-                end={item.to === "/my"}
+                end={item.to === "/my" || hasMoreSpecificSibling}
                 className={({ isActive }) =>
                   cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",

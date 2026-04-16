@@ -22,12 +22,20 @@ export function DashboardLayout() {
 
   if (!isLoggedIn()) return <Navigate to="/login" replace />;
   const displayName = user ? `${user.firstName} ${user.lastName}` : "User";
+  // Map the 5 internal roles to human labels. Previously this only handled
+  // hr_admin / hr_manager and fell through to "Employee" for everything
+  // else — so org_admin + super_admin showed as "Employee" in the top bar
+  // (issue #39).
   const roleLabel =
-    user?.role === "hr_admin"
-      ? "HR Admin"
-      : user?.role === "hr_manager"
-        ? "HR Manager"
-        : "Employee";
+    user?.role === "super_admin"
+      ? "Super Admin"
+      : user?.role === "org_admin"
+        ? "Admin"
+        : user?.role === "hr_admin"
+          ? "HR Admin"
+          : user?.role === "hr_manager"
+            ? "HR Manager"
+            : "Employee";
 
   return (
     <div className="flex h-screen bg-gray-50">
