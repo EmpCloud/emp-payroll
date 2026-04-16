@@ -8,7 +8,7 @@ import { Modal } from "@/components/ui/Modal";
 import { DataTable } from "@/components/ui/DataTable";
 import { StatCard } from "@/components/ui/StatCard";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { apiGet, apiPost, apiDelete } from "@/api/client";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/api/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
@@ -19,6 +19,7 @@ import {
   Minus,
   Loader2,
   Trash2,
+  Pencil,
   FileUp,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -27,6 +28,9 @@ export function BenchmarksPage() {
   const [tab, setTab] = useState<"benchmarks" | "compa-ratio">("benchmarks");
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
+  // When set, the create modal re-purposes itself as an edit form pre-filled
+  // with this row's values (issue #18 — edit button was missing entirely).
+  const [editing, setEditing] = useState<any>(null);
   const qc = useQueryClient();
 
   const { data: benchRes, isLoading: benchLoading } = useQuery({
@@ -44,23 +48,34 @@ export function BenchmarksPage() {
   const compaData = compaRes?.data || {};
   const compaEmployees = compaData.employees || [];
 
-  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
+  function closeModal() {
+    setShowCreate(false);
+    setEditing(null);
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setCreating(true);
     const fd = new FormData(e.currentTarget);
+    const payload = {
+      jobTitle: fd.get("jobTitle"),
+      department: fd.get("department"),
+      location: fd.get("location"),
+      marketP25: Number(fd.get("marketP25")),
+      marketP50: Number(fd.get("marketP50")),
+      marketP75: Number(fd.get("marketP75")),
+      source: fd.get("source"),
+      effectiveDate: fd.get("effectiveDate"),
+    };
     try {
-      await apiPost("/benchmarks", {
-        jobTitle: fd.get("jobTitle"),
-        department: fd.get("department"),
-        location: fd.get("location"),
-        marketP25: Number(fd.get("marketP25")),
-        marketP50: Number(fd.get("marketP50")),
-        marketP75: Number(fd.get("marketP75")),
-        source: fd.get("source"),
-        effectiveDate: fd.get("effectiveDate"),
-      });
-      toast.success("Benchmark created");
-      setShowCreate(false);
+      if (editing) {
+        await apiPut(`/benchmarks/${editing.id}`, payload);
+        toast.success("Benchmark updated");
+      } else {
+        await apiPost("/benchmarks", payload);
+        toast.success("Benchmark created");
+      }
+      closeModal();
       qc.invalidateQueries({ queryKey: ["benchmarks"] });
     } catch (err: any) {
       toast.error(err.response?.data?.error?.message || "Failed");
@@ -108,14 +123,28 @@ export function BenchmarksPage() {
       key: "actions",
       header: "",
       render: (r: any) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => deleteBenchmark(r.id)}
-          className="text-red-600"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            title="Edit"
+            onClick={() => {
+              setEditing(r);
+              setShowCreate(true);
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            title="Delete"
+            onClick={() => deleteBenchmark(r.id)}
+            className="text-red-600"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -283,34 +312,91 @@ export function BenchmarksPage() {
         </>
       )}
 
-      {/* Create Benchmark Modal */}
+      {/* Create / Edit Benchmark Modal — same form re-purposed as edit when
+          `editing` is set. Issue #17: the P25/P50/P75 inputs now carry
+          min=0 so the stepper can't decrement into negative salary values.
+          Issue #18: the Edit button that populates `editing` and opens
+          this modal was previously missing. */}
       <Modal
         open={showCreate}
-        onClose={() => setShowCreate(false)}
-        title="Add Compensation Benchmark"
+        onClose={closeModal}
+        title={editing ? "Edit Compensation Benchmark" : "Add Compensation Benchmark"}
       >
-        <form onSubmit={handleCreate} className="space-y-4">
-          <Input label="Job Title" name="jobTitle" placeholder="e.g., Software Engineer" required />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            label="Job Title"
+            name="jobTitle"
+            placeholder="e.g., Software Engineer"
+            defaultValue={editing?.job_title || ""}
+            required
+          />
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Department" name="department" placeholder="e.g., Engineering" />
-            <Input label="Location" name="location" placeholder="e.g., Bangalore" />
+            <Input
+              label="Department"
+              name="department"
+              placeholder="e.g., Engineering"
+              defaultValue={editing?.department || ""}
+            />
+            <Input
+              label="Location"
+              name="location"
+              placeholder="e.g., Bangalore"
+              defaultValue={editing?.location || ""}
+            />
           </div>
           <div className="grid grid-cols-3 gap-4">
-            <Input label="P25 (Annual)" name="marketP25" type="number" required />
-            <Input label="P50 Median (Annual)" name="marketP50" type="number" required />
-            <Input label="P75 (Annual)" name="marketP75" type="number" required />
+            <Input
+              label="P25 (Annual)"
+              name="marketP25"
+              type="number"
+              min={0}
+              step="any"
+              defaultValue={editing?.market_p25 ?? ""}
+              required
+            />
+            <Input
+              label="P50 Median (Annual)"
+              name="marketP50"
+              type="number"
+              min={0}
+              step="any"
+              defaultValue={editing?.market_p50 ?? ""}
+              required
+            />
+            <Input
+              label="P75 (Annual)"
+              name="marketP75"
+              type="number"
+              min={0}
+              step="any"
+              defaultValue={editing?.market_p75 ?? ""}
+              required
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Source" name="source" placeholder="e.g., Glassdoor 2026" />
-            <Input label="Effective Date" name="effectiveDate" type="date" required />
+            <Input
+              label="Source"
+              name="source"
+              placeholder="e.g., Glassdoor 2026"
+              defaultValue={editing?.source || ""}
+            />
+            <Input
+              label="Effective Date"
+              name="effectiveDate"
+              type="date"
+              defaultValue={
+                editing?.effective_date ? String(editing.effective_date).slice(0, 10) : ""
+              }
+              required
+            />
           </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setShowCreate(false)}>
+            <Button type="button" variant="ghost" onClick={closeModal}>
               Cancel
             </Button>
             <Button type="submit" disabled={creating}>
               {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Save Benchmark
+              {editing ? "Update Benchmark" : "Save Benchmark"}
             </Button>
           </div>
         </form>

@@ -333,6 +333,20 @@ export const createBenchmarkSchema = z.object({
   }),
 });
 
+export const updateBenchmarkSchema = z.object({
+  params: z.object({ id: z.string() }),
+  body: z.object({
+    jobTitle: z.string().min(1).max(255).optional(),
+    department: z.string().max(100).optional().nullable(),
+    location: z.string().max(255).optional().nullable(),
+    marketP25: z.number().min(0).optional(),
+    marketP50: z.number().min(0).optional(),
+    marketP75: z.number().min(0).optional(),
+    source: z.string().max(255).optional().nullable(),
+    effectiveDate: z.string().optional(),
+  }),
+});
+
 export const importBenchmarksSchema = z.object({
   body: z.object({
     benchmarks: z

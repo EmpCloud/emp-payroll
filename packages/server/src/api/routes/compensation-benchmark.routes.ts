@@ -1,7 +1,12 @@
 import { Router } from "express";
 import { CompensationBenchmarkService } from "../../services/compensation-benchmark.service";
 import { authenticate, authorize } from "../middleware/auth.middleware";
-import { validate, createBenchmarkSchema, importBenchmarksSchema } from "../validators";
+import {
+  validate,
+  createBenchmarkSchema,
+  updateBenchmarkSchema,
+  importBenchmarksSchema,
+} from "../validators";
 import { wrap, param } from "../helpers";
 
 const router = Router();
@@ -45,6 +50,7 @@ router.post(
 router.put(
   "/:id",
   authorize("hr_admin"),
+  validate(updateBenchmarkSchema),
   wrap(async (req, res) => {
     const data = await svc.updateBenchmark(
       param(req, "id"),
