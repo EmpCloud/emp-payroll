@@ -108,11 +108,14 @@ export function DashboardPage() {
         }
       />
 
-      {/* Quick actions */}
+      {/* Quick actions — the primary "Run Payroll" CTA lives in the page
+          header; this tile is relabelled to "Payroll Runs" so it's a
+          navigation shortcut to the runs history, not a duplicate action
+          (issue #52). */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
         {[
           {
-            label: "Run Payroll",
+            label: "Payroll Runs",
             icon: Play,
             path: "/payroll/runs",
             color: "bg-brand-50 text-brand-700",
