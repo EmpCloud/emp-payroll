@@ -177,6 +177,17 @@ export class LeaveService {
 
   // -------------------------------------------------------------------------
   // Leave Actions — proxy to EmpCloud's leave_applications
+  // List active leave types for an org — used by the Apply Leave form so the
+  // dropdown shows the real codes/names instead of a hardcoded list that
+  // didn't match what EmpCloud stored (issue #12).
+  async listLeaveTypes(orgId: string) {
+    const empcloudDb = getEmpCloudDB();
+    return empcloudDb("leave_types")
+      .where({ organization_id: Number(orgId), is_active: true })
+      .select("id", "code", "name", "leave_category", "max_days_per_year")
+      .orderBy("name", "asc");
+  }
+
   // -------------------------------------------------------------------------
   async applyLeave(
     employeeId: string,

@@ -48,6 +48,17 @@ router.get(
   }),
 );
 
+// Active leave types for the caller's org — drives the Apply Leave dropdown
+// (#12). EmpCloud stores codes like CL / SL / EL; the client used to hardcode
+// casual / sick / earned, so every apply-leave attempt 400'd.
+router.get(
+  "/types",
+  wrap(async (req, res) => {
+    const data = await svc.listLeaveTypes(String(req.user!.empcloudOrgId));
+    res.json({ success: true, data });
+  }),
+);
+
 // Cancel leave (employee — immediate)
 router.post(
   "/:id/cancel",
