@@ -3,7 +3,12 @@ import { EmployeeService } from "../../services/employee.service";
 import { ExportService } from "../../services/export.service";
 import { createNote, getNotes, deleteNote } from "../../services/notes.service";
 import { authenticate, authorize } from "../middleware/auth.middleware";
-import { validate, createEmployeeSchema, updateEmployeeSchema } from "../validators";
+import {
+  validate,
+  createEmployeeSchema,
+  updateEmployeeSchema,
+  updateBankDetailsSchema,
+} from "../validators";
 import { wrap, param } from "../helpers";
 
 const router = Router();
@@ -389,6 +394,7 @@ router.get(
 router.put(
   "/:id/bank-details",
   authorize("hr_admin", "hr_manager"),
+  validate(updateBankDetailsSchema),
   wrap(async (req, res) => {
     const data = await svc.updateBankDetails(
       numParam(req, "id"),
