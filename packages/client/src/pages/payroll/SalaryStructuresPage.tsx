@@ -261,156 +261,160 @@ export function SalaryStructuresPage() {
         title={editingStructure ? "Edit Salary Structure" : "New Salary Structure"}
         className="max-w-3xl"
       >
-        <form className="space-y-5" onSubmit={handleSave}>
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              id="name"
-              name="name"
-              label="Structure Name"
-              placeholder="e.g. Standard India CTC"
-              defaultValue={editingStructure?.name || ""}
-              required
-            />
-            <Input
-              id="description"
-              name="description"
-              label="Description"
-              placeholder="For full-time employees"
-              defaultValue={editingStructure?.description || ""}
-            />
-          </div>
-
-          {/* Components */}
-          <div>
-            <div className="mb-3 flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-gray-700">Components</h4>
-              <div className="flex gap-2">
-                {unusedPresets.length > 0 && (
-                  <SelectField
-                    id="add-preset"
-                    label=""
-                    value=""
-                    onChange={(e) => {
-                      const preset = PRESET_COMPONENTS.find((p) => p.code === e.target.value);
-                      if (preset) addComponent(preset);
-                      e.target.value = "";
-                    }}
-                    options={[
-                      { value: "", label: "+ Add preset..." },
-                      ...unusedPresets.map((p) => ({
-                        value: p.code,
-                        label: `${p.name} (${p.type})`,
-                      })),
-                    ]}
-                  />
-                )}
-                <Button type="button" variant="outline" size="sm" onClick={() => addComponent()}>
-                  <Plus className="h-3.5 w-3.5" /> Custom
-                </Button>
-              </div>
+        <form className="flex flex-col" onSubmit={handleSave}>
+          <div className="max-h-[calc(100vh-260px)] space-y-5 overflow-y-auto pr-1">
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                id="name"
+                name="name"
+                label="Structure Name"
+                placeholder="e.g. Standard India CTC"
+                defaultValue={editingStructure?.name || ""}
+                required
+              />
+              <Input
+                id="description"
+                name="description"
+                label="Description"
+                placeholder="For full-time employees"
+                defaultValue={editingStructure?.description || ""}
+              />
             </div>
 
-            <div className="overflow-hidden rounded-lg border border-gray-200">
-              {/* Header */}
-              <div className="grid grid-cols-[1fr_80px_100px_90px_70px_90px_36px] gap-2 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500">
-                <span>Name</span>
-                <span>Code</span>
-                <span>Type</span>
-                <span>Calc</span>
-                <span>Value</span>
-                <span>% Of</span>
-                <span></span>
+            {/* Components */}
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-gray-700">Components</h4>
+                <div className="flex gap-2">
+                  {unusedPresets.length > 0 && (
+                    <SelectField
+                      id="add-preset"
+                      label=""
+                      value=""
+                      onChange={(e) => {
+                        const preset = PRESET_COMPONENTS.find((p) => p.code === e.target.value);
+                        if (preset) addComponent(preset);
+                        e.target.value = "";
+                      }}
+                      options={[
+                        { value: "", label: "+ Add preset..." },
+                        ...unusedPresets.map((p) => ({
+                          value: p.code,
+                          label: `${p.name} (${p.type})`,
+                        })),
+                      ]}
+                    />
+                  )}
+                  <Button type="button" variant="outline" size="sm" onClick={() => addComponent()}>
+                    <Plus className="h-3.5 w-3.5" /> Custom
+                  </Button>
+                </div>
               </div>
 
-              {/* Rows */}
-              <div className="divide-y divide-gray-100">
-                {components.map((c, i) => (
-                  <div
-                    key={i}
-                    className="grid grid-cols-[1fr_80px_100px_90px_70px_90px_36px] items-center gap-2 px-3 py-2"
-                  >
-                    <input
-                      className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-1"
-                      placeholder="Component name"
-                      value={c.name}
-                      onChange={(e) => updateComponent(i, "name", e.target.value)}
-                      required
-                    />
-                    <input
-                      className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 font-mono text-sm focus:outline-none focus:ring-1"
-                      placeholder="CODE"
-                      value={c.code}
-                      onChange={(e) => updateComponent(i, "code", e.target.value.toUpperCase())}
-                      required
-                    />
-                    <select
-                      className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-1 py-1.5 text-sm focus:outline-none focus:ring-1"
-                      value={c.type}
-                      onChange={(e) => updateComponent(i, "type", e.target.value)}
+              <div className="overflow-hidden rounded-lg border border-gray-200">
+                {/* Header */}
+                <div className="grid grid-cols-[1fr_80px_100px_90px_70px_90px_36px] gap-2 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500">
+                  <span>Name</span>
+                  <span>Code</span>
+                  <span>Type</span>
+                  <span>Calc</span>
+                  <span>Value</span>
+                  <span>% Of</span>
+                  <span></span>
+                </div>
+
+                {/* Rows */}
+                <div className="divide-y divide-gray-100">
+                  {components.map((c, i) => (
+                    <div
+                      key={i}
+                      className="grid grid-cols-[1fr_80px_100px_90px_70px_90px_36px] items-center gap-2 px-3 py-2"
                     >
-                      <option value="earning">Earning</option>
-                      <option value="deduction">Deduction</option>
-                      <option value="reimbursement">Reimb.</option>
-                    </select>
-                    <select
-                      className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-1 py-1.5 text-sm focus:outline-none focus:ring-1"
-                      value={c.calculationType}
-                      onChange={(e) => updateComponent(i, "calculationType", e.target.value)}
-                    >
-                      <option value="percentage">%</option>
-                      <option value="fixed">Fixed</option>
-                    </select>
-                    <input
-                      className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-1"
-                      type="number"
-                      value={c.value}
-                      onChange={(e) => updateComponent(i, "value", Number(e.target.value))}
-                    />
-                    <input
-                      className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 font-mono text-sm focus:outline-none focus:ring-1 disabled:bg-gray-50 disabled:text-gray-300"
-                      placeholder="CTC"
-                      value={c.percentageOf}
-                      onChange={(e) =>
-                        updateComponent(i, "percentageOf", e.target.value.toUpperCase())
-                      }
-                      disabled={c.calculationType !== "percentage"}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeComponent(i)}
-                      className="flex h-8 w-8 items-center justify-center rounded text-red-400 hover:bg-red-50 hover:text-red-600"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
+                      <input
+                        className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-1"
+                        placeholder="Component name"
+                        value={c.name}
+                        onChange={(e) => updateComponent(i, "name", e.target.value)}
+                        required
+                      />
+                      <input
+                        className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 font-mono text-sm focus:outline-none focus:ring-1"
+                        placeholder="CODE"
+                        value={c.code}
+                        onChange={(e) => updateComponent(i, "code", e.target.value.toUpperCase())}
+                        required
+                      />
+                      <select
+                        className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-1 py-1.5 text-sm focus:outline-none focus:ring-1"
+                        value={c.type}
+                        onChange={(e) => updateComponent(i, "type", e.target.value)}
+                      >
+                        <option value="earning">Earning</option>
+                        <option value="deduction">Deduction</option>
+                        <option value="reimbursement">Reimb.</option>
+                      </select>
+                      <select
+                        className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-1 py-1.5 text-sm focus:outline-none focus:ring-1"
+                        value={c.calculationType}
+                        onChange={(e) => updateComponent(i, "calculationType", e.target.value)}
+                      >
+                        <option value="percentage">%</option>
+                        <option value="fixed">Fixed</option>
+                      </select>
+                      <input
+                        className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-1"
+                        type="number"
+                        value={c.value}
+                        onChange={(e) => updateComponent(i, "value", Number(e.target.value))}
+                      />
+                      <input
+                        className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 font-mono text-sm focus:outline-none focus:ring-1 disabled:bg-gray-50 disabled:text-gray-300"
+                        placeholder="CTC"
+                        value={c.percentageOf}
+                        onChange={(e) =>
+                          updateComponent(i, "percentageOf", e.target.value.toUpperCase())
+                        }
+                        disabled={c.calculationType !== "percentage"}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeComponent(i)}
+                        className="flex h-8 w-8 items-center justify-center rounded text-red-400 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
+
+              {/* Summary */}
+              {components.length > 0 && (
+                <div className="mt-3 flex gap-4 text-xs text-gray-500">
+                  <span>{components.filter((c) => c.type === "earning").length} earnings</span>
+                  {components.filter((c) => c.type === "deduction").length > 0 && (
+                    <span>
+                      {components.filter((c) => c.type === "deduction").length} deductions
+                    </span>
+                  )}
+                  {components.filter((c) => c.type === "reimbursement").length > 0 && (
+                    <span>
+                      {components.filter((c) => c.type === "reimbursement").length} reimbursements
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Summary */}
-            {components.length > 0 && (
-              <div className="mt-3 flex gap-4 text-xs text-gray-500">
-                <span>{components.filter((c) => c.type === "earning").length} earnings</span>
-                {components.filter((c) => c.type === "deduction").length > 0 && (
-                  <span>{components.filter((c) => c.type === "deduction").length} deductions</span>
-                )}
-                {components.filter((c) => c.type === "reimbursement").length > 0 && (
-                  <span>
-                    {components.filter((c) => c.type === "reimbursement").length} reimbursements
-                  </span>
-                )}
-              </div>
-            )}
+            {/* Info box */}
+            <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+              <strong>Note:</strong> Statutory deductions (EPF, ESI, PT, TDS) are computed
+              automatically during payroll and do not need to be added here. Use "Deduction" type
+              for recurring non-statutory deductions like canteen fees or welfare fund.
+            </div>
           </div>
 
-          {/* Info box */}
-          <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-            <strong>Note:</strong> Statutory deductions (EPF, ESI, PT, TDS) are computed
-            automatically during payroll and do not need to be added here. Use "Deduction" type for
-            recurring non-statutory deductions like canteen fees or welfare fund.
-          </div>
-
-          <div className="flex justify-end gap-3">
+          <div className="sticky bottom-0 mt-4 flex justify-end gap-3 border-t border-gray-100 bg-white pt-4 dark:border-gray-800 dark:bg-gray-900">
             <Button variant="outline" type="button" onClick={closeModal}>
               Cancel
             </Button>
