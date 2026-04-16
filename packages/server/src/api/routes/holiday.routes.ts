@@ -52,9 +52,35 @@ router.post(
     const orgId = Number(req.user!.empcloudOrgId);
     const { name, date, type, description } = req.body;
 
+    // #29 — Holiday name must contain at least one alphabet character.
+    // Purely-numeric or symbol-only names (e.g. "123", "---") are rejected
+    // both here and on the client.
+    const trimmedName = typeof name === "string" ? name.trim() : "";
+    if (!trimmedName) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "INVALID_INPUT", message: "Holiday name is required" },
+      });
+    }
+    if (!/[A-Za-z]/.test(trimmedName)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "INVALID_INPUT",
+          message: "Holiday name must contain at least one letter",
+        },
+      });
+    }
+    if (!date || typeof date !== "string") {
+      return res.status(400).json({
+        success: false,
+        error: { code: "INVALID_INPUT", message: "Holiday date is required (YYYY-MM-DD)" },
+      });
+    }
+
     const [id] = await empcloudDb("company_events").insert({
       organization_id: orgId,
-      title: name,
+      title: trimmedName,
       description: description || null,
       event_type: "holiday",
       start_date: `${date} 00:00:00`,
@@ -68,7 +94,9 @@ router.post(
       updated_at: new Date(),
     });
 
-    res.status(201).json({ success: true, data: { id: String(id), name, date, type } });
+    res
+      .status(201)
+      .json({ success: true, data: { id: String(id), name: trimmedName, date, type } });
   }),
 );
 

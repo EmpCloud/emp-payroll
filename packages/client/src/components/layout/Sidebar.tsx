@@ -69,6 +69,12 @@ const navItems: NavItem[] = [
     roles: ["org_admin", "hr_admin", "hr_manager"],
   },
   {
+    to: "/departments",
+    label: "Departments",
+    icon: Network,
+    roles: ["org_admin", "hr_admin", "hr_manager"],
+  },
+  {
     to: "/payroll/structures",
     label: "Structures",
     icon: Wallet,

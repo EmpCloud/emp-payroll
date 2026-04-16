@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SelectField } from "@/components/ui/SelectField";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
-import { useCreateEmployee } from "@/api/hooks";
+import { useCreateEmployee, useDepartments } from "@/api/hooks";
 import { ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -29,6 +29,8 @@ const PHONE_REGEX = /^[+\d][\d\s()-]{0,19}$/;
 export function EmployeeCreatePage() {
   const navigate = useNavigate();
   const mutation = useCreateEmployee();
+  const { data: deptRes } = useDepartments();
+  const departments: { id: string; name: string }[] = deptRes?.data || [];
   const maxDob = todayISO();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -194,13 +196,32 @@ export function EmployeeCreatePage() {
                 placeholder="EMP009"
                 required
               />
-              <Input
-                id="department"
-                name="department"
-                label="Department"
-                placeholder="Engineering"
-                required
-              />
+              {/* #48 — Department dropdown populated from the org's
+                  organization_departments API. When the org has no
+                  departments configured yet we fall back to a free-text
+                  input and guide the admin to the Departments page so the
+                  form remains usable on a fresh tenant. */}
+              {departments.length > 0 ? (
+                <SelectField
+                  id="department"
+                  name="department"
+                  label="Department"
+                  required
+                  options={[
+                    { value: "", label: "Select department..." },
+                    ...departments.map((d) => ({ value: d.name, label: d.name })),
+                  ]}
+                />
+              ) : (
+                <Input
+                  id="department"
+                  name="department"
+                  label="Department"
+                  placeholder="Engineering"
+                  required
+                  title="No departments configured yet — add some from Settings > Departments"
+                />
+              )}
               <Input
                 id="designation"
                 name="designation"

@@ -182,6 +182,32 @@ export function useOrgSettings(id: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Departments (#48)
+// ---------------------------------------------------------------------------
+export function useDepartments() {
+  return useQuery({
+    queryKey: ["departments"],
+    queryFn: () => apiGet<any>("/departments"),
+  });
+}
+
+export function useCreateDepartment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { name: string }) => apiPost<any>("/departments", data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["departments"] }),
+  });
+}
+
+export function useDeleteDepartment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiDelete<any>(`/departments/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["departments"] }),
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Self-Service
 // ---------------------------------------------------------------------------
 export function useSelfDashboard() {

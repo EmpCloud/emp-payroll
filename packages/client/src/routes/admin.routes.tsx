@@ -65,6 +65,9 @@ const SystemHealthPage = lazy(() =>
 const OrgChartPage = lazy(() =>
   import("@/pages/employees/OrgChartPage").then((m) => ({ default: m.OrgChartPage })),
 );
+const DepartmentsPage = lazy(() =>
+  import("@/pages/departments/DepartmentsPage").then((m) => ({ default: m.DepartmentsPage })),
+);
 const LoansPage = lazy(() =>
   import("@/pages/loans/LoansPage").then((m) => ({ default: m.LoansPage })),
 );
@@ -137,6 +140,7 @@ export function AdminRoutes() {
       <Route path="/employees/import" element={<EmployeeImportPage />} />
       <Route path="/employees/:id" element={<EmployeeDetailPage />} />
       <Route path="/employees/org-chart" element={<OrgChartPage />} />
+      <Route path="/departments" element={<DepartmentsPage />} />
       <Route path="/payroll/structures" element={<SalaryStructuresPage />} />
       <Route path="/payroll/runs" element={<PayrollRunsPage />} />
       <Route path="/payroll/runs/:id" element={<PayrollRunDetailPage />} />

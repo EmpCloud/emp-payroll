@@ -5,6 +5,7 @@ import { SelectField } from "@/components/ui/SelectField";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { useOrganization, useOrgSettings } from "@/api/hooks";
 import { apiPut } from "@/api/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { getUser } from "@/api/auth";
 import { Building2, CreditCard, Shield, Bell, Loader2 } from "lucide-react";
 import { useState } from "react";
@@ -12,6 +13,7 @@ import toast from "react-hot-toast";
 
 export function SettingsPage() {
   const [saving, setSaving] = useState(false);
+  const qc = useQueryClient();
   const user = getUser();
   const orgId = user?.orgId ? String(user.orgId) : "";
   const { data: orgRes, isLoading } = useOrganization(orgId);
@@ -27,36 +29,112 @@ export function SettingsPage() {
 
   const org = orgRes?.data;
   const settings = settingsRes?.data;
-  const address = org?.registered_address
-    ? typeof org.registered_address === "string"
-      ? JSON.parse(org.registered_address)
-      : org.registered_address
-    : {};
+  // Server returns camelCase `registeredAddress`; legacy shape used snake_case
+  // `registered_address`. Accept either so we don't ship a half-broken UI if
+  // the API moves underneath us.
+  const rawAddress = org?.registeredAddress ?? org?.registered_address;
+  const address =
+    rawAddress && typeof rawAddress === "string"
+      ? (() => {
+          try {
+            return JSON.parse(rawAddress);
+          } catch {
+            // Not JSON — treat as a single line1
+            return { line1: rawAddress };
+          }
+        })()
+      : rawAddress || {};
 
+  // #27 — Join only non-empty parts with ", " so the default shown in the
+  // Registered Address field never carries stray leading/trailing commas
+  // when some segments are missing. Previously we did
+  //   `${line1}, ${city}` — which produced e.g. ", Bengaluru" or "HSR, "
+  // and that exact string was what got saved back on submit, which is why
+  // the extra comma reappeared after refresh.
+  const addressDisplay = [
+    address.line1,
+    address.line2,
+    address.city,
+    address.state,
+    address.pincode,
+    address.country,
+  ]
+    .map((p) => (p == null ? "" : String(p).trim()))
+    .filter((p) => p.length > 0)
+    .join(", ");
+
+  // #24 — Settings save used to POST everything to
+  // `PUT /organizations/:id/settings`, but that endpoint (OrgService.updateSettings)
+  // only persists payFrequency / payDay / state / PF / ESI / PT fields and
+  // silently discards the rest (name, GSTIN, address, etc.) — so the UI
+  // toasted "saved" but nothing changed.
+  //
+  // Fix: split the payload. Org-identity fields (name, legal, GSTIN, state,
+  // registered address) go to `PUT /organizations/:id` (OrgService.update,
+  // which writes both EmpCloud and payroll_settings). Pay/statutory fields
+  // stay on the settings endpoint.
   async function handleSave() {
+    const val = (id: string) =>
+      (document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null)?.value ?? "";
+
+    const orgName = val("org_name").trim();
+    const orgGstin = val("org_gstin").trim();
+    const orgStateVal = val("org_state");
+    const orgAddressStr = val("org_address").trim();
+    const pfEstab = val("pf_estab").trim();
+    const esiEstab = val("esi_estab").trim();
+    const payFreq = val("pay_frequency");
+    const payDay = val("pay_day");
+
+    // Parse the comma-separated address back into the JSON shape the API
+    // expects. Empty segments are dropped so we don't round-trip a
+    // trailing comma (see #27).
+    const addressParts = orgAddressStr
+      .split(",")
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0);
+    const registeredAddress =
+      addressParts.length > 0
+        ? {
+            line1: addressParts[0] || "",
+            line2: addressParts[1] || "",
+            city: addressParts[2] || "",
+            state: addressParts[3] || "",
+            pincode: addressParts[4] || "",
+            country: addressParts[5] || "",
+          }
+        : null;
+
+    const orgPayload: Record<string, any> = {};
+    if (orgName) orgPayload.name = orgName;
+    if (orgGstin) orgPayload.gstin = orgGstin;
+    if (orgStateVal) orgPayload.state = orgStateVal;
+    if (pfEstab) orgPayload.pfEstablishmentCode = pfEstab;
+    if (esiEstab) orgPayload.esiEstablishmentCode = esiEstab;
+    if (registeredAddress) orgPayload.registeredAddress = registeredAddress;
+
+    const settingsPayload: Record<string, any> = {};
+    if (payFreq) settingsPayload.payFrequency = payFreq;
+    if (payDay) settingsPayload.payDay = parseInt(payDay, 10);
+    if (pfEstab) settingsPayload.pfEstablishmentCode = pfEstab;
+    if (esiEstab) settingsPayload.esiEstablishmentCode = esiEstab;
+    if (orgStateVal) settingsPayload.state = orgStateVal;
+
     setSaving(true);
     try {
-      const formData: Record<string, any> = {};
-
-      // Collect form field values
-      const payFreq = (document.getElementById("pay_frequency") as HTMLSelectElement)?.value;
-      const pfEstab = (document.getElementById("pf_estab") as HTMLInputElement)?.value;
-      const esiEstab = (document.getElementById("esi_estab") as HTMLInputElement)?.value;
-      const pfRestrict = (document.getElementById("pf_restrict") as HTMLSelectElement)?.value;
-      const orgState = (document.getElementById("org_state") as HTMLSelectElement)?.value;
-
-      const payDay = (document.getElementById("pay_day") as HTMLInputElement)?.value;
-
-      if (payFreq) formData.payFrequency = payFreq;
-      if (payDay) formData.payDay = parseInt(payDay, 10);
-      if (pfEstab) formData.pfEstablishmentCode = pfEstab;
-      if (esiEstab) formData.esiEstablishmentCode = esiEstab;
-      if (orgState) formData.state = orgState;
-
-      await apiPut(`/organizations/${orgId}/settings`, formData);
+      if (Object.keys(orgPayload).length > 0) {
+        await apiPut(`/organizations/${orgId}`, orgPayload);
+      }
+      if (Object.keys(settingsPayload).length > 0) {
+        await apiPut(`/organizations/${orgId}/settings`, settingsPayload);
+      }
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["organization", orgId] }),
+        qc.invalidateQueries({ queryKey: ["org-settings", orgId] }),
+      ]);
       toast.success("Settings saved");
-    } catch {
-      toast.error("Failed to save settings");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error?.message || "Failed to save settings");
     } finally {
       setSaving(false);
     }
@@ -78,17 +156,13 @@ export function SettingsPage() {
             <Input
               id="org_legal"
               label="Legal Name"
-              defaultValue={org?.legal_name || ""}
+              defaultValue={org?.legalName || org?.legal_name || ""}
               disabled
             />
             <Input id="org_pan" label="PAN" defaultValue={org?.pan || ""} disabled />
             <Input id="org_tan" label="TAN" defaultValue={org?.tan || ""} disabled />
             <Input id="org_gstin" label="GSTIN" defaultValue={org?.gstin || ""} />
-            <Input
-              id="org_address"
-              label="Registered Address"
-              defaultValue={`${address.line1 || ""}, ${address.city || ""}`}
-            />
+            <Input id="org_address" label="Registered Address" defaultValue={addressDisplay} />
             <SelectField
               id="org_state"
               label="State (for PT)"
@@ -138,12 +212,22 @@ export function SettingsPage() {
             <Input
               id="pf_estab"
               label="PF Establishment Code"
-              defaultValue={org?.pf_establishment_code || settings?.pfEstablishmentCode || ""}
+              defaultValue={
+                org?.pfEstablishmentCode ||
+                org?.pf_establishment_code ||
+                settings?.pfEstablishmentCode ||
+                ""
+              }
             />
             <Input
               id="esi_estab"
               label="ESI Code"
-              defaultValue={org?.esi_establishment_code || settings?.esiEstablishmentCode || ""}
+              defaultValue={
+                org?.esiEstablishmentCode ||
+                org?.esi_establishment_code ||
+                settings?.esiEstablishmentCode ||
+                ""
+              }
             />
             <SelectField
               id="pf_restrict"

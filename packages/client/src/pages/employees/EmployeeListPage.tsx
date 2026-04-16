@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -63,18 +63,29 @@ const columns = [
 export function EmployeeListPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [searchParams] = useSearchParams();
   const { data: res, isLoading } = useEmployees({ limit: 100 });
   const [showImport, setShowImport] = useState(false);
   const [deptFilter, setDeptFilter] = useState("");
   const [search, setSearch] = useState("");
 
+  // #54 — When the Dashboard "Active Employees" card links here with
+  // ?status=active, scope the list to active employees only.
+  const statusFilter = searchParams.get("status"); // "active" | "inactive" | null
   const allEmployees = res?.data?.data || [];
+  const statusFiltered = statusFilter
+    ? allEmployees.filter((e: any) => {
+        if (statusFilter === "active") return e.is_active === true || e.is_active === 1;
+        if (statusFilter === "inactive") return !(e.is_active === true || e.is_active === 1);
+        return true;
+      })
+    : allEmployees;
   const departments = Array.from(
-    new Set<string>(allEmployees.map((e: any) => e.department)),
+    new Set<string>(statusFiltered.map((e: any) => e.department)),
   ).sort();
   const filtered = deptFilter
-    ? allEmployees.filter((e: any) => e.department === deptFilter)
-    : allEmployees;
+    ? statusFiltered.filter((e: any) => e.department === deptFilter)
+    : statusFiltered;
   const employees = search
     ? filtered.filter((e: any) => {
         const q = search.toLowerCase();
@@ -161,7 +172,9 @@ export function EmployeeListPage() {
         description={
           isLoading
             ? "Loading..."
-            : `${employees.length}${deptFilter ? ` in ${deptFilter}` : ""} of ${total} employees`
+            : `${employees.length}${deptFilter ? ` in ${deptFilter}` : ""}${
+                statusFilter ? ` ${statusFilter}` : ""
+              } of ${total} employees`
         }
         actions={
           <>

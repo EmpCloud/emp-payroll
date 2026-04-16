@@ -35,17 +35,29 @@ export function HolidaysPage() {
   async function addHoliday(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const name = ((fd.get("name") as string) || "").trim();
+    const date = (fd.get("date") as string) || "";
+    const type = (fd.get("type") as string) || "national";
+
+    // #29 — Reject purely numeric / symbol names (e.g. "123", "-"). At least
+    // one alphabet character is required. Server re-validates with the same
+    // regex, but we catch it here so the user doesn't round-trip.
+    if (!name) {
+      toast.error("Holiday name is required");
+      return;
+    }
+    if (!/[A-Za-z]/.test(name)) {
+      toast.error("Holiday name must contain at least one letter");
+      return;
+    }
+
     try {
-      await apiPost("/holidays", {
-        name: fd.get("name") as string,
-        date: fd.get("date") as string,
-        type: fd.get("type") as string,
-      });
+      await apiPost("/holidays", { name, date, type });
       toast.success("Holiday added");
       qc.invalidateQueries({ queryKey: ["holidays"] });
       setShowAdd(false);
-    } catch {
-      toast.error("Failed to add holiday");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error?.message || "Failed to add holiday");
     }
   }
 
@@ -186,7 +198,15 @@ export function HolidaysPage() {
 
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add Holiday">
         <form onSubmit={addHoliday} className="space-y-4">
-          <Input id="name" name="name" label="Holiday Name" placeholder="e.g. Diwali" required />
+          <Input
+            id="name"
+            name="name"
+            label="Holiday Name"
+            placeholder="e.g. Diwali"
+            required
+            pattern=".*[A-Za-z].*"
+            title="Must contain at least one letter"
+          />
           <Input id="date" name="date" label="Date" type="date" required />
           <SelectField
             id="type"

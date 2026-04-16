@@ -22,7 +22,7 @@ import {
   Play,
   CreditCard,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   BarChart,
   Bar,
@@ -167,12 +167,23 @@ export function DashboardPage() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Active Employees"
-          value={String(totalEmployees)}
-          subtitle={`${totalEmployees} total`}
-          icon={Users}
-        />
+        {/* #54 — Active Employees card links through to the employees list
+            pre-filtered to status=active. Wrapped in a Link and given
+            hover/focus affordances so it's discoverable as a clickable
+            surface. */}
+        <Link
+          to="/employees?status=active"
+          className="focus-visible:ring-brand-500 rounded-xl transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2"
+          aria-label="View active employees"
+        >
+          <StatCard
+            title="Active Employees"
+            value={String(totalEmployees)}
+            subtitle={`${totalEmployees} total`}
+            icon={Users}
+            className="h-full cursor-pointer"
+          />
+        </Link>
         <StatCard
           title="Last Payroll (Gross)"
           value={lastRun ? formatCurrency(lastRun.total_gross) : "—"}
