@@ -46,13 +46,19 @@ export function MyReimbursementsPage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSubmitting(true);
     const fd = new FormData(e.currentTarget);
+    const amount = Number(fd.get("amount"));
+    // #38 — guard against negative / NaN amounts before hitting the server
+    if (!Number.isFinite(amount) || amount < 0) {
+      toast.error("Amount must be zero or a positive number");
+      return;
+    }
+    setSubmitting(true);
     try {
       await apiPost("/self-service/reimbursements", {
         category: fd.get("category"),
         description: fd.get("description"),
-        amount: Number(fd.get("amount")),
+        amount,
         expenseDate: fd.get("date"),
       });
       toast.success("Claim submitted for approval");
@@ -174,6 +180,8 @@ export function MyReimbursementsPage() {
               label="Amount (₹)"
               type="number"
               placeholder="1500"
+              min="0"
+              step="0.01"
               required
             />
             <Input id="date" name="date" label="Expense Date" type="date" required />

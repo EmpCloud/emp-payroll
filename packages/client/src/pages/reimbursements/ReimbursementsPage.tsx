@@ -10,6 +10,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Receipt, CheckCircle2, XCircle, Clock, CreditCard } from "lucide-react";
 import toast from "react-hot-toast";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 export function ReimbursementsPage() {
   const [filter, setFilter] = useState("");
@@ -23,8 +24,11 @@ export function ReimbursementsPage() {
   const claims = res?.data?.data || [];
   const pending = claims.filter((c: any) => c.status === "pending");
   const approved = claims.filter((c: any) => c.status === "approved");
+  const rejected = claims.filter((c: any) => c.status === "rejected");
+  const paid = claims.filter((c: any) => c.status === "paid");
   const totalPending = pending.reduce((s: number, c: any) => s + Number(c.amount), 0);
   const totalApproved = approved.reduce((s: number, c: any) => s + Number(c.amount), 0);
+  const totalRejected = rejected.reduce((s: number, c: any) => s + Number(c.amount), 0);
 
   async function handleAction(id: string, action: "approve" | "reject") {
     try {
@@ -103,11 +107,47 @@ export function ReimbursementsPage() {
         description="Review and manage employee expense claims"
       />
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Total Claims" value={String(claims.length)} icon={Receipt} />
-        <StatCard title="Pending" value={String(pending.length)} subtitle={formatCurrency(totalPending)} icon={Clock} />
-        <StatCard title="Approved" value={String(approved.length)} subtitle={formatCurrency(totalApproved)} icon={CheckCircle2} />
-        <StatCard title="Paid" value={String(claims.filter((c: any) => c.status === "paid").length)} icon={CreditCard} />
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+        <Link
+          to="/reimbursements"
+          onClick={() => setFilter("")}
+          className="rounded-xl transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+          aria-label="View all reimbursement claims"
+        >
+          <StatCard title="Total Claims" value={String(claims.length)} icon={Receipt} />
+        </Link>
+        <Link
+          to="/reimbursements"
+          onClick={() => setFilter("pending")}
+          className="rounded-xl transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+          aria-label="View pending reimbursement claims"
+        >
+          <StatCard title="Pending" value={String(pending.length)} subtitle={formatCurrency(totalPending)} icon={Clock} />
+        </Link>
+        <Link
+          to="/reimbursements"
+          onClick={() => setFilter("approved")}
+          className="rounded-xl transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+          aria-label="View approved reimbursement claims"
+        >
+          <StatCard title="Approved" value={String(approved.length)} subtitle={formatCurrency(totalApproved)} icon={CheckCircle2} />
+        </Link>
+        <Link
+          to="/reimbursements"
+          onClick={() => setFilter("rejected")}
+          className="rounded-xl transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+          aria-label="View rejected reimbursement claims"
+        >
+          <StatCard title="Rejected" value={String(rejected.length)} subtitle={formatCurrency(totalRejected)} icon={XCircle} />
+        </Link>
+        <Link
+          to="/reimbursements"
+          onClick={() => setFilter("paid")}
+          className="rounded-xl transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-500"
+          aria-label="View paid reimbursement claims"
+        >
+          <StatCard title="Paid" value={String(paid.length)} icon={CreditCard} />
+        </Link>
       </div>
 
       <div className="flex gap-2">

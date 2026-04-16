@@ -1,5 +1,19 @@
+import { z } from "zod";
 import { getDB } from "../db/adapters";
 import { AppError } from "../api/middleware/error.middleware";
+
+// #38 — Reject negative or non-finite amounts server-side. Using Zod here
+// (instead of the shared validators module) keeps validation co-located with
+// the service and avoids touching cross-cutting files other agents share.
+const submitSchema = z.object({
+  category: z.string().min(1, "Category is required"),
+  description: z.string().min(1, "Description is required"),
+  amount: z
+    .number({ invalid_type_error: "Amount must be a number" })
+    .finite("Amount must be a valid number")
+    .nonnegative("Amount must be zero or a positive number"),
+  expenseDate: z.string().min(1, "Expense date is required"),
+});
 
 export class ReimbursementService {
   private db = getDB();
@@ -52,12 +66,23 @@ export class ReimbursementService {
     amount: number;
     expenseDate: string;
   }) {
+    const parsed = submitSchema.safeParse({
+      ...data,
+      // Coerce from string/bigint/null just in case the caller forwarded raw
+      // body values without pre-conversion.
+      amount: typeof data.amount === "number" ? data.amount : Number(data.amount),
+    });
+    if (!parsed.success) {
+      const first = parsed.error.issues[0];
+      throw new AppError(400, "VALIDATION_ERROR", first?.message || "Invalid claim data");
+    }
+
     return this.db.create("reimbursements", {
       employee_id: employeeId,
-      category: data.category,
-      description: data.description,
-      amount: data.amount,
-      expense_date: data.expenseDate,
+      category: parsed.data.category,
+      description: parsed.data.description,
+      amount: parsed.data.amount,
+      expense_date: parsed.data.expenseDate,
       status: "pending",
     });
   }
@@ -66,6 +91,20 @@ export class ReimbursementService {
     const claim = await this.db.findById<any>("reimbursements", id);
     if (!claim) throw new AppError(404, "NOT_FOUND", "Claim not found");
     if (claim.status !== "pending") throw new AppError(400, "INVALID_STATUS", "Only pending claims can be approved");
+
+    // #38 — Mirror the submit-time nonnegative guard for approver overrides.
+    if (amount !== undefined && amount !== null) {
+      const amt = typeof amount === "number" ? amount : Number(amount);
+      const amountCheck = z
+        .number()
+        .finite()
+        .nonnegative()
+        .safeParse(amt);
+      if (!amountCheck.success) {
+        throw new AppError(400, "VALIDATION_ERROR", "Approved amount must be zero or a positive number");
+      }
+      amount = amountCheck.data;
+    }
 
     return this.db.update("reimbursements", id, {
       status: "approved",
