@@ -35,7 +35,8 @@ export function AttendancePage() {
   const qc = useQueryClient();
   const { data: empRes, isLoading: empLoading } = useEmployees({ limit: 1000 });
   const employees = empRes?.data?.data || [];
-  const [markOpen, setMarkOpen] = useState(false);
+  const [markAllOpen, setMarkAllOpen] = useState(false);
+  const [markSingleOpen, setMarkSingleOpen] = useState(false);
   const [marking, setMarking] = useState(false);
 
   // Fetch attendance for all employees in bulk
@@ -127,10 +128,10 @@ export function AttendancePage() {
         description={`${MONTHS[currentMonth]} ${currentYear} attendance summary`}
         actions={
           <div className="flex gap-3">
-            <Button variant="outline" size="sm" onClick={() => setMarkOpen(true)}>
+            <Button variant="outline" size="sm" onClick={() => setMarkAllOpen(true)}>
               <PlusCircle className="h-4 w-4" /> Mark All Present
             </Button>
-            <Button size="sm" onClick={() => setMarkOpen(true)}>
+            <Button size="sm" onClick={() => setMarkSingleOpen(true)}>
               <Upload className="h-4 w-4" /> Mark Attendance
             </Button>
           </div>
@@ -152,19 +153,24 @@ export function AttendancePage() {
         <DataTable columns={columns} data={attendance} />
       )}
 
-      {/* Mark Attendance Modal */}
+      {/* Mark All Present Modal — bulk marks every active employee as present */}
       <Modal
-        open={markOpen}
-        onClose={() => setMarkOpen(false)}
-        title="Mark Attendance"
-        description={`${MONTHS[currentMonth]} ${currentYear}`}
+        open={markAllOpen}
+        onClose={() => setMarkAllOpen(false)}
+        title="Mark All Present"
+        description={`Bulk mark all employees as present for ${MONTHS[currentMonth]} ${currentYear}`}
         className="max-w-lg"
       >
         <form
           onSubmit={async (e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
-            const totalDays = Number(fd.get("totalDays"));
+            const totalDaysRaw = Number(fd.get("totalDays"));
+            const totalDays = Math.floor(totalDaysRaw);
+            if (!Number.isFinite(totalDays) || totalDays < 1 || totalDays > 31) {
+              toast.error("Working days must be a whole number between 1 and 31");
+              return;
+            }
             setMarking(true);
             try {
               const records = employees.map((emp: any) => ({
@@ -185,7 +191,7 @@ export function AttendancePage() {
               toast.success(
                 `Marked ${employees.length} employees as present for ${totalDays} days`,
               );
-              setMarkOpen(false);
+              setMarkAllOpen(false);
               qc.invalidateQueries({ queryKey: ["attendance-all"] });
             } catch (err: any) {
               toast.error(err.response?.data?.error?.message || "Failed to mark attendance");
@@ -200,6 +206,9 @@ export function AttendancePage() {
             name="totalDays"
             label="Working Days in Month"
             type="number"
+            min={1}
+            max={31}
+            step={1}
             defaultValue="22"
             required
           />
@@ -208,11 +217,159 @@ export function AttendancePage() {
             You can edit individual records afterwards.
           </p>
           <div className="flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={() => setMarkOpen(false)}>
+            <Button variant="outline" type="button" onClick={() => setMarkAllOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" loading={marking}>
               Mark All Present
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Mark Attendance Modal — record attendance for a single employee */}
+      <Modal
+        open={markSingleOpen}
+        onClose={() => setMarkSingleOpen(false)}
+        title="Mark Attendance"
+        description={`Record attendance for a single employee — ${MONTHS[currentMonth]} ${currentYear}`}
+        className="max-w-lg"
+      >
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const employeeId = String(fd.get("employeeId") || "");
+            const totalDaysRaw = Number(fd.get("totalDays"));
+            const totalDays = Math.floor(totalDaysRaw);
+            const presentDays = Number(fd.get("presentDays"));
+            const absentDays = Number(fd.get("absentDays") || 0);
+            const lopDays = Number(fd.get("lopDays") || 0);
+            const overtimeHours = Number(fd.get("overtimeHours") || 0);
+
+            if (!employeeId) {
+              toast.error("Please select an employee");
+              return;
+            }
+            if (!Number.isFinite(totalDays) || totalDays < 1 || totalDays > 31) {
+              toast.error("Working days must be a whole number between 1 and 31");
+              return;
+            }
+            if (!Number.isFinite(presentDays) || presentDays < 0 || presentDays > totalDays) {
+              toast.error("Present days must be between 0 and working days");
+              return;
+            }
+
+            setMarking(true);
+            try {
+              await apiPost("/attendance/import", {
+                month: currentMonth,
+                year: currentYear,
+                records: [
+                  {
+                    employeeId,
+                    totalDays,
+                    presentDays,
+                    absentDays,
+                    lopDays,
+                    overtimeHours,
+                    holidays: 0,
+                    weekoffs: 0,
+                  },
+                ],
+              });
+              toast.success("Attendance recorded");
+              setMarkSingleOpen(false);
+              qc.invalidateQueries({ queryKey: ["attendance-all"] });
+            } catch (err: any) {
+              toast.error(err.response?.data?.error?.message || "Failed to mark attendance");
+            } finally {
+              setMarking(false);
+            }
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label htmlFor="employeeId" className="mb-1 block text-sm font-medium text-gray-700">
+              Employee
+            </label>
+            <select
+              id="employeeId"
+              name="employeeId"
+              required
+              defaultValue=""
+              className="focus:border-brand-500 focus:ring-brand-500 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1"
+            >
+              <option value="" disabled>
+                Select an employee
+              </option>
+              {employees.map((emp: any) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.first_name} {emp.last_name}
+                  {emp.emp_code ? ` (${emp.emp_code})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              id="totalDays"
+              name="totalDays"
+              label="Working Days"
+              type="number"
+              min={1}
+              max={31}
+              step={1}
+              defaultValue="22"
+              required
+            />
+            <Input
+              id="presentDays"
+              name="presentDays"
+              label="Present Days"
+              type="number"
+              min={0}
+              max={31}
+              step={1}
+              defaultValue="22"
+              required
+            />
+            <Input
+              id="absentDays"
+              name="absentDays"
+              label="Absent Days"
+              type="number"
+              min={0}
+              max={31}
+              step={1}
+              defaultValue="0"
+            />
+            <Input
+              id="lopDays"
+              name="lopDays"
+              label="LOP Days"
+              type="number"
+              min={0}
+              max={31}
+              step={1}
+              defaultValue="0"
+            />
+            <Input
+              id="overtimeHours"
+              name="overtimeHours"
+              label="Overtime Hours"
+              type="number"
+              min={0}
+              step="0.1"
+              defaultValue="0"
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" type="button" onClick={() => setMarkSingleOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={marking}>
+              Save Attendance
             </Button>
           </div>
         </form>
