@@ -8,14 +8,47 @@ import { useCreateEmployee } from "@/api/hooks";
 import { ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 
+// Today's date (local) as YYYY-MM-DD — used to cap the DOB <input type="date" max=".."/>
+function todayISO() {
+  const t = new Date();
+  const y = t.getFullYear();
+  const m = String(t.getMonth() + 1).padStart(2, "0");
+  const d = String(t.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+// Bank name: letters (including accented/i18n), spaces, and . , & -
+// Pure numeric or any embedded digit is rejected.
+const BANK_NAME_REGEX = /^[\p{L}\s.,&-]+$/u;
+
 export function EmployeeCreatePage() {
   const navigate = useNavigate();
   const mutation = useCreateEmployee();
+  const maxDob = todayISO();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const get = (k: string) => fd.get(k) as string;
+
+    // ---- Client-side validation (server re-validates) ----
+    const dobStr = get("dob");
+    if (dobStr) {
+      const dob = new Date(dobStr);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      dob.setHours(0, 0, 0, 0);
+      if (Number.isNaN(dob.getTime()) || dob.getTime() >= today.getTime()) {
+        toast.error("Date of birth must be in the past");
+        return;
+      }
+    }
+
+    const bankName = get("bank_name");
+    if (bankName && !BANK_NAME_REGEX.test(bankName)) {
+      toast.error("Bank name must only contain letters, spaces, and . , & -");
+      return;
+    }
 
     try {
       await mutation.mutateAsync({
@@ -68,14 +101,35 @@ export function EmployeeCreatePage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Personal Info */}
         <Card>
-          <CardHeader><CardTitle>Personal Information</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Personal Information</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Input id="first_name" name="first_name" label="First Name" placeholder="Arjun" required />
-              <Input id="last_name" name="last_name" label="Last Name" placeholder="Sharma" required />
-              <Input id="email" name="email" label="Email" type="email" placeholder="arjun@company.com" required />
+              <Input
+                id="first_name"
+                name="first_name"
+                label="First Name"
+                placeholder="Arjun"
+                required
+              />
+              <Input
+                id="last_name"
+                name="last_name"
+                label="Last Name"
+                placeholder="Sharma"
+                required
+              />
+              <Input
+                id="email"
+                name="email"
+                label="Email"
+                type="email"
+                placeholder="arjun@company.com"
+                required
+              />
               <Input id="phone" name="phone" label="Phone" placeholder="+91 98765 43210" />
-              <Input id="dob" name="dob" label="Date of Birth" type="date" required />
+              <Input id="dob" name="dob" label="Date of Birth" type="date" max={maxDob} required />
               <SelectField
                 id="gender"
                 name="gender"
@@ -93,13 +147,39 @@ export function EmployeeCreatePage() {
 
         {/* Employment Details */}
         <Card>
-          <CardHeader><CardTitle>Employment Details</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Employment Details</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Input id="employee_id" name="employee_id" label="Employee ID" placeholder="EMP009" required />
-              <Input id="department" name="department" label="Department" placeholder="Engineering" required />
-              <Input id="designation" name="designation" label="Designation" placeholder="Software Engineer" required />
-              <Input id="date_of_joining" name="date_of_joining" label="Date of Joining" type="date" required />
+              <Input
+                id="employee_id"
+                name="employee_id"
+                label="Employee ID"
+                placeholder="EMP009"
+                required
+              />
+              <Input
+                id="department"
+                name="department"
+                label="Department"
+                placeholder="Engineering"
+                required
+              />
+              <Input
+                id="designation"
+                name="designation"
+                label="Designation"
+                placeholder="Software Engineer"
+                required
+              />
+              <Input
+                id="date_of_joining"
+                name="date_of_joining"
+                label="Date of Joining"
+                type="date"
+                required
+              />
               <SelectField
                 id="employment_type"
                 name="employment_type"
@@ -117,11 +197,27 @@ export function EmployeeCreatePage() {
 
         {/* Bank Details */}
         <Card>
-          <CardHeader><CardTitle>Bank Details</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Bank Details</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Input id="bank_name" name="bank_name" label="Bank Name" placeholder="HDFC Bank" required />
-              <Input id="account_number" name="account_number" label="Account Number" placeholder="1234567890" required />
+              <Input
+                id="bank_name"
+                name="bank_name"
+                label="Bank Name"
+                placeholder="HDFC Bank"
+                pattern="^[A-Za-z\u00C0-\u024F\s.,&\-]+$"
+                title="Letters, spaces, and . , & - only (no numbers)"
+                required
+              />
+              <Input
+                id="account_number"
+                name="account_number"
+                label="Account Number"
+                placeholder="1234567890"
+                required
+              />
               <Input id="ifsc" name="ifsc" label="IFSC Code" placeholder="HDFC0001234" required />
             </div>
           </CardContent>
@@ -129,7 +225,9 @@ export function EmployeeCreatePage() {
 
         {/* Tax & Statutory */}
         <Card>
-          <CardHeader><CardTitle>Tax & Statutory</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Tax & Statutory</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Input id="pan" name="pan" label="PAN Number" placeholder="ABCPS1234F" required />

@@ -54,6 +54,43 @@ export class SalaryService {
     return structure;
   }
 
+  async duplicateStructure(id: string, orgId: string, nameOverride?: string) {
+    const original = await this.getStructure(id, orgId);
+    const { data: components } = await this.getComponents(id);
+
+    const newName = (nameOverride && nameOverride.trim()) || `${original.name} (Copy)`;
+
+    const copy = await this.db.create<any>("salary_structures", {
+      org_id: original.org_id || "00000000-0000-0000-0000-000000000000",
+      empcloud_org_id: Number(orgId),
+      name: newName,
+      description: original.description || null,
+      is_default: false,
+      is_active: true,
+    });
+
+    for (let i = 0; i < components.length; i++) {
+      const c: any = components[i];
+      await this.db.create("salary_components", {
+        structure_id: copy.id,
+        name: c.name,
+        code: c.code,
+        type: c.type,
+        calculation_type: c.calculation_type,
+        value: c.value != null ? Number(c.value) : 0,
+        percentage_of: c.percentage_of || null,
+        formula: c.formula || null,
+        is_taxable: c.is_taxable !== false,
+        is_statutory: c.is_statutory === true,
+        is_proratable: c.is_proratable !== false,
+        is_active: true,
+        sort_order: c.sort_order ?? i,
+      });
+    }
+
+    return copy;
+  }
+
   async updateStructure(id: string, orgId: string, data: any) {
     await this.getStructure(id, orgId);
     return this.db.update("salary_structures", id, {

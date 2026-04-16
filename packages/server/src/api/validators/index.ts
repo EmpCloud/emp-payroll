@@ -49,6 +49,32 @@ export const registerSchema = z.object({
 // ---------------------------------------------------------------------------
 // Employee Schemas
 // ---------------------------------------------------------------------------
+// DOB must be a valid date strictly in the past (not today, not future).
+const pastDateOfBirth = z
+  .string()
+  .min(1, "Date of birth is required")
+  .refine(
+    (v) => {
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime() < today.getTime();
+    },
+    { message: "Date of birth must be in the past" },
+  );
+
+// Bank name: letters, spaces, periods, commas, hyphens, ampersands.
+// Accented/Unicode letters are allowed (i18n bank names). Pure numeric or
+// any embedded digit is rejected.
+const bankNameRegex = /^[\p{L}\s.,&-]+$/u;
+const bankNameSchema = z
+  .string()
+  .min(1, "Bank name is required")
+  .max(100)
+  .regex(bankNameRegex, "Bank name must only contain letters, spaces, and . , & -");
+
 export const createEmployeeSchema = z.object({
   body: z.object({
     employeeCode: z.string().min(1).max(50).optional(),
@@ -56,7 +82,7 @@ export const createEmployeeSchema = z.object({
     lastName: z.string().min(1).max(100),
     email: z.string().email(),
     phone: z.string().max(20).optional(),
-    dateOfBirth: z.string(),
+    dateOfBirth: pastDateOfBirth,
     gender: z.enum(["male", "female", "other"]),
     dateOfJoining: z.string(),
     employmentType: z.enum(["full_time", "part_time", "contract", "intern"]).default("full_time"),
@@ -67,7 +93,7 @@ export const createEmployeeSchema = z.object({
       .object({
         accountNumber: z.string(),
         ifscCode: z.string(),
-        bankName: z.string(),
+        bankName: bankNameSchema,
         branchName: z.string().optional(),
       })
       .optional(),
@@ -85,6 +111,17 @@ export const createEmployeeSchema = z.object({
         contributionRate: z.number().default(12),
       })
       .optional(),
+  }),
+});
+
+export const updateBankDetailsSchema = z.object({
+  params: z.object({ id: z.string() }),
+  body: z.object({
+    bankName: bankNameSchema,
+    accountNumber: z.string().min(1).max(50),
+    ifscCode: z.string().min(1).max(20),
+    accountType: z.enum(["savings", "current", "salary"]).optional(),
+    branchName: z.string().max(100).optional(),
   }),
 });
 

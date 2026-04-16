@@ -192,29 +192,13 @@ export function SalaryStructuresPage() {
 
   async function handleDuplicate(ss: any) {
     try {
-      const compRes = await apiGet<any>(`/salary-structures/${ss.id}/components`);
-      const comps = compRes?.data?.data || [];
-      await apiPost("/salary-structures", {
+      await apiPost(`/salary-structures/${ss.id}/duplicate`, {
         name: `${ss.name} (Copy)`,
-        description: ss.description,
-        isDefault: false,
-        components: comps.map((c: any, i: number) => ({
-          name: c.name,
-          code: c.code,
-          type: c.type,
-          calculationType: c.calculation_type,
-          value: c.value,
-          percentageOf: c.percentage_of,
-          isTaxable: c.is_taxable,
-          isStatutory: c.is_statutory,
-          isProratable: c.is_proratable,
-          sortOrder: i,
-        })),
       });
       toast.success("Structure duplicated");
       qc.invalidateQueries({ queryKey: ["salary-structures"] });
-    } catch {
-      toast.error("Failed to duplicate");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error?.message || "Failed to duplicate");
     }
   }
 
@@ -483,6 +467,10 @@ function StructureCard({
             </span>
           </div>
           <div className="flex items-center gap-1">
+            {/* Duplicate works without needing the components preloaded — server copies line items */}
+            <Button variant="ghost" size="sm" onClick={() => onDuplicate(ss)} title="Duplicate">
+              <Copy className="h-3.5 w-3.5" />
+            </Button>
             {expanded && components.length > 0 && (
               <>
                 <Button
@@ -492,9 +480,6 @@ function StructureCard({
                   title="Edit"
                 >
                   <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => onDuplicate(ss)} title="Duplicate">
-                  <Copy className="h-3.5 w-3.5" />
                 </Button>
                 {!ss.is_default && (
                   <Button

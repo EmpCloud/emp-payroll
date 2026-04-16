@@ -59,6 +59,19 @@ router.delete(
   }),
 );
 
+router.post(
+  "/:id/duplicate",
+  authorize("hr_admin"),
+  wrap(async (req, res) => {
+    const data = await svc.duplicateStructure(
+      param(req, "id"),
+      String(req.user!.empcloudOrgId),
+      typeof req.body?.name === "string" ? req.body.name : undefined,
+    );
+    res.status(201).json({ success: true, data });
+  }),
+);
+
 router.get(
   "/:id/components",
   wrap(async (req, res) => {

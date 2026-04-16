@@ -519,11 +519,18 @@ export function EmployeeDetailPage() {
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault();
-            setBankSaving(true);
             const fd = new FormData(e.currentTarget);
+            const bankName = (fd.get("bankName") as string) || "";
+            // Letters (incl. accented), spaces, and . , & -
+            const BANK_NAME_REGEX = /^[\p{L}\s.,&-]+$/u;
+            if (!BANK_NAME_REGEX.test(bankName)) {
+              toast.error("Bank name must only contain letters, spaces, and . , & -");
+              return;
+            }
+            setBankSaving(true);
             try {
               await apiPut(`/employees/${id}/bank-details`, {
-                bankName: fd.get("bankName") as string,
+                bankName,
                 accountNumber: fd.get("accountNumber") as string,
                 ifscCode: fd.get("ifscCode") as string,
                 accountType: fd.get("accountType") as string,
@@ -544,6 +551,8 @@ export function EmployeeDetailPage() {
             label="Bank Name"
             defaultValue={bankDetails.bankName || ""}
             placeholder="e.g. HDFC Bank"
+            pattern="^[A-Za-z\u00C0-\u024F\s.,&\-]+$"
+            title="Letters, spaces, and . , & - only (no numbers)"
             required
           />
           <Input
