@@ -93,11 +93,45 @@ export class SalaryService {
 
   async updateStructure(id: string, orgId: string, data: any) {
     await this.getStructure(id, orgId);
-    return this.db.update("salary_structures", id, {
+
+    const updated = await this.db.update("salary_structures", id, {
       name: data.name,
       description: data.description,
       is_default: data.isDefault,
     });
+
+    // Reconcile components when the caller supplies the `components` array.
+    // The UI always posts the full current list, so the simplest correct
+    // behaviour is replace-all: soft-delete the existing active rows and
+    // insert the new list. Omitting this was the root of issues #19 / #9 —
+    // the structure itself saved (name/description) but any added, removed
+    // or edited preset rows silently disappeared after the toast.
+    if (Array.isArray(data.components)) {
+      const { data: existing } = await this.getComponents(id);
+      for (const c of existing) {
+        await this.db.update("salary_components", (c as any).id, { is_active: false });
+      }
+      for (let i = 0; i < data.components.length; i++) {
+        const c = data.components[i];
+        await this.db.create("salary_components", {
+          structure_id: id,
+          name: c.name,
+          code: c.code,
+          type: c.type,
+          calculation_type: c.calculationType,
+          value: c.value || 0,
+          percentage_of: c.percentageOf || null,
+          formula: c.formula || null,
+          is_taxable: c.isTaxable !== false,
+          is_statutory: c.isStatutory || false,
+          is_proratable: c.isProratable !== false,
+          is_active: true,
+          sort_order: c.sortOrder ?? i,
+        });
+      }
+    }
+
+    return updated;
   }
 
   async deleteStructure(id: string, orgId: string) {
