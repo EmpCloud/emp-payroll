@@ -1,7 +1,12 @@
 import { Router } from "express";
 import { BenefitsService } from "../../services/benefits.service";
 import { authenticate, authorize } from "../middleware/auth.middleware";
-import { validate, createBenefitPlanSchema, enrollBenefitSchema } from "../validators";
+import {
+  validate,
+  createBenefitPlanSchema,
+  updateBenefitPlanSchema,
+  enrollBenefitSchema,
+} from "../validators";
 import { wrap, param } from "../helpers";
 
 const router = Router();
@@ -60,6 +65,7 @@ router.post(
 router.put(
   "/plans/:id",
   authorize("hr_admin"),
+  validate(updateBenefitPlanSchema),
   wrap(async (req, res) => {
     const data = await svc.updatePlan(param(req, "id"), String(req.user!.empcloudOrgId), req.body);
     res.json({ success: true, data });

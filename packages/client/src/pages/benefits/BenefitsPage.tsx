@@ -9,10 +9,20 @@ import { Modal } from "@/components/ui/Modal";
 import { DataTable } from "@/components/ui/DataTable";
 import { StatCard } from "@/components/ui/StatCard";
 import { formatCurrency } from "@/lib/utils";
-import { apiGet, apiPost, apiPut } from "@/api/client";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/api/client";
 import { useEmployees } from "@/api/hooks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Heart, Shield, Users, DollarSign, UserPlus, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Heart,
+  Shield,
+  Users,
+  DollarSign,
+  UserPlus,
+  Loader2,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import toast from "react-hot-toast";
 
 const PLAN_TYPES = [
@@ -35,6 +45,8 @@ export function BenefitsPage() {
   const [showCreatePlan, setShowCreatePlan] = useState(false);
   const [showEnroll, setShowEnroll] = useState(false);
   const [creating, setCreating] = useState(false);
+  // When set, the plan modal re-purposes as edit (#16).
+  const [editingPlan, setEditingPlan] = useState<any>(null);
   const qc = useQueryClient();
   const { data: empRes } = useEmployees({ limit: 200 });
 
@@ -58,29 +70,59 @@ export function BenefitsPage() {
   const enrollments = enrollRes?.data || [];
   const employees = empRes?.data?.data || [];
 
-  async function handleCreatePlan(e: React.FormEvent<HTMLFormElement>) {
+  function closePlanModal() {
+    setShowCreatePlan(false);
+    setEditingPlan(null);
+  }
+
+  async function handlePlanSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setCreating(true);
     const fd = new FormData(e.currentTarget);
+    const start = String(fd.get("enrollmentPeriodStart") || "");
+    const end = String(fd.get("enrollmentPeriodEnd") || "");
+    // Client-side guard for #15 — server also rejects, but we fail fast.
+    if (start && end && new Date(end).getTime() < new Date(start).getTime()) {
+      toast.error("Enrollment end date cannot be before start date");
+      return;
+    }
+    setCreating(true);
+    const payload = {
+      name: fd.get("name"),
+      type: fd.get("type"),
+      provider: fd.get("provider"),
+      description: fd.get("description"),
+      premiumAmount: Number(fd.get("premiumAmount") || 0),
+      employerContribution: Number(fd.get("employerContribution") || 0),
+      enrollmentPeriodStart: start || undefined,
+      enrollmentPeriodEnd: end || undefined,
+    };
     try {
-      await apiPost("/benefits/plans", {
-        name: fd.get("name"),
-        type: fd.get("type"),
-        provider: fd.get("provider"),
-        description: fd.get("description"),
-        premiumAmount: Number(fd.get("premiumAmount") || 0),
-        employerContribution: Number(fd.get("employerContribution") || 0),
-        enrollmentPeriodStart: fd.get("enrollmentPeriodStart") || undefined,
-        enrollmentPeriodEnd: fd.get("enrollmentPeriodEnd") || undefined,
-      });
-      toast.success("Benefit plan created");
-      setShowCreatePlan(false);
+      if (editingPlan) {
+        await apiPut(`/benefits/plans/${editingPlan.id}`, payload);
+        toast.success("Benefit plan updated");
+      } else {
+        await apiPost("/benefits/plans", payload);
+        toast.success("Benefit plan created");
+      }
+      closePlanModal();
       qc.invalidateQueries({ queryKey: ["benefit-plans"] });
       qc.invalidateQueries({ queryKey: ["benefits-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to create plan");
+      toast.error(err.response?.data?.error?.message || "Failed to save plan");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function deletePlan(id: string) {
+    if (!confirm("Deactivate this benefit plan? Existing enrollments are unaffected.")) return;
+    try {
+      await apiDelete(`/benefits/plans/${id}`);
+      toast.success("Benefit plan deactivated");
+      qc.invalidateQueries({ queryKey: ["benefit-plans"] });
+      qc.invalidateQueries({ queryKey: ["benefits-dashboard"] });
+    } catch (err: any) {
+      toast.error(err.response?.data?.error?.message || "Failed to deactivate plan");
     }
   }
 
@@ -149,6 +191,36 @@ export function BenefitsPage() {
         <Badge variant={r.is_active ? "active" : "inactive"}>
           {r.is_active ? "Active" : "Inactive"}
         </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      render: (r: any) => (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            title="Edit"
+            onClick={() => {
+              setEditingPlan(r);
+              setShowCreatePlan(true);
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          {r.is_active && (
+            <Button
+              variant="ghost"
+              size="sm"
+              title="Deactivate"
+              onClick={() => deletePlan(r.id)}
+              className="text-red-600"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       ),
     },
   ];
@@ -293,37 +365,84 @@ export function BenefitsPage() {
         </Card>
       )}
 
-      {/* Create Plan Modal */}
+      {/* Create / Edit Plan Modal — one form for both flows (#16). */}
       <Modal
         open={showCreatePlan}
-        onClose={() => setShowCreatePlan(false)}
-        title="Create Benefit Plan"
+        onClose={closePlanModal}
+        title={editingPlan ? "Edit Benefit Plan" : "Create Benefit Plan"}
+        key={editingPlan?.id || "new-plan"}
       >
-        <form onSubmit={handleCreatePlan} className="space-y-4">
-          <Input label="Plan Name" name="name" required />
-          <SelectField label="Type" name="type" options={PLAN_TYPES} required />
-          <Input label="Provider" name="provider" />
-          <Input label="Description" name="description" />
+        <form onSubmit={handlePlanSubmit} className="space-y-4">
+          <Input label="Plan Name" name="name" defaultValue={editingPlan?.name || ""} required />
+          <SelectField
+            label="Type"
+            name="type"
+            options={PLAN_TYPES}
+            defaultValue={editingPlan?.type || ""}
+            required
+          />
+          <Input label="Provider" name="provider" defaultValue={editingPlan?.provider || ""} />
+          <Input
+            label="Description"
+            name="description"
+            defaultValue={editingPlan?.description || ""}
+          />
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Monthly Premium" name="premiumAmount" type="number" step="0.01" />
+            <Input
+              label="Monthly Premium"
+              name="premiumAmount"
+              type="number"
+              step="0.01"
+              min={0}
+              defaultValue={editingPlan?.premium_amount ?? ""}
+            />
             <Input
               label="Employer Contribution"
               name="employerContribution"
               type="number"
               step="0.01"
+              min={0}
+              defaultValue={editingPlan?.employer_contribution ?? ""}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Enrollment Start" name="enrollmentPeriodStart" type="date" />
-            <Input label="Enrollment End" name="enrollmentPeriodEnd" type="date" />
+            <Input
+              label="Enrollment Start"
+              name="enrollmentPeriodStart"
+              type="date"
+              defaultValue={
+                editingPlan?.enrollment_period_start
+                  ? String(editingPlan.enrollment_period_start).slice(0, 10)
+                  : ""
+              }
+              onChange={(e) => {
+                // Push the selected start date as the minimum for the end date input,
+                // so the browser's date picker blocks earlier selections (#15).
+                const form = (e.currentTarget as HTMLInputElement).form;
+                const endInput = form?.elements.namedItem(
+                  "enrollmentPeriodEnd",
+                ) as HTMLInputElement | null;
+                if (endInput) endInput.min = e.currentTarget.value;
+              }}
+            />
+            <Input
+              label="Enrollment End"
+              name="enrollmentPeriodEnd"
+              type="date"
+              defaultValue={
+                editingPlan?.enrollment_period_end
+                  ? String(editingPlan.enrollment_period_end).slice(0, 10)
+                  : ""
+              }
+            />
           </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setShowCreatePlan(false)}>
+            <Button type="button" variant="ghost" onClick={closePlanModal}>
               Cancel
             </Button>
             <Button type="submit" disabled={creating}>
               {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Create Plan
+              {editingPlan ? "Update Plan" : "Create Plan"}
             </Button>
           </div>
         </form>

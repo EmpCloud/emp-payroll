@@ -263,40 +263,96 @@ export const createOrgSchema = z.object({
 // ---------------------------------------------------------------------------
 // Benefits Schemas
 // ---------------------------------------------------------------------------
+// Reusable helper — guards any schema where both startKey and endKey are
+// optional date strings. Fails with a clear "end must be on or after start"
+// message so the UI can surface it inline. Shared by the benefit-plan /
+// benefit-enrollment schemas (both affected by #15) and reused by the
+// insurance schemas (#13).
+function refineDateRange<T extends z.ZodRawShape>(
+  shape: z.ZodObject<T>,
+  startKey: keyof T & string,
+  endKey: keyof T & string,
+  label: string,
+) {
+  return shape.refine(
+    (v: any) => {
+      if (!v[startKey] || !v[endKey]) return true;
+      return new Date(v[endKey]).getTime() >= new Date(v[startKey]).getTime();
+    },
+    {
+      message: `${label} end date must be on or after start date`,
+      path: [endKey],
+    },
+  );
+}
+
 export const createBenefitPlanSchema = z.object({
-  body: z.object({
-    name: z.string().min(1).max(100),
-    type: z.enum(["health", "dental", "vision", "life", "disability", "retirement"]),
-    provider: z.string().max(255).optional(),
-    description: z.string().optional(),
-    premiumAmount: z.number().min(0).default(0),
-    employerContribution: z.number().min(0).default(0),
-    coverageDetails: z.record(z.any()).optional(),
-    enrollmentPeriodStart: z.string().optional(),
-    enrollmentPeriodEnd: z.string().optional(),
-  }),
+  body: refineDateRange(
+    z.object({
+      name: z.string().min(1).max(100),
+      type: z.enum(["health", "dental", "vision", "life", "disability", "retirement"]),
+      provider: z.string().max(255).optional(),
+      description: z.string().optional(),
+      premiumAmount: z.number().min(0).default(0),
+      employerContribution: z.number().min(0).default(0),
+      coverageDetails: z.record(z.any()).optional(),
+      enrollmentPeriodStart: z.string().optional(),
+      enrollmentPeriodEnd: z.string().optional(),
+    }),
+    "enrollmentPeriodStart",
+    "enrollmentPeriodEnd",
+    "Enrollment period",
+  ),
+});
+
+export const updateBenefitPlanSchema = z.object({
+  params: z.object({ id: z.string() }),
+  body: refineDateRange(
+    z.object({
+      name: z.string().min(1).max(100).optional(),
+      type: z.enum(["health", "dental", "vision", "life", "disability", "retirement"]).optional(),
+      provider: z.string().max(255).optional().nullable(),
+      description: z.string().optional().nullable(),
+      premiumAmount: z.number().min(0).optional(),
+      employerContribution: z.number().min(0).optional(),
+      coverageDetails: z.record(z.any()).optional(),
+      enrollmentPeriodStart: z.string().optional().nullable(),
+      enrollmentPeriodEnd: z.string().optional().nullable(),
+      isActive: z.boolean().optional(),
+    }),
+    "enrollmentPeriodStart",
+    "enrollmentPeriodEnd",
+    "Enrollment period",
+  ),
 });
 
 export const enrollBenefitSchema = z.object({
-  body: z.object({
-    employeeId: z.union([z.string(), z.number()]).transform(String),
-    planId: z.string(),
-    coverageType: z.enum(["individual", "family", "individual_plus_spouse"]).default("individual"),
-    startDate: z.string(),
-    endDate: z.string().optional(),
-    status: z.enum(["enrolled", "pending"]).default("pending"),
-    premiumEmployeeShare: z.number().min(0).default(0),
-    premiumEmployerShare: z.number().min(0).optional(),
-    dependents: z
-      .array(
-        z.object({
-          name: z.string().min(1).max(255),
-          relationship: z.enum(["spouse", "child", "parent"]),
-          dateOfBirth: z.string().optional(),
-        }),
-      )
-      .optional(),
-  }),
+  body: refineDateRange(
+    z.object({
+      employeeId: z.union([z.string(), z.number()]).transform(String),
+      planId: z.string(),
+      coverageType: z
+        .enum(["individual", "family", "individual_plus_spouse"])
+        .default("individual"),
+      startDate: z.string(),
+      endDate: z.string().optional(),
+      status: z.enum(["enrolled", "pending"]).default("pending"),
+      premiumEmployeeShare: z.number().min(0).default(0),
+      premiumEmployerShare: z.number().min(0).optional(),
+      dependents: z
+        .array(
+          z.object({
+            name: z.string().min(1).max(255),
+            relationship: z.enum(["spouse", "child", "parent"]),
+            dateOfBirth: z.string().optional(),
+          }),
+        )
+        .optional(),
+    }),
+    "startDate",
+    "endDate",
+    "Enrollment",
+  ),
 });
 
 // ---------------------------------------------------------------------------
