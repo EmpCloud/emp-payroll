@@ -59,23 +59,35 @@ export function PayrollAnalyticsPage() {
     employerCost: Number(r.total_gross) + Number(r.total_employer_contributions || 0),
   }));
 
+  // Safe percent-of helper — returns null when the denominator is zero
+  // or non-finite so the caller can render a dash instead of Infinity/NaN.
+  // Issues #47 and #50: the first payroll run has no prior run, and when
+  // any run has total_gross = 0 the old inline math produced Infinity%
+  // in the summary cards and the per-row Gross%/Net% columns.
+  const safePct = (numerator: number, denominator: number): number | null => {
+    if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) {
+      return null;
+    }
+    return (numerator / denominator) * 100;
+  };
+
   // Calculate stats
   const latest = runs[runs.length - 1];
   const prev = runs[runs.length - 2];
   const grossChange =
     latest && prev
-      ? ((Number(latest.total_gross) - Number(prev.total_gross)) / Number(prev.total_gross)) * 100
-      : 0;
+      ? safePct(Number(latest.total_gross) - Number(prev.total_gross), Number(prev.total_gross))
+      : null;
   const netChange =
     latest && prev
-      ? ((Number(latest.total_net) - Number(prev.total_net)) / Number(prev.total_net)) * 100
-      : 0;
+      ? safePct(Number(latest.total_net) - Number(prev.total_net), Number(prev.total_net))
+      : null;
   const avgPerEmployee = latest
     ? Math.round(Number(latest.total_net) / (latest.employee_count || 1))
     : 0;
   const deductionRate = latest
-    ? Math.round((Number(latest.total_deductions) / Number(latest.total_gross)) * 100)
-    : 0;
+    ? safePct(Number(latest.total_deductions), Number(latest.total_gross))
+    : null;
 
   // Cost breakdown for latest
   const costBreakdown = latest
@@ -103,19 +115,21 @@ export function PayrollAnalyticsPage() {
         />
         <StatCard
           title="Gross Pay Change"
-          value={`${grossChange >= 0 ? "+" : ""}${grossChange.toFixed(1)}%`}
+          value={
+            grossChange === null ? "—" : `${grossChange >= 0 ? "+" : ""}${grossChange.toFixed(1)}%`
+          }
           subtitle="vs previous month"
-          icon={grossChange >= 0 ? TrendingUp : TrendingDown}
+          icon={(grossChange ?? 0) >= 0 ? TrendingUp : TrendingDown}
         />
         <StatCard
           title="Net Pay Change"
-          value={`${netChange >= 0 ? "+" : ""}${netChange.toFixed(1)}%`}
+          value={netChange === null ? "—" : `${netChange >= 0 ? "+" : ""}${netChange.toFixed(1)}%`}
           subtitle="vs previous month"
-          icon={netChange >= 0 ? TrendingUp : TrendingDown}
+          icon={(netChange ?? 0) >= 0 ? TrendingUp : TrendingDown}
         />
         <StatCard
           title="Deduction Rate"
-          value={`${deductionRate}%`}
+          value={deductionRate === null ? "—" : `${Math.round(deductionRate)}%`}
           subtitle="of gross pay"
           icon={Wallet}
         />
@@ -266,15 +280,19 @@ export function PayrollAnalyticsPage() {
                     .map((r: any, idx: number) => {
                       const reversed = runs.slice().reverse();
                       const prevRun = reversed[idx + 1];
+                      // Use safePct so a prev run with zero gross/net
+                      // renders "—" instead of Infinity/NaN (#47, #50).
                       const grossPct = prevRun
-                        ? ((Number(r.total_gross) - Number(prevRun.total_gross)) /
-                            Number(prevRun.total_gross)) *
-                          100
+                        ? safePct(
+                            Number(r.total_gross) - Number(prevRun.total_gross),
+                            Number(prevRun.total_gross),
+                          )
                         : null;
                       const netPct = prevRun
-                        ? ((Number(r.total_net) - Number(prevRun.total_net)) /
-                            Number(prevRun.total_net)) *
-                          100
+                        ? safePct(
+                            Number(r.total_net) - Number(prevRun.total_net),
+                            Number(prevRun.total_net),
+                          )
                         : null;
                       return (
                         <tr key={r.id} className="hover:bg-gray-50">
