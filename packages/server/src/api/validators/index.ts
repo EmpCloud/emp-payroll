@@ -677,6 +677,55 @@ export const updateComplianceItemSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// Leave Schemas
+// ---------------------------------------------------------------------------
+// Apply-leave payload. Accepts either leaveTypeId (preferred — numeric PK of
+// the EmpCloud leave_types row) or the legacy leaveType code string. #26:
+// previously only the free-form code was accepted, so apps still sending
+// hardcoded "earned" hit `Leave type 'earned' not found` for every org whose
+// real codes were CL / SL / EL. Sending the id bypasses the tenant-code
+// mismatch entirely. #36: end date must not be before start date.
+export const applyLeaveSchema = z.object({
+  body: z
+    .object({
+      leaveTypeId: z.union([z.string(), z.number()]).optional(),
+      leaveType: z.string().optional(),
+      startDate: z.string().min(1, "Start date is required"),
+      endDate: z.string().min(1, "End date is required"),
+      reason: z.string().min(1, "Reason is required").max(2000),
+      isHalfDay: z.boolean().optional(),
+      halfDayPeriod: z.enum(["first_half", "second_half"]).optional(),
+    })
+    .refine(
+      (v) => {
+        const hasId =
+          v.leaveTypeId !== undefined &&
+          v.leaveTypeId !== null &&
+          String(v.leaveTypeId).trim() !== "";
+        const hasCode = typeof v.leaveType === "string" && v.leaveType.length > 0;
+        return hasId || hasCode;
+      },
+      {
+        message: "Leave type is required",
+        path: ["leaveTypeId"],
+      },
+    )
+    .refine(
+      (v) => {
+        if (!v.startDate || !v.endDate) return true;
+        const s = new Date(v.startDate).getTime();
+        const e = new Date(v.endDate).getTime();
+        if (Number.isNaN(s) || Number.isNaN(e)) return true;
+        return e >= s;
+      },
+      {
+        message: "End date must be greater than start date",
+        path: ["endDate"],
+      },
+    ),
+});
+
+// ---------------------------------------------------------------------------
 // Pagination query params
 // ---------------------------------------------------------------------------
 export const paginationSchema = z.object({

@@ -193,7 +193,8 @@ export class LeaveService {
     employeeId: string,
     orgId: string,
     data: {
-      leaveType: string;
+      leaveTypeId?: string | number;
+      leaveType?: string;
       startDate: string;
       endDate: string;
       reason: string;
@@ -205,12 +206,34 @@ export class LeaveService {
     const orgIdNum = Number(orgId);
     const userIdNum = Number(employeeId);
 
-    // Find the leave type
-    const leaveType = await empcloudDb("leave_types")
-      .where({ organization_id: orgIdNum, code: data.leaveType, is_active: true })
-      .first();
-    if (!leaveType)
-      throw new AppError(400, "INVALID_TYPE", `Leave type '${data.leaveType}' not found`);
+    // Resolve the leave type — prefer the numeric PK (leaveTypeId) since
+    // EmpCloud's leave_types.code is tenant-configurable and varies per org
+    // (e.g. CL / SL / EL) so a hardcoded code like "earned" never matched.
+    // Falling back to code lookup keeps older clients working. (#26)
+    let leaveType: any = null;
+    if (data.leaveTypeId !== undefined && data.leaveTypeId !== null && data.leaveTypeId !== "") {
+      leaveType = await empcloudDb("leave_types")
+        .where({ id: Number(data.leaveTypeId), organization_id: orgIdNum, is_active: true })
+        .first();
+    } else if (data.leaveType) {
+      leaveType = await empcloudDb("leave_types")
+        .where({ organization_id: orgIdNum, code: data.leaveType, is_active: true })
+        .first();
+    }
+    if (!leaveType) {
+      const label = data.leaveTypeId ?? data.leaveType ?? "";
+      throw new AppError(400, "INVALID_TYPE", `Leave type '${label}' not found`);
+    }
+
+    // Guard: end date must be on/after start date. Duplicates the Zod
+    // refinement so direct service calls (tests, seeds) also fail loudly. (#36)
+    if (new Date(data.endDate).getTime() < new Date(data.startDate).getTime()) {
+      throw new AppError(
+        400,
+        "INVALID_DATE_RANGE",
+        "End date must be greater than start date",
+      );
+    }
 
     const days = data.isHalfDay ? 0.5 : this.calculateDays(data.startDate, data.endDate);
 

@@ -7,7 +7,7 @@ import { Modal } from "@/components/ui/Modal";
 import { DataTable } from "@/components/ui/DataTable";
 import { apiGet, apiPost } from "@/api/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, X, Loader2, Calendar, Clock } from "lucide-react";
+import { Check, X, Loader2, Calendar, Clock, Ban } from "lucide-react";
 import toast from "react-hot-toast";
 
 const STATUS_COLORS: Record<string, "green" | "yellow" | "red" | "gray"> = {
@@ -31,6 +31,7 @@ export function LeaveManagementPage() {
 
   const requests = data?.data?.data || [];
   const pendingCount = requests.filter((r: any) => r.status === "pending").length;
+  const cancelledCount = requests.filter((r: any) => r.status === "cancelled").length;
 
   async function handleAction() {
     if (!remarksModal) return;
@@ -63,7 +64,7 @@ export function LeaveManagementPage() {
       <PageHeader title="Leave Management" />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
         <Card className="cursor-pointer" onClick={() => setFilter("pending")}>
           <CardContent className="flex items-center gap-3 p-4">
             <Clock className="h-8 w-8 text-yellow-500" />
@@ -88,6 +89,19 @@ export function LeaveManagementPage() {
             <div>
               <p className="text-2xl font-bold">—</p>
               <p className="text-sm text-gray-500">Rejected</p>
+            </div>
+          </CardContent>
+        </Card>
+        {/* #61 — surfaced alongside the other status cards so admins can see
+            cancelled leaves at a glance instead of only finding them via the
+            filter tabs. Count only populates when the current filter actually
+            includes cancelled rows (same pattern as Pending above). */}
+        <Card className="cursor-pointer" onClick={() => setFilter("cancelled")}>
+          <CardContent className="flex items-center gap-3 p-4">
+            <Ban className="h-8 w-8 text-gray-500" />
+            <div>
+              <p className="text-2xl font-bold">{cancelledCount || "—"}</p>
+              <p className="text-sm text-gray-500">Cancelled</p>
             </div>
           </CardContent>
         </Card>

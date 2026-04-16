@@ -27,6 +27,23 @@ export function MyLeavesPage() {
   const [filter, setFilter] = useState("all");
   const [tab, setTab] = useState<"my" | "team">("my");
   const [teamFilter, setTeamFilter] = useState("pending");
+  // Controlled form state for the Apply Leave modal. Using a useState object
+  // (instead of reading from FormData on submit) makes client-side validation
+  // and field-clearing between submits straightforward. (#37)
+  const [applyForm, setApplyForm] = useState({
+    leaveTypeId: "",
+    startDate: "",
+    endDate: "",
+    reason: "",
+    isHalfDay: "false",
+    halfDayPeriod: "first_half" as "first_half" | "second_half",
+  });
+  const [applyErrors, setApplyErrors] = useState<{
+    leaveTypeId?: string;
+    startDate?: string;
+    endDate?: string;
+    reason?: string;
+  }>({});
   const [remarksModal, setRemarksModal] = useState<{
     id: string;
     action: "approve" | "reject";
@@ -47,8 +64,15 @@ export function MyLeavesPage() {
     queryKey: ["leave-types"],
     queryFn: () => apiGet<any>("/leaves/types"),
   });
-  const leaveTypeOptions = (typesData?.data || []).map((t: any) => ({
-    value: t.code,
+  // Build the select options against the real leave_types rows. `value` is the
+  // numeric id (stringified for the <select> element) so the server can do a
+  // stable PK lookup — codes vary per tenant (CL / SL / EL / etc.) and
+  // submitting them by name was what caused the "Leave type 'earned' not
+  // found" error (#26).
+  const leaveTypes: Array<{ id: number | string; code: string; name: string }> =
+    typesData?.data || [];
+  const leaveTypeOptions = leaveTypes.map((t) => ({
+    value: String(t.id),
     label: t.name,
   }));
 
@@ -73,25 +97,79 @@ export function MyLeavesPage() {
   const totalUsed = balances.reduce((s: number, b: any) => s + Number(b.used), 0);
   const teamPendingCount = teamRequests.filter((r: any) => r.status === "pending").length;
 
+  function resetApplyForm() {
+    setApplyForm({
+      leaveTypeId: "",
+      startDate: "",
+      endDate: "",
+      reason: "",
+      isHalfDay: "false",
+      halfDayPeriod: "first_half",
+    });
+    setApplyErrors({});
+  }
+
+  function validateApplyForm() {
+    const errs: typeof applyErrors = {};
+    if (!applyForm.leaveTypeId) errs.leaveTypeId = "Please select a leave type";
+    if (!applyForm.startDate) errs.startDate = "Start date is required";
+    if (!applyForm.endDate) errs.endDate = "End date is required";
+    if (
+      applyForm.startDate &&
+      applyForm.endDate &&
+      new Date(applyForm.endDate).getTime() < new Date(applyForm.startDate).getTime()
+    ) {
+      // #36 — block the submit client-side and surface the error under the
+      // end-date field so the user sees it without a server round-trip.
+      errs.endDate = "End date must be greater than start date";
+    }
+    if (!applyForm.reason.trim()) errs.reason = "Reason is required";
+    setApplyErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
   async function handleApply(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // Validate up-front so the submit button click always produces a visible
+    // response (either inline errors or the server round-trip). Previously a
+    // silent failure here was one reason the submit appeared to "not fire". (#37)
+    if (!validateApplyForm()) return;
+    if (submitting) return;
     setSubmitting(true);
-    const fd = new FormData(e.currentTarget);
     try {
       await apiPost("/leaves/apply", {
-        leaveType: fd.get("leaveType"),
-        startDate: fd.get("startDate"),
-        endDate: fd.get("endDate"),
-        reason: fd.get("reason"),
-        isHalfDay: fd.get("isHalfDay") === "true",
-        halfDayPeriod: fd.get("halfDayPeriod") || undefined,
+        // Send the numeric id — server resolves it against leave_types.id,
+        // bypassing the tenant-specific code mismatch. (#26)
+        leaveTypeId: applyForm.leaveTypeId,
+        startDate: applyForm.startDate,
+        endDate: applyForm.endDate,
+        reason: applyForm.reason,
+        isHalfDay: applyForm.isHalfDay === "true",
+        halfDayPeriod:
+          applyForm.isHalfDay === "true" ? applyForm.halfDayPeriod : undefined,
       });
       toast.success("Leave applied — sent to your reporting manager");
       setShowApply(false);
+      resetApplyForm();
       qc.invalidateQueries({ queryKey: ["my-leave-requests"] });
       qc.invalidateQueries({ queryKey: ["my-leave-balance"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to apply leave");
+      // Surface server-side validation errors (Zod `details`) inline on top of
+      // the generic toast so the user knows exactly which field is invalid. (#37)
+      const serverErr = err?.response?.data?.error;
+      const details = serverErr?.details as Record<string, string[]> | undefined;
+      if (details) {
+        const next: typeof applyErrors = {};
+        for (const [path, msgs] of Object.entries(details)) {
+          const key = path.split(".").pop() || path;
+          if (key === "leaveTypeId" || key === "leaveType") next.leaveTypeId = msgs[0];
+          else if (key === "startDate") next.startDate = msgs[0];
+          else if (key === "endDate") next.endDate = msgs[0];
+          else if (key === "reason") next.reason = msgs[0];
+        }
+        setApplyErrors(next);
+      }
+      toast.error(serverErr?.message || err?.message || "Failed to apply leave");
     } finally {
       setSubmitting(false);
     }
@@ -450,28 +528,82 @@ export function MyLeavesPage() {
       )}
 
       {/* Apply Leave Modal */}
-      <Modal open={showApply} onClose={() => setShowApply(false)} title="Apply for Leave">
-        <form onSubmit={handleApply} className="space-y-4">
+      <Modal
+        open={showApply}
+        onClose={() => {
+          setShowApply(false);
+          resetApplyForm();
+        }}
+        title="Apply for Leave"
+      >
+        <form onSubmit={handleApply} className="space-y-4" noValidate>
           <SelectField
-            id="leaveType"
-            name="leaveType"
+            id="leaveTypeId"
+            name="leaveTypeId"
             label="Leave Type"
-            required
+            value={applyForm.leaveTypeId}
+            onChange={(e) =>
+              setApplyForm((f) => ({ ...f, leaveTypeId: e.target.value }))
+            }
+            error={applyErrors.leaveTypeId}
             options={[{ value: "", label: "Select type..." }, ...leaveTypeOptions]}
           />
           <div className="grid grid-cols-2 gap-4">
-            <Input id="startDate" name="startDate" label="Start Date" type="date" required />
-            <Input id="endDate" name="endDate" label="End Date" type="date" required />
+            <Input
+              id="startDate"
+              name="startDate"
+              label="Start Date"
+              type="date"
+              value={applyForm.startDate}
+              onChange={(e) =>
+                setApplyForm((f) => ({ ...f, startDate: e.target.value }))
+              }
+              error={applyErrors.startDate}
+            />
+            <Input
+              id="endDate"
+              name="endDate"
+              label="End Date"
+              type="date"
+              min={applyForm.startDate || undefined}
+              value={applyForm.endDate}
+              onChange={(e) =>
+                setApplyForm((f) => ({ ...f, endDate: e.target.value }))
+              }
+              error={applyErrors.endDate}
+            />
           </div>
           <SelectField
             id="isHalfDay"
             name="isHalfDay"
             label="Half Day?"
+            value={applyForm.isHalfDay}
+            onChange={(e) =>
+              setApplyForm((f) => ({ ...f, isHalfDay: e.target.value }))
+            }
             options={[
               { value: "false", label: "No — Full Day(s)" },
               { value: "true", label: "Yes — Half Day" },
             ]}
           />
+          {applyForm.isHalfDay === "true" && (
+            <SelectField
+              id="halfDayPeriod"
+              name="halfDayPeriod"
+              label="Half Day Period"
+              value={applyForm.halfDayPeriod}
+              onChange={(e) =>
+                setApplyForm((f) => ({
+                  ...f,
+                  halfDayPeriod: e.target.value as "first_half" | "second_half",
+                }))
+              }
+              options={[
+                { value: "first_half", label: "First Half" },
+                { value: "second_half", label: "Second Half" },
+              ]}
+            />
+          )}
           <div>
             <label
               htmlFor="reason"
@@ -482,17 +614,30 @@ export function MyLeavesPage() {
             <textarea
               id="reason"
               name="reason"
-              required
               rows={3}
+              value={applyForm.reason}
+              onChange={(e) =>
+                setApplyForm((f) => ({ ...f, reason: e.target.value }))
+              }
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
               placeholder="Reason for leave..."
             />
+            {applyErrors.reason && (
+              <p className="mt-1 text-sm text-red-600">{applyErrors.reason}</p>
+            )}
           </div>
           <p className="text-xs text-gray-500">
             Your leave request will be sent to your reporting manager for approval.
           </p>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" type="button" onClick={() => setShowApply(false)}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setShowApply(false);
+                resetApplyForm();
+              }}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={submitting}>

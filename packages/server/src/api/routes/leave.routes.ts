@@ -6,6 +6,7 @@ import { Router } from "express";
 import { LeaveService } from "../../services/leave.service";
 import { authenticate, authorize } from "../middleware/auth.middleware";
 import { wrap, param } from "../helpers";
+import { validate, applyLeaveSchema } from "../validators";
 
 const router = Router();
 const svc = new LeaveService();
@@ -17,6 +18,7 @@ router.use(authenticate);
 // Apply for leave (auto-routes to reporting manager)
 router.post(
   "/apply",
+  validate(applyLeaveSchema),
   wrap(async (req, res) => {
     const data = await svc.applyLeave(
       String(req.user!.empcloudUserId),
