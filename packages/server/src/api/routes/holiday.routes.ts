@@ -27,15 +27,23 @@ router.get(
       .select("id", "title as name", "start_date as date", "description", "is_all_day", "status")
       .orderBy("start_date", "asc");
 
+    // #72 — EmpCloud's company_events table has no holiday-subtype column,
+    // so we encode the type (national/regional/optional/restricted) inline
+    // in the description with a marker the GET parses back out.
+    const TYPE_MARKER = /^\[type:(national|regional|optional|restricted)\]\s*/i;
     const enriched = holidays.map((h: any) => {
       const d = new Date(h.date);
+      const raw = typeof h.description === "string" ? h.description : "";
+      const m = raw.match(TYPE_MARKER);
+      const type = m ? m[1].toLowerCase() : "national";
+      const description = m ? raw.slice(m[0].length) : raw;
       return {
         id: String(h.id),
         name: h.name,
         date: d.toISOString().slice(0, 10),
         day: d.toLocaleDateString("en-US", { weekday: "long" }),
-        type: "national",
-        description: h.description,
+        type,
+        description: description || null,
       };
     });
 
@@ -78,10 +86,19 @@ router.post(
       });
     }
 
+    // #72 — persist holiday sub-type via a description prefix since
+    // company_events has no dedicated column for it. See GET handler.
+    const ALLOWED_TYPES = new Set(["national", "regional", "optional", "restricted"]);
+    const normalizedType = ALLOWED_TYPES.has(String(type).toLowerCase())
+      ? String(type).toLowerCase()
+      : "national";
+    const descPrefix = `[type:${normalizedType}] `;
+    const storedDescription = description ? `${descPrefix}${description}` : descPrefix.trim();
+
     const [id] = await empcloudDb("company_events").insert({
       organization_id: orgId,
       title: trimmedName,
-      description: description || null,
+      description: storedDescription,
       event_type: "holiday",
       start_date: `${date} 00:00:00`,
       end_date: `${date} 23:59:59`,
@@ -96,7 +113,10 @@ router.post(
 
     res
       .status(201)
-      .json({ success: true, data: { id: String(id), name: trimmedName, date, type } });
+      .json({
+        success: true,
+        data: { id: String(id), name: trimmedName, date, type: normalizedType },
+      });
   }),
 );
 
