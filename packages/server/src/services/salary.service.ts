@@ -216,6 +216,20 @@ export class SalaryService {
     return this.assignToEmployee({ ...data, employeeId });
   }
 
+  async bulkAssignSalary(employeeIds: string[], data: Omit<any, "employeeId">) {
+    const results: { employeeId: string; success: boolean; error?: string }[] = [];
+    for (const employeeId of employeeIds) {
+      try {
+        await this.assignToEmployee({ ...data, employeeId });
+        results.push({ employeeId, success: true });
+      } catch (err: any) {
+        results.push({ employeeId, success: false, error: err.message });
+      }
+    }
+    const failed = results.filter((r) => !r.success).length;
+    return { updated: results.length - failed, failed, results };
+  }
+
   async computeArrears(
     employeeId: string,
     orgId: string,

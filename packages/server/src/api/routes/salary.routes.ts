@@ -2,7 +2,12 @@ import { Router } from "express";
 import { SalaryService } from "../../services/salary.service";
 import { SalaryHistoryService } from "../../services/salary-history.service";
 import { authenticate, authorize } from "../middleware/auth.middleware";
-import { validate, createSalaryStructureSchema, assignSalarySchema } from "../validators";
+import {
+  validate,
+  createSalaryStructureSchema,
+  assignSalarySchema,
+  bulkSalaryAssignSchema,
+} from "../validators";
 import { wrap, param } from "../helpers";
 
 const router = Router();
@@ -149,6 +154,17 @@ router.post(
       newMonthlyCTC: req.body.newMonthlyCTC,
       effectiveFrom: req.body.effectiveFrom,
     });
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  "/bulk-assign",
+  authorize(...STRUCTURE_EDIT_ROLES),
+  validate(bulkSalaryAssignSchema),
+  wrap(async (req, res) => {
+    const { employeeIds, ...salaryData } = req.body;
+    const data = await svc.bulkAssignSalary(employeeIds, salaryData);
     res.json({ success: true, data });
   }),
 );

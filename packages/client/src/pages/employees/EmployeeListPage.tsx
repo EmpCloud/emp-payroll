@@ -12,53 +12,7 @@ import { useEmployees } from "@/api/hooks";
 import { api, apiGet, apiPost } from "@/api/client";
 import { Plus, Download, Upload, Loader2, Search, AlertCircle, Check, X } from "lucide-react";
 import toast from "react-hot-toast";
-
-const columns = [
-  {
-    key: "name",
-    header: "Employee",
-    render: (row: any) => (
-      <div className="flex items-center gap-3">
-        <Avatar name={`${row.first_name} ${row.last_name}`} size="sm" />
-        <div>
-          <p className="font-medium text-gray-900">
-            {row.first_name} {row.last_name}
-          </p>
-          <p className="text-xs text-gray-500">{row.employee_code}</p>
-        </div>
-      </div>
-    ),
-  },
-  {
-    key: "designation",
-    header: "Designation",
-    render: (row: any) => (
-      <div>
-        <p className="text-gray-900">{row.designation}</p>
-        <p className="text-xs text-gray-500">{row.department}</p>
-      </div>
-    ),
-  },
-  {
-    key: "email",
-    header: "Email",
-    render: (row: any) => <span className="text-gray-600">{row.email}</span>,
-  },
-  {
-    key: "date_of_joining",
-    header: "Joined",
-    render: (row: any) => new Date(row.date_of_joining).toLocaleDateString("en-IN"),
-  },
-  {
-    key: "status",
-    header: "Status",
-    render: (row: any) => (
-      <Badge variant={row.is_active ? "active" : "inactive"}>
-        {row.is_active ? "Active" : "Inactive"}
-      </Badge>
-    ),
-  },
-];
+import { BulkSalaryUpdateModal } from "@/pages/payroll/BulkSalaryUpdateModal";
 
 export function EmployeeListPage() {
   const navigate = useNavigate();
@@ -68,6 +22,8 @@ export function EmployeeListPage() {
   const [showImport, setShowImport] = useState(false);
   const [deptFilter, setDeptFilter] = useState("");
   const [search, setSearch] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkSalary, setShowBulkSalary] = useState(false);
 
   // #54 — When the Dashboard "Active Employees" card links here with
   // ?status=active, scope the list to active employees only.
@@ -115,6 +71,74 @@ export function EmployeeListPage() {
       toast.error(err.response?.data?.error?.message || `Failed to ${action}`);
     }
   }
+
+  const columns = [
+    {
+      key: "select",
+      header: "",
+      render: (row: any) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.has(String(row.id))}
+          onChange={(e) => {
+            const next = new Set(selectedIds);
+            e.target.checked ? next.add(String(row.id)) : next.delete(String(row.id));
+            setSelectedIds(next);
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className="cursor-pointer rounded border-gray-300"
+        />
+      ),
+    },
+    {
+      key: "name",
+      header: "Employee",
+      render: (row: any) => (
+        <div className="flex items-center gap-3">
+          <Avatar name={`${row.first_name} ${row.last_name}`} size="sm" />
+          <div>
+            <p className="font-medium text-gray-900">
+              {row.first_name} {row.last_name}
+            </p>
+            <p className="text-xs text-gray-500">{row.employee_code}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "designation",
+      header: "Designation",
+      render: (row: any) => (
+        <div>
+          <p className="text-gray-900">{row.designation}</p>
+          <p className="text-xs text-gray-500">{row.department}</p>
+        </div>
+      ),
+    },
+    {
+      key: "email",
+      header: "Email",
+      render: (row: any) => <span className="text-gray-600">{row.email}</span>,
+    },
+    {
+      key: "date_of_joining",
+      header: "Joined",
+      render: (row: any) => new Date(row.date_of_joining).toLocaleDateString("en-IN"),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (row: any) => (
+        <Badge variant={row.is_active ? "active" : "inactive"}>
+          {row.is_active ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+  ];
+
+  const selectedEmployeeNames = employees
+    .filter((e: any) => selectedIds.has(String(e.id)))
+    .map((e: any) => `${e.first_name} ${e.last_name}`);
 
   return (
     <div className="space-y-6">
@@ -255,6 +279,24 @@ export function EmployeeListPage() {
         </div>
       )}
 
+      {/* Bulk salary update action bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3">
+          <span className="text-sm font-medium text-indigo-700">
+            {selectedIds.size} employee(s) selected
+          </span>
+          <Button size="sm" onClick={() => setShowBulkSalary(true)}>
+            Update Salary
+          </Button>
+          <button
+            className="ml-auto text-xs text-gray-500 hover:text-gray-700"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex h-64 items-center justify-center">
           <Loader2 className="text-brand-600 h-8 w-8 animate-spin" />
@@ -271,6 +313,16 @@ export function EmployeeListPage() {
         open={showImport}
         onClose={() => setShowImport(false)}
         onSuccess={() => qc.invalidateQueries({ queryKey: ["employees"] })}
+      />
+
+      <BulkSalaryUpdateModal
+        open={showBulkSalary}
+        onClose={() => {
+          setShowBulkSalary(false);
+          setSelectedIds(new Set());
+        }}
+        employeeIds={[...selectedIds]}
+        employeeNames={selectedEmployeeNames}
       />
     </div>
   );

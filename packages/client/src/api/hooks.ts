@@ -6,8 +6,7 @@ import { apiGet, apiPost, apiPut, apiDelete } from "./client";
 // ---------------------------------------------------------------------------
 export function useLogin() {
   return useMutation({
-    mutationFn: (data: { email: string; password: string }) =>
-      apiPost<any>("/auth/login", data),
+    mutationFn: (data: { email: string; password: string }) => apiPost<any>("/auth/login", data),
   });
 }
 
@@ -63,6 +62,23 @@ export function useEmployeeSalary(empId: string) {
     queryKey: ["employee-salary", empId],
     queryFn: () => apiGet<any>(`/salary-structures/employee/${empId}`),
     enabled: !!empId,
+  });
+}
+
+export function useBulkAssignSalary() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      employeeIds: string[];
+      structureId: string;
+      ctc: number;
+      components: { code: string; name: string; monthlyAmount: number; annualAmount: number }[];
+      effectiveFrom: string;
+    }) => apiPost<any>("/salary-structures/bulk-assign", payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["employees"] });
+      qc.invalidateQueries({ queryKey: ["employee-salary"] });
+    },
   });
 }
 
