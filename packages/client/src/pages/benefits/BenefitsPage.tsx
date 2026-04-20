@@ -301,15 +301,31 @@ export function BenefitsPage() {
         }
       />
 
-      {/* Stats */}
+      {/* Stats — cards drill into the matching tab (#84) */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Active Plans" value={stats.totalPlans || 0} icon={Shield} />
-        <StatCard title="Enrolled" value={stats.totalEnrolled || 0} icon={Users} />
-        <StatCard title="Pending" value={stats.totalPending || 0} icon={Heart} />
+        <StatCard
+          title="Active Plans"
+          value={stats.totalPlans || 0}
+          icon={Shield}
+          onClick={() => setTab("plans")}
+        />
+        <StatCard
+          title="Enrolled"
+          value={stats.totalEnrolled || 0}
+          icon={Users}
+          onClick={() => setTab("enrollments")}
+        />
+        <StatCard
+          title="Pending"
+          value={stats.totalPending || 0}
+          icon={Heart}
+          onClick={() => setTab("enrollments")}
+        />
         <StatCard
           title="Monthly Employer Cost"
           value={formatCurrency(stats.totalEmployerCost || 0)}
           icon={DollarSign}
+          onClick={() => setTab("plans")}
         />
       </div>
 

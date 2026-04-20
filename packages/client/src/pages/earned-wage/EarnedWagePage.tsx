@@ -207,20 +207,32 @@ export function EarnedWagePage() {
         }
       />
 
-      {/* Stats */}
+      {/* Stats — cards drill into the Requests tab (#92) */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Pending Requests" value={stats.totalPending || 0} icon={Clock} />
+        <StatCard
+          title="Pending Requests"
+          value={stats.totalPending || 0}
+          icon={Clock}
+          onClick={() => setTab("requests")}
+        />
         <StatCard
           title="Total Disbursed"
           value={formatCurrency(stats.totalDisbursedAmount || 0)}
           icon={DollarSign}
+          onClick={() => setTab("requests")}
         />
         <StatCard
           title="Avg Request"
           value={formatCurrency(stats.avgRequestAmount || 0)}
           icon={HandCoins}
+          onClick={() => setTab("requests")}
         />
-        <StatCard title="Total Requests" value={stats.totalRequests || 0} icon={CheckCircle} />
+        <StatCard
+          title="Total Requests"
+          value={stats.totalRequests || 0}
+          icon={CheckCircle}
+          onClick={() => setTab("requests")}
+        />
       </div>
 
       {/* Available amount card */}
@@ -272,14 +284,28 @@ export function EarnedWagePage() {
         title="Request Salary Advance"
       >
         <form onSubmit={handleRequest} className="space-y-4">
-          <div className="rounded-lg bg-green-50 p-3 text-sm">
-            <p className="font-medium text-green-800">
-              Available: {formatCurrency(availability.available || 0)}
-            </p>
-            <p className="text-xs text-green-600">
+          {/* #93 — When availability.available is 0 (no salary configured,
+              cooldown active, or employee hasn't worked any days yet), the
+              native max="0" attribute blocked every non-zero entry and the
+              form looked broken. Only apply the max when there's actually
+              something to cap against, and surface a clear empty-state. */}
+          <div
+            className={`rounded-lg p-3 text-sm ${
+              (availability.available || 0) > 0
+                ? "bg-green-50 text-green-800"
+                : "bg-amber-50 text-amber-800"
+            }`}
+          >
+            <p className="font-medium">Available: {formatCurrency(availability.available || 0)}</p>
+            <p className="text-xs opacity-80">
               Monthly salary: {formatCurrency(availability.monthlySalary || 0)} | Day{" "}
               {availability.daysWorked}/{availability.daysInMonth}
             </p>
+            {(availability.available || 0) <= 0 && (
+              <p className="mt-1 text-xs font-medium">
+                No advance available yet. Check your salary configuration or cooldown period.
+              </p>
+            )}
           </div>
           <Input
             label="Amount"
@@ -287,8 +313,9 @@ export function EarnedWagePage() {
             type="number"
             required
             min={1}
-            max={availability.available || 0}
+            {...(Number(availability.available) > 0 ? { max: availability.available } : {})}
             placeholder="Enter amount"
+            disabled={(availability.available || 0) <= 0}
           />
           <Input
             label="Reason (optional)"
@@ -340,20 +367,25 @@ export function EarnedWagePage() {
               min={0}
             />
           </div>
+          {/* #94 — Stop defaulting "0" into the inputs. Placeholder carries
+              the zero hint so typing a real value doesn't need a leading
+              backspace. In edit mode we still pre-fill with stored values. */}
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Min Amount"
               name="minAmount"
               type="number"
-              defaultValue={settings.min_amount || 0}
+              defaultValue={settings.min_amount ?? ""}
               min={0}
+              placeholder="0"
             />
             <Input
               label="Max Amount (0 = no limit)"
               name="maxAmount"
               type="number"
-              defaultValue={settings.max_amount || 0}
+              defaultValue={settings.max_amount ?? ""}
               min={0}
+              placeholder="0"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -362,23 +394,26 @@ export function EarnedWagePage() {
               name="feePercentage"
               type="number"
               step="0.01"
-              defaultValue={settings.fee_percentage || 0}
+              defaultValue={settings.fee_percentage ?? ""}
               min={0}
+              placeholder="0"
             />
             <Input
               label="Flat Fee"
               name="feeFlat"
               type="number"
-              defaultValue={settings.fee_flat || 0}
+              defaultValue={settings.fee_flat ?? ""}
               min={0}
+              placeholder="0"
             />
           </div>
           <Input
             label="Auto-approve Below (0 = disabled)"
             name="autoApproveBelow"
             type="number"
-            defaultValue={settings.auto_approve_below || 0}
+            defaultValue={settings.auto_approve_below ?? ""}
             min={0}
+            placeholder="0"
           />
           <label className="flex items-center gap-2">
             <input

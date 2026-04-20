@@ -255,16 +255,32 @@ export function BenchmarksPage() {
         }
       />
 
-      {/* Stats */}
+      {/* Stats — cards drill into the matching tab (#85) */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Benchmarks" value={benchmarks.length} icon={BarChart3} />
+        <StatCard
+          title="Benchmarks"
+          value={benchmarks.length}
+          icon={BarChart3}
+          onClick={() => setTab("benchmarks")}
+        />
         <StatCard
           title="Avg Compa-Ratio"
           value={compaData.averageCompaRatio?.toFixed(2) || "—"}
           icon={Target}
+          onClick={() => setTab("compa-ratio")}
         />
-        <StatCard title="Below Market" value={dist.belowMarket || 0} icon={TrendingDown} />
-        <StatCard title="Above Market" value={dist.aboveMarket || 0} icon={TrendingUp} />
+        <StatCard
+          title="Below Market"
+          value={dist.belowMarket || 0}
+          icon={TrendingDown}
+          onClick={() => setTab("compa-ratio")}
+        />
+        <StatCard
+          title="Above Market"
+          value={dist.aboveMarket || 0}
+          icon={TrendingUp}
+          onClick={() => setTab("compa-ratio")}
+        />
       </div>
 
       {/* Tabs */}

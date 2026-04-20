@@ -489,15 +489,31 @@ export function InsurancePage() {
         }
       />
 
-      {/* Stats */}
+      {/* Stats — cards drill into the matching tab (#96) */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Active Policies" value={stats.totalPolicies || 0} icon={ShieldCheck} />
-        <StatCard title="Active Enrollments" value={stats.totalEnrollments || 0} icon={Users} />
-        <StatCard title="Pending Claims" value={stats.pendingClaims || 0} icon={AlertCircle} />
+        <StatCard
+          title="Active Policies"
+          value={stats.totalPolicies || 0}
+          icon={ShieldCheck}
+          onClick={() => setTab("policies")}
+        />
+        <StatCard
+          title="Active Enrollments"
+          value={stats.totalEnrollments || 0}
+          icon={Users}
+          onClick={() => setTab("enrollments")}
+        />
+        <StatCard
+          title="Pending Claims"
+          value={stats.pendingClaims || 0}
+          icon={AlertCircle}
+          onClick={() => setTab("claims")}
+        />
         <StatCard
           title="Total Approved"
           value={formatCurrency(stats.totalApprovedAmount || 0)}
           icon={DollarSign}
+          onClick={() => setTab("claims")}
         />
       </div>
 

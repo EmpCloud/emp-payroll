@@ -10,9 +10,15 @@ const svc = new SalaryService();
 
 router.use(authenticate);
 
+// #106 — These routes were restricted to hr_admin / hr_manager; org_admin
+// and super_admin 403'd when clicking Edit Salary Structure, which the
+// client surfaced as a generic "Failed to save" toast. Widen the allow-list
+// to match the other finance-facing routes.
+const STRUCTURE_EDIT_ROLES = ["hr_admin", "hr_manager", "org_admin", "super_admin"] as const;
+
 router.get(
   "/",
-  authorize("hr_admin", "hr_manager"),
+  authorize(...STRUCTURE_EDIT_ROLES),
   wrap(async (req, res) => {
     const data = await svc.listStructures(String(req.user!.empcloudOrgId));
     res.json({ success: true, data });
@@ -29,7 +35,7 @@ router.get(
 
 router.post(
   "/",
-  authorize("hr_admin"),
+  authorize(...STRUCTURE_EDIT_ROLES),
   validate(createSalaryStructureSchema),
   wrap(async (req, res) => {
     const data = await svc.createStructure(String(req.user!.empcloudOrgId), req.body);
@@ -39,7 +45,7 @@ router.post(
 
 router.put(
   "/:id",
-  authorize("hr_admin"),
+  authorize(...STRUCTURE_EDIT_ROLES),
   wrap(async (req, res) => {
     const data = await svc.updateStructure(
       param(req, "id"),
@@ -52,7 +58,7 @@ router.put(
 
 router.delete(
   "/:id",
-  authorize("hr_admin"),
+  authorize(...STRUCTURE_EDIT_ROLES),
   wrap(async (req, res) => {
     const data = await svc.deleteStructure(param(req, "id"), String(req.user!.empcloudOrgId));
     res.json({ success: true, data });
@@ -61,7 +67,7 @@ router.delete(
 
 router.post(
   "/:id/duplicate",
-  authorize("hr_admin"),
+  authorize(...STRUCTURE_EDIT_ROLES),
   wrap(async (req, res) => {
     const data = await svc.duplicateStructure(
       param(req, "id"),
@@ -82,7 +88,7 @@ router.get(
 
 router.post(
   "/:id/components",
-  authorize("hr_admin"),
+  authorize(...STRUCTURE_EDIT_ROLES),
   wrap(async (req, res) => {
     const data = await svc.addComponent(param(req, "id"), req.body);
     res.status(201).json({ success: true, data });
@@ -91,7 +97,7 @@ router.post(
 
 router.put(
   "/:id/components/:cid",
-  authorize("hr_admin"),
+  authorize(...STRUCTURE_EDIT_ROLES),
   wrap(async (req, res) => {
     const data = await svc.updateComponent(param(req, "id"), param(req, "cid"), req.body);
     res.json({ success: true, data });
@@ -118,7 +124,7 @@ router.get(
 
 router.post(
   "/employee/:empId/revision",
-  authorize("hr_admin"),
+  authorize(...STRUCTURE_EDIT_ROLES),
   wrap(async (req, res) => {
     const data = await svc.salaryRevision(param(req, "empId"), req.body);
     res.status(201).json({ success: true, data });

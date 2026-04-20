@@ -56,27 +56,31 @@ export function PayEquityPage() {
         </div>
       ) : (
         <>
-          {/* Stats */}
+          {/* Stats — #89 cards drill into matching tab */}
           <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               title="Employees Analyzed"
               value={analysis.totalEmployees || 0}
               icon={Users}
+              onClick={() => setTab("overview")}
             />
             <StatCard
               title="Median Salary"
               value={formatCurrency(analysis.overallStats?.median || 0)}
               icon={BarChart3}
+              onClick={() => setTab("overview")}
             />
             <StatCard
               title="Mean Pay Gap"
               value={`${payGap.meanGapPercentage || 0}%`}
               icon={gapSeverity === "low" ? Scale : AlertTriangle}
+              onClick={() => setTab("compliance")}
             />
             <StatCard
               title="Median Pay Gap"
               value={`${payGap.medianGapPercentage || 0}%`}
               icon={Scale}
+              onClick={() => setTab("compliance")}
             />
           </div>
 
