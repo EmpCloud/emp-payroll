@@ -39,7 +39,10 @@ export function LoansPage() {
 
   const loans = res?.data?.data || [];
   const active = loans.filter((l: any) => l.status === "active");
-  const totalOutstanding = active.reduce((s: number, l: any) => s + Number(l.outstanding_amount), 0);
+  const totalOutstanding = active.reduce(
+    (s: number, l: any) => s + Number(l.outstanding_amount),
+    0,
+  );
   const totalEMI = active.reduce((s: number, l: any) => s + Number(l.emi_amount), 0);
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
@@ -82,7 +85,9 @@ export function LoansPage() {
       qc.invalidateQueries({ queryKey: ["loans"] });
     } catch (err: any) {
       toast.error(err.response?.data?.error?.message || "Failed");
-    } finally { setCreating(false); }
+    } finally {
+      setCreating(false);
+    }
   }
 
   async function recordPayment(id: string) {
@@ -90,7 +95,9 @@ export function LoansPage() {
       await apiPost(`/loans/${id}/payment`);
       toast.success("Payment recorded");
       qc.invalidateQueries({ queryKey: ["loans"] });
-    } catch (err: any) { toast.error(err.response?.data?.error?.message || "Failed"); }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error?.message || "Failed");
+    }
   }
 
   const employees = empRes?.data?.data || [];
@@ -98,7 +105,8 @@ export function LoansPage() {
 
   const columns = [
     {
-      key: "employee", header: "Employee",
+      key: "employee",
+      header: "Employee",
       render: (r: any) => (
         <div>
           <p className="font-medium text-gray-900">{r.employee_name}</p>
@@ -106,40 +114,97 @@ export function LoansPage() {
         </div>
       ),
     },
-    { key: "type", header: "Type", render: (r: any) => <Badge variant="draft">{r.type.replace("_", " ")}</Badge> },
+    {
+      key: "type",
+      header: "Type",
+      render: (r: any) => <Badge variant="draft">{r.type.replace("_", " ")}</Badge>,
+    },
     { key: "description", header: "Description" },
-    { key: "principal_amount", header: "Principal", render: (r: any) => formatCurrency(r.principal_amount) },
-    { key: "outstanding_amount", header: "Outstanding", render: (r: any) => (
-      <span className={Number(r.outstanding_amount) > 0 ? "font-semibold text-orange-600" : "text-green-600"}>
-        {formatCurrency(r.outstanding_amount)}
-      </span>
-    )},
+    {
+      key: "principal_amount",
+      header: "Principal",
+      render: (r: any) => formatCurrency(r.principal_amount),
+    },
+    {
+      key: "outstanding_amount",
+      header: "Outstanding",
+      render: (r: any) => (
+        <span
+          className={
+            Number(r.outstanding_amount) > 0 ? "font-semibold text-orange-600" : "text-green-600"
+          }
+        >
+          {formatCurrency(r.outstanding_amount)}
+        </span>
+      ),
+    },
     { key: "emi_amount", header: "EMI", render: (r: any) => formatCurrency(r.emi_amount) },
-    { key: "progress", header: "Progress", render: (r: any) => (
-      <div className="w-20">
-        <div className="mb-1 text-xs text-gray-500">{r.installments_paid}/{r.tenure_months}</div>
-        <div className="h-1.5 rounded-full bg-gray-200">
-          <div className="h-full rounded-full bg-brand-500" style={{ width: `${(r.installments_paid / r.tenure_months) * 100}%` }} />
+    {
+      key: "progress",
+      header: "Progress",
+      render: (r: any) => (
+        <div className="w-20">
+          <div className="mb-1 text-xs text-gray-500">
+            {r.installments_paid}/{r.tenure_months}
+          </div>
+          <div className="h-1.5 rounded-full bg-gray-200">
+            <div
+              className="bg-brand-500 h-full rounded-full"
+              style={{ width: `${(r.installments_paid / r.tenure_months) * 100}%` }}
+            />
+          </div>
         </div>
-      </div>
-    )},
-    { key: "status", header: "Status", render: (r: any) => <Badge variant={r.status === "active" ? "active" : r.status === "completed" ? "approved" : "inactive"}>{r.status}</Badge> },
-    { key: "actions", header: "", render: (r: any) => r.status === "active" ? (
-      <Button variant="ghost" size="sm" onClick={() => recordPayment(r.id)} className="text-green-600">
-        <CheckCircle2 className="h-4 w-4" /> Pay EMI
-      </Button>
-    ) : null },
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (r: any) => (
+        <Badge
+          variant={
+            r.status === "active" ? "active" : r.status === "completed" ? "approved" : "inactive"
+          }
+        >
+          {r.status}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      render: (r: any) =>
+        r.status === "active" ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => recordPayment(r.id)}
+            className="text-green-600"
+          >
+            <CheckCircle2 className="h-4 w-4" /> Pay EMI
+          </Button>
+        ) : null,
+    },
   ];
 
   // Each stat card deep-links into the list with a relevant status filter
   // (#71). "All" is represented by omitting the query param.
+  // #113 — hover:shadow-md stacks on top of StatCard's own shadow-sm and
+  // draws a thicker rectangle underneath the card that reads as an extra
+  // box appearing on hover. Keep the lift via hover:-translate-y-0.5 and
+  // drop the shadow bump.
   const cardLinkCls =
-    "block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 transition hover:-translate-y-0.5 hover:shadow-md";
+    "block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 transition hover:-translate-y-0.5";
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Loans & Advances" description="Track employee loans, advances, and EMI deductions"
-        actions={<Button size="sm" onClick={() => setShowCreate(true)}><Plus className="h-4 w-4" /> New Loan</Button>}
+      <PageHeader
+        title="Loans & Advances"
+        description="Track employee loans, advances, and EMI deductions"
+        actions={
+          <Button size="sm" onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4" /> New Loan
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -150,29 +215,48 @@ export function LoansPage() {
           <StatCard title="Outstanding" value={formatCurrency(totalOutstanding)} icon={Clock} />
         </Link>
         <Link to="/loans?status=active" className={cardLinkCls}>
-          <StatCard title="Monthly EMI" value={formatCurrency(totalEMI)} subtitle="total across all" icon={Banknote} />
+          <StatCard
+            title="Monthly EMI"
+            value={formatCurrency(totalEMI)}
+            subtitle="total across all"
+            icon={Banknote}
+          />
         </Link>
         <Link to="/loans?status=completed" className={cardLinkCls}>
-          <StatCard title="Completed" value={String(loans.filter((l: any) => l.status === "completed").length)} icon={CheckCircle2} />
+          <StatCard
+            title="Completed"
+            value={String(loans.filter((l: any) => l.status === "completed").length)}
+            icon={CheckCircle2}
+          />
         </Link>
       </div>
 
       <div className="flex gap-2">
         {["", "active", "completed", "cancelled"].map((f) => (
-          <button key={f} onClick={() => setFilter(f)}
-            className={`rounded-full px-3 py-1 text-xs font-medium ${filter === f ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`rounded-full px-3 py-1 text-xs font-medium ${filter === f ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+          >
             {f || "All"}
           </button>
         ))}
       </div>
 
       {isLoading ? (
-        <div className="flex h-32 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-brand-600" /></div>
+        <div className="flex h-32 items-center justify-center">
+          <Loader2 className="text-brand-600 h-6 w-6 animate-spin" />
+        </div>
       ) : (
         <DataTable columns={columns} data={loans} emptyMessage="No loans found" />
       )}
 
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create Loan / Advance" className="max-w-lg">
+      <Modal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        title="Create Loan / Advance"
+        className="max-w-lg"
+      >
         <form onSubmit={handleCreate} className="space-y-4">
           {hasEmployees ? (
             <SelectField
@@ -196,24 +280,78 @@ export function LoansPage() {
               </div>
             </div>
           )}
-          <SelectField id="type" name="type" label="Type" options={[
-            { value: "salary_advance", label: "Salary Advance" },
-            { value: "loan", label: "Loan" },
-            { value: "emergency", label: "Emergency Advance" },
-          ]} />
-          <Input id="description" name="description" label="Description" placeholder="e.g. Medical emergency" required />
+          <SelectField
+            id="type"
+            name="type"
+            label="Type"
+            options={[
+              { value: "salary_advance", label: "Salary Advance" },
+              { value: "loan", label: "Loan" },
+              { value: "emergency", label: "Emergency Advance" },
+            ]}
+          />
+          <Input
+            id="description"
+            name="description"
+            label="Description"
+            placeholder="e.g. Medical emergency"
+            required
+          />
           <div className="grid grid-cols-2 gap-4">
-            <Input id="amount" name="amount" label="Amount (₹)" type="number" min="0" step="1" placeholder="50000" required />
-            <Input id="tenure" name="tenure" label="Tenure (months)" type="number" min="1" step="1" placeholder="6" required />
+            <Input
+              id="amount"
+              name="amount"
+              label="Amount (₹)"
+              type="number"
+              min="0"
+              step="1"
+              placeholder="50000"
+              required
+            />
+            <Input
+              id="tenure"
+              name="tenure"
+              label="Tenure (months)"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="6"
+              required
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input id="interest" name="interest" label="Interest Rate (%)" type="number" min="0" step="0.01" placeholder="0" defaultValue="0" />
-            <Input id="startDate" name="startDate" label="Start Date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
+            <Input
+              id="interest"
+              name="interest"
+              label="Interest Rate (%)"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0"
+              defaultValue="0"
+            />
+            <Input
+              id="startDate"
+              name="startDate"
+              label="Start Date"
+              type="date"
+              defaultValue={new Date().toISOString().slice(0, 10)}
+              required
+            />
           </div>
-          <Input id="notes" name="notes" label="Notes (optional)" placeholder="Any additional notes" />
+          <Input
+            id="notes"
+            name="notes"
+            label="Notes (optional)"
+            placeholder="Any additional notes"
+          />
           <div className="flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={() => setShowCreate(false)}>Cancel</Button>
-            <Button type="submit" loading={creating} disabled={!hasEmployees}>Create Loan</Button>
+            <Button variant="outline" type="button" onClick={() => setShowCreate(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={creating} disabled={!hasEmployees}>
+              Create Loan
+            </Button>
           </div>
         </form>
       </Modal>
