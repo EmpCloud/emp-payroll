@@ -145,8 +145,7 @@ export function MyLeavesPage() {
         endDate: applyForm.endDate,
         reason: applyForm.reason,
         isHalfDay: applyForm.isHalfDay === "true",
-        halfDayPeriod:
-          applyForm.isHalfDay === "true" ? applyForm.halfDayPeriod : undefined,
+        halfDayPeriod: applyForm.isHalfDay === "true" ? applyForm.halfDayPeriod : undefined,
       });
       toast.success("Leave applied — sent to your reporting manager");
       setShowApply(false);
@@ -542,12 +541,29 @@ export function MyLeavesPage() {
             name="leaveTypeId"
             label="Leave Type"
             value={applyForm.leaveTypeId}
-            onChange={(e) =>
-              setApplyForm((f) => ({ ...f, leaveTypeId: e.target.value }))
-            }
+            onChange={(e) => setApplyForm((f) => ({ ...f, leaveTypeId: e.target.value }))}
             error={applyErrors.leaveTypeId}
-            options={[{ value: "", label: "Select type..." }, ...leaveTypeOptions]}
+            options={[
+              {
+                value: "",
+                label:
+                  leaveTypeOptions.length > 0
+                    ? "Select type..."
+                    : "No leave types configured — contact your HR admin",
+              },
+              ...leaveTypeOptions,
+            ]}
+            disabled={leaveTypeOptions.length === 0}
           />
+          {/* #128 — when EmpCloud has no active leave_types rows for this org,
+              the dropdown was empty with no explanation. Surface a clear
+              inline hint so employees know to contact HR. */}
+          {leaveTypeOptions.length === 0 && (
+            <p className="text-xs text-amber-600">
+              Your organization hasn't configured any leave types yet. Please ask your HR admin to
+              set them up in EmpCloud before applying for leave.
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <Input
               id="startDate"
@@ -555,9 +571,7 @@ export function MyLeavesPage() {
               label="Start Date"
               type="date"
               value={applyForm.startDate}
-              onChange={(e) =>
-                setApplyForm((f) => ({ ...f, startDate: e.target.value }))
-              }
+              onChange={(e) => setApplyForm((f) => ({ ...f, startDate: e.target.value }))}
               error={applyErrors.startDate}
             />
             <Input
@@ -567,9 +581,7 @@ export function MyLeavesPage() {
               type="date"
               min={applyForm.startDate || undefined}
               value={applyForm.endDate}
-              onChange={(e) =>
-                setApplyForm((f) => ({ ...f, endDate: e.target.value }))
-              }
+              onChange={(e) => setApplyForm((f) => ({ ...f, endDate: e.target.value }))}
               error={applyErrors.endDate}
             />
           </div>
@@ -578,9 +590,7 @@ export function MyLeavesPage() {
             name="isHalfDay"
             label="Half Day?"
             value={applyForm.isHalfDay}
-            onChange={(e) =>
-              setApplyForm((f) => ({ ...f, isHalfDay: e.target.value }))
-            }
+            onChange={(e) => setApplyForm((f) => ({ ...f, isHalfDay: e.target.value }))}
             options={[
               { value: "false", label: "No — Full Day(s)" },
               { value: "true", label: "Yes — Half Day" },
@@ -616,9 +626,7 @@ export function MyLeavesPage() {
               name="reason"
               rows={3}
               value={applyForm.reason}
-              onChange={(e) =>
-                setApplyForm((f) => ({ ...f, reason: e.target.value }))
-              }
+              onChange={(e) => setApplyForm((f) => ({ ...f, reason: e.target.value }))}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
               placeholder="Reason for leave..."
             />
