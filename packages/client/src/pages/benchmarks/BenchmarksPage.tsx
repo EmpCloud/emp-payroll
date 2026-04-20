@@ -4,12 +4,14 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { SelectField } from "@/components/ui/SelectField";
 import { Modal } from "@/components/ui/Modal";
 import { DataTable } from "@/components/ui/DataTable";
 import { StatCard } from "@/components/ui/StatCard";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { apiGet, apiPost, apiPut, apiDelete } from "@/api/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useDepartments } from "@/api/hooks";
 import {
   Plus,
   BarChart3,
@@ -47,6 +49,12 @@ export function BenchmarksPage() {
   const benchmarks = benchRes?.data || [];
   const compaData = compaRes?.data || {};
   const compaEmployees = compaData.employees || [];
+
+  // #86 — pull real department list so Department is a dropdown (not a
+  // free-text input where admins could type non-matching names).
+  const { data: deptsData } = useDepartments();
+  const departments: Array<{ id: number | string; name: string }> = deptsData?.data || [];
+  const departmentOptions = departments.map((d) => ({ value: d.name, label: d.name }));
 
   function closeModal() {
     setShowCreate(false);
@@ -351,11 +359,22 @@ export function BenchmarksPage() {
             required
           />
           <div className="grid grid-cols-2 gap-4">
-            <Input
+            {/* #86 — was a free-text Input; now a SelectField wired to the
+                org's real department list via useDepartments(). */}
+            <SelectField
               label="Department"
               name="department"
-              placeholder="e.g., Engineering"
               defaultValue={editing?.department || ""}
+              options={[
+                {
+                  value: "",
+                  label:
+                    departmentOptions.length > 0
+                      ? "Select department..."
+                      : "No departments configured",
+                },
+                ...departmentOptions,
+              ]}
             />
             <Input
               label="Location"

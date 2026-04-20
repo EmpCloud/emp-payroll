@@ -108,10 +108,27 @@ export function InsurancePage() {
     const fd = new FormData(e.currentTarget);
     const start = String(fd.get("startDate") || "");
     const end = String(fd.get("endDate") || "");
+    const renewal = String(fd.get("renewalDate") || "");
     // Client-side guard for #13 — server rejects too but we fail fast.
     if (start && end && new Date(end).getTime() < new Date(start).getTime()) {
       toast.error("Policy end date cannot be before start date");
       return;
+    }
+    // #98 — Renewal date is meaningful only after the policy ends. It can't
+    // be in the past, and must be on/after the end date (or the start date
+    // if there's no explicit end).
+    if (renewal) {
+      const renewTime = new Date(renewal).getTime();
+      const today = new Date().setHours(0, 0, 0, 0);
+      if (renewTime < today) {
+        toast.error("Renewal date cannot be in the past");
+        return;
+      }
+      const floor = end ? new Date(end).getTime() : start ? new Date(start).getTime() : 0;
+      if (floor && renewTime < floor) {
+        toast.error("Renewal date must be on or after the policy end date");
+        return;
+      }
     }
     setSaving(true);
     const payload = {
@@ -586,26 +603,32 @@ export function InsurancePage() {
             required
           />
           <div className="grid grid-cols-3 gap-4">
+            {/* #97 — use placeholder "0" instead of defaultValue "0" on create
+                so users don't have to manually clear the leading zero. In
+                edit mode we still pre-fill with the existing value. */}
             <Input
               label="Total Premium"
               name="premiumTotal"
               type="number"
               min={0}
-              defaultValue={editingPolicy?.premium_total ?? "0"}
+              placeholder="0"
+              defaultValue={editingPolicy?.premium_total ?? ""}
             />
             <Input
               label="Premium / Employee"
               name="premiumPerEmployee"
               type="number"
               min={0}
-              defaultValue={editingPolicy?.premium_per_employee ?? "0"}
+              placeholder="0"
+              defaultValue={editingPolicy?.premium_per_employee ?? ""}
             />
             <Input
               label="Coverage Amount"
               name="coverageAmount"
               type="number"
               min={0}
-              defaultValue={editingPolicy?.coverage_amount ?? "0"}
+              placeholder="0"
+              defaultValue={editingPolicy?.coverage_amount ?? ""}
             />
           </div>
           <div className="grid grid-cols-3 gap-4">
@@ -690,12 +713,15 @@ export function InsurancePage() {
             required
           />
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Sum Insured" name="sumInsured" type="number" defaultValue="0" />
+            {/* #97 — placeholder instead of defaultValue so users don't have to
+                backspace the "0" before typing; min="0" also blocks negatives. */}
+            <Input label="Sum Insured" name="sumInsured" type="number" min="0" placeholder="0" />
             <Input
               label="Employee Premium Share"
               name="premiumShare"
               type="number"
-              defaultValue="0"
+              min="0"
+              placeholder="0"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
