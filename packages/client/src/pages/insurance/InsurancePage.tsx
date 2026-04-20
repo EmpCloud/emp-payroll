@@ -102,7 +102,12 @@ export function InsurancePage() {
 
   const stats = dashRes?.data || {};
   const policies = policiesRes?.data || [];
-  const enrollments = enrollRes?.data || [];
+  // #103 — /insurance/enrollments returns the paginated envelope
+  // { data: [...], total, page, ... } unlike /insurance/policies which
+  // returns the bare array. The old one-level lookup was always undefined
+  // (object, not an array), so the Enrollments tab showed zero rows even
+  // when the dashboard said "1 active enrollment". Drill into `.data.data`.
+  const enrollments = Array.isArray(enrollRes?.data) ? enrollRes.data : enrollRes?.data?.data || [];
   const claims = claimsRes?.data || [];
   const employees = empRes?.data?.data || [];
 
