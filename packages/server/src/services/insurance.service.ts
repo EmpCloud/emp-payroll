@@ -11,7 +11,16 @@ export class InsuranceService {
   async listPolicies(orgId: string, filters?: { type?: string; status?: string }) {
     const where: Record<string, any> = { empcloud_org_id: Number(orgId) };
     if (filters?.type) where.type = filters.type;
-    if (filters?.status) where.status = filters.status;
+    if (filters?.status) {
+      where.status = filters.status;
+    } else {
+      // #99 — deletePolicy sets status to "cancelled" (soft delete), but the
+      // default list was showing every row regardless of status, so the item
+      // the admin just deleted kept showing in the UI. Filter cancelled rows
+      // out of the default list; callers can still pass status=cancelled to
+      // see them.
+      where.status = { op: "!=", value: "cancelled" };
+    }
     return this.db.findMany<any>("insurance_policies", {
       filters: where,
       sort: { field: "created_at", order: "desc" },

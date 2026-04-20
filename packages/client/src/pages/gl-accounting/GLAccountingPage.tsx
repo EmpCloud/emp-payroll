@@ -221,14 +221,32 @@ export function GLAccountingPage() {
         }
       />
 
-      {/* Stats */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <StatCard title="GL Mappings" value={mappings.length} icon={ArrowRightLeft} />
-        <StatCard title="Journal Entries" value={journals.length} icon={BookOpen} />
+      {/* Stats — cards drill into matching tab (#105). Also add a "Total
+          Approved" count which was missing from the issue report. */}
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="GL Mappings"
+          value={mappings.length}
+          icon={ArrowRightLeft}
+          onClick={() => setTab("mappings")}
+        />
+        <StatCard
+          title="Journal Entries"
+          value={journals.length}
+          icon={BookOpen}
+          onClick={() => setTab("journals")}
+        />
+        <StatCard
+          title="Approved"
+          value={journals.filter((j: any) => j.status === "posted").length}
+          icon={BookOpen}
+          onClick={() => setTab("journals")}
+        />
         <StatCard
           title="Exported"
           value={journals.filter((j: any) => j.status === "exported").length}
           icon={Download}
+          onClick={() => setTab("journals")}
         />
       </div>
 

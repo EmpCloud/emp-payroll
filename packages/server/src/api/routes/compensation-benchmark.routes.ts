@@ -63,7 +63,9 @@ router.put(
 
 router.delete(
   "/:id",
-  authorize("hr_admin"),
+  // #88 — hr_admin-only left org_admin / super_admin staring at a success-
+  // looking click that secretly 403'd, so the benchmark "didn't disappear".
+  authorize("hr_admin", "org_admin", "super_admin"),
   wrap(async (req, res) => {
     const data = await svc.deleteBenchmark(param(req, "id"), String(req.user!.empcloudOrgId));
     res.json({ success: true, data });

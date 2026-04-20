@@ -119,11 +119,52 @@ export class AttendanceService {
       }
     }
 
-    // Merge leave data into attendance records
-    const enriched = records.map((r: any) => {
-      const userLeave = leaveMap[r.empcloud_user_id] || { paid: 0, unpaid: 0 };
+    // #109 — The query above INNER JOINs attendance_records and users, so
+    // only employees who have at least one attendance row for this month
+    // appear. Meanwhile the Mark Attendance popup pulls employees from
+    // /employees (every active payroll user), and the dashboard was
+    // comparing the two. The result: popup shows 10 employees, dashboard
+    // shows 3 (the ones who already have records). Merge a full-user row
+    // set into the output so both lists match.
+    const allUsers = await empcloudDb("users")
+      .where({ organization_id: orgIdNum, status: 1 })
+      .whereNot("role", "super_admin")
+      .select("id as empcloud_user_id", "first_name", "last_name", "emp_code");
+
+    const recordMap: Record<number, any> = {};
+    for (const r of records) recordMap[r.empcloud_user_id] = r;
+
+    const enriched = allUsers.map((u: any) => {
+      const r = recordMap[u.empcloud_user_id];
+      const userLeave = leaveMap[u.empcloud_user_id] || { paid: 0, unpaid: 0 };
+      if (r) {
+        return {
+          ...r,
+          paid_leave: userLeave.paid,
+          unpaid_leave: userLeave.unpaid,
+          lop_days: userLeave.unpaid,
+          holidays: 0,
+          weekoffs: 0,
+          overtime_rate: 0,
+          overtime_amount: 0,
+        };
+      }
+      // Employee has no attendance rows this month — surface as a
+      // zero-row so the dashboard and the Mark Attendance popup agree on
+      // who is present in the org.
       return {
-        ...r,
+        empcloud_user_id: u.empcloud_user_id,
+        first_name: u.first_name,
+        last_name: u.last_name,
+        emp_code: u.emp_code,
+        month,
+        year,
+        total_days: totalWorkingDays,
+        present_days: 0,
+        half_days: 0,
+        absent_days: 0,
+        leave_days: 0,
+        overtime_hours: 0,
         paid_leave: userLeave.paid,
         unpaid_leave: userLeave.unpaid,
         lop_days: userLeave.unpaid,

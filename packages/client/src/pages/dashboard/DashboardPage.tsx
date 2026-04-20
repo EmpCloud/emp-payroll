@@ -112,14 +112,11 @@ export function DashboardPage() {
           header; this tile is relabelled to "Payroll Runs" so it's a
           navigation shortcut to the runs history, not a duplicate action
           (issue #52). */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+      {/* #95 — "Payroll Runs" tile was redundant with the primary "Run
+          Payroll" CTA in the page header (both navigated to /payroll/runs).
+          Dropped the tile so the action lives in exactly one place. */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {[
-          {
-            label: "Payroll Runs",
-            icon: Play,
-            path: "/payroll/runs",
-            color: "bg-brand-50 text-brand-700",
-          },
           {
             label: "Add Employee",
             icon: UserPlus,

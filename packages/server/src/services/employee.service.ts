@@ -229,6 +229,75 @@ export class EmployeeService {
       empCode = `EMP${String(count + 1).padStart(3, "0")}`;
     }
 
+    // #102 — employee_code must be unique within the org.
+    const codeClash = await db("users")
+      .where({ organization_id: empcloudOrgId, emp_code: empCode })
+      .first();
+    if (codeClash) {
+      throw new AppError(
+        409,
+        "EMPLOYEE_CODE_EXISTS",
+        `Employee code "${empCode}" is already in use — employee codes must be unique within the organization.`,
+      );
+    }
+
+    // #101 / #102 — PAN, PF and bank account numbers must be unique per org.
+    // They live in JSON blobs on employee_payroll_profiles so we scan the
+    // org's existing profiles for collisions. Skip checks when the incoming
+    // value is empty (new hires may not have provided these yet).
+    const incomingPan = (data.taxInfo?.pan || "").trim();
+    const incomingPf = (data.pfDetails?.pfNumber || data.pfDetails?.pf_number || "").trim();
+    const incomingAcct = (
+      data.bankDetails?.accountNumber ||
+      data.bankDetails?.account_number ||
+      ""
+    ).trim();
+    if (incomingPan || incomingPf || incomingAcct) {
+      const profiles = await this.payrollDb.findMany<any>("employee_payroll_profiles", {
+        filters: { empcloud_org_id: empcloudOrgId },
+        limit: 10000,
+      });
+      for (const p of profiles.data) {
+        const parseJson = (v: any) => {
+          if (!v) return {};
+          if (typeof v === "string") {
+            try {
+              return JSON.parse(v);
+            } catch {
+              return {};
+            }
+          }
+          return v;
+        };
+        const tax = parseJson(p.tax_info);
+        const pf = parseJson(p.pf_details);
+        const bank = parseJson(p.bank_details);
+        if (incomingPan && (tax.pan || "").trim().toUpperCase() === incomingPan.toUpperCase()) {
+          throw new AppError(
+            409,
+            "PAN_EXISTS",
+            `PAN "${incomingPan}" is already registered to another employee.`,
+          );
+        }
+        const existingPf = (pf.pfNumber || pf.pf_number || "").trim();
+        if (incomingPf && existingPf === incomingPf) {
+          throw new AppError(
+            409,
+            "PF_EXISTS",
+            `PF number "${incomingPf}" is already registered to another employee.`,
+          );
+        }
+        const existingAcct = (bank.accountNumber || bank.account_number || "").trim();
+        if (incomingAcct && existingAcct === incomingAcct) {
+          throw new AppError(
+            409,
+            "BANK_ACCOUNT_EXISTS",
+            `Bank account "${incomingAcct}" is already registered to another employee.`,
+          );
+        }
+      }
+    }
+
     // Create user in EmpCloud
     const bcryptModule = await import("bcryptjs");
     const bcrypt = bcryptModule.default || bcryptModule;

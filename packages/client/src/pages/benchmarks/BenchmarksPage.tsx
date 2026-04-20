@@ -4,12 +4,14 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { SelectField } from "@/components/ui/SelectField";
 import { Modal } from "@/components/ui/Modal";
 import { DataTable } from "@/components/ui/DataTable";
 import { StatCard } from "@/components/ui/StatCard";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { apiGet, apiPost, apiPut, apiDelete } from "@/api/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useDepartments } from "@/api/hooks";
 import {
   Plus,
   BarChart3,
@@ -47,6 +49,12 @@ export function BenchmarksPage() {
   const benchmarks = benchRes?.data || [];
   const compaData = compaRes?.data || {};
   const compaEmployees = compaData.employees || [];
+
+  // #86 — pull real department list so Department is a dropdown (not a
+  // free-text input where admins could type non-matching names).
+  const { data: deptsData } = useDepartments();
+  const departments: Array<{ id: number | string; name: string }> = deptsData?.data || [];
+  const departmentOptions = departments.map((d) => ({ value: d.name, label: d.name }));
 
   function closeModal() {
     setShowCreate(false);
@@ -247,16 +255,32 @@ export function BenchmarksPage() {
         }
       />
 
-      {/* Stats */}
+      {/* Stats — cards drill into the matching tab (#85) */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Benchmarks" value={benchmarks.length} icon={BarChart3} />
+        <StatCard
+          title="Benchmarks"
+          value={benchmarks.length}
+          icon={BarChart3}
+          onClick={() => setTab("benchmarks")}
+        />
         <StatCard
           title="Avg Compa-Ratio"
           value={compaData.averageCompaRatio?.toFixed(2) || "—"}
           icon={Target}
+          onClick={() => setTab("compa-ratio")}
         />
-        <StatCard title="Below Market" value={dist.belowMarket || 0} icon={TrendingDown} />
-        <StatCard title="Above Market" value={dist.aboveMarket || 0} icon={TrendingUp} />
+        <StatCard
+          title="Below Market"
+          value={dist.belowMarket || 0}
+          icon={TrendingDown}
+          onClick={() => setTab("compa-ratio")}
+        />
+        <StatCard
+          title="Above Market"
+          value={dist.aboveMarket || 0}
+          icon={TrendingUp}
+          onClick={() => setTab("compa-ratio")}
+        />
       </div>
 
       {/* Tabs */}
@@ -351,11 +375,22 @@ export function BenchmarksPage() {
             required
           />
           <div className="grid grid-cols-2 gap-4">
-            <Input
+            {/* #86 — was a free-text Input; now a SelectField wired to the
+                org's real department list via useDepartments(). */}
+            <SelectField
               label="Department"
               name="department"
-              placeholder="e.g., Engineering"
               defaultValue={editing?.department || ""}
+              options={[
+                {
+                  value: "",
+                  label:
+                    departmentOptions.length > 0
+                      ? "Select department..."
+                      : "No departments configured",
+                },
+                ...departmentOptions,
+              ]}
             />
             <Input
               label="Location"
@@ -364,6 +399,10 @@ export function BenchmarksPage() {
               defaultValue={editing?.location || ""}
             />
           </div>
+          {/* #87 — placeholders (e.g. 800000) make it obvious what shape
+              the value takes, so users aren't left guessing whether to enter
+              an annual total, lakhs, or a shorthand. min=1 + step=any on
+              create forms nudges positive values. */}
           <div className="grid grid-cols-3 gap-4">
             <Input
               label="P25 (Annual)"
@@ -371,6 +410,7 @@ export function BenchmarksPage() {
               type="number"
               min={0}
               step="any"
+              placeholder="e.g. 800000"
               defaultValue={editing?.market_p25 ?? ""}
               required
             />
@@ -380,6 +420,7 @@ export function BenchmarksPage() {
               type="number"
               min={0}
               step="any"
+              placeholder="e.g. 1200000"
               defaultValue={editing?.market_p50 ?? ""}
               required
             />
@@ -389,6 +430,7 @@ export function BenchmarksPage() {
               type="number"
               min={0}
               step="any"
+              placeholder="e.g. 1800000"
               defaultValue={editing?.market_p75 ?? ""}
               required
             />

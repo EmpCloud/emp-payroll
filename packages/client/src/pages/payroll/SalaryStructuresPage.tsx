@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/Badge";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
-import { SelectField } from "@/components/ui/SelectField";
 import { useSalaryStructures } from "@/api/hooks";
 import { apiGet, apiPost, apiPut, apiDelete } from "@/api/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -283,27 +282,31 @@ export function SalaryStructuresPage() {
 
             {/* Components */}
             <div>
-              <div className="mb-3 flex items-center justify-between">
+              {/* #104 — Use flex-wrap + gap so the header row doesn't smush
+                  the preset dropdown on top of the "Components" label when
+                  the modal content is narrow, and shrink-0 on the actions so
+                  they don't collapse onto a single pixel. */}
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <h4 className="text-sm font-semibold text-gray-700">Components</h4>
-                <div className="flex gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   {unusedPresets.length > 0 && (
-                    <SelectField
-                      id="add-preset"
-                      label=""
+                    <select
+                      aria-label="Add preset component"
+                      className="focus:border-brand-500 focus:ring-brand-500 h-8 rounded-md border border-gray-300 px-2 text-xs focus:outline-none focus:ring-1"
                       value=""
                       onChange={(e) => {
                         const preset = PRESET_COMPONENTS.find((p) => p.code === e.target.value);
                         if (preset) addComponent(preset);
                         e.target.value = "";
                       }}
-                      options={[
-                        { value: "", label: "+ Add preset..." },
-                        ...unusedPresets.map((p) => ({
-                          value: p.code,
-                          label: `${p.name} (${p.type})`,
-                        })),
-                      ]}
-                    />
+                    >
+                      <option value="">+ Add preset...</option>
+                      {unusedPresets.map((p) => (
+                        <option key={p.code} value={p.code}>
+                          {p.name} ({p.type})
+                        </option>
+                      ))}
+                    </select>
                   )}
                   <Button type="button" variant="outline" size="sm" onClick={() => addComponent()}>
                     <Plus className="h-3.5 w-3.5" /> Custom

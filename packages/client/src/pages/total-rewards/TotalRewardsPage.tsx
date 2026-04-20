@@ -101,32 +101,54 @@ export function TotalRewardsPage() {
             </p>
           </div>
 
-          {/* Summary Stats */}
+          {/* Summary Stats — #91 cards scroll to the matching breakdown
+              section below. Each card anchors to its own <section> via a
+              CSS-scroll id so users see how each total is composed. */}
           <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               title="Direct Compensation"
               value={formatCurrency(statement.totalRewards?.directCompensation || 0)}
               icon={DollarSign}
+              onClick={() =>
+                document
+                  .getElementById("breakdown-salary")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
             />
             <StatCard
               title="Benefits Value"
               value={formatCurrency(statement.totalRewards?.benefitsValue || 0)}
               icon={Heart}
+              onClick={() =>
+                document
+                  .getElementById("breakdown-benefits")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
             />
             <StatCard
               title="YTD Net Pay"
               value={formatCurrency(statement.ytdEarnings?.netPay || 0)}
               icon={Wallet}
+              onClick={() =>
+                document
+                  .getElementById("breakdown-ytd")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
             />
             <StatCard
               title="Reimbursements"
               value={formatCurrency(statement.totalRewards?.reimbursements || 0)}
               icon={Gift}
+              onClick={() =>
+                document
+                  .getElementById("breakdown-reimbursements")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
             />
           </div>
 
           {/* Salary Components */}
-          <div className="mb-6 grid gap-6 lg:grid-cols-2">
+          <div id="breakdown-salary" className="mb-6 grid scroll-mt-6 gap-6 lg:grid-cols-2">
             <Card>
               <CardContent className="p-6">
                 <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
@@ -158,7 +180,7 @@ export function TotalRewardsPage() {
             </Card>
 
             {/* Benefits */}
-            <Card>
+            <Card id="breakdown-benefits" className="scroll-mt-6">
               <CardContent className="p-6">
                 <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
                   <Heart className="h-5 w-5 text-pink-600" /> Benefits Enrollment
@@ -202,7 +224,7 @@ export function TotalRewardsPage() {
           </div>
 
           {/* YTD Earnings */}
-          <Card className="mb-6">
+          <Card id="breakdown-ytd" className="mb-6 scroll-mt-6">
             <CardContent className="p-6">
               <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
                 <FileText className="h-5 w-5 text-blue-600" /> Year-to-Date Earnings
