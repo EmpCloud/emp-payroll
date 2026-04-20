@@ -51,9 +51,15 @@ router.post(
 
 router.post(
   "/:id/payment",
-  authorize("hr_admin", "hr_manager"),
+  // #114 — Previously "hr_admin, hr_manager" only; org_admin / super_admin
+  // hit 403 when clicking Pay EMI, which bubbled to the client as an
+  // "Unknown error" toast. Align with the rest of the finance-facing
+  // endpoints (GL export, etc.).
+  authorize("hr_admin", "hr_manager", "org_admin", "super_admin"),
   wrap(async (req, res) => {
-    const data = await svc.recordPayment(param(req, "id"), req.body.amount);
+    // req.body may be undefined for bodyless POSTs; guard accordingly.
+    const amount = req.body?.amount;
+    const data = await svc.recordPayment(param(req, "id"), amount);
     res.json({ success: true, data });
   }),
 );
