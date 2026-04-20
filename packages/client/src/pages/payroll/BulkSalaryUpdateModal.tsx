@@ -34,46 +34,37 @@ export function BulkSalaryUpdateModal({
 
   const structures = Array.isArray(structRes?.data) ? structRes.data : [];
   const [structureId, setStructureId] = useState(structures[0]?.id || "");
-  const [ctc, setCTC] = useState(0);
   const [effectiveFrom, setEffectiveFrom] = useState(new Date().toISOString().slice(0, 10));
+  const [ctcMap, setCtcMap] = useState<Record<string, number>>(
+    Object.fromEntries(employeeIds.map((id) => [id, 0])),
+  );
 
-  // Auto-calculate components from CTC
-  // Basic = 40% of CTC, HRA = 50% of Basic, SA = remainder
-  const monthly = ctc / 12;
-  const monthlyBasic = Math.round(monthly * 0.4);
-  const monthlyHRA = Math.round(monthlyBasic * 0.5);
-  const monthlySA = Math.round(monthly - monthlyBasic - monthlyHRA);
-
-  const comps = [
-    { code: "BASIC", label: "Basic Salary", monthly: monthlyBasic },
-    { code: "HRA", label: "House Rent Allowance", monthly: monthlyHRA },
-    { code: "SA", label: "Special Allowance", monthly: monthlySA },
-  ];
-
-  const monthlyGross = monthlyBasic + monthlyHRA + monthlySA;
+  function handleCtcChange(employeeId: string, value: number) {
+    setCtcMap((prev) => ({ ...prev, [employeeId]: value }));
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!structureId || !ctc || employeeIds.length === 0) {
-      toast.error("Please fill all required fields");
+    if (!structureId) {
+      toast.error("Please select a salary structure");
       return;
     }
 
-    const components = comps.map((c) => ({
-      code: c.code,
-      name: c.label,
-      monthlyAmount: c.monthly,
-      annualAmount: c.monthly * 12,
-    }));
+    const assignments = employeeIds
+      .filter((id) => (ctcMap[id] || 0) > 0)
+      .map((id) => ({ employeeId: id, ctc: ctcMap[id] }));
+
+    if (assignments.length === 0) {
+      toast.error("Please enter CTC for at least one employee");
+      return;
+    }
 
     bulkAssign(
       {
-        employeeIds,
         structureId,
-        ctc,
-        components,
         effectiveFrom,
+        assignments,
       },
       {
         onSuccess: (res: any) => {
@@ -84,6 +75,7 @@ export function BulkSalaryUpdateModal({
             toast.success(`Updated ${updated} employee(s), ${failed} failed`);
           }
           onClose();
+          setCtcMap(Object.fromEntries(employeeIds.map((id) => [id, 0])));
         },
         onError: (err: any) => {
           const msg = err.response?.data?.error?.message || "Failed to update salary";
@@ -94,79 +86,63 @@ export function BulkSalaryUpdateModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Bulk Update Salary" className="max-w-lg">
+    <Modal open={open} onClose={onClose} title="Bulk Update Salary" className="max-w-3xl">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="rounded-lg bg-blue-50 p-3">
-          <p className="text-sm text-blue-700">
-            Updating salary for <span className="font-semibold">{employeeIds.length}</span>{" "}
-            employee(s)
-          </p>
-          {employeeNames && employeeNames.length > 0 && (
-            <p className="mt-2 text-xs text-blue-600">
-              {employeeNames.slice(0, 3).join(", ")}
-              {employeeNames.length > 3 ? ` +${employeeNames.length - 3} more` : ""}
-            </p>
-          )}
+        <div className="grid grid-cols-2 gap-3">
+          <SelectField
+            id="structure"
+            label="Salary Structure"
+            value={structureId}
+            onChange={(e) => setStructureId(e.target.value)}
+            options={structures.map((s: any) => ({ value: s.id, label: s.name }))}
+            required
+          />
+          <Input
+            id="effectiveFrom"
+            label="Effective From"
+            type="date"
+            value={effectiveFrom}
+            onChange={(e) => setEffectiveFrom(e.target.value)}
+            required
+          />
         </div>
 
-        <SelectField
-          id="structure"
-          label="Salary Structure"
-          value={structureId}
-          onChange={(e) => setStructureId(e.target.value)}
-          options={structures.map((s: any) => ({ value: s.id, label: s.name }))}
-          required
-        />
-
-        <Input
-          id="ctc"
-          label="Annual CTC (₹)"
-          type="number"
-          value={ctc || ""}
-          onChange={(e) => setCTC(Number(e.target.value))}
-          placeholder="e.g. 1200000"
-          required
-        />
-
-        {ctc > 0 && (
-          <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <h4 className="text-sm font-semibold text-gray-700">
-              Monthly Breakdown (Auto-Calculated)
-            </h4>
-
-            <div className="space-y-2">
-              {comps.map((c) => (
-                <div key={c.code} className="flex justify-between text-sm">
-                  <span className="text-gray-600">{c.label}</span>
-                  <span className="font-medium text-gray-900">{formatCurrency(c.monthly)}</span>
-                </div>
-              ))}
-
-              <div className="border-t border-gray-200 pt-2">
-                <div className="flex justify-between text-sm font-semibold text-gray-900">
-                  <span>Monthly Gross</span>
-                  <span>{formatCurrency(monthlyGross)}</span>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200 pt-2">
-                <div className="flex justify-between text-sm font-semibold text-indigo-600">
-                  <span>Annual Gross</span>
-                  <span>{formatCurrency(monthlyGross * 12)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <Input
-          id="effectiveFrom"
-          label="Effective From"
-          type="date"
-          value={effectiveFrom}
-          onChange={(e) => setEffectiveFrom(e.target.value)}
-          required
-        />
+        <div className="overflow-hidden rounded-lg border border-gray-200">
+          <table className="w-full text-sm">
+            <thead className="border-b border-gray-200 bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left font-semibold text-gray-700">Employee</th>
+                <th className="px-4 py-3 text-right font-semibold text-gray-700">Annual CTC (₹)</th>
+                <th className="px-4 py-3 text-right font-semibold text-gray-700">Monthly Gross</th>
+              </tr>
+            </thead>
+            <tbody>
+              {employeeIds.map((empId, idx) => {
+                const name = employeeNames?.[idx] || `Employee ${idx + 1}`;
+                const ctc = ctcMap[empId] || 0;
+                const monthlyGross = ctc > 0 ? Math.round(ctc / 12) : 0;
+                return (
+                  <tr key={empId} className="border-b border-gray-200 hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-900">{name}</td>
+                    <td className="px-4 py-3 text-right">
+                      <input
+                        type="number"
+                        value={ctc || ""}
+                        onChange={(e) => handleCtcChange(empId, Number(e.target.value))}
+                        placeholder="0"
+                        className="w-full rounded border border-gray-300 px-2 py-1 text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        min="0"
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-right text-gray-600">
+                      {monthlyGross > 0 ? formatCurrency(monthlyGross) : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
         <div className="flex justify-end gap-3 border-t border-gray-100 pt-4">
           <Button variant="outline" type="button" onClick={onClose}>
@@ -174,11 +150,11 @@ export function BulkSalaryUpdateModal({
           </Button>
           <Button
             type="submit"
-            disabled={!ctc || !structureId || isPending}
+            disabled={!structureId || Object.values(ctcMap).every((c) => c === 0) || isPending}
             className="flex items-center gap-2"
           >
             {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            Update Salary
+            Update {employeeIds.length} Employee(s)
           </Button>
         </div>
       </form>

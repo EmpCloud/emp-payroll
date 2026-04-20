@@ -69,11 +69,9 @@ export function useBulkAssignSalary() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: {
-      employeeIds: string[];
       structureId: string;
-      ctc: number;
-      components: { code: string; name: string; monthlyAmount: number; annualAmount: number }[];
       effectiveFrom: string;
+      assignments: { employeeId: string; ctc: number }[];
     }) => apiPost<any>("/salary-structures/bulk-assign", payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["employees"] });

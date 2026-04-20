@@ -249,20 +249,16 @@ export const assignSalarySchema = z.object({
 
 export const bulkSalaryAssignSchema = z.object({
   body: z.object({
-    employeeIds: z
-      .array(z.union([z.string(), z.number()]).transform(String))
-      .min(1, "Select at least one employee"),
     structureId: z.string().min(1),
-    ctc: z.number().positive(),
-    components: z.array(
-      z.object({
-        code: z.string(),
-        name: z.string(),
-        monthlyAmount: z.number().nonnegative(),
-        annualAmount: z.number().nonnegative(),
-      }),
-    ),
     effectiveFrom: z.string().min(1),
+    assignments: z
+      .array(
+        z.object({
+          employeeId: z.union([z.string(), z.number()]).transform(String),
+          ctc: z.number().positive(),
+        }),
+      )
+      .min(1, "Select at least one employee"),
   }),
 });
 

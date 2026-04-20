@@ -216,11 +216,28 @@ export class SalaryService {
     return this.assignToEmployee({ ...data, employeeId });
   }
 
-  async bulkAssignSalary(employeeIds: string[], data: Omit<any, "employeeId">) {
+  async bulkAssignSalary(
+    assignments: { employeeId: string; ctc: number }[],
+    sharedData: { structureId: string; effectiveFrom: string },
+  ) {
     const results: { employeeId: string; success: boolean; error?: string }[] = [];
-    for (const employeeId of employeeIds) {
+    for (const { employeeId, ctc } of assignments) {
       try {
-        await this.assignToEmployee({ ...data, employeeId });
+        const monthly = ctc / 12;
+        const basic = Math.round(monthly * 0.4);
+        const hra = Math.round(basic * 0.5);
+        const sa = Math.round(monthly - basic - hra);
+        const components = [
+          { code: "BASIC", name: "Basic Salary", monthlyAmount: basic, annualAmount: basic * 12 },
+          {
+            code: "HRA",
+            name: "House Rent Allowance",
+            monthlyAmount: hra,
+            annualAmount: hra * 12,
+          },
+          { code: "SA", name: "Special Allowance", monthlyAmount: sa, annualAmount: sa * 12 },
+        ];
+        await this.assignToEmployee({ employeeId, ctc, components, ...sharedData });
         results.push({ employeeId, success: true });
       } catch (err: any) {
         results.push({ employeeId, success: false, error: err.message });

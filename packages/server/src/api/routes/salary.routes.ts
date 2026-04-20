@@ -163,8 +163,8 @@ router.post(
   authorize(...STRUCTURE_EDIT_ROLES),
   validate(bulkSalaryAssignSchema),
   wrap(async (req, res) => {
-    const { employeeIds, ...salaryData } = req.body;
-    const data = await svc.bulkAssignSalary(employeeIds, salaryData);
+    const { assignments, structureId, effectiveFrom } = req.body;
+    const data = await svc.bulkAssignSalary(assignments, { structureId, effectiveFrom });
     res.json({ success: true, data });
   }),
 );
