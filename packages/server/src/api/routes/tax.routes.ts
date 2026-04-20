@@ -89,6 +89,11 @@ router.get(
     const form16Svc = new Form16Service();
     const html = await form16Svc.generateHTML(param(req, "empId"), req.query.fy as string);
     res.setHeader("Content-Type", "text/html");
+    // #135 — allow inline onclick="window.print()" on the Print / Save as PDF button
+    res.setHeader(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'",
+    );
     res.send(html);
   }),
 );

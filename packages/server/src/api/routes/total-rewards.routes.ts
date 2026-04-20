@@ -33,6 +33,11 @@ router.get(
       req.query.financialYear as string,
     );
     res.setHeader("Content-Type", "text/html");
+    // #135 — allow inline onclick="window.print()" on the Print / Save as PDF button
+    res.setHeader(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'",
+    );
     res.send(html);
   }),
 );
@@ -60,6 +65,11 @@ router.get(
       req.query.financialYear as string,
     );
     res.setHeader("Content-Type", "text/html");
+    // #135 — allow inline onclick="window.print()" on the Print / Save as PDF button
+    res.setHeader(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'",
+    );
     res.send(html);
   }),
 );

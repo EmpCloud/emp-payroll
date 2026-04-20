@@ -66,6 +66,11 @@ router.get(
     const pdfSvc = new PayslipPDFService();
     const html = await pdfSvc.generateHTML(param(req, "id"));
     res.setHeader("Content-Type", "text/html");
+    // #135 — allow inline onclick="window.print()" on the Print / Save as PDF button
+    res.setHeader(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'",
+    );
     res.send(html);
   }),
 );
@@ -171,6 +176,13 @@ router.get(
     const form16Svc = new Form16Service();
     const html = await form16Svc.generateHTML(uid(req), req.query.fy as string);
     res.setHeader("Content-Type", "text/html");
+    // #135 — allow inline scripts so the Print / Save as PDF button's
+    // onclick="window.print()" handler actually fires. Helmet's default
+    // CSP blocks inline event handlers otherwise.
+    res.setHeader(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'",
+    );
     res.send(html);
   }),
 );
