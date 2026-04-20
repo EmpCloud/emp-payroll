@@ -217,12 +217,35 @@ export class SalaryService {
   }
 
   async bulkAssignSalary(
-    assignments: { employeeId: string; ctc: number }[],
+    assignments: {
+      employeeId: string;
+      ctc: number;
+      bankDetails?: { accountNumber: string; ifscCode: string; bankName: string };
+    }[],
     sharedData: { structureId: string; effectiveFrom: string },
   ) {
     const results: { employeeId: string; success: boolean; error?: string }[] = [];
-    for (const { employeeId, ctc } of assignments) {
+    const employeeService = new (require("./employee.service").default)();
+
+    for (const { employeeId, ctc, bankDetails } of assignments) {
       try {
+        // Update bank details if provided
+        if (
+          bankDetails &&
+          (bankDetails.accountNumber || bankDetails.ifscCode || bankDetails.bankName)
+        ) {
+          try {
+            await employeeService.updateBankDetails(Number(employeeId), undefined, {
+              accountNumber: bankDetails.accountNumber,
+              ifscCode: bankDetails.ifscCode,
+              bankName: bankDetails.bankName,
+            });
+          } catch (bankErr: any) {
+            console.warn(`Bank details update failed for employee ${employeeId}:`, bankErr.message);
+            // Continue with salary assignment even if bank details update fails
+          }
+        }
+
         const monthly = ctc / 12;
         const basic = Math.round(monthly * 0.4);
         const hra = Math.round(basic * 0.5);

@@ -1,9 +1,10 @@
 import { useState, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
 import { Upload, FileText, CheckCircle2, AlertCircle } from "lucide-react";
 import { Input } from "./Input";
-import { apiPost } from "@/api/client";
+import { apiPost, apiGet } from "@/api/client";
 import toast from "react-hot-toast";
 
 interface BulkSalaryCSVModalProps {
@@ -24,6 +25,11 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
     errors: string[];
   } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const { data: structures = [] } = useQuery({
+    queryKey: ["salary-structures"],
+    queryFn: () => apiGet<any>("/salary-structures").then((r) => r.data.data || []),
+  });
 
   function parseCSV(text: string): Record<string, string>[] {
     const lines = text.trim().split("\n");
@@ -63,7 +69,11 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
       let failed = 0;
       const errors: string[] = [];
 
-      const assignments: { employeeId: string; ctc: number }[] = [];
+      const assignments: {
+        employeeId: string;
+        ctc: number;
+        bankDetails?: { accountNumber: string; ifscCode: string; bankName: string };
+      }[] = [];
 
       for (const row of rows) {
         try {
@@ -83,7 +93,18 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
             continue;
           }
 
-          assignments.push({ employeeId, ctc });
+          const assignment: any = { employeeId, ctc };
+
+          // Bank details (optional)
+          const accountNumber = row["Account Number"] || row["account_number"] || "";
+          const ifscCode = row["IFSC"] || row["ifsc"] || row["IFSC Code"] || row["ifsc_code"] || "";
+          const bankName = row["Bank Name"] || row["bank_name"] || "";
+
+          if (accountNumber || ifscCode || bankName) {
+            assignment.bankDetails = { accountNumber, ifscCode, bankName };
+          }
+
+          assignments.push(assignment);
           success++;
         } catch (err: any) {
           failed++;
@@ -163,13 +184,17 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
 
             <div className="rounded-lg bg-gray-50 p-3">
               <p className="text-xs font-medium text-gray-600">Expected CSV format:</p>
-              <code className="mt-1 block text-xs text-gray-500">Employee ID,Annual CTC</code>
+              <code className="mt-1 block text-xs text-gray-500">
+                Employee ID,Annual CTC,[Bank Name],[Account Number],[IFSC]
+              </code>
               <p className="mt-2 text-xs text-gray-600">
                 Example:
                 <br />
-                EMP001,1200000
+                EMP001,1200000,HDFC Bank,1234567890,HDFC0001234
                 <br />
-                EMP002,1500000
+                EMP002,1500000,ICICI Bank,0987654321,ICIC0005678
+                <br />
+                <span className="text-gray-500">(Bank details are optional)</span>
               </p>
             </div>
           </>
@@ -200,13 +225,19 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-700">Salary Structure *</label>
-                  <input
-                    type="text"
+                  <select
                     value={structureId}
                     onChange={(e) => setStructureId(e.target.value)}
-                    placeholder="Structure ID"
                     className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
+                  >
+                    <option value="">Select Structure</option>
+                    {Array.isArray(structures) &&
+                      structures.map((s: any) => (
+                        <option key={s.id} value={String(s.id)}>
+                          {s.name || s.id}
+                        </option>
+                      ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-700">Effective From *</label>
