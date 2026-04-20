@@ -136,7 +136,7 @@ export function EmployeeListPage() {
     },
   ];
 
-  const selectedEmployeeNames = employees
+  const selectedEmployeeNames = (employees || [])
     .filter((e: any) => selectedIds.has(String(e.id)))
     .map((e: any) => `${e.first_name} ${e.last_name}`);
 
