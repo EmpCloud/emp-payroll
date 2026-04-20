@@ -14,6 +14,7 @@ import { api, apiGet, apiPost } from "@/api/client";
 import { Plus, Download, Upload, Loader2, Search, AlertCircle, Check, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { BulkSalaryUpdateModal } from "@/pages/payroll/BulkSalaryUpdateModal";
+import { BulkSalaryCSVModal } from "@/components/ui/BulkSalaryCSVModal";
 
 export function EmployeeListPage() {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ export function EmployeeListPage() {
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkSalary, setShowBulkSalary] = useState(false);
+  const [showBulkSalaryCSV, setShowBulkSalaryCSV] = useState(false);
 
   // #54 — When the Dashboard "Active Employees" card links here with
   // ?status=active, scope the list to active employees only.
@@ -236,6 +238,14 @@ export function EmployeeListPage() {
               <Button size="sm" variant="outline" onClick={() => navigate("/employees/import")}>
                 <Upload className="h-4 w-4" /> Import CSV
               </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowBulkSalaryCSV(true)}
+                title="Bulk update salary from CSV file"
+              >
+                <Upload className="h-4 w-4" /> Bulk Salary
+              </Button>
               <Button size="sm" onClick={() => navigate("/employees/new")}>
                 <Plus className="h-4 w-4" /> Add Employee
               </Button>
@@ -331,6 +341,15 @@ export function EmployeeListPage() {
           }}
           employeeIds={[...selectedIds]}
           employeeNames={selectedEmployeeNames}
+        />
+
+        <BulkSalaryCSVModal
+          open={showBulkSalaryCSV}
+          onClose={() => setShowBulkSalaryCSV(false)}
+          onSuccess={() => {
+            qc.invalidateQueries({ queryKey: ["employees"] });
+            qc.invalidateQueries({ queryKey: ["employee-salary"] });
+          }}
         />
       </div>
     </ErrorBoundary>
