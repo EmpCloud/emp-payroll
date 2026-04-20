@@ -28,31 +28,37 @@ export function EmployeeListPage() {
   // #54 — When the Dashboard "Active Employees" card links here with
   // ?status=active, scope the list to active employees only.
   const statusFilter = searchParams.get("status"); // "active" | "inactive" | null
-  const allEmployees = res?.data?.data || [];
-  const statusFiltered = statusFilter
-    ? allEmployees.filter((e: any) => {
-        if (statusFilter === "active") return e.is_active === true || e.is_active === 1;
-        if (statusFilter === "inactive") return !(e.is_active === true || e.is_active === 1);
-        return true;
-      })
-    : allEmployees;
-  const departments = Array.from(
-    new Set<string>((statusFiltered || []).map((e: any) => e.department)),
-  ).sort();
-  const filtered = deptFilter
-    ? (statusFiltered || []).filter((e: any) => e.department === deptFilter)
-    : statusFiltered || [];
-  const employees = search
-    ? filtered.filter((e: any) => {
-        const q = search.toLowerCase();
-        return (
-          `${e.first_name} ${e.last_name}`.toLowerCase().includes(q) ||
-          e.email?.toLowerCase().includes(q) ||
-          e.employee_code?.toLowerCase().includes(q) ||
-          e.designation?.toLowerCase().includes(q)
-        );
-      })
-    : filtered;
+  const allEmployees = Array.isArray(res?.data?.data) ? res.data.data : [];
+  const statusFiltered = Array.isArray(allEmployees)
+    ? statusFilter
+      ? allEmployees.filter((e: any) => {
+          if (statusFilter === "active") return e.is_active === true || e.is_active === 1;
+          if (statusFilter === "inactive") return !(e.is_active === true || e.is_active === 1);
+          return true;
+        })
+      : allEmployees
+    : [];
+  const departments = Array.isArray(statusFiltered)
+    ? Array.from(new Set<string>(statusFiltered.map((e: any) => e.department))).sort()
+    : [];
+  const filtered = Array.isArray(statusFiltered)
+    ? deptFilter
+      ? statusFiltered.filter((e: any) => e.department === deptFilter)
+      : statusFiltered
+    : [];
+  const employees = Array.isArray(filtered)
+    ? search
+      ? filtered.filter((e: any) => {
+          const q = search.toLowerCase();
+          return (
+            `${e.first_name} ${e.last_name}`.toLowerCase().includes(q) ||
+            e.email?.toLowerCase().includes(q) ||
+            e.employee_code?.toLowerCase().includes(q) ||
+            e.designation?.toLowerCase().includes(q)
+          );
+        })
+      : filtered
+    : [];
   const total = res?.data?.total || allEmployees.length;
 
   // Pending bank update requests
