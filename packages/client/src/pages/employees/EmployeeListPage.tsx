@@ -37,11 +37,11 @@ export function EmployeeListPage() {
       })
     : allEmployees;
   const departments = Array.from(
-    new Set<string>(statusFiltered.map((e: any) => e.department)),
+    new Set<string>((statusFiltered || []).map((e: any) => e.department)),
   ).sort();
   const filtered = deptFilter
-    ? statusFiltered.filter((e: any) => e.department === deptFilter)
-    : statusFiltered;
+    ? (statusFiltered || []).filter((e: any) => e.department === deptFilter)
+    : statusFiltered || [];
   const employees = search
     ? filtered.filter((e: any) => {
         const q = search.toLowerCase();
