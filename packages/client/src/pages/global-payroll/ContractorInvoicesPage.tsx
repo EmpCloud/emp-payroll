@@ -60,11 +60,24 @@ export function ContractorInvoicesPage() {
       toast.error("Please fill all required fields");
       return;
     }
+    // #120 — Invoice amounts must be positive. A negative or zero invoice
+    // is an accounting mistake — block it before hitting the API.
+    const amtNum = Number(form.amount);
+    if (!Number.isFinite(amtNum) || amtNum <= 0) {
+      toast.error("Amount must be a positive number");
+      return;
+    }
+    // #121 — End date must be on or after start date; an invoice for a
+    // negative-length period is invalid.
+    if (new Date(form.periodEnd).getTime() < new Date(form.periodStart).getTime()) {
+      toast.error("End date must be on or after start date");
+      return;
+    }
     setSaving(true);
     try {
       await apiPost("/global/invoices", {
         globalEmployeeId: form.globalEmployeeId,
-        amount: Math.round(Number(form.amount) * 100),
+        amount: Math.round(amtNum * 100),
         description: form.description || undefined,
         periodStart: form.periodStart,
         periodEnd: form.periodEnd,
@@ -243,15 +256,30 @@ export function ContractorInvoicesPage() {
         title="Submit Contractor Invoice"
       >
         <div className="space-y-4">
+          {/* #120 — When the org has no contractor-type global employees, the
+              dropdown was empty with no explanation. Show a clear empty state
+              pointing to the right place to add contractors. */}
           <SelectField
             label="Contractor *"
-            options={contractorOptions}
+            options={[
+              {
+                value: "",
+                label:
+                  contractorOptions.length > 0
+                    ? "Select a contractor..."
+                    : "No contractors yet — add one under Global Employees",
+              },
+              ...contractorOptions,
+            ]}
             value={form.globalEmployeeId}
             onChange={(e) => setForm({ ...form, globalEmployeeId: e.target.value })}
+            disabled={contractorOptions.length === 0}
           />
           <Input
             label="Amount * (in major currency unit)"
             type="number"
+            min="0"
+            step="0.01"
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
           />
