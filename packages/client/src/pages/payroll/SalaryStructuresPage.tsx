@@ -478,7 +478,7 @@ function StructureCard({
             <Button variant="ghost" size="sm" onClick={() => onDuplicate(ss)} title="Duplicate">
               <Copy className="h-3.5 w-3.5" />
             </Button>
-            {expanded && components.length > 0 && (
+            {expanded && (
               <>
                 <Button
                   variant="ghost"
