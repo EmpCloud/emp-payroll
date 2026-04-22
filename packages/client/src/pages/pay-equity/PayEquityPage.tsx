@@ -56,36 +56,58 @@ export function PayEquityPage() {
         </div>
       ) : (
         <>
-          {/* Stats — #89 cards drill into matching tab */}
+          {/* #169 — Previously all 4 cards called setTab against the local
+              tab state, which only swapped the narrow "Analysis Overview /
+              Compliance Report" tabs on this very page. Two of them
+              (Employees Analyzed, Median Salary) were on the already-
+              active tab, so clicks produced zero visible change — users
+              reported the cards as "not redirecting". Point them at the
+              dedicated list/benchmarks pages; keep the gap cards on the
+              Compliance tab (that IS their drill-in view) but scroll it
+              into focus so the switch is visible. */}
           <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               title="Employees Analyzed"
               value={analysis.totalEmployees || 0}
               icon={Users}
-              onClick={() => setTab("overview")}
+              to="/employees"
             />
             <StatCard
               title="Median Salary"
               value={formatCurrency(analysis.overallStats?.median || 0)}
               icon={BarChart3}
-              onClick={() => setTab("overview")}
+              to="/benchmarks"
             />
             <StatCard
               title="Mean Pay Gap"
               value={`${payGap.meanGapPercentage || 0}%`}
               icon={gapSeverity === "low" ? Scale : AlertTriangle}
-              onClick={() => setTab("compliance")}
+              onClick={() => {
+                setTab("compliance");
+                requestAnimationFrame(() =>
+                  document
+                    .getElementById("pay-equity-tabs")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                );
+              }}
             />
             <StatCard
               title="Median Pay Gap"
               value={`${payGap.medianGapPercentage || 0}%`}
               icon={Scale}
-              onClick={() => setTab("compliance")}
+              onClick={() => {
+                setTab("compliance");
+                requestAnimationFrame(() =>
+                  document
+                    .getElementById("pay-equity-tabs")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                );
+              }}
             />
           </div>
 
           {/* Tabs */}
-          <div className="mb-4 flex gap-2 border-b border-gray-200">
+          <div id="pay-equity-tabs" className="mb-4 flex gap-2 border-b border-gray-200">
             <button
               onClick={() => setTab("overview")}
               className={`px-4 py-2 text-sm font-medium ${tab === "overview" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
@@ -314,14 +336,20 @@ export function PayEquityPage() {
                         <h4 className="mb-2 text-sm font-semibold text-gray-700">
                           Recommendations
                         </h4>
+                        {/* #170 — The recommendation items were rendered in
+                            blue-on-light-blue with a link-style icon, which
+                            read as hyperlinks even though they were plain
+                            informational copy. Switch to a neutral callout
+                            (gray text on a soft amber background) so the
+                            copy doesn't look actionable when it isn't. */}
                         <ul className="space-y-2">
                           {(compliance.recommendations || []).map((r: string, i: number) => (
                             <li
                               key={i}
-                              className="flex items-start gap-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-800"
+                              className="flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50 p-3 text-sm text-gray-700"
                             >
-                              <FileText className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
-                              {r}
+                              <FileText className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                              <span>{r}</span>
                             </li>
                           ))}
                         </ul>

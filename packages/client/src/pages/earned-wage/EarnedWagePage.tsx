@@ -31,7 +31,13 @@ const STATUS_BADGE: Record<string, "active" | "draft" | "inactive"> = {
 };
 
 export function EarnedWagePage() {
-  const [tab, setTab] = useState<"requests" | "settings">("requests");
+  // #171 — Stat cards used to call setTab("requests") against a tab state
+  // that never changed anything because the Requests table was already the
+  // only content rendered. Replace with a statusFilter so clicking e.g.
+  // "Pending Requests" actually scopes the table to pending rows.
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "disbursed" | "approved">(
+    "all",
+  );
   const [showRequest, setShowRequest] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -59,9 +65,11 @@ export function EarnedWagePage() {
   });
 
   const stats = dashRes?.data || {};
-  const requests = reqRes?.data || [];
+  const allRequests: any[] = reqRes?.data || [];
   const settings = settingsRes?.data || {};
   const availability = availRes?.data || {};
+  const requests =
+    statusFilter === "all" ? allRequests : allRequests.filter((r) => r.status === statusFilter);
 
   // --- Handlers ---
   async function handleRequest(e: React.FormEvent<HTMLFormElement>) {
@@ -207,33 +215,49 @@ export function EarnedWagePage() {
         }
       />
 
-      {/* Stats — cards drill into the Requests tab (#92) */}
+      {/* Stats — each card now scopes the requests table to the relevant
+          status (or clears the filter for Total / Avg). */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Pending Requests"
           value={stats.totalPending || 0}
           icon={Clock}
-          onClick={() => setTab("requests")}
+          onClick={() => setStatusFilter("pending")}
         />
         <StatCard
           title="Total Disbursed"
           value={formatCurrency(stats.totalDisbursedAmount || 0)}
           icon={DollarSign}
-          onClick={() => setTab("requests")}
+          onClick={() => setStatusFilter("disbursed")}
         />
         <StatCard
           title="Avg Request"
           value={formatCurrency(stats.avgRequestAmount || 0)}
           icon={HandCoins}
-          onClick={() => setTab("requests")}
+          onClick={() => setStatusFilter("all")}
         />
         <StatCard
           title="Total Requests"
           value={stats.totalRequests || 0}
           icon={CheckCircle}
-          onClick={() => setTab("requests")}
+          onClick={() => setStatusFilter("all")}
         />
       </div>
+
+      {statusFilter !== "all" && (
+        <div className="mb-4 flex items-center gap-2 text-sm text-gray-500">
+          <span>
+            Showing <strong className="text-gray-900">{statusFilter}</strong> requests
+          </span>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("all")}
+            className="text-brand-600 hover:underline"
+          >
+            Clear filter
+          </button>
+        </div>
+      )}
 
       {/* Available amount card */}
       {availability.available !== undefined && (
@@ -307,6 +331,13 @@ export function EarnedWagePage() {
               </p>
             )}
           </div>
+          {/* #172 — Don't `disabled` the Amount input when availability is 0.
+              It read as "the form is broken" because users couldn't type at
+              all. The amber banner above already explains why no advance is
+              available; here we still let them type (useful for prefilling
+              once config is fixed), keep the submit-button disabled when
+              there's nothing available, and rely on server-side validation
+              as the authoritative block. */}
           <Input
             label="Amount"
             name="amount"
@@ -315,7 +346,6 @@ export function EarnedWagePage() {
             min={1}
             {...(Number(availability.available) > 0 ? { max: availability.available } : {})}
             placeholder="Enter amount"
-            disabled={(availability.available || 0) <= 0}
           />
           <Input
             label="Reason (optional)"
@@ -326,7 +356,7 @@ export function EarnedWagePage() {
             <Button type="button" variant="ghost" onClick={() => setShowRequest(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || (availability.available || 0) <= 0}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Submit Request
             </Button>

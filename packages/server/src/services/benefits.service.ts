@@ -11,7 +11,17 @@ export class BenefitsService {
   async listPlans(orgId: string, filters?: { type?: string; active?: boolean }) {
     const where: Record<string, any> = { empcloud_org_id: Number(orgId) };
     if (filters?.type) where.type = filters.type;
-    if (filters?.active !== undefined) where.is_active = filters.active;
+    // #168 — deletePlan soft-deletes by setting is_active=false, but the
+    // list was returning every row regardless. Deactivated plans kept
+    // showing in the Benefits Plans table even though the admin had just
+    // "deleted" them. Match the insurance-policies pattern (#99): hide
+    // inactive rows by default; callers can still pass active=false to
+    // see them.
+    if (filters?.active !== undefined) {
+      where.is_active = filters.active;
+    } else {
+      where.is_active = true;
+    }
     return this.db.findMany<any>("benefit_plans", {
       filters: where,
       sort: { field: "created_at", order: "desc" },

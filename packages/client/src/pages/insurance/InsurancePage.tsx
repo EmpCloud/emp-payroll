@@ -688,6 +688,13 @@ export function InsurancePage() {
                   ? String(editingPolicy.start_date).slice(0, 10)
                   : undefined
               }
+              onChange={(e) => {
+                const form = (e.currentTarget as HTMLInputElement).form;
+                const renewalInput = form?.elements.namedItem(
+                  "renewalDate",
+                ) as HTMLInputElement | null;
+                if (renewalInput) renewalInput.min = e.currentTarget.value;
+              }}
             />
             <Input
               label="Renewal Date"
@@ -695,6 +702,13 @@ export function InsurancePage() {
               type="date"
               defaultValue={
                 editingPolicy?.renewal_date ? String(editingPolicy.renewal_date).slice(0, 10) : ""
+              }
+              min={
+                editingPolicy?.end_date
+                  ? String(editingPolicy.end_date).slice(0, 10)
+                  : editingPolicy?.start_date
+                    ? String(editingPolicy.start_date).slice(0, 10)
+                    : new Date().toISOString().slice(0, 10)
               }
             />
           </div>

@@ -209,7 +209,11 @@ export function BenefitsPage() {
           >
             <Pencil className="h-4 w-4" />
           </Button>
-          {r.is_active && (
+          {/* #168 — MySQL tinyint(1) comes back as 0/1; `0 && <Button/>`
+              renders the literal "0" next to the pencil icon on inactive
+              rows. Coerce to a real boolean so React skips the falsy
+              branch cleanly instead of printing a stray digit. */}
+          {!!r.is_active && (
             <Button
               variant="ghost"
               size="sm"

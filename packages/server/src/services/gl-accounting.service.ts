@@ -233,6 +233,13 @@ export class GLAccountingService {
     orgId: string,
   ): Promise<{ filename: string; content: string }> {
     const journal = await this.getJournalEntry(id, orgId);
+    // #175 — knex/mysql2 returns DATE columns as Date objects, so calling
+    // `.replace(/-/g, "")` directly on journal.entry_date threw
+    // `TypeError: entry_date.replace is not a function` the moment a user
+    // clicked "Tally" on any journal row. The window.open'd tab surfaced it
+    // as an error page. Normalize once up front so both the filename and the
+    // <DATE> tag always see an ISO YYYY-MM-DD string.
+    const dateIso = toIsoDateString(journal.entry_date);
 
     // Tally XML format
     const lines = journal.lines || [];
@@ -265,8 +272,8 @@ export class GLAccountingService {
       <REQUESTDATA>
         <TALLYMESSAGE>
           <VOUCHER VCHTYPE="Journal" ACTION="Create">
-            <DATE>${journal.entry_date.replace(/-/g, "")}</DATE>
-            <NARRATION>Payroll Journal Entry - ${journal.entry_date}</NARRATION>
+            <DATE>${dateIso.replace(/-/g, "")}</DATE>
+            <NARRATION>Payroll Journal Entry - ${dateIso}</NARRATION>
 ${xmlLines.join("\n")}
           </VOUCHER>
         </TALLYMESSAGE>
@@ -282,7 +289,7 @@ ${xmlLines.join("\n")}
     });
 
     return {
-      filename: `tally-journal-${journal.entry_date}.xml`,
+      filename: `tally-journal-${dateIso}.xml`,
       content: xml,
     };
   }
@@ -292,6 +299,7 @@ ${xmlLines.join("\n")}
     orgId: string,
   ): Promise<{ filename: string; content: string }> {
     const journal = await this.getJournalEntry(id, orgId);
+    const dateIso = toIsoDateString(journal.entry_date);
     const lines = journal.lines || [];
 
     // QuickBooks CSV format
@@ -301,7 +309,7 @@ ${xmlLines.join("\n")}
     for (const line of lines) {
       rows.push(
         [
-          `"${journal.entry_date}"`,
+          `"${dateIso}"`,
           `"${line.gl_account_code}"`,
           `"${(line.description || "").replace(/"/g, '""')}"`,
           Number(line.debit_amount) > 0 ? line.debit_amount : "",
@@ -317,7 +325,7 @@ ${xmlLines.join("\n")}
     });
 
     return {
-      filename: `quickbooks-journal-${journal.entry_date}.csv`,
+      filename: `quickbooks-journal-${dateIso}.csv`,
       content: rows.join("\n"),
     };
   }
@@ -327,13 +335,14 @@ ${xmlLines.join("\n")}
     orgId: string,
   ): Promise<{ filename: string; content: string }> {
     const journal = await this.getJournalEntry(id, orgId);
+    const dateIso = toIsoDateString(journal.entry_date);
     const lines = journal.lines || [];
 
     // Zoho Books JSON format
     const zohoData = {
-      journal_date: journal.entry_date,
+      journal_date: dateIso,
       reference_number: `PAYROLL-${journal.payroll_run_id.slice(0, 8)}`,
-      notes: `Payroll Journal Entry - ${journal.entry_date}`,
+      notes: `Payroll Journal Entry - ${dateIso}`,
       line_items: lines.map((l: any) => ({
         account_name: l.gl_account_code,
         description: l.description,
@@ -349,7 +358,7 @@ ${xmlLines.join("\n")}
     });
 
     return {
-      filename: `zoho-journal-${journal.entry_date}.json`,
+      filename: `zoho-journal-${dateIso}.json`,
       content: JSON.stringify(zohoData, null, 2),
     };
   }
@@ -362,4 +371,9 @@ function escapeXml(str: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
+}
+
+function toIsoDateString(v: unknown): string {
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  return String(v ?? "").slice(0, 10);
 }

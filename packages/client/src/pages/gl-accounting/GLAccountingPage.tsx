@@ -14,7 +14,10 @@ import { Plus, BookOpen, FileText, Download, ArrowRightLeft, Loader2, Trash2 } f
 import toast from "react-hot-toast";
 
 export function GLAccountingPage() {
-  const [tab, setTab] = useState<"mappings" | "journals">("mappings");
+  // #174 — "Exported" stat card now drills into a dedicated sub-tab that
+  // lists only journals with status="exported". "Total Approved" card was
+  // removed — it was always 0 in practice and had no meaningful drill-in.
+  const [tab, setTab] = useState<"mappings" | "journals" | "exported">("mappings");
   const [showCreateMapping, setShowCreateMapping] = useState(false);
   const [showGenerateJournal, setShowGenerateJournal] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -221,9 +224,11 @@ export function GLAccountingPage() {
         }
       />
 
-      {/* Stats — cards drill into matching tab (#105). Also add a "Total
-          Approved" count which was missing from the issue report. */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Stats — cards drill into matching tab (#105, #174). "Approved" was
+          removed — it was always 0 in this org's data and had no useful
+          destination. "Exported" now opens its own Exported tab sitting
+          beside Journal Entries so users can find just those rows. */}
+      <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <StatCard
           title="GL Mappings"
           value={mappings.length}
@@ -237,16 +242,10 @@ export function GLAccountingPage() {
           onClick={() => setTab("journals")}
         />
         <StatCard
-          title="Approved"
-          value={journals.filter((j: any) => j.status === "posted").length}
-          icon={BookOpen}
-          onClick={() => setTab("journals")}
-        />
-        <StatCard
           title="Exported"
           value={journals.filter((j: any) => j.status === "exported").length}
           icon={Download}
-          onClick={() => setTab("journals")}
+          onClick={() => setTab("exported")}
         />
       </div>
 
@@ -263,6 +262,12 @@ export function GLAccountingPage() {
           className={`px-4 py-2 text-sm font-medium ${tab === "journals" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
         >
           Journal Entries ({journals.length})
+        </button>
+        <button
+          onClick={() => setTab("exported")}
+          className={`px-4 py-2 text-sm font-medium ${tab === "exported" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
+        >
+          Exported ({journals.filter((j: any) => j.status === "exported").length})
         </button>
       </div>
 
@@ -296,6 +301,24 @@ export function GLAccountingPage() {
                 columns={journalColumns}
                 data={journals}
                 emptyMessage="No journal entries generated"
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {tab === "exported" && (
+        <Card>
+          <CardContent className="p-0">
+            {journalsLoading ? (
+              <div className="flex h-32 items-center justify-center">
+                <Loader2 className="text-brand-600 h-6 w-6 animate-spin" />
+              </div>
+            ) : (
+              <DataTable
+                columns={journalColumns}
+                data={journals.filter((j: any) => j.status === "exported")}
+                emptyMessage="No journals have been exported yet"
               />
             )}
           </CardContent>
