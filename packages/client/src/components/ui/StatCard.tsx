@@ -30,14 +30,18 @@ export function StatCard({
   // Layout guards for currency-heavy cards:
   // #136 — min-w-0 flex-1 on text column + shrink-0 on icon so big
   //        amounts can't push the icon outside the card.
-  // #129 — truncate (not wrap) so the minus sign and the currency glyph
-  //        stay on the same line; tooltip exposes the full value when it
-  //        doesn't fit.
+  // #144/#145/#146 — truncation was clipping real payroll amounts (e.g.
+  //        `-₹1,17,78...`, `₹12,23,0...`). Dropping the `truncate` class
+  //        and scaling the font down for long strings keeps the full
+  //        value readable at a glance. Tooltip via `title=` is preserved
+  //        so hover reveals the exact value without reflow.
+  const longValue = valueStr.length >= 10;
+  const valueClass = longValue ? "text-lg" : "text-2xl";
   const body = (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1 space-y-1">
         <p className="text-sm font-medium text-gray-500">{title}</p>
-        <p className="truncate text-2xl font-bold text-gray-900" title={valueStr}>
+        <p className={cn("break-words font-bold text-gray-900", valueClass)} title={valueStr}>
           {value}
         </p>
         {subtitle && <p className="truncate text-sm text-gray-500">{subtitle}</p>}
