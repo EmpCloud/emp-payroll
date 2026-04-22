@@ -41,7 +41,7 @@ const COVERAGE_TYPES = [
 ];
 
 export function BenefitsPage() {
-  const [tab, setTab] = useState<"plans" | "enrollments">("plans");
+  const [tab, setTab] = useState<"plans" | "enrollments" | "pending">("plans");
   const [showCreatePlan, setShowCreatePlan] = useState(false);
   const [showEnroll, setShowEnroll] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -319,7 +319,7 @@ export function BenefitsPage() {
           title="Pending"
           value={stats.totalPending || 0}
           icon={Heart}
-          onClick={() => setTab("enrollments")}
+          onClick={() => setTab("pending")}
         />
         <StatCard
           title="Monthly Employer Cost"
@@ -330,6 +330,9 @@ export function BenefitsPage() {
       </div>
 
       {/* Tabs */}
+      {/* #148 — Pending tab added so the Pending card has a drill-in
+          destination that filters enrollments to status="pending". Previously
+          it routed to the full Enrollments tab, which hid the distinction. */}
       <div className="mb-4 flex gap-2 border-b border-gray-200">
         <button
           onClick={() => setTab("plans")}
@@ -342,6 +345,12 @@ export function BenefitsPage() {
           className={`px-4 py-2 text-sm font-medium ${tab === "enrollments" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
         >
           Enrollments ({enrollments.length})
+        </button>
+        <button
+          onClick={() => setTab("pending")}
+          className={`px-4 py-2 text-sm font-medium ${tab === "pending" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
+        >
+          Pending ({stats.totalPending || 0})
         </button>
       </div>
 
@@ -375,6 +384,24 @@ export function BenefitsPage() {
                 columns={enrollColumns}
                 data={enrollments}
                 emptyMessage="No enrollments yet"
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {tab === "pending" && (
+        <Card>
+          <CardContent className="p-0">
+            {enrollLoading ? (
+              <div className="flex h-32 items-center justify-center">
+                <Loader2 className="text-brand-600 h-6 w-6 animate-spin" />
+              </div>
+            ) : (
+              <DataTable
+                columns={enrollColumns}
+                data={enrollments.filter((e: any) => e.status === "pending")}
+                emptyMessage="No pending enrollments"
               />
             )}
           </CardContent>
