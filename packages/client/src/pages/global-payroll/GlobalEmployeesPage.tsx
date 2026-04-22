@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -90,10 +90,14 @@ const COUNTRY_FLAGS: Record<string, string> = {
 export function GlobalEmployeesPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  // #151 — Seed filters from URL params so drill-in links from the Global
+  // Dashboard cards (e.g. `?status=onboarding` / `?employmentType=eor`)
+  // actually scope the list instead of silently falling back to "all".
+  const [searchParams] = useSearchParams();
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [countryFilter, setCountryFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState(searchParams.get("employmentType") || "");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "");
+  const [countryFilter, setCountryFilter] = useState(searchParams.get("country") || "");
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
 

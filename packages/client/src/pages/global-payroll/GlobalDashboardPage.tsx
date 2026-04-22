@@ -105,7 +105,12 @@ export function GlobalDashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Link to="/global-payroll/compliance" className="block transition hover:-translate-y-0.5">
+        {/* #151 — Compliance Score is an aggregate health metric, not a filter.
+            Linking it to /global-payroll/compliance (the country list) was
+            confusing because the destination is a catalogue, not a drill-in
+            view of the score. Render it as a static card until there's a
+            dedicated compliance-breakdown page to link to. */}
+        <div>
           <StatCard
             title="Compliance Score"
             value={`${dash?.compliancePercentage || 0}%`}
@@ -116,7 +121,7 @@ export function GlobalDashboardPage() {
                 : { value: "Needs attention", positive: false }
             }
           />
-        </Link>
+        </div>
         <Link
           to="/global-payroll/invoices?status=pending"
           className="block transition hover:-translate-y-0.5"
