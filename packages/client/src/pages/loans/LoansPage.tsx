@@ -30,6 +30,17 @@ export function LoansPage() {
     queryFn: () => apiGet<any>("/loans", filter ? { status: filter } : {}),
   });
 
+  // #158 — The top stat cards (Active / Outstanding / Monthly EMI / Completed)
+  // are an org-wide summary, not a view of the current tab. Previously they
+  // were derived from `res.data.data`, which is already filtered by status
+  // server-side — switching to the "active" tab therefore made the
+  // "Completed" card drop to 0 even though completed loans still exist.
+  // Fetch the unfiltered list separately and drive the cards off it.
+  const { data: allRes } = useQuery({
+    queryKey: ["loans-all"],
+    queryFn: () => apiGet<any>("/loans"),
+  });
+
   function setFilter(next: string) {
     const params = new URLSearchParams(searchParams);
     if (next) params.set("status", next);
@@ -38,12 +49,14 @@ export function LoansPage() {
   }
 
   const loans = res?.data?.data || [];
-  const active = loans.filter((l: any) => l.status === "active");
+  const allLoans = allRes?.data?.data || [];
+  const active = allLoans.filter((l: any) => l.status === "active");
   const totalOutstanding = active.reduce(
     (s: number, l: any) => s + Number(l.outstanding_amount),
     0,
   );
   const totalEMI = active.reduce((s: number, l: any) => s + Number(l.emi_amount), 0);
+  const completedCount = allLoans.filter((l: any) => l.status === "completed").length;
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -223,11 +236,7 @@ export function LoansPage() {
           />
         </Link>
         <Link to="/loans?status=completed" className={cardLinkCls}>
-          <StatCard
-            title="Completed"
-            value={String(loans.filter((l: any) => l.status === "completed").length)}
-            icon={CheckCircle2}
-          />
+          <StatCard title="Completed" value={String(completedCount)} icon={CheckCircle2} />
         </Link>
       </div>
 

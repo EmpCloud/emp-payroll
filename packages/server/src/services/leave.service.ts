@@ -184,7 +184,7 @@ export class LeaveService {
     const empcloudDb = getEmpCloudDB();
     return empcloudDb("leave_types")
       .where({ organization_id: Number(orgId), is_active: true })
-      .select("id", "code", "name", "leave_category", "max_days_per_year")
+      .select("id", "code", "name")
       .orderBy("name", "asc");
   }
 
@@ -228,11 +228,7 @@ export class LeaveService {
     // Guard: end date must be on/after start date. Duplicates the Zod
     // refinement so direct service calls (tests, seeds) also fail loudly. (#36)
     if (new Date(data.endDate).getTime() < new Date(data.startDate).getTime()) {
-      throw new AppError(
-        400,
-        "INVALID_DATE_RANGE",
-        "End date must be greater than start date",
-      );
+      throw new AppError(400, "INVALID_DATE_RANGE", "End date must be greater than start date");
     }
 
     const days = data.isHalfDay ? 0.5 : this.calculateDays(data.startDate, data.endDate);

@@ -293,6 +293,7 @@ export function ContractorInvoicesPage() {
             <Input
               label="Period End *"
               type="date"
+              min={form.periodStart || undefined}
               value={form.periodEnd}
               onChange={(e) => setForm({ ...form, periodEnd: e.target.value })}
             />

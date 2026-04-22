@@ -3,14 +3,34 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, XCircle, Database, Server, HardDrive, Clock, RefreshCw, Loader2, Activity, Users, FileText, Play } from "lucide-react";
+import {
+  CheckCircle2,
+  XCircle,
+  Database,
+  Server,
+  HardDrive,
+  Clock,
+  RefreshCw,
+  Loader2,
+  Activity,
+  Users,
+  FileText,
+  Play,
+} from "lucide-react";
+import { apiGet } from "@/api/client";
 
 export function SystemHealthPage() {
+  // #147 — Use the shared axios client so the health check rides on the same
+  // base URL + credentials as every other API call. The old raw fetch stripped
+  // `/api/v1` from VITE_API_URL and hit `/health/detailed` at the root — which
+  // in production isn't routed to the payroll server (only `/api/v1/*` is),
+  // so the System tab always showed "Server unreachable". Server also exposes
+  // health under `/api/v1/system/health/detailed` to match.
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["health"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_API_URL?.replace("/api/v1", "") || ""}/health/detailed`);
-      return res.json();
+      const res = await apiGet<any>("/system/health/detailed");
+      return (res as any)?.data ?? res;
     },
     refetchInterval: 30000,
   });
@@ -28,7 +48,9 @@ export function SystemHealthPage() {
       />
 
       {isLoading ? (
-        <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-brand-600" /></div>
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="text-brand-600 h-8 w-8 animate-spin" />
+        </div>
       ) : !data ? (
         <Card>
           <CardContent className="py-12 text-center">
@@ -39,7 +61,13 @@ export function SystemHealthPage() {
       ) : (
         <>
           {/* Status banner */}
-          <Card className={data.status === "healthy" ? "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950" : "border-red-200 bg-red-50"}>
+          <Card
+            className={
+              data.status === "healthy"
+                ? "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950"
+                : "border-red-200 bg-red-50"
+            }
+          >
             <CardContent className="py-4">
               <div className="flex items-center gap-3">
                 {data.status === "healthy" ? (
@@ -52,7 +80,8 @@ export function SystemHealthPage() {
                     System is {data.status === "healthy" ? "Healthy" : "Degraded"}
                   </p>
                   <p className="text-sm text-gray-500">
-                    Response time: {data.responseTime} | Environment: {data.environment} | Version: {data.version}
+                    Response time: {data.responseTime} | Environment: {data.environment} | Version:{" "}
+                    {data.version}
                   </p>
                 </div>
               </div>
@@ -74,10 +103,14 @@ export function SystemHealthPage() {
                         {data.checks?.database?.status || "unknown"}
                       </Badge>
                       {data.checks?.database?.latency && (
-                        <span className="text-xs text-gray-400">{data.checks.database.latency}</span>
+                        <span className="text-xs text-gray-400">
+                          {data.checks.database.latency}
+                        </span>
                       )}
                     </div>
-                    <p className="mt-1 text-xs text-gray-400">{data.checks?.database?.provider || "—"}</p>
+                    <p className="mt-1 text-xs text-gray-400">
+                      {data.checks?.database?.provider || "—"}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -94,7 +127,8 @@ export function SystemHealthPage() {
                     <p className="text-xs text-gray-500">Memory</p>
                     <p className="text-sm font-semibold">{data.checks?.memory?.heapUsed || "—"}</p>
                     <p className="text-xs text-gray-400">
-                      of {data.checks?.memory?.heapTotal || "—"} heap | {data.checks?.memory?.rss || "—"} RSS
+                      of {data.checks?.memory?.heapTotal || "—"} heap |{" "}
+                      {data.checks?.memory?.rss || "—"} RSS
                     </p>
                   </div>
                 </div>
@@ -111,7 +145,9 @@ export function SystemHealthPage() {
                   <div>
                     <p className="text-xs text-gray-500">Uptime</p>
                     <p className="text-sm font-semibold">{data.checks?.uptime?.formatted || "—"}</p>
-                    <p className="text-xs text-gray-400">{data.checks?.uptime?.process || "—"} seconds</p>
+                    <p className="text-xs text-gray-400">
+                      {data.checks?.uptime?.process || "—"} seconds
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -127,9 +163,15 @@ export function SystemHealthPage() {
                   <div>
                     <p className="text-xs text-gray-500">Data</p>
                     <div className="flex gap-3 text-xs">
-                      <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {data.checks?.data?.employees ?? "—"}</span>
-                      <span className="flex items-center gap-1"><Play className="h-3 w-3" /> {data.checks?.data?.payrollRuns ?? "—"}</span>
-                      <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> {data.checks?.data?.payslips ?? "—"}</span>
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3 w-3" /> {data.checks?.data?.employees ?? "—"}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Play className="h-3 w-3" /> {data.checks?.data?.payrollRuns ?? "—"}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <FileText className="h-3 w-3" /> {data.checks?.data?.payslips ?? "—"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -139,7 +181,9 @@ export function SystemHealthPage() {
 
           {/* Raw JSON */}
           <Card>
-            <CardHeader><CardTitle>Raw Health Response</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Raw Health Response</CardTitle>
+            </CardHeader>
             <CardContent>
               <pre className="max-h-64 overflow-auto rounded-lg bg-gray-900 p-4 text-xs text-green-400">
                 {JSON.stringify(data, null, 2)}

@@ -60,44 +60,54 @@ export function DataTable<T extends Record<string, any>>({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-gray-200 bg-gray-50">
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                className={cn("px-6 py-3 font-medium text-gray-500", col.className)}
-              >
-                {col.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {displayData.length === 0 ? (
-            <tr>
-              <td colSpan={columns.length} className="px-6 py-12 text-center text-gray-400">
-                {emptyMessage}
-              </td>
+    // #161 — Pagination bar used to sit inside the `overflow-x-auto` wrapper
+    // so when a wide table (e.g. My Leaves) forced horizontal scroll, the
+    // pagination row scrolled with the table — overlapping the last row and
+    // clipping "of N". Split the layout: outer card owns the pagination and
+    // the border/shadow, and only the <table> scrolls horizontally.
+    <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-gray-200 bg-gray-50">
+              {columns.map((col) => (
+                <th
+                  key={col.key}
+                  className={cn("px-6 py-3 font-medium text-gray-500", col.className)}
+                >
+                  {col.header}
+                </th>
+              ))}
             </tr>
-          ) : (
-            displayData.map((row, i) => (
-              <tr
-                key={i}
-                onClick={() => onRowClick?.(row)}
-                className={cn("transition-colors hover:bg-gray-50", onRowClick && "cursor-pointer")}
-              >
-                {columns.map((col) => (
-                  <td key={col.key} className={cn("px-6 py-4 text-gray-700", col.className)}>
-                    {col.render ? col.render(row) : String(row[col.key] ?? "")}
-                  </td>
-                ))}
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {displayData.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="px-6 py-12 text-center text-gray-400">
+                  {emptyMessage}
+                </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              displayData.map((row, i) => (
+                <tr
+                  key={i}
+                  onClick={() => onRowClick?.(row)}
+                  className={cn(
+                    "transition-colors hover:bg-gray-50",
+                    onRowClick && "cursor-pointer",
+                  )}
+                >
+                  {columns.map((col) => (
+                    <td key={col.key} className={cn("px-6 py-4 text-gray-700", col.className)}>
+                      {col.render ? col.render(row) : String(row[col.key] ?? "")}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {showPagination && (
         <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-6 py-3">

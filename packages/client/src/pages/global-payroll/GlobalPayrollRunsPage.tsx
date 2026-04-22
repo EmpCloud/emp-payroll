@@ -49,6 +49,17 @@ export function GlobalPayrollRunsPage() {
     queryFn: () => apiGet<any>("/global/countries"),
   });
 
+  // #154 — Filter the Create Run country picker down to only countries that
+  // actually have active EOR/direct-hire employees. Without this, users
+  // could select a country with no payable employees and hit the server's
+  // "No active EOR/direct-hire employees found in <Country>" error after
+  // the fact. Pulling the employee list up-front lets us prune the
+  // dropdown instead.
+  const { data: globalEmployeesRes } = useQuery({
+    queryKey: ["global-employees-for-runs"],
+    queryFn: () => apiGet<any>("/global/employees"),
+  });
+
   const { data: runsRes, isLoading } = useQuery({
     queryKey: ["global-payroll-runs", statusFilter],
     queryFn: () =>
@@ -67,10 +78,26 @@ export function GlobalPayrollRunsPage() {
   const runs = runsRes?.data || [];
   const runDetail = detailRes?.data;
 
-  const countryOptions = countries.map((c: any) => ({
-    value: c.id,
-    label: `${c.name} (${c.currency})`,
-  }));
+  // Country IDs where we have at least one active EOR or direct-hire
+  // employee — those are the only countries the backend will accept for
+  // a Create Run (#154).
+  const globalEmployees: any[] = globalEmployeesRes?.data || [];
+  const payableCountryIds = new Set(
+    globalEmployees
+      .filter(
+        (e) =>
+          e.status === "active" &&
+          (e.employment_type === "eor" || e.employment_type === "direct_hire"),
+      )
+      .map((e) => e.country_id),
+  );
+
+  const countryOptions = countries
+    .filter((c: any) => payableCountryIds.has(c.id))
+    .map((c: any) => ({
+      value: c.id,
+      label: `${c.name} (${c.currency})`,
+    }));
 
   const yearOptions = Array.from({ length: 5 }, (_, i) => {
     const y = new Date().getFullYear() - 1 + i;
@@ -245,9 +272,10 @@ export function GlobalPayrollRunsPage() {
         title="Create Global Payroll Run"
       >
         <div className="space-y-4">
-          {/* #118 — When no countries are seeded for this org, the dropdown
-              was empty and the user got a confusing "select a country" toast.
-              Surface a clear empty state + link-worthy hint instead. */}
+          {/* #118/#154 — When there are no *payable* countries (i.e. none
+              with an active EOR or direct-hire employee), keep the dropdown
+              empty with an explanatory label so users don't submit into
+              "no employees in <country>" errors. */}
           <SelectField
             label="Country *"
             options={[
@@ -256,7 +284,7 @@ export function GlobalPayrollRunsPage() {
                 label:
                   countryOptions.length > 0
                     ? "Select a country..."
-                    : "No countries configured — contact your admin",
+                    : "No countries with active EOR/direct-hire employees",
               },
               ...countryOptions,
             ]}

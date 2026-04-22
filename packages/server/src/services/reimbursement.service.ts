@@ -146,23 +146,40 @@ export class ReimbursementService {
 
   /**
    * Accepts either a payroll employees.id (UUID) or an EmpCloud user ID
-   * (numeric string) and returns the employees row with { id, empcloud_user_id }.
-   * Returns null when the user isn't mapped to any payroll employee.
+   * (numeric string) and returns an employee row with { id, empcloud_user_id }.
+   *
+   * Resolves against two storage layouts because the schema has evolved:
+   *   1. Legacy `employees` table (UUID id + `empcloud_user_id` FK) — only
+   *      present where older demo seeds ran.
+   *   2. Current `employee_payroll_profiles` — the live source of truth,
+   *      keyed on `empcloud_user_id`. This is where Apply-to-Payroll writes.
+   *
+   * Returning null still means "not in payroll" (real 400 response). Without
+   * the profiles fallback, users onboarded via the newer flow saw "You don't
+   * have a payroll profile yet" even after admin had added them. (#159/#160)
    */
   private async resolveEmployeeRow(
     employeeId: string,
   ): Promise<{ id: string; empcloud_user_id: number | null } | null> {
-    // Try direct lookup by employees.id (UUID case)
+    // Try legacy employees.id first (UUID case)
     const byId = await this.db.findById<any>("employees", employeeId).catch(() => null);
     if (byId) return { id: byId.id, empcloud_user_id: byId.empcloud_user_id ?? null };
 
-    // Numeric → look up by empcloud_user_id
+    // Numeric → EmpCloud user id. Check legacy table, then profiles.
     const numeric = Number(employeeId);
     if (Number.isFinite(numeric)) {
       const byEmpcloud = await this.db
         .findOne<any>("employees", { empcloud_user_id: numeric })
         .catch(() => null);
       if (byEmpcloud) return { id: byEmpcloud.id, empcloud_user_id: numeric };
+
+      const profile = await this.db
+        .findOne<any>("employee_payroll_profiles", {
+          empcloud_user_id: numeric,
+          is_active: 1,
+        })
+        .catch(() => null);
+      if (profile) return { id: profile.id, empcloud_user_id: numeric };
     }
     return null;
   }
