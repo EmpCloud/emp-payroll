@@ -130,19 +130,53 @@ export class InsuranceService {
       limit: 500,
     });
 
-    // Enrich with policy names and employee names
-    const policyIds = [...new Set(result.data.map((e: any) => e.policy_id))];
+    // #173 — Enrichment must not crash the list. Previously, a failing lookup
+    // inside either loop (missing row, bad id, table-not-visible) surfaced as
+    // a 500 on GET /insurance/enrollments even though the dashboard count
+    // from the same table succeeded. Isolate each lookup and fall back to
+    // `employee_payroll_profiles` (newer Apply-to-Payroll orgs) when the
+    // legacy `employees` row is missing — same pattern as reimbursements
+    // (#159/#160).
+    const policyIds = [...new Set(result.data.map((e: any) => e.policy_id).filter(Boolean))];
     const policyMap: Record<string, any> = {};
     for (const pid of policyIds) {
-      const policy = await this.db.findById<any>("insurance_policies", pid as string);
-      if (policy) policyMap[pid as string] = policy;
+      try {
+        const policy = await this.db.findById<any>("insurance_policies", pid as string);
+        if (policy) policyMap[pid as string] = policy;
+      } catch {
+        // orphaned policy_id — leave name as "Unknown"
+      }
     }
 
-    const empIds = [...new Set(result.data.map((e: any) => String(e.employee_id)))];
-    const empMap: Record<string, any> = {};
+    const empIds = [
+      ...new Set(
+        result.data
+          .map((e: any) => (e.employee_id == null ? null : String(e.employee_id)))
+          .filter(Boolean),
+      ),
+    ] as string[];
+    const empMap: Record<string, { first_name: string; last_name: string }> = {};
     for (const eid of empIds) {
-      const emp = await this.db.findOne<any>("employees", { empcloud_user_id: Number(eid) });
-      if (emp) empMap[eid] = emp;
+      const numeric = Number(eid);
+      if (!Number.isFinite(numeric)) continue;
+      try {
+        const emp = await this.db.findOne<any>("employees", { empcloud_user_id: numeric });
+        if (emp) {
+          empMap[eid] = { first_name: emp.first_name, last_name: emp.last_name };
+          continue;
+        }
+        const profile = await this.db.findOne<any>("employee_payroll_profiles", {
+          empcloud_user_id: numeric,
+        });
+        if (profile) {
+          empMap[eid] = {
+            first_name: profile.first_name || "",
+            last_name: profile.last_name || "",
+          };
+        }
+      } catch {
+        // swallow and fall through to fallback name
+      }
     }
 
     return {
@@ -152,7 +186,8 @@ export class InsuranceService {
         policy_name: policyMap[e.policy_id]?.name || "Unknown",
         policy_type: policyMap[e.policy_id]?.type || "",
         employee_name: empMap[String(e.employee_id)]
-          ? `${empMap[String(e.employee_id)].first_name} ${empMap[String(e.employee_id)].last_name}`
+          ? `${empMap[String(e.employee_id)].first_name} ${empMap[String(e.employee_id)].last_name}`.trim() ||
+            `Employee #${e.employee_id}`
           : `Employee #${e.employee_id}`,
       })),
     };
@@ -259,12 +294,36 @@ export class InsuranceService {
       limit: 200,
     });
 
-    // Enrich with employee names
-    const empIds = [...new Set(result.data.map((c: any) => String(c.employee_id)))];
-    const empMap: Record<string, any> = {};
+    // Enrich with employee names — same defensive pattern as listEnrollments.
+    const empIds = [
+      ...new Set(
+        result.data
+          .map((c: any) => (c.employee_id == null ? null : String(c.employee_id)))
+          .filter(Boolean),
+      ),
+    ] as string[];
+    const empMap: Record<string, { first_name: string; last_name: string }> = {};
     for (const eid of empIds) {
-      const emp = await this.db.findOne<any>("employees", { empcloud_user_id: Number(eid) });
-      if (emp) empMap[eid] = emp;
+      const numeric = Number(eid);
+      if (!Number.isFinite(numeric)) continue;
+      try {
+        const emp = await this.db.findOne<any>("employees", { empcloud_user_id: numeric });
+        if (emp) {
+          empMap[eid] = { first_name: emp.first_name, last_name: emp.last_name };
+          continue;
+        }
+        const profile = await this.db.findOne<any>("employee_payroll_profiles", {
+          empcloud_user_id: numeric,
+        });
+        if (profile) {
+          empMap[eid] = {
+            first_name: profile.first_name || "",
+            last_name: profile.last_name || "",
+          };
+        }
+      } catch {
+        // swallow — leave as fallback label
+      }
     }
 
     return {
@@ -273,7 +332,8 @@ export class InsuranceService {
         ...c,
         documents: typeof c.documents === "string" ? JSON.parse(c.documents) : c.documents,
         employee_name: empMap[String(c.employee_id)]
-          ? `${empMap[String(c.employee_id)].first_name} ${empMap[String(c.employee_id)].last_name}`
+          ? `${empMap[String(c.employee_id)].first_name} ${empMap[String(c.employee_id)].last_name}`.trim() ||
+            `Employee #${c.employee_id}`
           : `Employee #${c.employee_id}`,
       })),
     };
