@@ -27,7 +27,9 @@ import {
 import toast from "react-hot-toast";
 
 export function BenchmarksPage() {
-  const [tab, setTab] = useState<"benchmarks" | "compa-ratio">("benchmarks");
+  const [tab, setTab] = useState<"benchmarks" | "compa-ratio" | "below-market" | "above-market">(
+    "benchmarks",
+  );
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   // When set, the create modal re-purposes itself as an edit form pre-filled
@@ -43,7 +45,9 @@ export function BenchmarksPage() {
   const { data: compaRes, isLoading: compaLoading } = useQuery({
     queryKey: ["compa-ratio"],
     queryFn: () => apiGet<any>("/benchmarks/reports/compa-ratio"),
-    enabled: tab === "compa-ratio",
+    // #150 — the Below/Above Market tabs drill into the same dataset, so we
+    // need the compa-ratio fetch for any of those three tabs.
+    enabled: tab === "compa-ratio" || tab === "below-market" || tab === "above-market",
   });
 
   const benchmarks = benchRes?.data || [];
@@ -273,17 +277,21 @@ export function BenchmarksPage() {
           title="Below Market"
           value={dist.belowMarket || 0}
           icon={TrendingDown}
-          onClick={() => setTab("compa-ratio")}
+          onClick={() => setTab("below-market")}
         />
         <StatCard
           title="Above Market"
           value={dist.aboveMarket || 0}
           icon={TrendingUp}
-          onClick={() => setTab("compa-ratio")}
+          onClick={() => setTab("above-market")}
         />
       </div>
 
       {/* Tabs */}
+      {/* #150 — Below/Above Market tabs added next to Compa-Ratio Report so
+          the matching cards have a drill-in destination that scopes the table
+          to just those employees. Counts reuse the same distribution numbers
+          surfaced on the stat cards for consistency. */}
       <div className="mb-4 flex gap-2 border-b border-gray-200">
         <button
           onClick={() => setTab("benchmarks")}
@@ -296,6 +304,18 @@ export function BenchmarksPage() {
           className={`px-4 py-2 text-sm font-medium ${tab === "compa-ratio" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
         >
           Compa-Ratio Report
+        </button>
+        <button
+          onClick={() => setTab("below-market")}
+          className={`px-4 py-2 text-sm font-medium ${tab === "below-market" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
+        >
+          Below Market ({dist.belowMarket || 0})
+        </button>
+        <button
+          onClick={() => setTab("above-market")}
+          className={`px-4 py-2 text-sm font-medium ${tab === "above-market" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
+        >
+          Above Market ({dist.aboveMarket || 0})
         </button>
       </div>
 
@@ -352,6 +372,34 @@ export function BenchmarksPage() {
                 </CardContent>
               </Card>
             </>
+          )}
+        </>
+      )}
+
+      {(tab === "below-market" || tab === "above-market") && (
+        <>
+          {compaLoading ? (
+            <div className="flex h-32 items-center justify-center">
+              <Loader2 className="text-brand-600 h-6 w-6 animate-spin" />
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <DataTable
+                  columns={compaColumns}
+                  data={compaEmployees.filter(
+                    (e: any) =>
+                      e.marketPosition ===
+                      (tab === "below-market" ? "below_market" : "above_market"),
+                  )}
+                  emptyMessage={
+                    tab === "below-market"
+                      ? "No employees below market"
+                      : "No employees above market"
+                  }
+                />
+              </CardContent>
+            </Card>
           )}
         </>
       )}
