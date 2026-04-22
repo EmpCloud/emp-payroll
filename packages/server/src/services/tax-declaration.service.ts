@@ -217,7 +217,7 @@ export class TaxDeclarationService {
   private async resolveEmployeeIds(
     employeeId: string,
   ): Promise<{ empcloudUserId: number | null; employeeRowId: string | null }> {
-    // Try direct lookup by employees.id
+    // Try direct lookup by employees.id (legacy layout)
     const byId = await this.db.findById<any>("employees", employeeId).catch(() => null);
     if (byId) {
       return {
@@ -226,7 +226,10 @@ export class TaxDeclarationService {
       };
     }
 
-    // Try numeric empcloud_user_id
+    // Numeric → EmpCloud user id. Check legacy employees table, then the
+    // newer employee_payroll_profiles table (current source of truth for
+    // users provisioned via Apply-to-Payroll). See reimbursement.service
+    // for the same dual-lookup and the #159/#160 motivation.
     const numeric = Number(employeeId);
     if (Number.isFinite(numeric)) {
       const byEmpcloud = await this.db
@@ -234,6 +237,15 @@ export class TaxDeclarationService {
         .catch(() => null);
       if (byEmpcloud) {
         return { empcloudUserId: numeric, employeeRowId: byEmpcloud.id };
+      }
+      const profile = await this.db
+        .findOne<any>("employee_payroll_profiles", {
+          empcloud_user_id: numeric,
+          is_active: 1,
+        })
+        .catch(() => null);
+      if (profile) {
+        return { empcloudUserId: numeric, employeeRowId: profile.id };
       }
       return { empcloudUserId: numeric, employeeRowId: null };
     }
