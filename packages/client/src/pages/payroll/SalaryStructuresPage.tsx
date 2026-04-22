@@ -467,7 +467,11 @@ function StructureCard({
             <Badge variant={ss.is_active ? "active" : "inactive"}>
               {ss.is_active ? "Active" : "Inactive"}
             </Badge>
-            {ss.is_default && <Badge variant="approved">Default</Badge>}
+            {/* #162 — MySQL returns tinyint(1) as the number 0/1, so
+                `{ss.is_default && <Badge/>}` rendered a literal "0" next to
+                the Active badge when the structure wasn't the default. Coerce
+                to a real boolean so React skips the falsy branch cleanly. */}
+            {!!ss.is_default && <Badge variant="approved">Default</Badge>}
             <span className="text-xs text-gray-400">
               {earningCount > 0 && `${earningCount} earnings`}
               {deductionCount > 0 && ` · ${deductionCount} deductions`}
