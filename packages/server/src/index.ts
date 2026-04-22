@@ -125,6 +125,10 @@ v1.use("/insurance", insuranceRoutes);
 v1.use("/global", globalPayrollRoutes);
 v1.use("/holidays", holidayRoutes);
 v1.use("/departments", departmentRoutes);
+// #147 — Also expose health under /api/v1/system/health so the System
+// Health page reaches the server through the same API base as every other
+// request. The top-level /health mount is preserved for infra probes.
+v1.use("/system/health", healthRoutes);
 v1.get("/docs/openapi.json", apiDocsHandler);
 v1.get("/docs", swaggerUIHandler);
 
