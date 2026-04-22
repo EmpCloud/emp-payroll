@@ -97,6 +97,14 @@ export function SettingsPage() {
       toast.error("Company Name is required");
       return;
     }
+    // #156 — Registered Address is required for statutory correspondence
+    // (PF/ESI/PT filings). Fire this before PAN/TAN format checks so users
+    // see the "missing field" error ahead of the "filled but malformed"
+    // error when multiple fields are wrong at once.
+    if (!orgAddressStr) {
+      toast.error("Registered Address is required");
+      return;
+    }
     // #124 — Basic shape checks for PAN (AAAAA9999A) and TAN (AAAA99999A).
     // Skip when the user hasn't filled them in yet (they're optional for new
     // tenants), but reject malformed values so bad data doesn't land.
