@@ -9,6 +9,7 @@ import { SelectField } from "@/components/ui/SelectField";
 import { Modal } from "@/components/ui/Modal";
 import { DataTable } from "@/components/ui/DataTable";
 import { apiGet, apiPost } from "@/api/client";
+import { useDepartments } from "@/api/hooks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Loader2, Globe } from "lucide-react";
 import toast from "react-hot-toast";
@@ -100,6 +101,13 @@ export function GlobalEmployeesPage() {
   const [countryFilter, setCountryFilter] = useState(searchParams.get("country") || "");
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // #180 — Source the org's department list so the Add Employee form can
+  // offer a dropdown instead of a free-text input. Mirrors the pattern in
+  // EmployeeCreatePage; falls back to a free-text input when the org has
+  // no departments configured yet so a fresh tenant isn't blocked.
+  const { data: deptRes } = useDepartments();
+  const departments: { id: string; name: string }[] = deptRes?.data || [];
 
   // Form state
   const [form, setForm] = useState({
@@ -374,11 +382,24 @@ export function GlobalEmployeesPage() {
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Department"
-              value={form.department}
-              onChange={(e) => setForm({ ...form, department: e.target.value })}
-            />
+            {departments.length > 0 ? (
+              <SelectField
+                label="Department"
+                value={form.department}
+                onChange={(e) => setForm({ ...form, department: e.target.value })}
+                options={[
+                  { value: "", label: "Select department..." },
+                  ...departments.map((d) => ({ value: d.name, label: d.name })),
+                ]}
+              />
+            ) : (
+              <Input
+                label="Department"
+                value={form.department}
+                onChange={(e) => setForm({ ...form, department: e.target.value })}
+                title="No departments configured yet — add some from Settings > Departments"
+              />
+            )}
             <Input
               label="Start Date *"
               type="date"
