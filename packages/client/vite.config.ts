@@ -9,6 +9,10 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@shared": path.resolve(__dirname, "../shared/src"),
+      // Resolve the workspace package directly to its TS source so vite/rollup
+      // doesn't have to grok the CJS dist barrel — matches the tsconfig path
+      // alias and avoids "X is not exported by .../shared/dist/index.js" errors.
+      "@emp-payroll/shared": path.resolve(__dirname, "../shared/src"),
     },
   },
   server: {
