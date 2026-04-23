@@ -39,6 +39,11 @@ import {
 } from "lucide-react";
 import { api } from "@/api/client";
 import toast from "react-hot-toast";
+import {
+  resolveSalaryComponents,
+  SalaryResolverError,
+  type ResolverComponent,
+} from "@emp-payroll/shared";
 
 export function EmployeeDetailPage() {
   const { id } = useParams();
@@ -1126,29 +1131,44 @@ function SalaryAssignForm({
   const [structureId, setStructureId] = useState(structures[0]?.id || "");
   const [ctc, setCTC] = useState(currentCTC || 0);
 
-  // Auto-calculate components from CTC
-  const monthlyBasic = Math.round((ctc * 0.4) / 12);
-  const monthlyHRA = Math.round(monthlyBasic * 0.5);
-  const monthlyEPF = Math.round(Math.min(monthlyBasic, 15000) * 0.12);
-  const monthlySA = Math.round(ctc / 12 - monthlyBasic - monthlyHRA - monthlyEPF);
+  // Pull the selected structure's components so the preview reflects what the
+  // server will actually compute (including Balance, percentage chains, etc.).
+  const { data: compsRes } = useQuery({
+    queryKey: ["salary-structure-components", structureId],
+    queryFn: () => apiGet<any>(`/salary-structures/${structureId}/components`),
+    enabled: !!structureId,
+  });
+  const definitions: ResolverComponent[] = (compsRes?.data?.data || []).map((c: any) => ({
+    code: c.code,
+    name: c.name,
+    type: c.type,
+    calculationType: c.calculation_type,
+    value: Number(c.value) || 0,
+    percentageOf: c.percentage_of || undefined,
+  }));
 
-  const comps = [
-    { code: "BASIC", label: "Basic Salary", monthly: monthlyBasic },
-    { code: "HRA", label: "HRA", monthly: monthlyHRA },
-    { code: "SA", label: "Special Allowance", monthly: monthlySA },
-  ];
+  let resolved: { code: string; name: string; monthlyAmount: number }[] = [];
+  let resolveError: string | null = null;
+  if (ctc > 0 && definitions.length) {
+    try {
+      resolved = resolveSalaryComponents(definitions, ctc);
+    } catch (err) {
+      resolveError =
+        err instanceof SalaryResolverError ? err.message : "Could not compute breakdown.";
+    }
+  }
+  const monthlyBasic = resolved.find((c) => c.code === "BASIC")?.monthlyAmount || 0;
+  const monthlyGross = resolved.reduce((s, c) => s + c.monthlyAmount, 0);
+  const monthlyEPF = Math.round(Math.min(monthlyBasic, 15000) * 0.12);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Don't pre-compute components — let the server resolve from the structure
+    // so the math stays in one place (and `balance` is honored authoritatively).
     onSubmit({
       employeeId,
       structureId,
       ctc,
-      components: comps.map((c) => ({
-        code: c.code,
-        monthlyAmount: c.monthly,
-        annualAmount: c.monthly * 12,
-      })),
       effectiveFrom: new Date().toISOString().slice(0, 10),
     });
   }
@@ -1176,30 +1196,36 @@ function SalaryAssignForm({
       {ctc > 0 && (
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
           <h4 className="mb-3 text-sm font-semibold text-gray-700">
-            Monthly Breakdown (auto-calculated)
+            Monthly Breakdown (from structure)
           </h4>
-          <div className="space-y-2">
-            {comps.map((c) => (
-              <div key={c.code} className="flex justify-between text-sm">
-                <span className="text-gray-500">{c.label}</span>
-                <span className="font-medium text-gray-900">{formatCurrency(c.monthly)}</span>
+          {resolveError ? (
+            <p className="text-sm text-red-600">{resolveError}</p>
+          ) : resolved.length === 0 ? (
+            <p className="text-sm text-gray-400">Select a structure to see the breakdown.</p>
+          ) : (
+            <div className="space-y-2">
+              {resolved.map((c) => (
+                <div key={c.code} className="flex justify-between text-sm">
+                  <span className="text-gray-500">{c.name}</span>
+                  <span className="font-medium text-gray-900">
+                    {formatCurrency(c.monthlyAmount)}
+                  </span>
+                </div>
+              ))}
+              <div className="flex justify-between border-t border-gray-200 pt-2 text-sm font-semibold">
+                <span>Monthly Gross</span>
+                <span>{formatCurrency(monthlyGross)}</span>
               </div>
-            ))}
-            <div className="flex justify-between border-t border-gray-200 pt-2 text-sm font-semibold">
-              <span>Monthly Gross</span>
-              <span>{formatCurrency(monthlyBasic + monthlyHRA + monthlySA)}</span>
+              <div className="flex justify-between text-sm text-red-600">
+                <span>EPF Deduction</span>
+                <span>-{formatCurrency(monthlyEPF)}</span>
+              </div>
+              <div className="text-brand-700 flex justify-between border-t border-gray-200 pt-2 text-sm font-bold">
+                <span>Approx Net Pay</span>
+                <span>{formatCurrency(monthlyGross - monthlyEPF - 200)}</span>
+              </div>
             </div>
-            <div className="flex justify-between text-sm text-red-600">
-              <span>EPF Deduction</span>
-              <span>-{formatCurrency(monthlyEPF)}</span>
-            </div>
-            <div className="text-brand-700 flex justify-between border-t border-gray-200 pt-2 text-sm font-bold">
-              <span>Approx Net Pay</span>
-              <span>
-                {formatCurrency(monthlyBasic + monthlyHRA + monthlySA - monthlyEPF - 200)}
-              </span>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -1215,7 +1241,7 @@ function SalaryAssignForm({
         <Button variant="outline" type="button" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" loading={loading} disabled={!ctc || !structureId}>
+        <Button type="submit" loading={loading} disabled={!ctc || !structureId || !!resolveError}>
           {currentCTC ? "Apply Revision" : "Assign Salary"}
         </Button>
       </div>
