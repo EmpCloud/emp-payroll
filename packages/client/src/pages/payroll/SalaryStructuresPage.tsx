@@ -24,7 +24,7 @@ interface ComponentRow {
   name: string;
   code: string;
   type: "earning" | "deduction" | "reimbursement";
-  calculationType: "percentage" | "fixed";
+  calculationType: "percentage" | "fixed" | "balance";
   value: number;
   percentageOf: string;
 }
@@ -50,7 +50,7 @@ const DEFAULT_COMPONENTS: ComponentRow[] = [
     name: "Special Allowance",
     code: "SA",
     type: "earning",
-    calculationType: "fixed",
+    calculationType: "balance",
     value: 0,
     percentageOf: "",
   },
@@ -102,6 +102,10 @@ export function SalaryStructuresPage() {
   function updateComponent(i: number, field: string, value: any) {
     const updated = [...components];
     (updated[i] as any)[field] = value;
+    // Balance only makes sense for earnings; if user switches type, demote to fixed.
+    if (field === "type" && value !== "earning" && updated[i].calculationType === "balance") {
+      updated[i].calculationType = "fixed";
+    }
     setComponents(updated);
   }
 
@@ -134,6 +138,21 @@ export function SalaryStructuresPage() {
 
   async function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    // Only one component may use Balance calculation, and only earnings can.
+    const balanceRows = components.filter(
+      (c) => c.calculationType === "balance" && c.name && c.code,
+    );
+    if (balanceRows.length > 1) {
+      toast.error("Only one component can use Balance calculation.");
+      return;
+    }
+    const badBalance = balanceRows.find((c) => c.type !== "earning");
+    if (badBalance) {
+      toast.error(`Balance calculation is only valid for earnings (${badBalance.code}).`);
+      return;
+    }
+
     const fd = new FormData(e.currentTarget);
     setSaving(true);
 
@@ -148,8 +167,9 @@ export function SalaryStructuresPage() {
           code: c.code,
           type: c.type,
           calculationType: c.calculationType,
-          value: c.value,
-          percentageOf: c.percentageOf || undefined,
+          value: c.calculationType === "balance" ? 0 : c.value,
+          percentageOf:
+            c.calculationType === "percentage" ? c.percentageOf || undefined : undefined,
           isTaxable: c.type === "earning",
           isStatutory: false,
           isProratable: true,
@@ -363,17 +383,27 @@ export function SalaryStructuresPage() {
                       >
                         <option value="percentage">%</option>
                         <option value="fixed">Fixed</option>
+                        {(c.type === "earning" || c.calculationType === "balance") && (
+                          <option value="balance">Balance</option>
+                        )}
                       </select>
                       <input
-                        className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-1"
+                        className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-1 disabled:bg-gray-50 disabled:text-gray-300"
                         type="number"
-                        value={c.value}
+                        value={c.calculationType === "balance" ? "" : c.value}
+                        placeholder={c.calculationType === "balance" ? "auto" : ""}
                         onChange={(e) => updateComponent(i, "value", Number(e.target.value))}
+                        disabled={c.calculationType === "balance"}
+                        title={
+                          c.calculationType === "balance"
+                            ? "Auto-filled from CTC at assignment time"
+                            : undefined
+                        }
                       />
                       <input
                         className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 font-mono text-sm focus:outline-none focus:ring-1 disabled:bg-gray-50 disabled:text-gray-300"
-                        placeholder="CTC"
-                        value={c.percentageOf}
+                        placeholder={c.calculationType === "balance" ? "—" : "CTC"}
+                        value={c.calculationType === "balance" ? "" : c.percentageOf}
                         onChange={(e) =>
                           updateComponent(i, "percentageOf", e.target.value.toUpperCase())
                         }
@@ -413,7 +443,9 @@ export function SalaryStructuresPage() {
             <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-950 dark:text-blue-300">
               <strong>Note:</strong> Statutory deductions (EPF, ESI, PT, TDS) are computed
               automatically during payroll and do not need to be added here. Use "Deduction" type
-              for recurring non-statutory deductions like canteen fees or welfare fund.
+              for recurring non-statutory deductions like canteen fees or welfare fund. Use{" "}
+              <strong>Balance</strong> on one earning (typically Special Allowance) to absorb
+              whatever portion of CTC remains after the other components.
             </div>
           </div>
 

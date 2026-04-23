@@ -190,9 +190,9 @@ export interface SalaryComponent {
   name: string; // e.g., "Basic Salary", "HRA", "Special Allowance"
   code: string; // e.g., "BASIC", "HRA", "SA"
   type: ComponentType;
-  calculationType: "fixed" | "percentage" | "formula";
-  value: number; // fixed amount or percentage
-  percentageOf?: string; // component code to calculate percentage of
+  calculationType: "fixed" | "percentage" | "formula" | "balance";
+  value: number; // fixed amount or percentage (ignored when calculationType === "balance")
+  percentageOf?: string; // component code to calculate percentage of (CTC | GROSS | <CODE>)
   formula?: string; // custom formula
   isTaxable: boolean;
   isStatutory: boolean; // PF, ESI, PT

@@ -1,8 +1,43 @@
 import { getDB } from "../db/adapters";
 import { AppError } from "../api/middleware/error.middleware";
+import {
+  resolveSalaryComponents,
+  SalaryResolverError,
+  type ResolverComponent,
+} from "@emp-payroll/shared";
 
 export class SalaryService {
   private db = getDB();
+
+  /**
+   * Load a structure's components and resolve them against an annual CTC,
+   * returning monthly amounts ready to persist on `employee_salaries`.
+   * Honors `balance` calc type — exactly one earning may absorb the remainder
+   * of monthly gross after fixed/percentage rows are computed.
+   */
+  private async resolveComponentsForCTC(structureId: string, ctcAnnual: number) {
+    const rows = await this.db.findMany<any>("salary_components", {
+      filters: { structure_id: structureId, is_active: true },
+      sort: { field: "sort_order", order: "asc" },
+    });
+    const list = (rows as any).data ?? rows ?? [];
+    const definitions: ResolverComponent[] = list.map((c: any) => ({
+      code: c.code,
+      name: c.name,
+      type: c.type,
+      calculationType: c.calculation_type,
+      value: Number(c.value) || 0,
+      percentageOf: c.percentage_of || undefined,
+    }));
+    try {
+      return resolveSalaryComponents(definitions, ctcAnnual);
+    } catch (err) {
+      if (err instanceof SalaryResolverError) {
+        throw new AppError(400, err.code, err.message);
+      }
+      throw err;
+    }
+  }
 
   async listStructures(orgId: string) {
     return this.db.findMany<any>("salary_structures", {
@@ -175,6 +210,21 @@ export class SalaryService {
   }
 
   async assignToEmployee(data: any) {
+    // If caller didn't pre-compute components, derive them from the structure.
+    // This is the path that supports `balance` calculation: the structure is
+    // the source of truth, the resolver does the math from CTC.
+    let components = data.components;
+    if (!components || components.length === 0) {
+      if (!data.structureId) {
+        throw new AppError(
+          400,
+          "MISSING_COMPONENTS",
+          "Either components[] or structureId is required.",
+        );
+      }
+      components = await this.resolveComponentsForCTC(data.structureId, Number(data.ctc));
+    }
+
     // Deactivate current salary
     await this.db.updateMany(
       "employee_salaries",
@@ -185,10 +235,7 @@ export class SalaryService {
       { is_active: false },
     );
 
-    const grossSalary = data.components.reduce(
-      (sum: number, c: any) => sum + c.monthlyAmount * 12,
-      0,
-    );
+    const grossSalary = components.reduce((sum: number, c: any) => sum + c.monthlyAmount * 12, 0);
 
     return this.db.create("employee_salaries", {
       employee_id: "00000000-0000-0000-0000-000000000000",
@@ -197,7 +244,7 @@ export class SalaryService {
       ctc: data.ctc,
       gross_salary: grossSalary,
       net_salary: grossSalary, // Will be computed properly during payroll
-      components: JSON.stringify(data.components),
+      components: JSON.stringify(components),
       effective_from: data.effectiveFrom,
       is_active: true,
     });
@@ -246,20 +293,10 @@ export class SalaryService {
           }
         }
 
-        const monthly = ctc / 12;
-        const basic = Math.round(monthly * 0.4);
-        const hra = Math.round(basic * 0.5);
-        const sa = Math.round(monthly - basic - hra);
-        const components = [
-          { code: "BASIC", name: "Basic Salary", monthlyAmount: basic, annualAmount: basic * 12 },
-          {
-            code: "HRA",
-            name: "House Rent Allowance",
-            monthlyAmount: hra,
-            annualAmount: hra * 12,
-          },
-          { code: "SA", name: "Special Allowance", monthlyAmount: sa, annualAmount: sa * 12 },
-        ];
+        // Resolve components from the chosen structure (supports `balance`
+        // calc type, percentage chains, etc). Falls back per-row to whatever
+        // the structure defines — no more hardcoded Basic/HRA/SA math here.
+        const components = await this.resolveComponentsForCTC(sharedData.structureId, ctc);
         await this.assignToEmployee({ employeeId, ctc, components, ...sharedData });
         results.push({ employeeId, success: true });
       } catch (err: any) {
