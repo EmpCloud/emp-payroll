@@ -60,7 +60,14 @@ export const config = {
   },
 
   // Email (payslip delivery)
+  // Provider preference: SendGrid when SENDGRID_API_KEY is set, else SMTP
+  // (nodemailer). Keeping the SMTP block lets local-dev / on-prem stays
+  // working without a SendGrid account.
   email: {
+    sendgridApiKey: process.env.SENDGRID_API_KEY || "",
+    fromEmail: process.env.EMAIL_FROM_EMAIL || process.env.SMTP_FROM || "payroll@empcloud.com",
+    fromName: process.env.EMAIL_FROM_NAME || "EMP Payroll",
+    // SMTP fallback (used only when SENDGRID_API_KEY is empty)
     host: process.env.SMTP_HOST || "smtp.gmail.com",
     port: parseInt(process.env.SMTP_PORT || "587"),
     user: process.env.SMTP_USER || "",

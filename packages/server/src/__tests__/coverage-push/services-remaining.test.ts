@@ -53,6 +53,9 @@ vi.mock("nodemailer", () => ({
     .fn()
     .mockReturnValue({ sendMail: vi.fn().mockResolvedValue({ messageId: "test" }) }),
 }));
+vi.mock("@sendgrid/mail", () => ({
+  default: { setApiKey: vi.fn(), send: vi.fn().mockResolvedValue([{ statusCode: 202 }]) },
+}));
 
 import { getDB } from "../../db/adapters";
 import { getEmpCloudDB, findOrgById } from "../../db/empcloud";
