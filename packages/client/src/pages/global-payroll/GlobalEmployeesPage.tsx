@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/Input";
 import { SelectField } from "@/components/ui/SelectField";
 import { Modal } from "@/components/ui/Modal";
 import { DataTable } from "@/components/ui/DataTable";
-import { apiGet, apiPost } from "@/api/client";
+import { apiGet, apiPost, apiPut } from "@/api/client";
 import { useDepartments } from "@/api/hooks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Loader2, Globe } from "lucide-react";
+import { Plus, Search, Loader2, Globe, Pencil, UserX } from "lucide-react";
 import toast from "react-hot-toast";
 
 const EMPLOYMENT_TYPES = [
@@ -101,6 +101,10 @@ export function GlobalEmployeesPage() {
   const [countryFilter, setCountryFilter] = useState(searchParams.get("country") || "");
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
+  // When set, the Add Employee modal acts as Edit (PUT instead of POST,
+  // pre-populates form from this row).
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [terminatingId, setTerminatingId] = useState<string | null>(null);
 
   // #180 — Source the org's department list so the Add Employee form can
   // offer a dropdown instead of a free-text input. Mirrors the pattern in
@@ -158,7 +162,57 @@ export function GlobalEmployeesPage() {
     label: `${c.name} (${c.currency})`,
   }));
 
-  const handleAdd = async () => {
+  const emptyForm = {
+    firstName: "",
+    lastName: "",
+    email: "",
+    countryId: "",
+    employmentType: "eor" as string,
+    contractType: "full_time" as string,
+    jobTitle: "",
+    department: "",
+    startDate: "",
+    salaryAmount: "",
+    salaryFrequency: "monthly" as string,
+    taxId: "",
+    bankName: "",
+    bankAccount: "",
+    bankRouting: "",
+    notes: "",
+  };
+
+  const closeModal = () => {
+    setShowAdd(false);
+    setEditingId(null);
+    setForm(emptyForm);
+  };
+
+  const openEdit = (row: any) => {
+    setEditingId(row.id);
+    setForm({
+      firstName: row.first_name || "",
+      lastName: row.last_name || "",
+      email: row.email || "",
+      countryId: row.country_id ? String(row.country_id) : "",
+      employmentType: row.employment_type || "eor",
+      contractType: row.contract_type || "full_time",
+      jobTitle: row.job_title || "",
+      department: row.department || "",
+      // <input type=date> needs YYYY-MM-DD
+      startDate: row.start_date ? String(row.start_date).slice(0, 10) : "",
+      // server stores cents/paise; convert to major unit for display
+      salaryAmount: row.salary_amount ? String(Number(row.salary_amount) / 100) : "",
+      salaryFrequency: row.salary_frequency || "monthly",
+      taxId: row.tax_id || "",
+      bankName: row.bank_name || "",
+      bankAccount: row.bank_account || "",
+      bankRouting: row.bank_routing || "",
+      notes: row.notes || "",
+    });
+    setShowAdd(true);
+  };
+
+  const handleSubmit = async () => {
     if (
       !form.firstName ||
       !form.lastName ||
@@ -173,36 +227,45 @@ export function GlobalEmployeesPage() {
     }
     setSaving(true);
     try {
-      await apiPost("/global/employees", {
+      const payload = {
         ...form,
         salaryAmount: Math.round(Number(form.salaryAmount) * 100),
-      });
-      toast.success("Global employee added");
-      setShowAdd(false);
-      setForm({
-        firstName: "",
-        lastName: "",
-        email: "",
-        countryId: "",
-        employmentType: "eor",
-        contractType: "full_time",
-        jobTitle: "",
-        department: "",
-        startDate: "",
-        salaryAmount: "",
-        salaryFrequency: "monthly",
-        taxId: "",
-        bankName: "",
-        bankAccount: "",
-        bankRouting: "",
-        notes: "",
-      });
+      };
+      if (editingId) {
+        await apiPut(`/global/employees/${editingId}`, payload);
+        toast.success("Global employee updated");
+      } else {
+        await apiPost("/global/employees", payload);
+        toast.success("Global employee added");
+      }
+      closeModal();
       qc.invalidateQueries({ queryKey: ["global-employees"] });
       qc.invalidateQueries({ queryKey: ["global-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to add employee");
+      toast.error(
+        err.response?.data?.error?.message ||
+          (editingId ? "Failed to update employee" : "Failed to add employee"),
+      );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTerminate = async (row: any) => {
+    const reason = window.prompt(
+      `Terminate ${row.first_name} ${row.last_name}? Enter a reason (required):`,
+    );
+    if (!reason || !reason.trim()) return;
+    setTerminatingId(row.id);
+    try {
+      await apiPost(`/global/employees/${row.id}/terminate`, { reason: reason.trim() });
+      toast.success("Employee terminated");
+      qc.invalidateQueries({ queryKey: ["global-employees"] });
+      qc.invalidateQueries({ queryKey: ["global-dashboard"] });
+    } catch (err: any) {
+      toast.error(err.response?.data?.error?.message || "Failed to terminate employee");
+    } finally {
+      setTerminatingId(null);
     }
   };
 
@@ -270,6 +333,47 @@ export function GlobalEmployeesPage() {
       header: "Start Date",
       render: (row: any) => new Date(row.start_date).toLocaleDateString(),
     },
+    {
+      key: "actions",
+      header: "Actions",
+      render: (row: any) => (
+        // Edit reuses the Add modal in edit-mode (PUT). Terminate prompts for
+        // a reason and POSTs to /employees/:id/terminate (the backend's
+        // soft-delete equivalent — there is no hard DELETE for global
+        // employees by design). Hide both for already-terminated rows.
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            title="Edit employee"
+            onClick={(e) => {
+              e.stopPropagation();
+              openEdit(row);
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          {row.status !== "terminated" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              title="Terminate employee"
+              disabled={terminatingId === row.id}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTerminate(row);
+              }}
+            >
+              {terminatingId === row.id ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <UserX className="h-3.5 w-3.5 text-red-500" />
+              )}
+            </Button>
+          )}
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -333,8 +437,12 @@ export function GlobalEmployeesPage() {
         />
       )}
 
-      {/* Add Employee Modal */}
-      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add Global Employee">
+      {/* Add / Edit Employee Modal — same form, switches mode based on editingId */}
+      <Modal
+        open={showAdd}
+        onClose={closeModal}
+        title={editingId ? "Edit Global Employee" : "Add Global Employee"}
+      >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input
@@ -457,12 +565,12 @@ export function GlobalEmployeesPage() {
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => setShowAdd(false)}>
+            <Button variant="outline" onClick={closeModal}>
               Cancel
             </Button>
-            <Button onClick={handleAdd} disabled={saving}>
+            <Button onClick={handleSubmit} disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Add Employee
+              {editingId ? "Save Changes" : "Add Employee"}
             </Button>
           </div>
         </div>
