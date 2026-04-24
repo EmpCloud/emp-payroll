@@ -236,118 +236,58 @@ describe("AttendanceService", () => {
 // ============================================================================
 // ANNOUNCEMENT SERVICE (0% -> 100%)
 // ============================================================================
-describe("AnnouncementService", () => {
+// Announcements are now read-only and sourced from EmpCloud (the local
+// payroll table was dropped in migration 022). Tests cover the EmpCloud-
+// only read path; create / update / delete were removed with the table.
+describe("AnnouncementService (read-only EmpCloud)", () => {
   let mod: any;
   beforeEach(async () => {
     mod = await import("../../services/announcement.service");
   });
 
-  it("createAnnouncement creates with defaults", async () => {
-    const r = await mod.createAnnouncement({
-      orgId: 1,
-      authorId: 1,
-      title: "Test",
-      content: "Body",
-    });
-    expect(r.id).toBe("test-uuid-1234");
-    expect(mockDb.create).toHaveBeenCalledWith(
-      "announcements",
-      expect.objectContaining({ title: "Test", priority: "normal", category: "general" }),
-    );
-  });
+  function ecDbReturning(rows: any[], users: any[] = []) {
+    // First call → announcements query, second call → users batch lookup.
+    const announcementsQ: any = {
+      select: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      andWhere: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      then: (resolve: any) => resolve(rows),
+    };
+    const usersQ: any = {
+      whereIn: vi.fn().mockReturnThis(),
+      select: vi.fn().mockResolvedValue(users),
+    };
+    let call = 0;
+    return vi.fn().mockImplementation((_table: string) => (call++ === 0 ? announcementsQ : usersQ));
+  }
 
-  it("createAnnouncement with all options", async () => {
-    await mod.createAnnouncement({
-      orgId: 1,
-      authorId: 1,
-      title: "Urgent",
-      content: "Body",
-      priority: "urgent",
-      category: "hr",
-      isPinned: true,
-      publishAt: "2026-01-01",
-      expiresAt: "2026-12-31",
-    });
-    expect(mockDb.create).toHaveBeenCalledWith(
-      "announcements",
-      expect.objectContaining({
-        priority: "urgent",
-        category: "hr",
-        is_pinned: 1,
-      }),
+  it("listAnnouncements maps EmpCloud rows with ec- prefix and source tag", async () => {
+    mockedGetEmpCloudDB.mockReturnValue(
+      ecDbReturning(
+        [{ id: 7, title: "Town Hall", content: "...", priority: "high", is_active: 1 }],
+        [{ id: 5, first_name: "Ada", last_name: "Lovelace" }],
+      ) as any,
     );
-  });
-
-  it("listAnnouncements with defaults (nested array)", async () => {
-    mockDb.raw.mockResolvedValue([[{ id: "a1", author_id: 1 }]]);
     const r = await mod.listAnnouncements(1);
     expect(r).toHaveLength(1);
+    expect(r[0].id).toBe("ec-7");
+    expect(r[0].source).toBe("empcloud");
+    expect(r[0].priority).toBe("high");
   });
 
-  it("listAnnouncements with activeOnly=false", async () => {
-    mockDb.raw.mockResolvedValue([{ id: "a1" }]);
-    const r = await mod.listAnnouncements(1, { activeOnly: false });
-    expect(r).toHaveLength(1);
-  });
-
-  it("listAnnouncements with limit (rows format)", async () => {
-    mockDb.raw.mockResolvedValue({ rows: [{ id: "a1" }] });
-    const r = await mod.listAnnouncements(1, { limit: 5 });
-    expect(r).toHaveLength(1);
-  });
-
-  it("listAnnouncements handles EmpCloud errors gracefully", async () => {
-    mockDb.raw.mockResolvedValue([[{ id: "a1", author_id: 1 }]]);
-    const ecDb = makeMockEcDb();
-    ecDb.mockImplementation(() => {
+  it("listAnnouncements returns [] when EmpCloud is unreachable", async () => {
+    mockedGetEmpCloudDB.mockImplementation(() => {
       throw new Error("DB down");
     });
-    mockedGetEmpCloudDB.mockReturnValue(ecDb as any);
     const r = await mod.listAnnouncements(1);
-    expect(r).toHaveLength(1);
+    expect(r).toEqual([]);
   });
 
-  it("getAnnouncement returns row", async () => {
-    mockDb.raw.mockResolvedValue([[{ id: "a1", title: "Test" }]]);
-    const r = await mod.getAnnouncement("a1", 1);
-    expect(r.title).toBe("Test");
-  });
-
-  it("getAnnouncement returns null when not found", async () => {
-    mockDb.raw.mockResolvedValue([[]]);
-    const r = await mod.getAnnouncement("nonexist", 1);
+  it("getAnnouncement rejects non ec- IDs (no local table to query)", async () => {
+    const r = await mod.getAnnouncement("some-uuid", 1);
     expect(r).toBeNull();
-  });
-
-  it("updateAnnouncement updates fields", async () => {
-    mockDb.updateMany.mockResolvedValue(1);
-    const r = await mod.updateAnnouncement("a1", 1, {
-      title: "New",
-      content: "New",
-      priority: "high",
-      category: "event",
-      isPinned: true,
-      publishAt: "2026-01-01",
-      expiresAt: "2026-12-31",
-    });
-    expect(r).toBe(true);
-  });
-
-  it("updateAnnouncement returns false for empty update", async () => {
-    const r = await mod.updateAnnouncement("a1", 1, {});
-    expect(r).toBe(false);
-  });
-
-  it("deleteAnnouncement soft deletes", async () => {
-    mockDb.updateMany.mockResolvedValue(1);
-    const r = await mod.deleteAnnouncement("a1", 1);
-    expect(r).toBe(true);
-  });
-
-  it("deleteAnnouncement returns false when not found", async () => {
-    mockDb.updateMany.mockResolvedValue(0);
-    const r = await mod.deleteAnnouncement("a1", 1);
-    expect(r).toBe(false);
   });
 });
 
