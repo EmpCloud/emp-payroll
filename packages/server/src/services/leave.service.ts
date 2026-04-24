@@ -180,12 +180,24 @@ export class LeaveService {
   // List active leave types for an org — used by the Apply Leave form so the
   // dropdown shows the real codes/names instead of a hardcoded list that
   // didn't match what EmpCloud stored (issue #12).
+  //
+  // #198 — EmpCloud's leave_types table has no uniqueness constraint on
+  // (organization_id, code), so seeds / re-runs / manual inserts can leave
+  // duplicate rows behind. Dedupe by code here (lowest id wins, since the
+  // first row created is the canonical one) so the Apply Leave dropdown
+  // never shows the same leave type twice.
   async listLeaveTypes(orgId: string) {
     const empcloudDb = getEmpCloudDB();
-    return empcloudDb("leave_types")
+    const rows: Array<{ id: number; code: string; name: string }> = await empcloudDb("leave_types")
       .where({ organization_id: Number(orgId), is_active: true })
       .select("id", "code", "name")
-      .orderBy("name", "asc");
+      .orderBy("id", "asc");
+    const byCode = new Map<string, { id: number; code: string; name: string }>();
+    for (const r of rows) {
+      const key = (r.code || "").toUpperCase();
+      if (!byCode.has(key)) byCode.set(key, r);
+    }
+    return Array.from(byCode.values()).sort((a, b) => a.name.localeCompare(b.name));
   }
 
   // -------------------------------------------------------------------------
