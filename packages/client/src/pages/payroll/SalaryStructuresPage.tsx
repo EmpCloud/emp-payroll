@@ -186,7 +186,14 @@ export function SalaryStructuresPage() {
         toast.success("Salary structure created");
       }
       closeModal();
+      // #186 — also invalidate the per-structure components cache; the
+      // expanded card below the list reads from ["structure-components", id]
+      // and was rendering stale rows after Update because only the list
+      // cache was being invalidated. Prefix-only key matches every
+      // structure's component cache so the user sees the new rows
+      // immediately, no page reload required.
       qc.invalidateQueries({ queryKey: ["salary-structures"] });
+      qc.invalidateQueries({ queryKey: ["structure-components"] });
     } catch (err: any) {
       toast.error(err.response?.data?.error?.message || "Failed to save");
     } finally {
@@ -202,6 +209,7 @@ export function SalaryStructuresPage() {
       await apiDelete(`/salary-structures/${id}`);
       toast.success("Salary structure deleted");
       qc.invalidateQueries({ queryKey: ["salary-structures"] });
+      qc.invalidateQueries({ queryKey: ["structure-components"] });
     } catch (err: any) {
       toast.error(err.response?.data?.error?.message || "Failed to delete");
     } finally {
@@ -216,6 +224,7 @@ export function SalaryStructuresPage() {
       });
       toast.success("Structure duplicated");
       qc.invalidateQueries({ queryKey: ["salary-structures"] });
+      qc.invalidateQueries({ queryKey: ["structure-components"] });
     } catch (err: any) {
       toast.error(err?.response?.data?.error?.message || "Failed to duplicate");
     }
