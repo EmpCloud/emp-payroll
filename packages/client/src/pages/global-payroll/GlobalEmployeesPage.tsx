@@ -431,20 +431,26 @@ export function GlobalEmployeesPage() {
               value={form.taxId}
               onChange={(e) => setForm({ ...form, taxId: e.target.value })}
             />
+            {/* #187 — labels were ambiguous (Bank Name? Bank Account?). Make
+                 it explicit which is the bank, the account number, and the
+                 routing number; add placeholders showing the expected shape. */}
             <Input
               label="Bank Name"
+              placeholder="e.g. HDFC Bank"
               value={form.bankName}
               onChange={(e) => setForm({ ...form, bankName: e.target.value })}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Bank Account"
+              label="Bank Account Number"
+              placeholder="e.g. 12345678901234"
               value={form.bankAccount}
               onChange={(e) => setForm({ ...form, bankAccount: e.target.value })}
             />
             <Input
-              label="Bank Routing"
+              label="Bank Routing / IFSC"
+              placeholder="e.g. HDFC0001234"
               value={form.bankRouting}
               onChange={(e) => setForm({ ...form, bankRouting: e.target.value })}
             />
