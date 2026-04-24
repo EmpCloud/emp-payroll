@@ -40,6 +40,7 @@ export async function listAnnouncements(
   const db = getDB();
   const now = new Date().toISOString().replace("T", " ").replace("Z", "");
 
+  // ── Local payroll announcements ──────────────────────────────────────────
   let query = `SELECT * FROM announcements WHERE org_id = ?`;
   const params: any[] = [orgId];
 
@@ -56,28 +57,104 @@ export async function listAnnouncements(
   }
 
   const result = await db.raw<any>(query, params);
-  const announcements = Array.isArray(result)
+  const local: any[] = Array.isArray(result)
     ? Array.isArray(result[0])
       ? result[0]
       : result
     : result.rows || [];
+  for (const a of local) a.source = "payroll";
 
-  // Enrich with author names
+  // ── EmpCloud announcements (read-only) ───────────────────────────────────
+  // EmpCloud is the platform-wide source for company announcements; this
+  // page should surface them alongside payroll-local ones. Schema differs
+  // (no category, no is_pinned, different column names) — normalize to the
+  // payroll shape here.
+  let empcloud: any[] = [];
   try {
     const ecDb = getEmpCloudDB();
-    for (const a of announcements) {
-      if (a.author_id) {
-        const author = await ecDb("users")
-          .where({ id: Number(a.author_id) })
-          .select("first_name", "last_name")
-          .first();
-        a.author_name = author ? `${author.first_name} ${author.last_name}` : "Unknown";
+    let q = ecDb("announcements as a")
+      .select(
+        "a.id",
+        "a.title",
+        "a.content",
+        "a.priority",
+        "a.published_at",
+        "a.expires_at",
+        "a.created_by",
+        "a.is_active",
+        "a.created_at",
+        "a.updated_at",
+      )
+      .where({ "a.organization_id": orgId });
+
+    if (opts?.activeOnly !== false) {
+      const nowIso = new Date();
+      q = q
+        .andWhere("a.is_active", true)
+        .andWhere((qb) => qb.whereNull("a.published_at").orWhere("a.published_at", "<=", nowIso))
+        .andWhere((qb) => qb.whereNull("a.expires_at").orWhere("a.expires_at", ">", nowIso));
+    }
+
+    q = q.orderBy("a.created_at", "desc");
+    if (opts?.limit) q = q.limit(opts.limit);
+
+    const ecRows: any[] = await q;
+    empcloud = ecRows.map((r) => ({
+      id: `ec-${r.id}`,
+      org_id: orgId,
+      title: r.title,
+      content: r.content,
+      priority: r.priority || "normal",
+      category: "general", // EmpCloud schema has no category; default
+      author_id: r.created_by,
+      is_pinned: 0, // EmpCloud has no pin concept
+      is_active: r.is_active ? 1 : 0,
+      publish_at: r.published_at,
+      expires_at: r.expires_at,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+      source: "empcloud", // UI uses this to render read-only + a badge
+    }));
+  } catch {
+    // EmpCloud may not be reachable; fall through with empcloud=[].
+  }
+
+  // Merge, preserving pinned-first then created_at desc. Payroll is_pinned
+  // wins because EmpCloud has no pin concept (all 0).
+  const announcements = [...local, ...empcloud].sort((x, y) => {
+    if ((y.is_pinned || 0) !== (x.is_pinned || 0)) {
+      return (y.is_pinned || 0) - (x.is_pinned || 0);
+    }
+    const xt = x.created_at ? new Date(x.created_at).getTime() : 0;
+    const yt = y.created_at ? new Date(y.created_at).getTime() : 0;
+    return yt - xt;
+  });
+
+  // Enrich every row with author name from EmpCloud users (single batch).
+  try {
+    const ecDb = getEmpCloudDB();
+    const authorIds = Array.from(
+      new Set(announcements.map((a) => Number(a.author_id)).filter((n) => Number.isFinite(n))),
+    );
+    if (authorIds.length) {
+      const authors: any[] = await ecDb("users")
+        .whereIn("id", authorIds)
+        .select("id", "first_name", "last_name");
+      const byId = new Map(
+        authors.map((u) => [Number(u.id), `${u.first_name || ""} ${u.last_name || ""}`.trim()]),
+      );
+      for (const a of announcements) {
+        a.author_name = byId.get(Number(a.author_id)) || "Unknown";
       }
     }
   } catch {
     // EmpCloud may not be available
   }
 
+  // Apply a final limit across the merged list so callers get what they asked for.
+  if (opts?.limit && announcements.length > opts.limit) {
+    return announcements.slice(0, opts.limit);
+  }
   return announcements;
 }
 
@@ -100,6 +177,10 @@ export async function updateAnnouncement(
   orgId: number,
   data: Partial<CreateAnnouncementInput>,
 ) {
+  if (id.startsWith("ec-")) {
+    // EmpCloud-sourced rows are read-only here; edit them in EmpCloud.
+    return false;
+  }
   const db = getDB();
   const updates: Record<string, any> = {};
   if (data.title !== undefined) updates.title = data.title;
@@ -118,6 +199,9 @@ export async function updateAnnouncement(
 }
 
 export async function deleteAnnouncement(id: string, orgId: number) {
+  if (id.startsWith("ec-")) {
+    return false; // EmpCloud-sourced; not deletable from payroll.
+  }
   const db = getDB();
   const count = await db.updateMany(
     "announcements",
