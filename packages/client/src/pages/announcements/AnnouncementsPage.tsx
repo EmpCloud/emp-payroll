@@ -163,7 +163,7 @@ export function AnnouncementsPage() {
               <CardContent className="py-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="mb-1 flex items-center gap-2">
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
                       {a.is_pinned && <Pin className="text-brand-600 h-4 w-4" />}
                       <h3 className="text-lg font-semibold text-gray-900">{a.title}</h3>
                       <span
@@ -176,6 +176,14 @@ export function AnnouncementsPage() {
                       >
                         {a.category}
                       </span>
+                      {a.source === "empcloud" && (
+                        <span
+                          className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700"
+                          title="Posted from EmpCloud — manage it there"
+                        >
+                          EmpCloud
+                        </span>
+                      )}
                       {!a.is_active && <Badge variant="inactive">Archived</Badge>}
                     </div>
                     <p className="whitespace-pre-wrap text-sm text-gray-700">{a.content}</p>
@@ -190,7 +198,9 @@ export function AnnouncementsPage() {
                       )}
                     </div>
                   </div>
-                  {isAdmin && (
+                  {/* EmpCloud-sourced rows are read-only here — manage them
+                       in EmpCloud. Hide the action cluster entirely. */}
+                  {isAdmin && a.source !== "empcloud" && (
                     <div className="ml-4 flex items-center gap-1">
                       <button
                         onClick={() => togglePin(a)}
