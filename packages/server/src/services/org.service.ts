@@ -146,6 +146,11 @@ export class OrgService {
       const prUpdates: any = {};
       if (data.name) prUpdates.name = data.name;
       if (data.legalName) prUpdates.legal_name = data.legalName;
+      // #194 — pan and tan were silently dropped on update (only create
+      // wrote them), so the Settings page toasted "saved" but the values
+      // disappeared on the next refresh. Persist them here too.
+      if (data.pan) prUpdates.pan = data.pan;
+      if (data.tan) prUpdates.tan = data.tan;
       if (data.gstin) prUpdates.gstin = data.gstin;
       if (data.pfEstablishmentCode) prUpdates.pf_establishment_code = data.pfEstablishmentCode;
       if (data.esiEstablishmentCode) prUpdates.esi_establishment_code = data.esiEstablishmentCode;

@@ -108,12 +108,15 @@ export function SettingsPage() {
     // #124 — Basic shape checks for PAN (AAAAA9999A) and TAN (AAAA99999A).
     // Skip when the user hasn't filled them in yet (they're optional for new
     // tenants), but reject malformed values so bad data doesn't land.
+    // #194 — short toast; the Input placeholder shows the expected format,
+    // and the long format-explanation message felt scolding to users who
+    // were trying to type a valid value.
     if (orgPan && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(orgPan)) {
-      toast.error("PAN must be 10 characters: 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F)");
+      toast.error("Not a valid PAN");
       return;
     }
     if (orgTan && !/^[A-Z]{4}[0-9]{5}[A-Z]$/.test(orgTan)) {
-      toast.error("TAN must be 10 characters: 4 letters, 5 digits, 1 letter (e.g. ABCD12345E)");
+      toast.error("Not a valid TAN");
       return;
     }
 
