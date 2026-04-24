@@ -43,6 +43,9 @@ vi.mock("nodemailer", () => ({
   default: { createTransport: vi.fn(() => ({ sendMail: vi.fn().mockResolvedValue({}) })) },
   createTransport: vi.fn(() => ({ sendMail: vi.fn().mockResolvedValue({}) })),
 }));
+vi.mock("@sendgrid/mail", () => ({
+  default: { setApiKey: vi.fn(), send: vi.fn().mockResolvedValue([{ statusCode: 202 }]) },
+}));
 
 import { getDB } from "../../db/adapters";
 const mockedGetDB = vi.mocked(getDB);

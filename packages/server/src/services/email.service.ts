@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import sgMail from "@sendgrid/mail";
 import { config } from "../config";
 import { getDB } from "../db/adapters";
 import { findUserById, findOrgById } from "../db/empcloud";
@@ -11,6 +12,17 @@ interface EmailOptions {
   html: string;
 }
 
+// Lazy-initialize the SendGrid SDK exactly once per process. The API key may
+// be unset (local dev), in which case we fall back to nodemailer SMTP below.
+let sendgridReady = false;
+function ensureSendgrid(): boolean {
+  if (sendgridReady) return true;
+  if (!config.email.sendgridApiKey) return false;
+  sgMail.setApiKey(config.email.sendgridApiKey);
+  sendgridReady = true;
+  return true;
+}
+
 export class EmailService {
   private transporter: nodemailer.Transporter;
   private db = getDB();
@@ -20,31 +32,64 @@ export class EmailService {
       host: config.email.host,
       port: config.email.port,
       secure: config.email.port === 465,
-      auth: config.email.user ? {
-        user: config.email.user,
-        pass: config.email.password,
-      } : undefined,
+      auth: config.email.user
+        ? {
+            user: config.email.user,
+            pass: config.email.password,
+          }
+        : undefined,
     });
   }
 
   /**
-   * Returns true when the SMTP transport has enough config to actually send mail.
-   * Used by callers (e.g. the payroll routes) to surface a clear "email provider
-   * not configured" error instead of the generic "Failed to send emails".
+   * Returns true when *some* email transport is wired up. SendGrid wins when
+   * SENDGRID_API_KEY is set; otherwise we need full SMTP credentials. Used by
+   * callers (e.g. payroll routes) to surface a clear "email provider not
+   * configured" error instead of the generic "Failed to send emails".
    */
   isConfigured(): boolean {
+    if (config.email.sendgridApiKey) return true;
     return Boolean(config.email.host && config.email.user && config.email.password);
   }
 
+  /**
+   * Send a transactional email. Routes through SendGrid when SENDGRID_API_KEY
+   * is set (preferred), otherwise falls back to SMTP/nodemailer so existing
+   * deployments without a SendGrid account keep working.
+   */
   async sendEmail(options: EmailOptions): Promise<boolean> {
+    if (ensureSendgrid()) {
+      try {
+        await sgMail.send({
+          to: options.to,
+          from: { email: config.email.fromEmail, name: config.email.fromName },
+          subject: options.subject,
+          html: options.html,
+        });
+        logger.info(`Email sent via SendGrid to ${options.to}: ${options.subject}`);
+        return true;
+      } catch (err: any) {
+        // SendGrid stuffs error details in err.response.body.errors — surface
+        // them in the log so misconfig (bad API key, unverified sender, etc.)
+        // is debuggable from the prod logs.
+        const detail =
+          err?.response?.body?.errors?.map((e: any) => e.message).join("; ") ||
+          err?.message ||
+          String(err);
+        logger.error(`SendGrid send failed to ${options.to}: ${detail}`);
+        return false;
+      }
+    }
+
+    // Fallback: legacy SMTP via nodemailer.
     try {
       await this.transporter.sendMail({
-        from: `"EMP Payroll" <${config.email.from}>`,
+        from: `"${config.email.fromName}" <${config.email.from}>`,
         to: options.to,
         subject: options.subject,
         html: options.html,
       });
-      logger.info(`Email sent to ${options.to}: ${options.subject}`);
+      logger.info(`Email sent via SMTP to ${options.to}: ${options.subject}`);
       return true;
     } catch (error) {
       logger.error(`Failed to send email to ${options.to}:`, error);
@@ -66,8 +111,7 @@ export class EmailService {
     // reference in `empcloud_user_id`. Old payslips may have a real UUID in
     // `employee_id` that points at the legacy payroll employees table.
     const placeholderUuid = "00000000-0000-0000-0000-000000000000";
-    let employee: { first_name?: string; email?: string; org_id?: string | number } | null =
-      null;
+    let employee: { first_name?: string; email?: string; org_id?: string | number } | null = null;
     let orgIdForOrgLookup: string | number | null = null;
 
     if (payslip.empcloud_user_id) {
@@ -106,24 +150,50 @@ export class EmailService {
       org = await this.db.findById<any>("organizations", String(orgIdForOrgLookup));
     }
 
-    const monthNames = ["", "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"];
+    const monthNames = [
+      "",
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
     const period = `${monthNames[payslip.month]} ${payslip.year}`;
 
-    const fmt = (n: number) => new Intl.NumberFormat("en-IN", {
-      style: "currency", currency: "INR", maximumFractionDigits: 0,
-    }).format(n);
+    const fmt = (n: number) =>
+      new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        maximumFractionDigits: 0,
+      }).format(n);
 
-    const earnings = typeof payslip.earnings === "string" ? JSON.parse(payslip.earnings) : payslip.earnings || [];
-    const deductions = typeof payslip.deductions === "string" ? JSON.parse(payslip.deductions) : payslip.deductions || [];
+    const earnings =
+      typeof payslip.earnings === "string" ? JSON.parse(payslip.earnings) : payslip.earnings || [];
+    const deductions =
+      typeof payslip.deductions === "string"
+        ? JSON.parse(payslip.deductions)
+        : payslip.deductions || [];
 
-    const earningsHtml = earnings.map((e: any) =>
-      `<tr><td style="padding:8px 16px;border-bottom:1px solid #f3f4f6">${e.name || e.code}</td><td style="padding:8px 16px;border-bottom:1px solid #f3f4f6;text-align:right">${fmt(e.amount)}</td></tr>`
-    ).join("");
+    const earningsHtml = earnings
+      .map(
+        (e: any) =>
+          `<tr><td style="padding:8px 16px;border-bottom:1px solid #f3f4f6">${e.name || e.code}</td><td style="padding:8px 16px;border-bottom:1px solid #f3f4f6;text-align:right">${fmt(e.amount)}</td></tr>`,
+      )
+      .join("");
 
-    const deductionsHtml = deductions.map((d: any) =>
-      `<tr><td style="padding:8px 16px;border-bottom:1px solid #f3f4f6">${d.name || d.code}</td><td style="padding:8px 16px;border-bottom:1px solid #f3f4f6;text-align:right;color:#dc2626">${fmt(d.amount)}</td></tr>`
-    ).join("");
+    const deductionsHtml = deductions
+      .map(
+        (d: any) =>
+          `<tr><td style="padding:8px 16px;border-bottom:1px solid #f3f4f6">${d.name || d.code}</td><td style="padding:8px 16px;border-bottom:1px solid #f3f4f6;text-align:right;color:#dc2626">${fmt(d.amount)}</td></tr>`,
+      )
+      .join("");
 
     const html = `
 <!DOCTYPE html>

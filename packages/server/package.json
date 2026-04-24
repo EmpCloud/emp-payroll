@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@emp-payroll/shared": "workspace:*",
+    "@sendgrid/mail": "^8.1.6",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.30.0",
     "compression": "^1.7.5",
