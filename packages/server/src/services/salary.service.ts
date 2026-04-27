@@ -1,6 +1,7 @@
 import { getDB } from "../db/adapters";
 import { AppError } from "../api/middleware/error.middleware";
 import { EmployeeService } from "./employee.service";
+import { findUserByEmpCode, findUserById } from "../db/empcloud";
 import {
   resolveSalaryComponents,
   SalaryResolverError,
@@ -270,24 +271,47 @@ export class SalaryService {
       ctc: number;
       bankDetails?: { accountNumber: string; ifscCode: string; bankName: string };
     }[],
-    sharedData: { structureId: string; effectiveFrom: string },
+    sharedData: { structureId: string; effectiveFrom: string; orgId: number },
   ) {
     const results: { employeeId: string; success: boolean; error?: string }[] = [];
-    // EmployeeService is a NAMED export, not a default. The previous
-    // `require("./employee.service").default` resolved to undefined and
-    // threw "require(...).default is not a constructor" on every bulk
-    // assign. Use the top-level named import.
     const employeeService = new EmployeeService();
 
     for (const { employeeId, ctc, bankDetails } of assignments) {
       try {
-        // Update bank details if provided
+        // The CSV "Employee ID" column carries either the numeric
+        // empcloud user id (rare — only when HR exported the directory
+        // with the technical id) or the human-readable emp_code like
+        // "EMP/BHI/2025/23" (the common case). `Number("EMP/...")` is
+        // NaN, which used to crash the SQL with "Unknown column 'NaN'
+        // in 'where clause'". Resolve to the numeric id once per row;
+        // try numeric first (cheap), then fall back to emp_code lookup.
+        let numericUserId: number | null = null;
+        const asNum = Number(employeeId);
+        if (Number.isFinite(asNum) && asNum > 0) {
+          const u = await findUserById(asNum);
+          if (u && u.organization_id === sharedData.orgId) numericUserId = u.id;
+        }
+        if (numericUserId == null) {
+          const u = await findUserByEmpCode(String(employeeId), sharedData.orgId);
+          if (u) numericUserId = u.id;
+        }
+        if (numericUserId == null) {
+          results.push({
+            employeeId,
+            success: false,
+            error: `No active employee found for "${employeeId}" (looked up by id and emp_code)`,
+          });
+          continue;
+        }
+
+        // Bank details (optional). Pass the resolved numeric id, never
+        // the raw CSV cell.
         if (
           bankDetails &&
           (bankDetails.accountNumber || bankDetails.ifscCode || bankDetails.bankName)
         ) {
           try {
-            await employeeService.updateBankDetails(Number(employeeId), undefined, {
+            await employeeService.updateBankDetails(numericUserId, undefined, {
               accountNumber: bankDetails.accountNumber,
               ifscCode: bankDetails.ifscCode,
               bankName: bankDetails.bankName,
@@ -302,7 +326,13 @@ export class SalaryService {
         // calc type, percentage chains, etc). Falls back per-row to whatever
         // the structure defines — no more hardcoded Basic/HRA/SA math here.
         const components = await this.resolveComponentsForCTC(sharedData.structureId, ctc);
-        await this.assignToEmployee({ employeeId, ctc, components, ...sharedData });
+        await this.assignToEmployee({
+          employeeId: String(numericUserId),
+          ctc,
+          components,
+          structureId: sharedData.structureId,
+          effectiveFrom: sharedData.effectiveFrom,
+        });
         results.push({ employeeId, success: true });
       } catch (err: any) {
         results.push({ employeeId, success: false, error: err.message });

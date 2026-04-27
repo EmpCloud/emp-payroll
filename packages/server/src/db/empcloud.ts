@@ -137,6 +137,24 @@ export async function findUserById(id: number): Promise<EmpCloudUser | null> {
 }
 
 /**
+ * Find a user by employee code, scoped to an org. emp_code is what HR
+ * sees in the directory and what the bulk-CSV upload expects in the
+ * "Employee ID" column (e.g. "EMP/BHI/2025/23"). It's a string and
+ * Number(it) is NaN, which used to crash the bulk-assign flow with
+ * "Unknown column 'NaN' in 'where clause'".
+ */
+export async function findUserByEmpCode(
+  empCode: string,
+  orgId: number,
+): Promise<EmpCloudUser | null> {
+  const db = getEmpCloudDB();
+  const user = await db("users")
+    .where({ emp_code: empCode, organization_id: orgId, status: 1 })
+    .first();
+  return user || null;
+}
+
+/**
  * Find an organization by ID.
  */
 export async function findOrgById(id: number): Promise<EmpCloudOrganization | null> {
