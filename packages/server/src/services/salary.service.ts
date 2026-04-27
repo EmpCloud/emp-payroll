@@ -311,7 +311,12 @@ export class SalaryService {
           (bankDetails.accountNumber || bankDetails.ifscCode || bankDetails.bankName)
         ) {
           try {
-            await employeeService.updateBankDetails(numericUserId, undefined, {
+            // updateBankDetails signature is (empcloudUserId, empcloudOrgId,
+            // details) — getByEmpCloudId() inside throws "Employee not
+            // found" if orgId !== ecUser.organization_id, and undefined
+            // never matches. We already have orgId on sharedData; thread
+            // it through.
+            await employeeService.updateBankDetails(numericUserId, sharedData.orgId, {
               accountNumber: bankDetails.accountNumber,
               ifscCode: bankDetails.ifscCode,
               bankName: bankDetails.bankName,
