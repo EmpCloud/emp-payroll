@@ -164,7 +164,11 @@ router.post(
   validate(bulkSalaryAssignSchema),
   wrap(async (req, res) => {
     const { assignments, structureId, effectiveFrom } = req.body;
-    const data = await svc.bulkAssignSalary(assignments, { structureId, effectiveFrom });
+    const data = await svc.bulkAssignSalary(assignments, {
+      structureId,
+      effectiveFrom,
+      orgId: Number(req.user!.empcloudOrgId),
+    });
     res.json({ success: true, data });
   }),
 );
