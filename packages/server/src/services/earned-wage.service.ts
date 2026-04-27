@@ -78,17 +78,39 @@ export class EarnedWageService {
       };
     }
 
-    // Get employee's current salary assignment
-    const salaryAssignment = await this.db.findOne<any>("salary_assignments", {
-      employee_id: employeeId,
-      org_id: numOrgId,
-    });
+    // Get employee's current salary. Try the legacy salary_assignments
+    // table first (UUID employee_id keyed), then fall back to
+    // employee_salaries which is keyed on empcloud_user_id — the EmpCloud
+    // integration writes to the latter, so without this fallback users
+    // onboarded via the new flow always get "No salary assigned"
+    // and "Unable to request advanced salary" (#208).
+    let ctc: number | null = null;
+    const salaryAssignment = await this.db
+      .findOne<any>("salary_assignments", {
+        employee_id: employeeId,
+        org_id: numOrgId,
+      })
+      .catch(() => null);
+    if (salaryAssignment) {
+      ctc = Number(salaryAssignment.ctc);
+    } else {
+      const numericEmpId = Number(employeeId);
+      if (Number.isFinite(numericEmpId) && numericEmpId > 0) {
+        const empSalary = await this.db
+          .findOne<any>("employee_salaries", {
+            empcloud_user_id: numericEmpId,
+            is_active: 1,
+          })
+          .catch(() => null);
+        if (empSalary) ctc = Number(empSalary.ctc);
+      }
+    }
 
-    if (!salaryAssignment) {
+    if (!ctc || ctc <= 0) {
       return { available: 0, earnedSoFar: 0, alreadyWithdrawn: 0, message: "No salary assigned" };
     }
 
-    const monthlySalary = Number(salaryAssignment.ctc) / 12;
+    const monthlySalary = ctc / 12;
 
     // Calculate days worked this month
     const now = new Date();

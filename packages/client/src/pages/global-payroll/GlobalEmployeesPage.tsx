@@ -353,24 +353,31 @@ export function GlobalEmployeesPage() {
           >
             <Pencil className="h-3.5 w-3.5" />
           </Button>
-          {row.status !== "terminated" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              title="Terminate employee"
-              disabled={terminatingId === row.id}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleTerminate(row);
-              }}
-            >
-              {terminatingId === row.id ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <UserX className="h-3.5 w-3.5 text-red-500" />
-              )}
-            </Button>
-          )}
+          {/* Keep the terminate icon visible after termination but disabled,
+              instead of hiding it. The empty action column made the row
+              look broken / inconsistent vs other rows (#209). */}
+          <Button
+            variant="ghost"
+            size="sm"
+            title={
+              row.status === "terminated" ? "Employee already terminated" : "Terminate employee"
+            }
+            disabled={row.status === "terminated" || terminatingId === row.id}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (row.status !== "terminated") handleTerminate(row);
+            }}
+          >
+            {terminatingId === row.id ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <UserX
+                className={`h-3.5 w-3.5 ${
+                  row.status === "terminated" ? "text-gray-300" : "text-red-500"
+                }`}
+              />
+            )}
+          </Button>
         </div>
       ),
     },
