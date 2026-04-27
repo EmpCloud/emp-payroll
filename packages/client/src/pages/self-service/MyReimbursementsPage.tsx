@@ -26,6 +26,7 @@ const CATEGORIES = [
 export function MyReimbursementsPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved">("all");
   const qc = useQueryClient();
 
   // #1358 — Request a large page so client-side pagination has all records
@@ -43,6 +44,13 @@ export function MyReimbursementsPage() {
   const totalApproved = claims
     .filter((c: any) => c.status === "approved" || c.status === "paid")
     .reduce((s: number, c: any) => s + Number(c.amount), 0);
+
+  const visibleClaims =
+    statusFilter === "all"
+      ? claims
+      : statusFilter === "pending"
+        ? claims.filter((c: any) => c.status === "pending")
+        : claims.filter((c: any) => c.status === "approved" || c.status === "paid");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -83,25 +91,51 @@ export function MyReimbursementsPage() {
         }
       />
 
+      {/* Stat cards double as filter buttons — clicking one narrows the
+          claims list below to that status (#237). */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="py-4">
-            <p className="text-sm text-gray-500">Total Claims</p>
-            <p className="text-xl font-bold">{claims.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4">
-            <p className="text-sm text-gray-500">Pending</p>
-            <p className="text-xl font-bold text-orange-600">{formatCurrency(totalPending)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4">
-            <p className="text-sm text-gray-500">Approved / Paid</p>
-            <p className="text-xl font-bold text-green-600">{formatCurrency(totalApproved)}</p>
-          </CardContent>
-        </Card>
+        <button
+          type="button"
+          onClick={() => setStatusFilter("all")}
+          className={`text-left transition ${
+            statusFilter === "all" ? "ring-brand-500 rounded-lg ring-2" : ""
+          }`}
+        >
+          <Card>
+            <CardContent className="py-4">
+              <p className="text-sm text-gray-500">Total Claims</p>
+              <p className="text-xl font-bold">{claims.length}</p>
+            </CardContent>
+          </Card>
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatusFilter("pending")}
+          className={`text-left transition ${
+            statusFilter === "pending" ? "ring-brand-500 rounded-lg ring-2" : ""
+          }`}
+        >
+          <Card>
+            <CardContent className="py-4">
+              <p className="text-sm text-gray-500">Pending</p>
+              <p className="text-xl font-bold text-orange-600">{formatCurrency(totalPending)}</p>
+            </CardContent>
+          </Card>
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatusFilter("approved")}
+          className={`text-left transition ${
+            statusFilter === "approved" ? "ring-brand-500 rounded-lg ring-2" : ""
+          }`}
+        >
+          <Card>
+            <CardContent className="py-4">
+              <p className="text-sm text-gray-500">Approved / Paid</p>
+              <p className="text-xl font-bold text-green-600">{formatCurrency(totalApproved)}</p>
+            </CardContent>
+          </Card>
+        </button>
       </div>
 
       {isLoading ? (
@@ -159,7 +193,7 @@ export function MyReimbursementsPage() {
               },
             },
           ]}
-          data={claims}
+          data={visibleClaims}
         />
       )}
 

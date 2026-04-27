@@ -19,17 +19,36 @@ export class ReimbursementService {
   private db = getDB();
 
   async list(orgId: string, filters?: { status?: string; employeeId?: string }) {
-    // Get employees for this org, then filter reimbursements
+    // The legacy `employees` table is one source of truth; the newer flow
+    // writes to `employee_payroll_profiles`. submit() writes
+    // reimbursements.employee_id with whichever id matched, so the admin
+    // list has to consider both tables — otherwise claims submitted by
+    // anyone onboarded via the new flow are invisible here (#215, #216).
     const employees = await this.db.findMany<any>("employees", {
       filters: { org_id: orgId, is_active: true },
       limit: 10000,
     });
-    const empIds = employees.data.map((e: any) => e.id);
+    const profiles = await this.db
+      .findMany<any>("employee_payroll_profiles", {
+        filters: { org_id: orgId, is_active: 1 },
+        limit: 10000,
+      })
+      .catch(() => ({ data: [] as any[] }));
+
+    const empMap: Record<string, any> = {};
+    for (const emp of employees.data) empMap[emp.id] = emp;
+    for (const prof of profiles.data) {
+      // Don't clobber a legacy row with a profile of the same uuid.
+      if (!empMap[prof.id]) empMap[prof.id] = prof;
+    }
+
+    const empIds = Object.keys(empMap);
     if (empIds.length === 0) return { data: [], total: 0, page: 1, limit: 50, totalPages: 0 };
 
-    const queryFilters: any = { employee_id: empIds };
+    const queryFilters: any = filters?.employeeId
+      ? { employee_id: filters.employeeId }
+      : { employee_id: empIds };
     if (filters?.status) queryFilters.status = filters.status;
-    if (filters?.employeeId) queryFilters.employee_id = filters.employeeId;
 
     const result = await this.db.findMany<any>("reimbursements", {
       filters: queryFilters,
@@ -37,17 +56,14 @@ export class ReimbursementService {
       limit: 100,
     });
 
-    // Attach employee names
-    const empMap: Record<string, any> = {};
-    for (const emp of employees.data) empMap[emp.id] = emp;
-
-    const enriched = result.data.map((r: any) => ({
-      ...r,
-      employee_name: empMap[r.employee_id]
-        ? `${empMap[r.employee_id].first_name} ${empMap[r.employee_id].last_name}`
-        : "Unknown",
-      employee_code: empMap[r.employee_id]?.employee_code || "",
-    }));
+    const enriched = result.data.map((r: any) => {
+      const row = empMap[r.employee_id];
+      return {
+        ...r,
+        employee_name: row ? `${row.first_name} ${row.last_name}` : "Unknown",
+        employee_code: row?.employee_code || "",
+      };
+    });
 
     return { ...result, data: enriched };
   }
