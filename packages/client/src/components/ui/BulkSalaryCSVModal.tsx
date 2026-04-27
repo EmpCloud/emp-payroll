@@ -165,7 +165,14 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
           assignments,
         });
 
-        const { updated, failed: apiFailures } = response.data.data || { updated: 0, failed: 0 };
+        // apiPost returns the unwrapped axios body, i.e. the API envelope
+        // { success, data: {...} }. The bulk-assign payload is at
+        // `response.data` directly — the previous `response.data.data` was
+        // always undefined, so `updated` rendered as 0 even when the
+        // server reported a successful row.
+        const payload: any = response?.data ?? {};
+        const updated = Number(payload.updated ?? 0);
+        const apiFailures = Number(payload.failed ?? 0);
         setResult({ success: updated, failed: apiFailures, errors });
         if (updated > 0) {
           toast.success(`Updated salary for ${updated} employee(s)`);
