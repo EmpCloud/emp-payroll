@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getDB } from "../db/adapters";
+import { getEmpCloudDB } from "../db/empcloud";
 import { AppError } from "../api/middleware/error.middleware";
 
 // Zod schema for loan creation — lives in the service so we don't have to
@@ -38,23 +39,57 @@ export class LoanService {
       limit: 100,
     });
 
-    // Enrich with employee names
-    const empIds = [...new Set(result.data.map((l: any) => l.employee_id))];
+    // Enrich with employee names. Loans cut against the legacy employees
+    // table store the name there; loans cut after the EmpCloud integration
+    // store only empcloud_user_id (the employees row may not exist), so
+    // names have to come from the EmpCloud users table for those rows
+    // (#206 — admin saw "Unknown" for every loan).
+    const empIds = [...new Set(result.data.map((l: any) => l.employee_id).filter(Boolean))];
+    const userIds = [
+      ...new Set(
+        result.data
+          .map((l: any) => Number(l.empcloud_user_id))
+          .filter((n: any) => Number.isFinite(n) && n > 0),
+      ),
+    ];
+
     const empMap: Record<string, any> = {};
     for (const eid of empIds) {
-      const emp = await this.db.findById<any>("employees", eid as string);
+      const emp = await this.db.findById<any>("employees", eid as string).catch(() => null);
       if (emp) empMap[eid as string] = emp;
+    }
+
+    let userMap: Record<string, any> = {};
+    if (userIds.length > 0) {
+      try {
+        const ecDb = getEmpCloudDB();
+        const rows = await ecDb("users")
+          .whereIn("id", userIds as number[])
+          .select("id", "first_name", "last_name", "emp_code");
+        for (const u of rows) {
+          userMap[String(u.id)] = u;
+        }
+      } catch {
+        // EmpCloud DB unavailable — fall back to "Unknown"
+      }
     }
 
     return {
       ...result,
-      data: result.data.map((l: any) => ({
-        ...l,
-        employee_name: empMap[l.employee_id]
-          ? `${empMap[l.employee_id].first_name} ${empMap[l.employee_id].last_name}`
-          : "Unknown",
-        employee_code: empMap[l.employee_id]?.employee_code || "",
-      })),
+      data: result.data.map((l: any) => {
+        const emp = empMap[l.employee_id];
+        const user = l.empcloud_user_id ? userMap[String(l.empcloud_user_id)] : undefined;
+        const name = emp
+          ? `${emp.first_name} ${emp.last_name}`
+          : user
+            ? `${user.first_name} ${user.last_name}`
+            : "Unknown";
+        return {
+          ...l,
+          employee_name: name,
+          employee_code: emp?.employee_code || user?.emp_code || "",
+        };
+      }),
     };
   }
 
@@ -82,9 +117,13 @@ export class LoanService {
     const data = parsed.data;
 
     const rate = data.interestRate || 0;
-    const emi = rate > 0
-      ? Math.round((data.principalAmount * (1 + rate / 100 * data.tenureMonths / 12)) / data.tenureMonths)
-      : Math.round(data.principalAmount / data.tenureMonths);
+    const emi =
+      rate > 0
+        ? Math.round(
+            (data.principalAmount * (1 + ((rate / 100) * data.tenureMonths) / 12)) /
+              data.tenureMonths,
+          )
+        : Math.round(data.principalAmount / data.tenureMonths);
 
     return this.db.create("loans", {
       employee_id: data.employeeId,
