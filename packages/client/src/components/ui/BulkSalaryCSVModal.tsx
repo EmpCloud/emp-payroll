@@ -1,10 +1,10 @@
 import { useState, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
 import { Upload, FileText, CheckCircle2, AlertCircle } from "lucide-react";
 import { Input } from "./Input";
-import { apiPost, apiGet } from "@/api/client";
+import { apiPost } from "@/api/client";
+import { useSalaryStructures } from "@/api/hooks";
 import toast from "react-hot-toast";
 
 interface BulkSalaryCSVModalProps {
@@ -26,21 +26,21 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
   } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Endpoint returns a paginated envelope `{ success, data: { data: [...], total, ... } }`.
-  // Tolerate a flat `data: [...]` shape too in case the endpoint is ever
-  // simplified — the array can live at either level. Same defensive
-  // pattern used by SalaryStructuresPage / EmployeeDetailPage / Bulk
-  // Update modal after PR #258.
-  const { data: structures = [] } = useQuery({
-    queryKey: ["salary-structures"],
-    queryFn: () =>
-      apiGet<any>("/salary-structures").then((r) => {
-        const p: any = r?.data;
-        if (Array.isArray(p)) return p;
-        if (Array.isArray(p?.data)) return p.data;
-        return [];
-      }),
-  });
+  // Use the shared `useSalaryStructures` hook so we share react-query's
+  // cache with every other consumer (#259's per-component queryFn caused
+  // a cache-collision: whichever component mounted first wrote its
+  // queryFn's return shape into the `["salary-structures"]` cache; later
+  // mounts read whatever was already there, regardless of their own
+  // queryFn). Apply the same defensive Array.isArray helper used by the
+  // other consumers since the endpoint returns a paginated envelope:
+  //   { success, data: { data: [...], total, page, limit, totalPages } }
+  const { data: structRes } = useSalaryStructures();
+  const structuresPayload: any = structRes?.data;
+  const structures: any[] = Array.isArray(structuresPayload)
+    ? structuresPayload
+    : Array.isArray(structuresPayload?.data)
+      ? structuresPayload.data
+      : [];
 
   function parseCSV(text: string): Record<string, string>[] {
     const lines = text.trim().split("\n");
