@@ -50,10 +50,31 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
       const values = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
       const row: Record<string, string> = {};
       headers.forEach((h, i) => {
+        // Skip empty values when the same header repeats so a stray
+        // duplicate column ("First Name,...,First Name,...") doesn't
+        // overwrite a real value with "".
+        if (row[h] && !values[i]) return;
         row[h] = values[i] || "";
       });
       return row;
     });
+  }
+
+  // Case- and separator-insensitive lookup. Tries each candidate against
+  // the row's keys ignoring case + spaces + underscores so headers like
+  // "CTC", "Annual CTC", "annual_ctc", "annualCTC" all match the same
+  // logical field. Necessary because users export CSVs from many tools
+  // (Excel, Google Sheets, our own export) and the casing varies.
+  function pick(row: Record<string, string>, candidates: string[]): string {
+    const norm = (s: string) => s.toLowerCase().replace(/[\s_-]+/g, "");
+    const wanted = candidates.map(norm);
+    for (const key of Object.keys(row)) {
+      if (wanted.includes(norm(key))) {
+        const v = row[key];
+        if (v) return v;
+      }
+    }
+    return "";
   }
 
   function handleFile(f: File) {
@@ -88,9 +109,17 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
 
       for (const row of rows) {
         try {
-          const employeeId =
-            row["Employee ID"] || row["employee_id"] || row["EmployeeId"] || row["employeeId"];
-          const ctcStr = row["Annual CTC"] || row["ctc"] || row["annual_ctc"] || "";
+          const employeeId = pick(row, [
+            "Employee ID",
+            "EmployeeId",
+            "Emp Code",
+            "EmpCode",
+            "Employee Code",
+          ]);
+          // CTC: accept the bare "CTC" header too. Case + space + underscore
+          // insensitive via `pick`, so "CTC", "ctc", "Annual CTC", "annual_ctc"
+          // all resolve to the same logical field.
+          const ctcStr = pick(row, ["Annual CTC", "CTC"]);
           const ctc = Number(ctcStr);
 
           if (!employeeId) {
@@ -106,10 +135,10 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
 
           const assignment: any = { employeeId, ctc };
 
-          // Bank details (optional)
-          const accountNumber = row["Account Number"] || row["account_number"] || "";
-          const ifscCode = row["IFSC"] || row["ifsc"] || row["IFSC Code"] || row["ifsc_code"] || "";
-          const bankName = row["Bank Name"] || row["bank_name"] || "";
+          // Bank details (optional). Same case-insensitive lookup.
+          const accountNumber = pick(row, ["Account Number"]);
+          const ifscCode = pick(row, ["IFSC", "IFSC Code"]);
+          const bankName = pick(row, ["Bank Name"]);
 
           if (accountNumber || ifscCode || bankName) {
             assignment.bankDetails = { accountNumber, ifscCode, bankName };
