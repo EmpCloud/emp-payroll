@@ -79,7 +79,10 @@ export function SalaryStructuresPage() {
   const { data: res, isLoading } = useSalaryStructures();
   const qc = useQueryClient();
 
-  const structures = res?.data?.data || [];
+  // apiGet already unwraps the axios body, so `res` is the API envelope
+  // `{ success, data, ... }` — `.data` is the array. The previous double
+  // `.data?.data` always evaluated to undefined, leaving the page empty.
+  const structures = Array.isArray(res?.data) ? res.data : [];
 
   function addComponent(preset?: (typeof PRESET_COMPONENTS)[0]) {
     setComponents([
