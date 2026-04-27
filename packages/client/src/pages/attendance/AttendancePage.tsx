@@ -171,6 +171,12 @@ export function AttendancePage() {
               toast.error("Working days must be a whole number between 1 and 31");
               return;
             }
+            if (employees.length === 0) {
+              toast.error(
+                "No employees found in payroll. Apply EmpCloud users to payroll first (Settings > Employees).",
+              );
+              return;
+            }
             setMarking(true);
             try {
               const records = employees.map((emp: any) => ({

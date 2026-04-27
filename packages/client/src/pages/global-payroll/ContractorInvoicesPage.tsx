@@ -59,6 +59,11 @@ export function ContractorInvoicesPage() {
     label: `${c.first_name} ${c.last_name} (${c.country_name})`,
   }));
 
+  // Resolve the selected contractor's currency so the amount input can
+  // show its symbol/code instead of a bare number (#217).
+  const selectedContractor = contractors.find((c: any) => c.id === form.globalEmployeeId);
+  const amountCurrency = selectedContractor?.currency_symbol || selectedContractor?.currency || "";
+
   const handleSubmit = async () => {
     if (!form.globalEmployeeId || !form.amount || !form.periodStart || !form.periodEnd) {
       toast.error("Please fill all required fields");
@@ -279,14 +284,26 @@ export function ContractorInvoicesPage() {
             onChange={(e) => setForm({ ...form, globalEmployeeId: e.target.value })}
             disabled={contractorOptions.length === 0}
           />
-          <Input
-            label="Amount * (in major currency unit)"
-            type="number"
-            min="0"
-            step="0.01"
-            value={form.amount}
-            onChange={(e) => setForm({ ...form, amount: e.target.value })}
-          />
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Amount <span className="text-red-500">*</span>{" "}
+              <span className="text-xs font-normal text-gray-400">(major currency unit)</span>
+            </label>
+            <div className="flex">
+              <span className="inline-flex w-14 items-center justify-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-sm font-medium text-gray-600">
+                {amountCurrency || "—"}
+              </span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                className="focus:border-brand-500 focus:ring-brand-500 block w-full rounded-r-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1"
+                placeholder="0.00"
+              />
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Period Start *"

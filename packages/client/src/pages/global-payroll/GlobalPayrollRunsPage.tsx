@@ -78,18 +78,15 @@ export function GlobalPayrollRunsPage() {
   const runs = runsRes?.data || [];
   const runDetail = detailRes?.data;
 
-  // Country IDs where we have at least one active EOR or direct-hire
-  // employee — those are the only countries the backend will accept for
-  // a Create Run (#154).
+  // Country IDs where we have at least one active employee. Originally
+  // narrowed to EOR/direct-hire only (#154), but that excluded countries
+  // where the org had only contractors and meant 'India' was the only
+  // pickable option for orgs with non-Indian contractors (#210). Show
+  // every country with any active global employee; the backend still
+  // returns a clear error if the country has no payable employees.
   const globalEmployees: any[] = globalEmployeesRes?.data || [];
   const payableCountryIds = new Set(
-    globalEmployees
-      .filter(
-        (e) =>
-          e.status === "active" &&
-          (e.employment_type === "eor" || e.employment_type === "direct_hire"),
-      )
-      .map((e) => e.country_id),
+    globalEmployees.filter((e) => e.status === "active").map((e) => e.country_id),
   );
 
   const countryOptions = countries
