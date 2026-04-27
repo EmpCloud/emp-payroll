@@ -521,7 +521,7 @@ export function EmployeeDetailPage() {
       >
         <SalaryAssignForm
           employeeId={id!}
-          structures={structuresRes?.data?.data || []}
+          structures={Array.isArray(structuresRes?.data) ? structuresRes.data : []}
           currentCTC={salary ? Number(salary.ctc) : undefined}
           loading={salaryAssigning}
           onSubmit={async (data) => {
