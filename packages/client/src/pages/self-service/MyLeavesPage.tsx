@@ -27,6 +27,7 @@ export function MyLeavesPage() {
   const [filter, setFilter] = useState("all");
   const [tab, setTab] = useState<"my" | "team">("my");
   const [teamFilter, setTeamFilter] = useState("pending");
+  const [showUsedBreakdown, setShowUsedBreakdown] = useState(false);
   // Controlled form state for the Apply Leave modal. Using a useState object
   // (instead of reading from FormData on submit) makes client-side validation
   // and field-clearing between submits straightforward. (#37)
@@ -269,12 +270,24 @@ export function MyLeavesPage() {
                 <p className="text-2xl font-bold text-blue-600">{totalAvailable}</p>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total Used</p>
-                <p className="text-2xl font-bold text-orange-600">{totalUsed}</p>
-              </CardContent>
-            </Card>
+            {/* Total Used is clickable — opens a breakdown of which leave
+                types contributed to the total (#238). */}
+            <button
+              type="button"
+              onClick={() => setShowUsedBreakdown(true)}
+              className="text-left transition hover:-translate-y-0.5"
+              title="See breakdown by leave type"
+            >
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Total Used</p>
+                  <p className="text-2xl font-bold text-orange-600">{totalUsed}</p>
+                  <p className="mt-1 text-[10px] uppercase tracking-wide text-gray-400">
+                    Click for breakdown
+                  </p>
+                </CardContent>
+              </Card>
+            </button>
             {balances.map((b: any) => (
               <Card key={b.leave_type}>
                 <CardContent className="p-4 text-center">
@@ -660,6 +673,64 @@ export function MyLeavesPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Total Used breakdown — populated from the same balance rows the
+          Total Used card sums, so it always matches the headline number
+          (#238). */}
+      <Modal
+        open={showUsedBreakdown}
+        onClose={() => setShowUsedBreakdown(false)}
+        title="Leaves used — breakdown by type"
+      >
+        {balances.length === 0 || totalUsed === 0 ? (
+          <p className="py-4 text-center text-sm text-gray-500">
+            You haven't used any leave yet this period.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <table className="w-full text-sm">
+              <thead className="border-b text-left text-xs uppercase tracking-wide text-gray-500">
+                <tr>
+                  <th className="pb-2 font-medium">Type</th>
+                  <th className="pb-2 text-right font-medium">Used</th>
+                  <th className="pb-2 text-right font-medium">Accrued</th>
+                  <th className="pb-2 text-right font-medium">% of total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {balances
+                  .filter((b: any) => Number(b.used) > 0)
+                  .sort((a: any, b: any) => Number(b.used) - Number(a.used))
+                  .map((b: any) => {
+                    const used = Number(b.used);
+                    const pct = totalUsed > 0 ? Math.round((used / totalUsed) * 100) : 0;
+                    return (
+                      <tr key={b.leave_type}>
+                        <td className="py-2 capitalize">
+                          {String(b.leave_type).replace(/_/g, " ")}
+                        </td>
+                        <td className="py-2 text-right font-medium text-orange-600">{used}</td>
+                        <td className="py-2 text-right text-gray-500">{Number(b.accrued)}</td>
+                        <td className="py-2 text-right text-gray-500">{pct}%</td>
+                      </tr>
+                    );
+                  })}
+                <tr className="border-t font-semibold">
+                  <td className="py-2">Total</td>
+                  <td className="py-2 text-right text-orange-600">{totalUsed}</td>
+                  <td className="py-2"></td>
+                  <td className="py-2 text-right text-gray-400">100%</td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="flex justify-end pt-2">
+              <Button variant="outline" onClick={() => setShowUsedBreakdown(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Cancel Leave Modal */}

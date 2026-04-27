@@ -106,12 +106,17 @@ export function MyProfilePage() {
               ["Employee Code", emp.employee_code],
               ["Department", emp.department],
               ["Designation", emp.designation],
-              ["Employment Type", (emp.employment_type || "full_time").replace("_", " ")],
-              ["Date of Joining", formatDate(emp.date_of_joining)],
+              ["Employment Type", emp.employment_type ? emp.employment_type.replace("_", " ") : ""],
+              ["Date of Joining", emp.date_of_joining ? formatDate(emp.date_of_joining) : ""],
             ].map(([label, value]) => (
               <div key={label}>
                 <dt className="text-sm text-gray-500">{label}</dt>
-                <dd className="mt-1 text-sm font-medium capitalize text-gray-900">{value}</dd>
+                {/* Show an em-dash for missing values so the field reads as
+                    "not set" instead of silently rendering blank or, worse,
+                    a default like "HR" the user never entered (#250). */}
+                <dd className="mt-1 text-sm font-medium capitalize text-gray-900">
+                  {value || "—"}
+                </dd>
               </div>
             ))}
           </dl>

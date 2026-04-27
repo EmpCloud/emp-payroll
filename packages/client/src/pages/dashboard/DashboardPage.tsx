@@ -245,6 +245,9 @@ export function DashboardPage() {
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
+                  {/* activeIndex=-1 + cursor=false suppress recharts'
+                      default click highlight, which painted a translucent
+                      rectangle behind the active slice (#252). */}
                   <Pie
                     data={departmentHeadcount}
                     dataKey="count"
@@ -253,13 +256,21 @@ export function DashboardPage() {
                     cy="45%"
                     outerRadius={60}
                     innerRadius={30}
+                    activeIndex={-1}
+                    isAnimationActive={false}
                   >
                     {departmentHeadcount.map((_, i) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip
+                    cursor={false}
                     formatter={(value: number, name: string) => [`${value} employees`, name]}
+                    contentStyle={{
+                      borderRadius: 8,
+                      border: "1px solid rgb(229 231 235)",
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                    }}
                   />
                   <Legend
                     layout="horizontal"
