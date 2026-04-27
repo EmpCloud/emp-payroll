@@ -79,10 +79,18 @@ export function SalaryStructuresPage() {
   const { data: res, isLoading } = useSalaryStructures();
   const qc = useQueryClient();
 
-  // apiGet already unwraps the axios body, so `res` is the API envelope
-  // `{ success, data, ... }` — `.data` is the array. The previous double
-  // `.data?.data` always evaluated to undefined, leaving the page empty.
-  const structures = Array.isArray(res?.data) ? res.data : [];
+  // The salary-structures endpoint returns a paginated envelope:
+  //   { success, data: { data: [...], total, page, limit, totalPages } }
+  // `apiGet` unwraps axios's outer body, leaving `res = { success, data }`
+  // where `res.data` is the pagination object and `res.data.data` is the
+  // actual array. Tolerate a flat `data: [...]` shape too in case the
+  // endpoint is ever simplified — the array can live at either level.
+  const payload: any = res?.data;
+  const structures: any[] = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : [];
 
   function addComponent(preset?: (typeof PRESET_COMPONENTS)[0]) {
     setComponents([

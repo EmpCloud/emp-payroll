@@ -32,7 +32,14 @@ export function BulkSalaryUpdateModal({
   const { data: structRes } = useSalaryStructures();
   const { mutate: bulkAssign, isPending } = useBulkAssignSalary();
 
-  const structures = Array.isArray(structRes?.data) ? structRes.data : [];
+  // Endpoint returns a paginated envelope `{ data: { data: [...], total, ... } }`.
+  // Tolerate a flat shape too in case the endpoint is ever simplified.
+  const structuresPayload: any = structRes?.data;
+  const structures = Array.isArray(structuresPayload)
+    ? structuresPayload
+    : Array.isArray(structuresPayload?.data)
+      ? structuresPayload.data
+      : [];
   const [structureId, setStructureId] = useState(structures[0]?.id || "");
   const [effectiveFrom, setEffectiveFrom] = useState(new Date().toISOString().slice(0, 10));
   const [ctcMap, setCtcMap] = useState<Record<string, number>>(
