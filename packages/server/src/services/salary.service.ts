@@ -1,5 +1,6 @@
 import { getDB } from "../db/adapters";
 import { AppError } from "../api/middleware/error.middleware";
+import { EmployeeService } from "./employee.service";
 import {
   resolveSalaryComponents,
   SalaryResolverError,
@@ -272,7 +273,11 @@ export class SalaryService {
     sharedData: { structureId: string; effectiveFrom: string },
   ) {
     const results: { employeeId: string; success: boolean; error?: string }[] = [];
-    const employeeService = new (require("./employee.service").default)();
+    // EmployeeService is a NAMED export, not a default. The previous
+    // `require("./employee.service").default` resolved to undefined and
+    // threw "require(...).default is not a constructor" on every bulk
+    // assign. Use the top-level named import.
+    const employeeService = new EmployeeService();
 
     for (const { employeeId, ctc, bankDetails } of assignments) {
       try {
