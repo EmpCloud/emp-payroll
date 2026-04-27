@@ -399,9 +399,31 @@ export function SalaryStructuresPage() {
                       <input
                         className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-1 disabled:bg-gray-50 disabled:text-gray-300"
                         type="number"
-                        value={c.calculationType === "balance" ? "" : c.value}
-                        placeholder={c.calculationType === "balance" ? "auto" : ""}
-                        onChange={(e) => updateComponent(i, "value", Number(e.target.value))}
+                        min={0}
+                        value={
+                          c.calculationType === "balance"
+                            ? ""
+                            : c.value === 0 && (c as any)._cleared
+                              ? ""
+                              : c.value
+                        }
+                        placeholder={c.calculationType === "balance" ? "auto" : "0"}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          if (raw === "") {
+                            updateComponent(i, "value", 0);
+                            updateComponent(i, "_cleared", true);
+                            return;
+                          }
+                          const n = Number(raw);
+                          updateComponent(i, "value", Number.isFinite(n) && n >= 0 ? n : 0);
+                          updateComponent(i, "_cleared", false);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "-" || e.key === "+" || e.key === "e") {
+                            e.preventDefault();
+                          }
+                        }}
                         disabled={c.calculationType === "balance"}
                         title={
                           c.calculationType === "balance"
