@@ -232,7 +232,10 @@ export function PayrollRunDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Payroll — ${formatMonth(run.month, run.year)}`}
+        title={
+          run.month && run.year ? `${formatMonth(run.month, run.year)} Payroll Run` : "Payroll Run"
+        }
+        description={`Run ${run.code || run.id?.slice(0, 8) || ""} · ${run.status?.toUpperCase() || ""}`}
         actions={
           <div className="flex items-center gap-3">
             <Button variant="ghost" onClick={() => navigate("/payroll/runs")}>
@@ -354,10 +357,31 @@ export function PayrollRunDetailPage() {
                       toast.success(msg);
                     }
                   } catch (err: any) {
-                    // Prefer the server-provided error message (e.g. "Email provider
-                    // is not configured…") over a generic "Failed to send".
-                    const serverMsg = err?.response?.data?.error?.message;
-                    toast.error(serverMsg || "Failed to send payslip emails");
+                    // Prefer the server-provided error message (e.g. "Email
+                    // provider is not configured…") + details when present
+                    // (e.g. "{ failed: 5 }") over a generic "Failed to send".
+                    // Also nudge the operator to check Settings > Send Test
+                    // Email if SMTP isn't configured (#222).
+                    const errBody = err?.response?.data?.error;
+                    const serverMsg = errBody?.message;
+                    const detail = errBody?.details
+                      ? Object.entries(errBody.details)
+                          .map(
+                            ([k, v]) => `${k}: ${Array.isArray(v) ? (v as any[]).join(", ") : v}`,
+                          )
+                          .join(" · ")
+                      : "";
+                    const code = errBody?.code;
+                    const hint =
+                      code === "EMAIL_NOT_CONFIGURED"
+                        ? " (Set SMTP creds or SENDGRID_API_KEY on the server.)"
+                        : "";
+                    toast.error(
+                      `${serverMsg || "Failed to send payslip emails"}${
+                        detail ? ` · ${detail}` : ""
+                      }${hint}`,
+                      { duration: 8000 },
+                    );
                   } finally {
                     setEmailing(false);
                   }
@@ -374,21 +398,27 @@ export function PayrollRunDetailPage() {
         <Badge variant={run.status}>{run.status}</Badge>
       </div>
 
+      {/* When the run is still in 'draft', the totals are 0 and rendered as
+          '—'. Add a subtitle so it's obvious the values are pending compute
+          rather than missing data (#227). */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Employees" value={String(run.employee_count || 0)} icon={Users} />
         <StatCard
           title="Gross Pay"
           value={Number(run.total_gross) ? formatCurrency(run.total_gross) : "—"}
+          subtitle={Number(run.total_gross) ? undefined : "Click Compute to calculate"}
           icon={Wallet}
         />
         <StatCard
           title="Deductions"
           value={Number(run.total_deductions) ? formatCurrency(run.total_deductions) : "—"}
+          subtitle={Number(run.total_deductions) ? undefined : "Click Compute to calculate"}
           icon={TrendingDown}
         />
         <StatCard
           title="Net Pay"
           value={Number(run.total_net) ? formatCurrency(run.total_net) : "—"}
+          subtitle={Number(run.total_net) ? undefined : "Click Compute to calculate"}
           icon={Building2}
         />
       </div>
