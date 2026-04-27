@@ -66,7 +66,10 @@ export function StatCard({
   // Cards clickable (#84 #85 #89 #91 #92 #96 #105 etc) — when `to` or
   // `onClick` is provided, render as an interactive element with a subtle
   // hover cue. focus-visible rings only (never persist after mouse click).
-  const cardBase = "rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition";
+  // h-full keeps siblings the same height when one card has a short value
+  // and another has a subtitle / longer string in the same grid row
+  // (#229 Tax 'Total Employees', #232 Loans cards).
+  const cardBase = "h-full rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition";
   const interactive =
     "hover:-translate-y-0.5 hover:border-brand-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500";
 

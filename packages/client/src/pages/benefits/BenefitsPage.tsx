@@ -325,11 +325,15 @@ export function BenefitsPage() {
           icon={Heart}
           onClick={() => setTab("pending")}
         />
+        {/* Monthly Employer Cost is a summary number — clicking it used to
+            jump back to Plans even when the user already had Enrollments/
+            Pending open, swapping their context for no good reason. Render
+            as a plain non-interactive card so the value is informative
+            without redirecting (#233). */}
         <StatCard
           title="Monthly Employer Cost"
           value={formatCurrency(stats.totalEmployerCost || 0)}
           icon={DollarSign}
-          onClick={() => setTab("plans")}
         />
       </div>
 
