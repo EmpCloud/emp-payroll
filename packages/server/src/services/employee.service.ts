@@ -42,17 +42,18 @@ async function mergeUserWithProfile(ecUser: EmpCloudUser, payrollDb: any): Promi
       : profile.tax_info
     : {};
 
-  // PAN / Aadhar are entered on EmpCloud's profile screen (employee_profiles
-  // table). The payroll-side tax_info JSON may have been written by an HR
-  // admin via the payroll detail page, but if the employee filled their
-  // statutory IDs in EmpCloud first, the payroll merge previously ignored
-  // them and surfaced "—" on the My Profile screen. Fall through to the
-  // EmpCloud employee_profiles row when tax_info is missing the field
-  // (#251).
+  // PAN / Aadhar / UAN are entered on EmpCloud's profile screen
+  // (employee_profiles table). The payroll-side tax_info JSON may have
+  // been written by an HR admin via the payroll detail page, but if the
+  // employee filled their statutory IDs in EmpCloud first, the payroll
+  // merge previously ignored them and surfaced "—" on the My Profile
+  // screen. Fall through to the EmpCloud employee_profiles row when
+  // tax_info is missing the field (#251).
   const ecStatutory = await findEmployeeProfileByUserId(ecUser.id);
   if (ecStatutory) {
     if (!taxInfo.pan && ecStatutory.pan_number) taxInfo.pan = ecStatutory.pan_number;
     if (!taxInfo.aadhar && ecStatutory.aadhar_number) taxInfo.aadhar = ecStatutory.aadhar_number;
+    if (!taxInfo.uan && ecStatutory.uan_number) taxInfo.uan = ecStatutory.uan_number;
   }
   const pfDetails = profile
     ? typeof profile.pf_details === "string"

@@ -168,6 +168,10 @@ export async function getUserDepartmentName(departmentId: number | null): Promis
 export interface EmpCloudEmployeeProfile {
   pan_number: string | null;
   aadhar_number: string | null;
+  // EmpCloud migration 050 added this column — coalesce missing values to
+  // null so older EmpCloud DBs that haven't run the migration yet still
+  // work (the column won't be selected in the catch path below either).
+  uan_number: string | null;
   passport_number: string | null;
 }
 
@@ -178,11 +182,13 @@ export async function findEmployeeProfileByUserId(
   try {
     const row = await db("employee_profiles")
       .where({ user_id: userId })
-      .select("pan_number", "aadhar_number", "passport_number")
+      .select("pan_number", "aadhar_number", "uan_number", "passport_number")
       .first();
     return row || null;
   } catch {
-    // The table may not exist on older EmpCloud schemas; degrade gracefully.
+    // Either the table or the new uan_number column may not exist on older
+    // EmpCloud schemas. Degrade gracefully — caller falls back to whatever
+    // the payroll DB has.
     return null;
   }
 }
