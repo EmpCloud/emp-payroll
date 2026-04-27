@@ -144,10 +144,18 @@ export function InsurancePage() {
         return;
       }
     }
+    // #221 — Policy numbers are identifiers (e.g. "POL-2024-001"), never
+    // negative figures. Reject a leading "-" or a pure-negative value
+    // before sending so HR can't accidentally save a malformed id.
+    const policyNumber = String(fd.get("policyNumber") || "").trim();
+    if (policyNumber && (policyNumber.startsWith("-") || /^-\d/.test(policyNumber))) {
+      toast.error("Policy number cannot start with a minus sign");
+      return;
+    }
     setSaving(true);
     const payload = {
       name: fd.get("name"),
-      policyNumber: fd.get("policyNumber") || undefined,
+      policyNumber: policyNumber || undefined,
       provider: fd.get("provider"),
       type: fd.get("type"),
       premiumTotal: Number(fd.get("premiumTotal") || 0),
@@ -617,6 +625,9 @@ export function InsurancePage() {
               label="Policy Number"
               name="policyNumber"
               defaultValue={editingPolicy?.policy_number || ""}
+              pattern="[^\-].*"
+              title="Policy number cannot start with a minus sign"
+              placeholder="e.g. POL-2024-001"
             />
             <Input
               label="Provider"
