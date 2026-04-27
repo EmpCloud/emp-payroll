@@ -156,6 +156,38 @@ export async function getUserDepartmentName(departmentId: number | null): Promis
 }
 
 /**
+ * Statutory IDs (PAN, Aadhar, passport) live on EmpCloud's
+ * `employee_profiles` table — separate from the `users` row but tied to
+ * it via `user_id`. emp-payroll needs them so PAN/Aadhar entered in the
+ * EmpCloud profile show up on the payroll-side My Profile (#251).
+ *
+ * Returns null when the row doesn't exist (employee never opened their
+ * EmpCloud profile / hasn't filled it in yet) so the caller can fall
+ * through to whatever the payroll DB has.
+ */
+export interface EmpCloudEmployeeProfile {
+  pan_number: string | null;
+  aadhar_number: string | null;
+  passport_number: string | null;
+}
+
+export async function findEmployeeProfileByUserId(
+  userId: number,
+): Promise<EmpCloudEmployeeProfile | null> {
+  const db = getEmpCloudDB();
+  try {
+    const row = await db("employee_profiles")
+      .where({ user_id: userId })
+      .select("pan_number", "aadhar_number", "passport_number")
+      .first();
+    return row || null;
+  } catch {
+    // The table may not exist on older EmpCloud schemas; degrade gracefully.
+    return null;
+  }
+}
+
+/**
  * Find all users in an organization (active only).
  */
 export async function findUsersByOrgId(
