@@ -64,10 +64,26 @@ export function CountryCompliancePage() {
   const [search, setSearch] = useState("");
   const [regionFilter, setRegionFilter] = useState("");
   const [selectedCountryId, setSelectedCountryId] = useState<string | null>(null);
+  // When the user lands here from the Global Dashboard "Countries" card
+  // (?configured=true), narrow the list to countries the org actually has
+  // employees in. Defaults to false so the page still doubles as a global
+  // catalogue when accessed directly (#235).
+  const [configuredOnly, setConfiguredOnly] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("configured") === "true";
+  });
 
   const { data: countriesRes, isLoading } = useQuery({
     queryKey: ["global-countries", regionFilter],
     queryFn: () => apiGet<any>("/global/countries", { region: regionFilter || undefined }),
+  });
+
+  // Pull the dashboard payload to know which countries the org has set up.
+  // Already cached if the user came from the dashboard.
+  const { data: dashRes } = useQuery({
+    queryKey: ["global-dashboard"],
+    queryFn: () => apiGet<any>("/global/dashboard"),
+    enabled: configuredOnly,
   });
 
   const { data: countryDetail } = useQuery({
@@ -76,7 +92,16 @@ export function CountryCompliancePage() {
     enabled: !!selectedCountryId,
   });
 
+  const configuredCountryCodes = new Set<string>(
+    (dashRes?.data?.employeesByCountry || [])
+      .map((c: any) => (c.country_code || c.code || "").toUpperCase())
+      .filter(Boolean),
+  );
+
   const countries = (countriesRes?.data || []).filter((c: any) => {
+    if (configuredOnly && configuredCountryCodes.size > 0) {
+      if (!configuredCountryCodes.has((c.code || "").toUpperCase())) return false;
+    }
     if (!search) return true;
     const q = search.toLowerCase();
     return c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q);
@@ -110,6 +135,17 @@ export function CountryCompliancePage() {
                 value={regionFilter}
                 onChange={(e) => setRegionFilter(e.target.value)}
               />
+              {configuredCountryCodes.size > 0 && (
+                <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={configuredOnly}
+                    onChange={(e) => setConfiguredOnly(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  Only my configured countries ({configuredCountryCodes.size})
+                </label>
+              )}
             </CardContent>
           </Card>
 

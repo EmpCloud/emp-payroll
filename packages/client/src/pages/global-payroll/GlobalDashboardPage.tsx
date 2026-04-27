@@ -80,10 +80,16 @@ export function GlobalDashboardPage() {
 
       {/* Stats — each card links to the drill-down page (#115) */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Link to="/global-payroll/employees" className="block transition hover:-translate-y-0.5">
+        <Link
+          to="/global-payroll/employees?status=active"
+          className="block transition hover:-translate-y-0.5"
+        >
           <StatCard title="Active Employees" value={String(dash?.totalActive || 0)} icon={Users} />
         </Link>
-        <Link to="/global-payroll/compliance" className="block transition hover:-translate-y-0.5">
+        <Link
+          to="/global-payroll/compliance?configured=true"
+          className="block transition hover:-translate-y-0.5"
+        >
           <StatCard title="Countries" value={String(dash?.totalCountries || 0)} icon={Globe} />
         </Link>
         <Link

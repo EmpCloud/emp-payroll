@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -23,7 +24,10 @@ export function ContractorInvoicesPage() {
   const qc = useQueryClient();
   const [showSubmit, setShowSubmit] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [statusFilter, setStatusFilter] = useState("");
+  // Seed filter from URL so the dashboard's "Pending Invoices" card actually
+  // lands the user on a pending-only view instead of all statuses (#236).
+  const [searchParams] = useSearchParams();
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "");
 
   const [form, setForm] = useState({
     globalEmployeeId: "",
