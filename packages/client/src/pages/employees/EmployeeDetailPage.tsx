@@ -521,7 +521,13 @@ export function EmployeeDetailPage() {
       >
         <SalaryAssignForm
           employeeId={id!}
-          structures={Array.isArray(structuresRes?.data) ? structuresRes.data : []}
+          structures={(() => {
+            // Endpoint returns a paginated envelope; the array is at
+            // res.data.data. Tolerate a flat shape too in case the
+            // endpoint is ever simplified.
+            const p: any = structuresRes?.data;
+            return Array.isArray(p) ? p : Array.isArray(p?.data) ? p.data : [];
+          })()}
           currentCTC={salary ? Number(salary.ctc) : undefined}
           loading={salaryAssigning}
           onSubmit={async (data) => {
