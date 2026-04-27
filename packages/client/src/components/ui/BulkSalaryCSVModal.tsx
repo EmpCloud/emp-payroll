@@ -105,6 +105,8 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
         employeeId: string;
         ctc: number;
         bankDetails?: { accountNumber: string; ifscCode: string; bankName: string };
+        pan?: string;
+        pfDetails?: { pfNumber?: string; uan?: string };
       }[] = [];
 
       for (const row of rows) {
@@ -142,6 +144,20 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
 
           if (accountNumber || ifscCode || bankName) {
             assignment.bankDetails = { accountNumber, ifscCode, bankName };
+          }
+
+          // PAN (optional). Server merges into existing tax_info.
+          const pan = pick(row, ["PAN", "PAN Number"]);
+          if (pan) assignment.pan = pan;
+
+          // PF Number / UAN (optional). Server merges into existing pf_details.
+          const pfNumber = pick(row, ["PF Number", "PF No", "PFNumber"]);
+          const uan = pick(row, ["UAN", "UAN Number"]);
+          if (pfNumber || uan) {
+            assignment.pfDetails = {
+              ...(pfNumber ? { pfNumber } : {}),
+              ...(uan ? { uan } : {}),
+            };
           }
 
           assignments.push(assignment);

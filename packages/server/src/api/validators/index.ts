@@ -256,6 +256,26 @@ export const bulkSalaryAssignSchema = z.object({
         z.object({
           employeeId: z.union([z.string(), z.number()]).transform(String),
           ctc: z.number().positive(),
+          // Optional statutory / payment fields. Sent by the CSV import
+          // when those columns are present; bulkAssignSalary merges them
+          // into the existing payroll profile (read-merge-write so a
+          // partial CSV doesn't clobber other fields).
+          pan: z.string().trim().min(1).optional(),
+          pfDetails: z
+            .object({
+              pfNumber: z.string().trim().min(1).optional(),
+              uan: z.string().trim().min(1).optional(),
+            })
+            .partial()
+            .optional(),
+          bankDetails: z
+            .object({
+              accountNumber: z.string().optional(),
+              ifscCode: z.string().optional(),
+              bankName: z.string().optional(),
+            })
+            .partial()
+            .optional(),
         }),
       )
       .min(1, "Select at least one employee"),

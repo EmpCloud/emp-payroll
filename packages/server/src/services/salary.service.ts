@@ -269,14 +269,16 @@ export class SalaryService {
     assignments: {
       employeeId: string;
       ctc: number;
-      bankDetails?: { accountNumber: string; ifscCode: string; bankName: string };
+      bankDetails?: { accountNumber?: string; ifscCode?: string; bankName?: string };
+      pan?: string;
+      pfDetails?: { pfNumber?: string; uan?: string };
     }[],
     sharedData: { structureId: string; effectiveFrom: string; orgId: number },
   ) {
     const results: { employeeId: string; success: boolean; error?: string }[] = [];
     const employeeService = new EmployeeService();
 
-    for (const { employeeId, ctc, bankDetails } of assignments) {
+    for (const { employeeId, ctc, bankDetails, pan, pfDetails } of assignments) {
       try {
         // The CSV "Employee ID" column carries either the numeric
         // empcloud user id (rare — only when HR exported the directory
@@ -324,6 +326,36 @@ export class SalaryService {
           } catch (bankErr: any) {
             console.warn(`Bank details update failed for employee ${employeeId}:`, bankErr.message);
             // Continue with salary assignment even if bank details update fails
+          }
+        }
+
+        // PAN — update tax_info if the CSV had a PAN column. Read-merge-write
+        // so we don't clobber other taxInfo fields (aadhar, deductions, etc).
+        if (pan && pan.trim()) {
+          try {
+            const existing =
+              (await employeeService.getTaxInfo(numericUserId, sharedData.orgId)) || {};
+            await employeeService.updateTaxInfo(numericUserId, sharedData.orgId, {
+              ...existing,
+              pan: pan.trim().toUpperCase(),
+            });
+          } catch (taxErr: any) {
+            console.warn(`PAN update failed for employee ${employeeId}:`, taxErr.message);
+          }
+        }
+
+        // PF Number / UAN — update pf_details. Same read-merge-write.
+        if (pfDetails && (pfDetails.pfNumber || pfDetails.uan)) {
+          try {
+            const existing =
+              (await employeeService.getPfDetails(numericUserId, sharedData.orgId)) || {};
+            await employeeService.updatePfDetails(numericUserId, sharedData.orgId, {
+              ...existing,
+              ...(pfDetails.pfNumber ? { pfNumber: pfDetails.pfNumber.trim() } : {}),
+              ...(pfDetails.uan ? { uan: pfDetails.uan.trim() } : {}),
+            });
+          } catch (pfErr: any) {
+            console.warn(`PF details update failed for employee ${employeeId}:`, pfErr.message);
           }
         }
 
