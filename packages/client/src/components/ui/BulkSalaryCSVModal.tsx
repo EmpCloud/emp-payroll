@@ -26,9 +26,20 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
   } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Endpoint returns a paginated envelope `{ success, data: { data: [...], total, ... } }`.
+  // Tolerate a flat `data: [...]` shape too in case the endpoint is ever
+  // simplified — the array can live at either level. Same defensive
+  // pattern used by SalaryStructuresPage / EmployeeDetailPage / Bulk
+  // Update modal after PR #258.
   const { data: structures = [] } = useQuery({
     queryKey: ["salary-structures"],
-    queryFn: () => apiGet<any>("/salary-structures").then((r) => r.data.data || []),
+    queryFn: () =>
+      apiGet<any>("/salary-structures").then((r) => {
+        const p: any = r?.data;
+        if (Array.isArray(p)) return p;
+        if (Array.isArray(p?.data)) return p.data;
+        return [];
+      }),
   });
 
   function parseCSV(text: string): Record<string, string>[] {
