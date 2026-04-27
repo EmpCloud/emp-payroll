@@ -56,32 +56,55 @@ export function PayEquityPage() {
         </div>
       ) : (
         <>
-          {/* #169 — Previously all 4 cards called setTab against the local
-              tab state, which only swapped the narrow "Analysis Overview /
-              Compliance Report" tabs on this very page. Two of them
-              (Employees Analyzed, Median Salary) were on the already-
-              active tab, so clicks produced zero visible change — users
-              reported the cards as "not redirecting". Point them at the
-              dedicated list/benchmarks pages; keep the gap cards on the
-              Compliance tab (that IS their drill-in view) but scroll it
-              into focus so the switch is visible. */}
+          {/* Card click behaviours:
+              - Employees Analyzed: scroll to the per-department / per-role
+                breakdown on this page so the user actually sees the
+                employees-analyzed breakdown instead of the org-wide
+                /employees roster (#204).
+              - Median Salary: scroll to the Role / Designation analysis
+                section that has p25/p50/p75 — the dedicated /benchmarks
+                page is empty until org-wide market data is wired up (#205).
+              - Mean / Median Pay Gap: same compliance drill-in target,
+                but rendered with distinct icon + color so they don't look
+                like the same card duplicated (#203). */}
           <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               title="Employees Analyzed"
               value={analysis.totalEmployees || 0}
               icon={Users}
-              to="/employees"
+              onClick={() => {
+                setTab("overview");
+                requestAnimationFrame(() =>
+                  document
+                    .getElementById("pe-employees-analyzed")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                );
+              }}
             />
             <StatCard
               title="Median Salary"
               value={formatCurrency(analysis.overallStats?.median || 0)}
               icon={BarChart3}
-              to="/benchmarks"
+              onClick={() => {
+                setTab("overview");
+                requestAnimationFrame(() =>
+                  document
+                    .getElementById("pe-role-analysis")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                );
+              }}
             />
             <StatCard
               title="Mean Pay Gap"
               value={`${payGap.meanGapPercentage || 0}%`}
               icon={gapSeverity === "low" ? Scale : AlertTriangle}
+              accentClassName={
+                gapSeverity === "high"
+                  ? "bg-red-50 text-red-600"
+                  : gapSeverity === "medium"
+                    ? "bg-amber-50 text-amber-600"
+                    : "bg-emerald-50 text-emerald-600"
+              }
               onClick={() => {
                 setTab("compliance");
                 requestAnimationFrame(() =>
@@ -94,7 +117,8 @@ export function PayEquityPage() {
             <StatCard
               title="Median Pay Gap"
               value={`${payGap.medianGapPercentage || 0}%`}
-              icon={Scale}
+              icon={TrendingDown}
+              accentClassName="bg-indigo-50 text-indigo-600"
               onClick={() => {
                 setTab("compliance");
                 requestAnimationFrame(() =>
@@ -202,7 +226,7 @@ export function PayEquityPage() {
               {/* Department Analysis */}
               {analysis.departmentAnalysis && (
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-6" id="pe-employees-analyzed">
                     <h3 className="mb-4 text-lg font-semibold text-gray-900">
                       Department Analysis
                     </h3>
@@ -255,7 +279,7 @@ export function PayEquityPage() {
               {/* Role Analysis */}
               {analysis.roleAnalysis && (
                 <Card>
-                  <CardContent className="p-6">
+                  <CardContent className="p-6" id="pe-role-analysis">
                     <h3 className="mb-4 text-lg font-semibold text-gray-900">
                       Role / Designation Analysis
                     </h3>

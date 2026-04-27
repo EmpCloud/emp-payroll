@@ -9,6 +9,12 @@ interface StatCardProps {
   icon: LucideIcon;
   trend?: { value: string; positive: boolean };
   className?: string;
+  /**
+   * Override the icon-bubble accent — Tailwind classes for the bg/text
+   * combo (e.g. "bg-emerald-50 text-emerald-600"). Defaults to brand.
+   * Use this to differentiate cards that would otherwise look identical.
+   */
+  accentClassName?: string;
   /** When set, the whole card becomes a react-router Link to this path. */
   to?: string;
   /** When set (and `to` is not), the card is a button with this handler. */
@@ -22,6 +28,7 @@ export function StatCard({
   icon: Icon,
   trend,
   className,
+  accentClassName,
   to,
   onClick,
 }: StatCardProps) {
@@ -57,8 +64,10 @@ export function StatCard({
           </p>
         )}
       </div>
-      <div className="bg-brand-50 shrink-0 rounded-lg p-3">
-        <Icon className="text-brand-600 h-6 w-6" />
+      <div
+        className={cn("shrink-0 rounded-lg p-3", accentClassName ?? "bg-brand-50 text-brand-600")}
+      >
+        <Icon className="h-6 w-6" />
       </div>
     </div>
   );
