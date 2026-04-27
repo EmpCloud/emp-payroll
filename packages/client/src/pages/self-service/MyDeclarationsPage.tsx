@@ -162,9 +162,10 @@ export function MyDeclarationsPage() {
         else if (field === "declaredAmount") errors.amount = issue.message;
       }
     }
-    if (!proofFile) {
-      errors.proof = "Please upload a proof document";
-    }
+    // Proof upload is not yet wired up server-side (the route just returns
+    // a placeholder), so don't block submission on missing proof — that
+    // was preventing employees from submitting declarations at all (#201).
+    // We still validate the file's type/size at selection time.
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -438,7 +439,9 @@ export function MyDeclarationsPage() {
             error={fieldErrors.amount}
           />
           <div>
-            <label className="block text-sm font-medium text-gray-700">Proof Document</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Proof Document <span className="text-xs font-normal text-gray-400">(optional)</span>
+            </label>
             <div
               role="button"
               tabIndex={0}

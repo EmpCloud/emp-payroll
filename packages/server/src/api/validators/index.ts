@@ -279,14 +279,20 @@ export const createPayrollRunSchema = z.object({
 // ---------------------------------------------------------------------------
 export const submitDeclarationSchema = z.object({
   body: z.object({
-    financialYear: z.string(),
-    declarations: z.array(
-      z.object({
-        section: z.string(),
-        description: z.string(),
-        declaredAmount: z.number().positive(),
-      }),
-    ),
+    financialYear: z.string().min(1),
+    // Accept 0 (placeholder declarations) — the service treats < 0 as the
+    // hard error. Schema previously required positive(), which rejected
+    // any 0-amount the UI legitimately submits, returning a 400 the
+    // service would never have raised (#201, #212, #214).
+    declarations: z
+      .array(
+        z.object({
+          section: z.string().min(1),
+          description: z.string().min(1),
+          declaredAmount: z.number().nonnegative(),
+        }),
+      )
+      .min(1),
   }),
 });
 
