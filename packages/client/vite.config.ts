@@ -29,6 +29,14 @@ export default defineConfig({
         target: "http://localhost:4000",
         changeOrigin: true,
       },
+      // #219 — Employee documents are served as `/uploads/<file>` by the
+      // backend's express.static handler. Without this proxy entry the
+      // request hits the Vite dev server (which has no such file) and
+      // the doc-view link 404s in dev.
+      "/uploads": {
+        target: "http://localhost:4000",
+        changeOrigin: true,
+      },
     },
   },
 });

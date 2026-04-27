@@ -16,6 +16,7 @@ import {
   useSalaryStructures,
 } from "@/api/hooks";
 import { apiGet, apiPost, apiDelete, apiPut } from "@/api/client";
+import { useDepartments } from "@/api/hooks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -68,6 +69,11 @@ export function EmployeeDetailPage() {
   });
   const updateMutation = useUpdateEmployee(id!);
   const { data: structuresRes } = useSalaryStructures();
+  const { data: deptsData } = useDepartments();
+  const deptOptions = (deptsData?.data?.data || deptsData?.data || []).map((d: any) => ({
+    value: d.name,
+    label: d.name,
+  }));
   const [editOpen, setEditOpen] = useState(false);
   const [salaryOpen, setSalaryOpen] = useState(false);
   const [salaryAssigning, setSalaryAssigning] = useState(false);
@@ -126,7 +132,10 @@ export function EmployeeDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title=""
+        title={`${emp.first_name} ${emp.last_name}`.trim() || "Employee"}
+        description={
+          emp.designation && emp.department ? `${emp.designation} · ${emp.department}` : undefined
+        }
         actions={
           <Button variant="ghost" onClick={() => navigate("/employees")}>
             <ArrowLeft className="h-4 w-4" /> Back to Employees
@@ -458,13 +467,32 @@ export function EmployeeDetailPage() {
           </div>
           <Input id="phone" name="phone" label="Phone" defaultValue={emp.phone || ""} />
           <div className="grid grid-cols-2 gap-4">
-            <Input
-              id="department"
-              name="department"
-              label="Department"
-              defaultValue={emp.department}
-              required
-            />
+            {deptOptions.length > 0 ? (
+              <SelectField
+                id="department"
+                name="department"
+                label="Department"
+                defaultValue={emp.department || ""}
+                options={[
+                  { value: "", label: "— Select department —" },
+                  ...(deptOptions.find((d: any) => d.value === emp.department)
+                    ? deptOptions
+                    : [
+                        { value: emp.department, label: `${emp.department} (current)` },
+                        ...deptOptions,
+                      ]),
+                ]}
+                required
+              />
+            ) : (
+              <Input
+                id="department"
+                name="department"
+                label="Department"
+                defaultValue={emp.department}
+                required
+              />
+            )}
             <Input
               id="designation"
               name="designation"
