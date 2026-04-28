@@ -94,6 +94,14 @@ export function PayrollRunsPage() {
       toast.error("Please enter a valid year (2020–2100)");
       return;
     }
+    // #1655 — Reject future-period runs client-side too, so the user gets
+    // immediate feedback instead of a 400 from the server.
+    const requested = year * 12 + (month - 1);
+    const current = now.getFullYear() * 12 + now.getMonth();
+    if (requested > current) {
+      toast.error("Cannot create a payroll run for a future period");
+      return;
+    }
     if (!payDate) {
       toast.error("Please choose a pay date");
       return;
@@ -181,6 +189,8 @@ export function PayrollRunsPage() {
               name="year"
               label="Year"
               type="number"
+              min={2020}
+              max={now.getFullYear()}
               defaultValue={String(now.getFullYear())}
               required
             />
