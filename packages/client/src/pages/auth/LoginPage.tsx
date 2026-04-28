@@ -26,10 +26,37 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // QA #29 — first click on Sign in did nothing visible. Root cause:
+    // when the browser autofills email + password, it does not always
+    // dispatch React's `change` event, so the controlled `email` /
+    // `password` state stay empty. With `required` on the inputs the
+    // form submit is silently rejected by HTML5 validation, no spinner,
+    // no error. Read values from FormData here as well — that gives us
+    // the actual DOM values regardless of state timing — and surface a
+    // toast if anything is empty so the user always gets feedback.
+    const fd = new FormData(e.currentTarget);
+    const fdEmail = String(fd.get("email") || "").trim();
+    const fdPassword = String(fd.get("password") || "");
+    const submitEmail = fdEmail || email;
+    const submitPassword = fdPassword || password;
+
+    if (!submitEmail || !submitPassword) {
+      toast.error("Please enter both your email and password");
+      return;
+    }
+
+    // Re-sync the controlled state from autofilled values so the next
+    // render shows what the user actually submitted.
+    if (fdEmail && fdEmail !== email) setEmail(fdEmail);
+    if (fdPassword && fdPassword !== password) setPassword(fdPassword);
+
     try {
-      const res = await loginMutation.mutateAsync({ email, password });
+      const res = await loginMutation.mutateAsync({
+        email: submitEmail,
+        password: submitPassword,
+      });
       if (res.success) {
         saveAuth(res.data);
         toast.success(`Welcome back, ${res.data.user.firstName}!`);
@@ -140,7 +167,9 @@ export function LoginPage() {
                 </label>
                 <input
                   id="email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="you@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -156,7 +185,9 @@ export function LoginPage() {
                 <div className="relative">
                   <input
                     id="password"
+                    name="password"
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
