@@ -28,9 +28,14 @@ export class ReimbursementService {
       filters: { org_id: orgId, is_active: true },
       limit: 10000,
     });
+    // #273 — `employee_payroll_profiles` uses `empcloud_org_id` (numeric),
+    // not `org_id` (the legacy uuid column on the old `employees` table).
+    // The old filter silently returned no rows because the column doesn't
+    // exist on this table, so any employee onboarded via the new flow had
+    // their reimbursements invisible in the admin list.
     const profiles = await this.db
       .findMany<any>("employee_payroll_profiles", {
-        filters: { org_id: orgId, is_active: 1 },
+        filters: { empcloud_org_id: Number(orgId), is_active: 1 },
         limit: 10000,
       })
       .catch(() => ({ data: [] as any[] }));
