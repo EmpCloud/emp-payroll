@@ -48,19 +48,65 @@ export function MySalaryPage() {
           </CardHeader>
           <CardContent>
             <dl className="space-y-3">
-              {[
-                ["Annual CTC", Number(salary.ctc)],
-                ["Gross Salary (Annual)", Number(salary.gross_salary)],
-                ...components.map((c: any) => [
-                  `Monthly ${c.code === "BASIC" ? "Basic" : c.code === "HRA" ? "HRA" : c.code}`,
-                  c.monthlyAmount,
-                ]),
-              ].map(([label, val]: any) => (
-                <div key={label} className="flex justify-between text-sm">
-                  <dt className="text-gray-500">{label}</dt>
-                  <dd className="font-medium text-gray-900">{formatCurrency(val)}</dd>
-                </div>
-              ))}
+              {(() => {
+                // CTC is the configured contractual figure (set by HR on the
+                // salary structure). The annualised sum of components is what
+                // the payroll engine derives after rounding each monthly
+                // component to whole rupees, then × 12 — the two won't match
+                // exactly when the resolver applies rounding. QA reported
+                // ₹12,23,00,000 vs ₹12,22,78,404 (#7).
+                //
+                // Show both as distinct labelled lines so users understand
+                // which is the source of truth (the configured CTC) and
+                // which is the derived figure. Surface the delta inline if
+                // it's non-trivial to avoid the silent "off by ~₹21k"
+                // mystery the QA flagged.
+                const ctc = Number(salary.ctc) || 0;
+                const componentsAnnual = components.reduce(
+                  (sum: number, c: any) => sum + Number(c.annualAmount || 0),
+                  0,
+                );
+                const grossAnnual = Number(salary.gross_salary) || componentsAnnual;
+                const delta = ctc - componentsAnnual;
+                const showDelta = Math.abs(delta) >= 1;
+                return (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <dt className="text-gray-500">Annual CTC (configured)</dt>
+                      <dd className="font-medium text-gray-900">{formatCurrency(ctc)}</dd>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <dt className="text-gray-500">Annual gross from components</dt>
+                      <dd className="font-medium text-gray-900">
+                        {formatCurrency(componentsAnnual)}
+                      </dd>
+                    </div>
+                    {showDelta && (
+                      <p className="text-xs leading-snug text-gray-400">
+                        Small differences between configured CTC and the sum of components are
+                        expected — components are rounded to whole rupees per month before being
+                        annualised.
+                      </p>
+                    )}
+                    {grossAnnual !== componentsAnnual && (
+                      <div className="flex justify-between text-sm">
+                        <dt className="text-gray-500">Gross Salary (Annual)</dt>
+                        <dd className="font-medium text-gray-900">{formatCurrency(grossAnnual)}</dd>
+                      </div>
+                    )}
+                    {components.map((c: any) => (
+                      <div key={c.code} className="flex justify-between text-sm">
+                        <dt className="text-gray-500">
+                          {`Monthly ${c.code === "BASIC" ? "Basic" : c.code === "HRA" ? "HRA" : c.code}`}
+                        </dt>
+                        <dd className="font-medium text-gray-900">
+                          {formatCurrency(c.monthlyAmount)}
+                        </dd>
+                      </div>
+                    ))}
+                  </>
+                );
+              })()}
             </dl>
           </CardContent>
         </Card>
