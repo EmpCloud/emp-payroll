@@ -286,12 +286,29 @@ export const bulkSalaryAssignSchema = z.object({
 // Payroll Schemas
 // ---------------------------------------------------------------------------
 export const createPayrollRunSchema = z.object({
-  body: z.object({
-    month: z.number().min(1).max(12),
-    year: z.number().min(2020).max(2100),
-    payDate: z.string(),
-    notes: z.string().optional(),
-  }),
+  body: z
+    .object({
+      month: z.number().min(1).max(12),
+      year: z.number().min(2020).max(2100),
+      payDate: z.string(),
+      notes: z.string().optional(),
+    })
+    // #1655 — Reject runs for future periods. The current month is always
+    // allowed (orgs commonly run payroll mid-month), but anything past
+    // (year, month) > today's (year, month) is bogus and was the source
+    // of the "August 2026 marked Paid in April 2026" report.
+    .refine(
+      (v) => {
+        const now = new Date();
+        const requested = v.year * 12 + (v.month - 1);
+        const current = now.getFullYear() * 12 + now.getMonth();
+        return requested <= current;
+      },
+      {
+        message: "Cannot create a payroll run for a future period",
+        path: ["month"],
+      },
+    ),
 });
 
 // ---------------------------------------------------------------------------
