@@ -28,6 +28,19 @@ const MONTHS = [
   { value: "12", label: "December" },
 ];
 
+// A cancelled run keeps its computed totals in the DB for audit purposes,
+// but those numbers are misleading in the list view — the run never paid out
+// (#5). Render an em-dash for money columns when the run is cancelled so QA
+// and HR don't read a ₹2.3 Cr deduction figure on a run that was thrown away.
+function isCancelled(row: any) {
+  return String(row?.status || "").toLowerCase() === "cancelled";
+}
+
+function moneyCell(row: any, value: any) {
+  if (isCancelled(row)) return "—";
+  return Number(value) ? formatCurrency(value) : "—";
+}
+
 const columns = [
   {
     key: "period",
@@ -39,23 +52,22 @@ const columns = [
   {
     key: "employee_count",
     header: "Employees",
-    render: (row: any) => row.employee_count || 0,
+    render: (row: any) => (isCancelled(row) ? "—" : row.employee_count || 0),
   },
   {
     key: "total_gross",
     header: "Gross Pay",
-    render: (row: any) => (Number(row.total_gross) ? formatCurrency(row.total_gross) : "—"),
+    render: (row: any) => moneyCell(row, row.total_gross),
   },
   {
     key: "total_deductions",
     header: "Deductions",
-    render: (row: any) =>
-      Number(row.total_deductions) ? formatCurrency(row.total_deductions) : "—",
+    render: (row: any) => moneyCell(row, row.total_deductions),
   },
   {
     key: "total_net",
     header: "Net Pay",
-    render: (row: any) => (Number(row.total_net) ? formatCurrency(row.total_net) : "—"),
+    render: (row: any) => moneyCell(row, row.total_net),
   },
   {
     key: "status",
