@@ -12,7 +12,75 @@ export class TaxDeclarationService {
       employee_id: employeeId,
       financial_year: fy,
     });
-    return computation;
+    if (!computation) return null;
+
+    // #269 — `tax_computations` is a snapshot written when computeTax() last
+    // ran, which is typically BEFORE any payslips are generated. We were
+    // returning that stale snapshot's tax_already_paid (= ₹0) even when
+    // months of TDS had since been deducted, so the My-Tax dashboard
+    // displayed "TDS Deducted YTD: ₹0". Recompute YTD live from payslips
+    // every time the computation is fetched, so the value is always
+    // current. Also recompute `remaining_tax` for the same reason.
+    const ytdTds = await this.computeYtdTdsFromPayslips(employeeId, fy);
+    const totalTax = Number(computation.total_tax || 0);
+    return {
+      ...computation,
+      tax_already_paid: ytdTds,
+      remaining_tax: Math.max(0, totalTax - ytdTds),
+    };
+  }
+
+  /**
+   * Sum the TDS line item from each payslip in the given financial year for
+   * this employee. The payslip stores deductions as a JSONB array of
+   * `{ code, name, amount }` rows; TDS is recorded under `code: "TDS"`.
+   *
+   * Filters:
+   *  - employee match: try local `employee_id` first, fall back to
+   *    `empcloud_user_id` for users provisioned via the SSO/payroll-profile
+   *    path (same dual-id concern as resolveEmployeeIds).
+   *  - financial year: India FY runs Apr → Mar, so an FY of "2026-2027"
+   *    means month >= 4 of 2026 OR month <= 3 of 2027.
+   *  - status: ignore `cancelled` (the run was cancelled and payslips
+   *    were physically deleted, but be defensive). `disputed` payslips
+   *    DO count — the deduction physically happened from gross even if
+   *    the employee is challenging the line items.
+   */
+  private async computeYtdTdsFromPayslips(employeeId: string, fy: string): Promise<number> {
+    // FY "2026-2027" → startYear 2026
+    const startYear = Number(fy.split("-")[0]);
+    if (!Number.isFinite(startYear)) return 0;
+
+    // Collect payslips by both id paths so we don't miss any.
+    const numericId = Number(employeeId);
+    const candidateFilters: Array<Record<string, unknown>> = [{ employee_id: employeeId }];
+    if (Number.isFinite(numericId)) {
+      candidateFilters.push({ empcloud_user_id: numericId });
+    }
+
+    const seen = new Set<string>();
+    let total = 0;
+    for (const f of candidateFilters) {
+      const result = await this.db
+        .findMany<any>("payslips", { filters: f, limit: 500 })
+        .catch(() => ({ data: [] as any[] }));
+      for (const ps of result.data) {
+        if (seen.has(ps.id)) continue;
+        seen.add(ps.id);
+        const status = String(ps.status || "").toLowerCase();
+        if (status === "cancelled") continue;
+        const inFy =
+          (Number(ps.year) === startYear && Number(ps.month) >= 4) ||
+          (Number(ps.year) === startYear + 1 && Number(ps.month) <= 3);
+        if (!inFy) continue;
+        const deductions =
+          typeof ps.deductions === "string" ? JSON.parse(ps.deductions) : ps.deductions;
+        if (!Array.isArray(deductions)) continue;
+        const tds = deductions.find((d: any) => d?.code === "TDS");
+        if (tds) total += Number(tds.amount) || 0;
+      }
+    }
+    return Math.round(total);
   }
 
   async computeTax(employeeId: string) {
@@ -45,18 +113,12 @@ export class TaxDeclarationService {
       amount: Number(d.approved_amount),
     }));
 
-    // Get tax already paid this FY
-    const paidPayslips = await this.db.findMany<any>("payslips", {
-      filters: { employee_id: employeeId },
-      limit: 100,
-    });
-    let taxAlreadyPaid = 0;
-    for (const ps of paidPayslips.data) {
-      const deductions =
-        typeof ps.deductions === "string" ? JSON.parse(ps.deductions) : ps.deductions;
-      const tds = deductions.find((d: any) => d.code === "TDS");
-      if (tds) taxAlreadyPaid += tds.amount;
-    }
+    // #269 — Tax already paid this FY. Use the shared helper so the FY
+    // window + status filter + dual-id (employee_id / empcloud_user_id)
+    // resolution match what getComputation() returns. Previously this
+    // queried payslips with ONLY `employee_id` and no FY filter, summing
+    // TDS across years.
+    const taxAlreadyPaid = await this.computeYtdTdsFromPayslips(employeeId, fy);
 
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
