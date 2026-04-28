@@ -1,6 +1,16 @@
 import { z } from "zod";
 import { Request, Response, NextFunction } from "express";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 import { AppError } from "../middleware/error.middleware";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Mirror of services/payroll.service.ts — keep in sync. India-only for
+// now; lift to org settings when multi-region tenants land.
+const PAYROLL_TZ = "Asia/Kolkata";
 
 // ---------------------------------------------------------------------------
 // Validation middleware factory
@@ -297,11 +307,13 @@ export const createPayrollRunSchema = z.object({
     // allowed (orgs commonly run payroll mid-month), but anything past
     // (year, month) > today's (year, month) is bogus and was the source
     // of the "August 2026 marked Paid in April 2026" report.
+    // "Today" is anchored to PAYROLL_TZ (IST), not server-local time, so
+    // a UTC server doesn't reject the first ~5.5 hours of every IST month.
     .refine(
       (v) => {
-        const now = new Date();
+        const now = dayjs().tz(PAYROLL_TZ);
         const requested = v.year * 12 + (v.month - 1);
-        const current = now.getFullYear() * 12 + now.getMonth();
+        const current = now.year() * 12 + now.month();
         return requested <= current;
       },
       {

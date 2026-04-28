@@ -11,13 +11,26 @@ import { findUsersByOrgId, findOrgById, getEmpCloudDB } from "../db/empcloud";
 import { config } from "../config";
 import * as cloudHRMS from "./cloud-hrms.service";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// All EmpCloud tenants are India-based; payroll periods follow the
+// IST calendar regardless of where the server runs. Hardcoded for now;
+// when multi-region tenants land this should read from org settings.
+const PAYROLL_TZ = "Asia/Kolkata";
 
 // #1655 — true if (year, month) is strictly *after* the current calendar
-// month. The current month is always allowed (orgs run payroll mid-month).
+// month *in the payroll timezone*. The current month is always allowed
+// (orgs run payroll mid-month). Server-local time is wrong here: a UTC
+// server is up to ~5.5 hours behind IST, which would block the first
+// hours of every IST month from creating the new month's run.
 function isFuturePeriod(year: number, month: number): boolean {
-  const now = new Date();
+  const now = dayjs().tz(PAYROLL_TZ);
   const requested = year * 12 + (month - 1);
-  const current = now.getFullYear() * 12 + now.getMonth();
+  const current = now.year() * 12 + now.month();
   return requested > current;
 }
 
@@ -394,6 +407,18 @@ export class PayrollService {
     const run = await this.getRun(runId, orgId);
     if (run.status !== "computed") {
       throw new AppError(400, "INVALID_STATUS", "Only computed payroll runs can be approved");
+    }
+    // #1655 — Same guard as createRun/markPaid. Without this, a future-
+    // period row that existed before this fix shipped (the production
+    // tenant in the report had several) could still flow computed →
+    // approved, leaving the lifecycle inconsistent. Blocking here keeps
+    // the whole pipeline future-period-free.
+    if (isFuturePeriod(run.year, run.month)) {
+      throw new AppError(
+        400,
+        "FUTURE_PERIOD",
+        `Cannot approve a future-period run (${run.month}/${run.year} has not started yet)`,
+      );
     }
     return this.db.update("payroll_runs", runId, {
       status: "approved",
