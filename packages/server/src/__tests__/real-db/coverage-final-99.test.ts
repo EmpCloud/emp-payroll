@@ -828,7 +828,7 @@ describe("PayrollService — additional listRuns and payslip queries", () => {
     if (!dbAvailable) ctx.skip();
   });
 
-  it("listRuns returns sorted by created_at desc", async () => {
+  it("listRuns returns sorted by year/month desc (chronological by pay period)", async () => {
     try {
       const { PayrollService } = await import("../../services/payroll.service");
       const svc = new PayrollService();

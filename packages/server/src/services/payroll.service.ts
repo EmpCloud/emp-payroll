@@ -16,10 +16,31 @@ export class PayrollService {
   private db = getDB();
 
   async listRuns(orgId: string) {
-    return this.db.findMany<any>("payroll_runs", {
+    // Sort by payroll period (year, month) rather than `created_at` so the
+    // list reads as a chronological timeline of pay months. Sorting on
+    // created_at meant a back-dated catch-up run would land at the top of
+    // the list out of period order — QA reported an order of
+    // Feb, Mar, Jan, May, Dec, ... (#6).
+    //
+    // The adapter only supports a single sort field, so we fetch and sort
+    // here. The list is bounded (one row per pay period per org), so the
+    // in-memory sort is fine.
+    const result = await this.db.findMany<any>("payroll_runs", {
       filters: { empcloud_org_id: Number(orgId) },
-      sort: { field: "created_at", order: "desc" },
+      sort: { field: "year", order: "desc" },
+      limit: 1000,
     });
+    if (Array.isArray(result?.data)) {
+      result.data.sort((a: any, b: any) => {
+        const ya = Number(a.year) || 0;
+        const yb = Number(b.year) || 0;
+        if (yb !== ya) return yb - ya;
+        const ma = Number(a.month) || 0;
+        const mb = Number(b.month) || 0;
+        return mb - ma;
+      });
+    }
+    return result;
   }
 
   async getRun(id: string, orgId: string) {
