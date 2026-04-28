@@ -108,6 +108,13 @@ export class PayrollService {
     let totalNet = 0;
     let totalEmployerContributions = 0;
     let employeeCount = 0;
+    // #268 — Track employees skipped because their salary structure has no
+    // earning components (or zero monthly amounts). Without this guard the
+    // engine generated payslips with gross=0 but deductions still applied
+    // (PF/ESI/TDS computed off `salary.gross_salary` rather than the empty
+    // components), producing huge negative net pay. Skip the row, surface
+    // the failure in the run summary so the admin can fix the structure.
+    const skipped: Array<{ empcloudUserId: number; reason: string; code: string }> = [];
 
     for (const ecEmp of ecEmployees) {
       // Reset per-employee employer contributions each iteration
@@ -178,9 +185,10 @@ export class PayrollService {
       // Parse salary components
       const components =
         typeof salary.components === "string" ? JSON.parse(salary.components) : salary.components;
+      const componentList = Array.isArray(components) ? components : [];
 
       // Calculate earnings (pro-rated for LOP)
-      const proRatio = paidDays / totalDays;
+      const proRatio = totalDays > 0 ? paidDays / totalDays : 0;
       const earnings: any[] = [];
       let grossEarnings = 0;
       let basicMonthly = 0;
@@ -189,17 +197,17 @@ export class PayrollService {
       const deductions: any[] = [];
       let totalDed = 0;
 
-      for (const comp of components) {
+      for (const comp of componentList) {
         if (comp.type === "deduction") {
           // Custom deduction from salary structure (canteen, welfare fund, etc.)
-          const amount = Math.round(comp.monthlyAmount * proRatio);
+          const amount = Math.round(Number(comp.monthlyAmount || 0) * proRatio);
           if (amount > 0) {
             deductions.push({ code: comp.code, name: comp.name || comp.code, amount });
             totalDed += amount;
           }
         } else {
           // Earning component
-          const amount = Math.round(comp.monthlyAmount * proRatio);
+          const amount = Math.round(Number(comp.monthlyAmount || 0) * proRatio);
           earnings.push({
             code: comp.code,
             name: comp.code === "BASIC" ? "Basic Salary" : comp.name || comp.code,
@@ -208,6 +216,26 @@ export class PayrollService {
           grossEarnings += amount;
           if (comp.code === "BASIC") basicMonthly = amount;
         }
+      }
+
+      // #268 — Guard against the "empty salary structure" disaster: if the
+      // employee's salary has no active earning components (or all of them
+      // pro-rate down to 0 because of zero working days etc.), skip this
+      // row entirely. Generating a payslip here would compute PF/ESI/TDS
+      // from `salary.gross_salary` while gross_earnings = 0 — that's how
+      // we ended up with payslips showing Net Pay of -₹1,17,78,332.
+      const hasEarningComponent = componentList.some(
+        (c: any) => c.type !== "deduction" && Number(c.monthlyAmount || 0) > 0,
+      );
+      if (!hasEarningComponent || grossEarnings <= 0) {
+        skipped.push({
+          empcloudUserId: ecEmp.id,
+          code: "EMPTY_SALARY_STRUCTURE",
+          reason: !hasEarningComponent
+            ? "Salary structure has no active earning components"
+            : "Earning components pro-rated to 0 (no paid days?)",
+        });
+        continue;
       }
 
       // PF
@@ -359,6 +387,20 @@ export class PayrollService {
       employeeCount++;
     }
 
+    // #268 — Append a structured note about any employees we had to skip
+    // because of empty/invalid salary structure, so the admin sees it
+    // immediately in the run summary instead of finding out via support
+    // tickets. Preserve any existing notes the admin set when creating
+    // the run.
+    let runNotes: string | null = run.notes || null;
+    if (skipped.length > 0) {
+      const skipSummary = `[skipped ${skipped.length} employee(s) — empty/invalid salary structure: ${skipped
+        .slice(0, 5)
+        .map((s) => `#${s.empcloudUserId}`)
+        .join(", ")}${skipped.length > 5 ? "..." : ""}]`;
+      runNotes = runNotes ? `${runNotes}\n${skipSummary}` : skipSummary;
+    }
+
     // Update payroll run
     await this.db.update("payroll_runs", runId, {
       status: "computed",
@@ -367,9 +409,12 @@ export class PayrollService {
       total_net: totalNet,
       total_employer_contributions: totalEmployerContributions,
       employee_count: employeeCount,
+      ...(runNotes !== run.notes ? { notes: runNotes } : {}),
     });
 
-    return this.getRun(runId, orgId);
+    const updated = await this.getRun(runId, orgId);
+    // Surface skip details to the API caller so the UI can show a banner.
+    return { ...updated, skipped };
   }
 
   async approveRun(runId: string, orgId: string, userId: string) {

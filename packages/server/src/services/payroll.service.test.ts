@@ -32,11 +32,12 @@ vi.mock("./tax/india-tax.service", () => ({
 
 import { PayrollService } from "./payroll.service";
 import { getDB } from "../db/adapters";
-import { findUsersByOrgId } from "../db/empcloud";
+import { findUsersByOrgId, getEmpCloudDB } from "../db/empcloud";
 import { computePF, computeESI } from "./compliance/india-statutory.service";
 
 const mockedGetDB = vi.mocked(getDB);
 const mockedFindUsers = vi.mocked(findUsersByOrgId);
+const mockedGetEmpCloudDB = vi.mocked(getEmpCloudDB);
 
 function makeMockDb(overrides: Record<string, unknown> = {}) {
   return {
@@ -268,6 +269,79 @@ describe("PayrollService", () => {
           employee_count: 0,
         }),
       );
+    });
+
+    // #268 — Regression guard: salary structure with no earning components
+    // (or all-zero monthlyAmount) MUST NOT generate a payslip with bogus
+    // negative net pay. The employee should be skipped and the skip
+    // surfaced in the run notes + return value.
+    it("should skip employees whose salary structure has no earning components (#268)", async () => {
+      // Provide a working empcloud DB stub so the attendance query doesn't
+      // explode before reaching the guard. The skip path triggers BEFORE
+      // PF/ESI/TDS, but it does run after the attendance lookup, so we
+      // need a chainable knex-like mock.
+      // The service does two empcloud DB queries:
+      //   1) attendance_records: chain ends with `.select(...)` and is awaited
+      //      (returning an array → the rows go into `[attRecord]`)
+      //   2) leave_applications: chain ends with `.first()` (returning a row)
+      // Build a thenable chain so both shapes resolve correctly.
+      const attRows = [{ present_days: 0, absent_days: 0, leave_days: 0 }];
+      const leaveRow = { paid_leave: 0, unpaid_leave: 0 };
+      const queryStub: any = {};
+      queryStub.where = vi.fn().mockReturnValue(queryStub);
+      queryStub.whereBetween = vi.fn().mockReturnValue(queryStub);
+      queryStub.join = vi.fn().mockReturnValue(queryStub);
+      queryStub.select = vi.fn().mockReturnValue(queryStub);
+      queryStub.first = vi.fn().mockResolvedValue(leaveRow);
+      // Make the chain awaitable: `await empcloudDb(...).where(...).select(...)`
+      // resolves to the attendance rows array.
+      queryStub.then = (resolve: (v: any) => any) => Promise.resolve(attRows).then(resolve);
+      const empcloudDbFn: any = vi.fn(() => queryStub);
+      empcloudDbFn.raw = vi.fn((s: string) => s);
+      mockedGetEmpCloudDB.mockReturnValue(empcloudDbFn);
+
+      mockDb.findOne
+        .mockResolvedValueOnce({
+          id: "run-1",
+          empcloud_org_id: 1,
+          status: "draft",
+          month: 3,
+          year: 2026,
+        })
+        .mockResolvedValueOnce({ state: "KA" }) // org settings
+        .mockResolvedValueOnce({ pf_details: null, tax_info: null }) // profile
+        .mockResolvedValueOnce({
+          // salary with empty components — the bug shape that broke #268
+          gross_salary: 10191667,
+          components: JSON.stringify([]),
+          is_active: true,
+        });
+
+      // After computation
+      mockDb.findOne.mockResolvedValueOnce({ id: "run-1", empcloud_org_id: 1, status: "computed" });
+
+      mockedFindUsers.mockResolvedValue([{ id: 100, first_name: "Emp", last_name: "Test" }] as any);
+
+      const result: any = await service.computePayroll("run-1", "1");
+
+      // No payslip should have been created — refusing to run is the fix.
+      const payslipCalls = mockDb.create.mock.calls.filter((c: any[]) => c[0] === "payslips");
+      expect(payslipCalls).toHaveLength(0);
+
+      // Run state must reflect zero processed employees, not a "successful"
+      // run with a giant negative net pay.
+      expect(mockDb.update).toHaveBeenCalledWith(
+        "payroll_runs",
+        "run-1",
+        expect.objectContaining({ employee_count: 0 }),
+      );
+
+      // Caller should be able to see what got skipped.
+      expect(result.skipped).toBeDefined();
+      expect(result.skipped[0]).toMatchObject({
+        empcloudUserId: 100,
+        code: "EMPTY_SALARY_STRUCTURE",
+      });
     });
   });
 
