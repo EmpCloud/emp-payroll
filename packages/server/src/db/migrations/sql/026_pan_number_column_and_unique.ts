@@ -58,12 +58,25 @@ export async function up(knex: Knex) {
     await knex.raw("ALTER TABLE employee_payroll_profiles DROP COLUMN pan_number");
   }
 
-  // Step 3 — re-create the column with NULLIF so JSON null → SQL NULL.
+  // Step 3 — re-create the column. The expression has to map every shape
+  // of "no PAN" to SQL NULL so the unique index doesn't see them as
+  // duplicates. We've now seen three failure modes in production:
+  //   - JSON null  → JSON_UNQUOTE returns the string 'null'
+  //   - ""         → JSON_UNQUOTE returns the empty string
+  //   - "   "      → whitespace-only entries from CSV imports
+  // CASE handles all of them and leaves real PAN values untouched.
+  // NULLIF(TRIM(...), '') folded into the single CASE for readability.
   await knex.raw(`
     ALTER TABLE employee_payroll_profiles
     ADD COLUMN pan_number VARCHAR(32)
     GENERATED ALWAYS AS (
-      NULLIF(JSON_UNQUOTE(JSON_EXTRACT(tax_info, '$.pan')), 'null')
+      CASE
+        WHEN JSON_EXTRACT(tax_info, '$.pan') IS NULL THEN NULL
+        WHEN JSON_TYPE(JSON_EXTRACT(tax_info, '$.pan')) = 'NULL' THEN NULL
+        WHEN TRIM(JSON_UNQUOTE(JSON_EXTRACT(tax_info, '$.pan'))) = '' THEN NULL
+        WHEN TRIM(JSON_UNQUOTE(JSON_EXTRACT(tax_info, '$.pan'))) IN ('null', 'NULL', 'Null') THEN NULL
+        ELSE TRIM(JSON_UNQUOTE(JSON_EXTRACT(tax_info, '$.pan')))
+      END
     ) STORED
   `);
 
