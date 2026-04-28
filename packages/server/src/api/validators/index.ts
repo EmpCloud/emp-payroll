@@ -105,7 +105,21 @@ const bankNameSchema = z
 
 export const createEmployeeSchema = z.object({
   body: z.object({
-    employeeCode: z.string().min(1).max(50).optional(),
+    // #1658 — emp_code is permissive on format (orgs use widely different
+    // conventions — letters, numbers, dots, dashes, underscores) but must
+    // not contain whitespace or control characters and must not be empty
+    // after trimming. Uniqueness is enforced at the EmpCloud users table
+    // (separate PR).
+    employeeCode: z
+      .string()
+      .trim()
+      .min(1)
+      .max(50)
+      .regex(
+        /^[A-Za-z0-9._-]+$/,
+        "Employee code may only contain letters, digits, dots, dashes or underscores",
+      )
+      .optional(),
     firstName: firstNameSchema,
     lastName: lastNameSchema,
     email: z.string().email(),
@@ -127,7 +141,13 @@ export const createEmployeeSchema = z.object({
       .optional(),
     taxInfo: z
       .object({
-        pan: z.string().min(1).max(10),
+        // #1656 — Indian PAN format AAAAA9999A. Empty/missing is allowed
+        // (the tax engine applies Section 206AA flat 20% in that case),
+        // but if a value is provided it must match.
+        pan: z
+          .string()
+          .regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/, "PAN must match the format AAAAA9999A")
+          .optional(),
         regime: z.enum(["old", "new"]).default("new"),
         uan: z.string().optional(),
       })
@@ -260,7 +280,12 @@ export const bulkSalaryAssignSchema = z.object({
           // when those columns are present; bulkAssignSalary merges them
           // into the existing payroll profile (read-merge-write so a
           // partial CSV doesn't clobber other fields).
-          pan: z.string().trim().min(1).optional(),
+          // #1656 — PAN must match the Indian format when provided.
+          pan: z
+            .string()
+            .trim()
+            .regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/, "PAN must match the format AAAAA9999A")
+            .optional(),
           pfDetails: z
             .object({
               pfNumber: z.string().trim().min(1).optional(),

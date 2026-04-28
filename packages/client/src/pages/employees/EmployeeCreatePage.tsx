@@ -74,9 +74,25 @@ export function EmployeeCreatePage() {
       return;
     }
 
+    // #1656 — Indian PAN format AAAAA9999A. Server re-validates; this
+    // gives an immediate, in-form error instead of a 400 from the API.
+    const panRaw = get("pan").trim().toUpperCase();
+    if (panRaw && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panRaw)) {
+      toast.error("PAN must match the format AAAAA9999A");
+      return;
+    }
+
+    // #1658 — emp_code permissive: letters, digits, dots, dashes,
+    // underscores. Whitespace and other punctuation rejected.
+    const empCode = get("employee_id").trim();
+    if (empCode && !/^[A-Za-z0-9._-]+$/.test(empCode)) {
+      toast.error("Employee code may only contain letters, digits, dots, dashes or underscores");
+      return;
+    }
+
     try {
       await mutation.mutateAsync({
-        employeeCode: get("employee_id"),
+        employeeCode: empCode,
         firstName: get("first_name"),
         lastName: get("last_name"),
         email: get("email"),
@@ -94,7 +110,7 @@ export function EmployeeCreatePage() {
           branchName: "",
         },
         taxInfo: {
-          pan: get("pan"),
+          pan: panRaw,
           regime: get("tax_regime") || "new",
           uan: get("uan") || undefined,
         },
@@ -194,6 +210,9 @@ export function EmployeeCreatePage() {
                 name="employee_id"
                 label="Employee ID"
                 placeholder="EMP009"
+                pattern="[A-Za-z0-9._\-]+"
+                title="Letters, digits, dots, dashes or underscores only"
+                maxLength={50}
                 required
               />
               {/* #48 — Department dropdown populated from the org's
@@ -286,7 +305,17 @@ export function EmployeeCreatePage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-              <Input id="pan" name="pan" label="PAN Number" placeholder="ABCPS1234F" required />
+              <Input
+                id="pan"
+                name="pan"
+                label="PAN Number"
+                placeholder="ABCPS1234F"
+                pattern="[A-Za-z]{5}[0-9]{4}[A-Za-z]"
+                title="PAN must match the format AAAAA9999A"
+                maxLength={10}
+                style={{ textTransform: "uppercase" }}
+                required
+              />
               <Input id="uan" name="uan" label="UAN / PF Number" placeholder="BGBNG/12345/009" />
               <SelectField
                 id="tax_regime"

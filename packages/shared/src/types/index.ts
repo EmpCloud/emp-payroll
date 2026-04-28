@@ -310,6 +310,11 @@ export interface TaxComputation {
   remainingTax: number;
   monthlyTds: number;
   computedAt: Date;
+  // Set to true when the employee has no PAN on record and the engine
+  // applied the Section 206AA flat 20% short-circuit instead of the
+  // regular slab calculation. Lets the UI surface a "no PAN — higher
+  // TDS until you submit yours" warning on payslips and the tax page.
+  panMissing206AA?: boolean;
 }
 
 export interface TaxExemption {

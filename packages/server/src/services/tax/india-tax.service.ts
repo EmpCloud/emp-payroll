@@ -4,15 +4,26 @@
 // ============================================================================
 
 import {
-  TAX_SLABS_OLD, TAX_SLABS_NEW,
-  STANDARD_DEDUCTION_OLD, STANDARD_DEDUCTION_NEW,
-  REBATE_87A_OLD_LIMIT, REBATE_87A_OLD_MAX,
-  REBATE_87A_NEW_LIMIT, REBATE_87A_NEW_MAX,
+  TAX_SLABS_OLD,
+  TAX_SLABS_NEW,
+  STANDARD_DEDUCTION_OLD,
+  STANDARD_DEDUCTION_NEW,
+  REBATE_87A_OLD_LIMIT,
+  REBATE_87A_OLD_MAX,
+  REBATE_87A_NEW_LIMIT,
+  REBATE_87A_NEW_MAX,
   MARGINAL_RELIEF_THRESHOLD_NEW,
-  SURCHARGE_SLABS, SURCHARGE_CAP_NEW_REGIME, CESS_RATE,
-  SECTION_80C_LIMIT, SECTION_80CCD_1B_LIMIT,
-  PF_EMPLOYEE_RATE, PF_WAGE_CEILING,
-  TaxRegime, TaxComputation, TaxDeduction, TaxExemption,
+  SURCHARGE_SLABS,
+  SURCHARGE_CAP_NEW_REGIME,
+  CESS_RATE,
+  SECTION_80C_LIMIT,
+  SECTION_80CCD_1B_LIMIT,
+  PF_EMPLOYEE_RATE,
+  PF_WAGE_CEILING,
+  TaxRegime,
+  TaxComputation,
+  TaxDeduction,
+  TaxExemption,
 } from "@emp-payroll/shared";
 
 interface TaxInput {
@@ -28,14 +39,65 @@ interface TaxInput {
   employeePfAnnual: number;
   monthsWorked: number; // months remaining in FY
   taxAlreadyPaid: number;
+  // #1657 — PAN of the employee. When missing/blank, Section 206AA of the
+  // Indian Income-Tax Act applies: TDS is the higher of 20% or the
+  // applicable rate. We apply 20% flat on annual gross since that
+  // dominates the slab-rate result for almost all earners and is the
+  // documented compliance default.
+  panNumber?: string | null;
 }
+
+// 206AA flat rate when PAN is unavailable. Section 206AA(1)(iii).
+const SECTION_206AA_FLAT_RATE = 0.2;
 
 export function computeIncomeTax(input: TaxInput): TaxComputation {
   const {
-    regime, annualGross, basicAnnual, hraAnnual,
-    rentPaidAnnual, isMetroCity, declarations,
-    employeePfAnnual, monthsWorked, taxAlreadyPaid,
+    regime,
+    annualGross,
+    basicAnnual,
+    hraAnnual,
+    rentPaidAnnual,
+    isMetroCity,
+    declarations,
+    employeePfAnnual,
+    monthsWorked,
+    taxAlreadyPaid,
+    panNumber,
   } = input;
+
+  // -----------------------------------------------------------------------
+  // Section 206AA short-circuit — no PAN, flat 20% on annual gross.
+  // Returning early here keeps the slab/exemption/cess pipeline below
+  // unchanged for the regular case.
+  // -----------------------------------------------------------------------
+  const panMissing = !panNumber || panNumber.trim() === "";
+  if (panMissing) {
+    const totalTax = Math.round(annualGross * SECTION_206AA_FLAT_RATE);
+    const remainingTax = Math.max(0, totalTax - taxAlreadyPaid);
+    const remainingMonths = Math.max(1, monthsWorked);
+    const monthlyTds = Math.round(remainingTax / remainingMonths);
+    return {
+      id: `${input.employeeId}-${input.financialYear}`,
+      employeeId: input.employeeId,
+      financialYear: input.financialYear,
+      regime,
+      grossIncome: annualGross,
+      exemptions: [],
+      totalExemptions: 0,
+      deductions: [],
+      totalDeductions: 0,
+      taxableIncome: annualGross,
+      taxOnIncome: totalTax,
+      surcharge: 0,
+      healthAndEducationCess: 0,
+      totalTax,
+      taxAlreadyPaid,
+      remainingTax,
+      monthlyTds,
+      computedAt: new Date(),
+      panMissing206AA: true,
+    } as TaxComputation;
+  }
 
   let grossIncome = annualGross;
   const exemptions: TaxExemption[] = [];
@@ -55,10 +117,14 @@ export function computeIncomeTax(input: TaxInput): TaxComputation {
       const hraExempt = Math.min(
         hraAnnual,
         rentPaidAnnual - 0.1 * basicAnnual,
-        (isMetroCity ? 0.5 : 0.4) * basicAnnual
+        (isMetroCity ? 0.5 : 0.4) * basicAnnual,
       );
       if (hraExempt > 0) {
-        exemptions.push({ code: "HRA", description: "HRA exemption", amount: Math.round(hraExempt) });
+        exemptions.push({
+          code: "HRA",
+          description: "HRA exemption",
+          amount: Math.round(hraExempt),
+        });
       }
     }
 
@@ -139,7 +205,11 @@ export function computeIncomeTax(input: TaxInput): TaxComputation {
   }
 
   // Marginal relief for new regime (income between 12L and 12.75L)
-  if (regime === TaxRegime.NEW && taxableIncome > REBATE_87A_NEW_LIMIT && taxableIncome <= MARGINAL_RELIEF_THRESHOLD_NEW) {
+  if (
+    regime === TaxRegime.NEW &&
+    taxableIncome > REBATE_87A_NEW_LIMIT &&
+    taxableIncome <= MARGINAL_RELIEF_THRESHOLD_NEW
+  ) {
     const excessIncome = taxableIncome - REBATE_87A_NEW_LIMIT;
     if (taxOnIncome > excessIncome) {
       taxOnIncome = excessIncome;
@@ -152,19 +222,19 @@ export function computeIncomeTax(input: TaxInput): TaxComputation {
   let surcharge = 0;
   for (const slab of SURCHARGE_SLABS) {
     if (taxableIncome >= slab.min && taxableIncome <= slab.max) {
-      surcharge = Math.round(taxOnIncome * slab.rate / 100);
+      surcharge = Math.round((taxOnIncome * slab.rate) / 100);
       break;
     }
   }
   // Cap surcharge for new regime
   if (regime === TaxRegime.NEW) {
-    surcharge = Math.min(surcharge, Math.round(taxOnIncome * SURCHARGE_CAP_NEW_REGIME / 100));
+    surcharge = Math.min(surcharge, Math.round((taxOnIncome * SURCHARGE_CAP_NEW_REGIME) / 100));
   }
 
   // -----------------------------------------------------------------------
   // Step 8: Health & Education Cess
   // -----------------------------------------------------------------------
-  const cess = Math.round((taxOnIncome + surcharge) * CESS_RATE / 100);
+  const cess = Math.round(((taxOnIncome + surcharge) * CESS_RATE) / 100);
 
   // -----------------------------------------------------------------------
   // Step 9: Total Tax and Monthly TDS
@@ -196,14 +266,18 @@ export function computeIncomeTax(input: TaxInput): TaxComputation {
   };
 }
 
-function computeSlabTax(income: number, slabs: readonly { min: number; max: number; rate: number }[]): number {
+function computeSlabTax(
+  income: number,
+  slabs: readonly { min: number; max: number; rate: number }[],
+): number {
   let tax = 0;
   let remaining = income;
 
   for (const slab of slabs) {
     if (remaining <= 0) break;
-    const slabWidth = slab.max === Infinity ? remaining : Math.min(remaining, slab.max - slab.min + 1);
-    tax += Math.round(slabWidth * slab.rate / 100);
+    const slabWidth =
+      slab.max === Infinity ? remaining : Math.min(remaining, slab.max - slab.min + 1);
+    tax += Math.round((slabWidth * slab.rate) / 100);
     remaining -= slabWidth;
   }
 

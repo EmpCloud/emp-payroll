@@ -291,6 +291,9 @@ export class PayrollService {
         employeePfAnnual: basicMonthly * 0.12 * 12,
         monthsWorked: monthsRemaining,
         taxAlreadyPaid: 0,
+        // #1657 — Section 206AA: when PAN is missing, the tax engine
+        // applies a flat 20% rate. Empty / null pan triggers that branch.
+        panNumber: typeof taxInfo?.pan === "string" ? taxInfo.pan : null,
       });
 
       if (taxResult.monthlyTds > 0) {
