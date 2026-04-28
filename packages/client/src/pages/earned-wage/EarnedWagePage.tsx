@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -42,6 +42,20 @@ export function EarnedWagePage() {
   const [showSettings, setShowSettings] = useState(false);
   const [saving, setSaving] = useState(false);
   const qc = useQueryClient();
+  // #284 — "Total Requests" card had no visible response when clicked
+  // because the table was already showing all rows. Add a ref so the card
+  // can scroll the requests section into view, giving the click a clear
+  // navigation cue (the table is the "respective page" since EWA lives on
+  // a single route).
+  const requestsRef = useRef<HTMLDivElement>(null);
+  const showAllAndScroll = () => {
+    setStatusFilter("all");
+    requestsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const filterAndScroll = (status: "pending" | "disbursed" | "approved") => {
+    setStatusFilter(status);
+    requestsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // --- Data ---
   const { data: dashRes } = useQuery({
@@ -222,25 +236,25 @@ export function EarnedWagePage() {
           title="Pending Requests"
           value={stats.totalPending || 0}
           icon={Clock}
-          onClick={() => setStatusFilter("pending")}
+          onClick={() => filterAndScroll("pending")}
         />
         <StatCard
           title="Total Disbursed"
           value={formatCurrency(stats.totalDisbursedAmount || 0)}
           icon={DollarSign}
-          onClick={() => setStatusFilter("disbursed")}
+          onClick={() => filterAndScroll("disbursed")}
         />
         <StatCard
           title="Avg Request"
           value={formatCurrency(stats.avgRequestAmount || 0)}
           icon={HandCoins}
-          onClick={() => setStatusFilter("all")}
+          onClick={showAllAndScroll}
         />
         <StatCard
           title="Total Requests"
           value={stats.totalRequests || 0}
           icon={CheckCircle}
-          onClick={() => setStatusFilter("all")}
+          onClick={showAllAndScroll}
         />
       </div>
 
@@ -289,17 +303,19 @@ export function EarnedWagePage() {
       )}
 
       {/* Requests Table */}
-      <Card>
-        <CardContent className="p-0">
-          {reqLoading ? (
-            <div className="flex h-32 items-center justify-center">
-              <Loader2 className="text-brand-600 h-6 w-6 animate-spin" />
-            </div>
-          ) : (
-            <DataTable columns={columns} data={requests} emptyMessage="No advance requests yet" />
-          )}
-        </CardContent>
-      </Card>
+      <div ref={requestsRef} className="scroll-mt-4">
+        <Card>
+          <CardContent className="p-0">
+            {reqLoading ? (
+              <div className="flex h-32 items-center justify-center">
+                <Loader2 className="text-brand-600 h-6 w-6 animate-spin" />
+              </div>
+            ) : (
+              <DataTable columns={columns} data={requests} emptyMessage="No advance requests yet" />
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Request Advance Modal */}
       <Modal
