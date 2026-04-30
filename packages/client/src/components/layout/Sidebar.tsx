@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { getUser, logout } from "@/api/auth";
 import { cn } from "@/lib/utils";
 import {
@@ -236,11 +236,29 @@ const navItems: NavItem[] = [
 export function Sidebar() {
   const user = getUser();
   const role = (user?.role || "employee") as Role;
+  const { pathname } = useLocation();
 
   const visibleItems = navItems.filter((item) => {
     if (!item.roles) return true; // visible to all
     return item.roles.includes(role);
   });
+
+  // #315 — Pick the single nav item whose `to` is the longest prefix of the
+  // current path. Previously we used NavLink's `end` flag with auto-detection
+  // ("Employees" was force-ended because `/employees/org-chart` exists as a
+  // sibling), which made the Employees entry stop glowing as soon as the
+  // user opened any individual employee at `/employees/:id`. This computes
+  // the most specific match so detail routes still light up their parent
+  // tab while sibling routes (org-chart, etc.) keep their own highlight.
+  const activeTo = (() => {
+    let best: string | null = null;
+    for (const item of visibleItems) {
+      if (pathname === item.to || pathname.startsWith(item.to + "/")) {
+        if (!best || item.to.length > best.length) best = item.to;
+      }
+    }
+    return best;
+  })();
 
   // Group by section
   let lastSection = "";
@@ -271,14 +289,7 @@ export function Sidebar() {
         {visibleItems.map((item) => {
           const showSection = item.section && item.section !== lastSection;
           if (item.section) lastSection = item.section;
-          // NavLink's default isActive matches any URL that starts with
-          // `to` + "/". So clicking /employees/org-chart also lit up the
-          // Employees entry ("/employees") — issue #42. Mark `end` on any
-          // item whose `to` is a prefix of another item's `to`, so the
-          // broader route only highlights on its exact match.
-          const hasMoreSpecificSibling = visibleItems.some(
-            (other) => other.to !== item.to && other.to.startsWith(item.to + "/"),
-          );
+          const isActive = activeTo === item.to;
           return (
             <div key={item.to}>
               {showSection && (
@@ -288,15 +299,13 @@ export function Sidebar() {
               )}
               <NavLink
                 to={item.to}
-                end={item.to === "/my" || hasMoreSpecificSibling}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-400"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white",
-                  )
-                }
+                end
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-400"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white",
+                )}
               >
                 <item.icon className="h-4.5 w-4.5 shrink-0" />
                 {item.label}

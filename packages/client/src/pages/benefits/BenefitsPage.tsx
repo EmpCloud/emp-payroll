@@ -229,11 +229,32 @@ export function BenefitsPage() {
     },
   ];
 
+  // #312 — enrollments only showed `#<id>`, no name. Build a quick lookup off
+  // the already-loaded employees list and resolve names at render time.
+  const employeeById: Record<string, any> = {};
+  for (const e of employees) {
+    if (e.id != null) employeeById[String(e.id)] = e;
+    if (e.empcloud_user_id != null) employeeById[String(e.empcloud_user_id)] = e;
+  }
+
   const enrollColumns = [
     {
       key: "employee",
-      header: "Employee ID",
-      render: (r: any) => <span className="font-medium">#{r.empcloud_user_id}</span>,
+      header: "Employee",
+      render: (r: any) => {
+        const emp = employeeById[String(r.empcloud_user_id)];
+        const fullName = emp
+          ? `${emp.first_name || emp.firstName || ""} ${emp.last_name || emp.lastName || ""}`.trim()
+          : "";
+        return (
+          <div>
+            <p className="font-medium text-gray-900">{fullName || `User #${r.empcloud_user_id}`}</p>
+            {(emp?.employee_code || emp?.emp_code) && (
+              <p className="text-xs text-gray-500">{emp.employee_code || emp.emp_code}</p>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "plan",

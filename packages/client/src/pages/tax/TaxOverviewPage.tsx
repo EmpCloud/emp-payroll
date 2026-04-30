@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
@@ -17,6 +17,7 @@ export function TaxOverviewPage() {
   const { data: res, isLoading } = useEmployees({ limit: 1000 });
   const employees = res?.data?.data || [];
 
+  const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const regimeFilter = searchParams.get("regime"); // "new" | "old" | null
@@ -157,7 +158,13 @@ export function TaxOverviewPage() {
               <Loader2 className="text-brand-600 h-6 w-6 animate-spin" />
             </div>
           ) : (
-            <DataTable columns={columns} data={taxData} />
+            <DataTable
+              columns={columns}
+              data={taxData}
+              // #299 — make rows clickable so HR can drill into the employee
+              // profile (and edit tax_info / PAN if they need to).
+              onRowClick={(row: any) => row.id && navigate(`/employees/${row.id}`)}
+            />
           )}
         </CardContent>
       </Card>

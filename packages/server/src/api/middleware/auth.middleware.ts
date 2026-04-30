@@ -52,13 +52,19 @@ export function authorize(...roles: AuthPayload["role"][]) {
     if (!req.user) {
       return next(new AppError(401, "UNAUTHORIZED", "Not authenticated"));
     }
-    // org_admin is a superset of hr_admin — grant access whenever any admin role is allowed
+    // org_admin / super_admin are supersets of hr_admin — grant access whenever
+    // any admin role is allowed. (#313, #302 — admin users with role
+    // `super_admin` were getting 403 on reimbursement approve/reject because
+    // the middleware only escalated for org_admin.)
     const effectiveRoles = [...roles];
     if (
       (roles.includes("hr_admin") || roles.includes("hr_manager")) &&
       !roles.includes("org_admin")
     ) {
       effectiveRoles.push("org_admin");
+    }
+    if (roles.length > 0 && !effectiveRoles.includes("super_admin")) {
+      effectiveRoles.push("super_admin");
     }
     if (effectiveRoles.length > 0 && !effectiveRoles.includes(req.user.role)) {
       return next(

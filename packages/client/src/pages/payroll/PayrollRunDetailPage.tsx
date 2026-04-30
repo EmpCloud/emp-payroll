@@ -235,7 +235,14 @@ export function PayrollRunDetailPage() {
         title={
           run.month && run.year ? `${formatMonth(run.month, run.year)} Payroll Run` : "Payroll Run"
         }
-        description={`Run ${run.code || run.id?.slice(0, 8) || ""} · ${run.status?.toUpperCase() || ""}`}
+        // #306 — surface the human-readable period (e.g. "January 2026")
+        // alongside the status; the auto-generated `code` is meaningless to
+        // HR users and the issue reporter wanted the period name shown.
+        description={
+          run.month && run.year
+            ? `${formatMonth(run.month, run.year)} · ${run.status?.toUpperCase() || ""}`
+            : `Run ${run.code || run.id?.slice(0, 8) || ""} · ${run.status?.toUpperCase() || ""}`
+        }
         actions={
           <div className="flex items-center gap-3">
             <Button variant="ghost" onClick={() => navigate("/payroll/runs")}>

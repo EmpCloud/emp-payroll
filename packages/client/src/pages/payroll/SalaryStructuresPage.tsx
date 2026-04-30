@@ -419,6 +419,11 @@ export function SalaryStructuresPage() {
                               : c.value
                         }
                         placeholder={c.calculationType === "balance" ? "auto" : "0"}
+                        // #316 — pre-select the contents on focus so typing
+                        // overwrites the leading 0 instead of producing "01",
+                        // "012", etc. Users were having to manually delete
+                        // the 0 before every entry.
+                        onFocus={(e) => e.currentTarget.select()}
                         onChange={(e) => {
                           const raw = e.target.value;
                           if (raw === "") {

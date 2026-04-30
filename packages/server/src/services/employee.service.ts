@@ -411,6 +411,23 @@ export class EmployeeService {
     if (data.phone !== undefined) ecUpdates.contact_number = data.phone;
     if (data.designation) ecUpdates.designation = data.designation;
     if (data.departmentId !== undefined) ecUpdates.department_id = data.departmentId;
+    // #291 — the EmployeeDetailPage edit modal sends `department` as the
+    // department NAME (its <select> options use `value: d.name`). The schema
+    // accepts that field but the service was only writing `departmentId`,
+    // so the name was passed validation and then silently dropped — the
+    // toast said "Employee updated" but the department never changed.
+    // Resolve the name to an id here so existing callers keep working.
+    if (
+      data.departmentId === undefined &&
+      typeof data.department === "string" &&
+      data.department.trim()
+    ) {
+      const dept = await db("organization_departments")
+        .where({ organization_id: empcloudOrgId })
+        .where("name", data.department.trim())
+        .first();
+      if (dept) ecUpdates.department_id = dept.id;
+    }
     if (data.locationId !== undefined) ecUpdates.location_id = data.locationId;
     if (data.reportingManagerId !== undefined)
       ecUpdates.reporting_manager_id = data.reportingManagerId;

@@ -39,27 +39,33 @@ export class LoanService {
       limit: 100,
     });
 
-    // Enrich with employee names. Loans cut against the legacy employees
-    // table store the name there; loans cut after the EmpCloud integration
-    // store only empcloud_user_id (the employees row may not exist), so
-    // names have to come from the EmpCloud users table for those rows
-    // (#206 — admin saw "Unknown" for every loan).
-    const empIds = [...new Set(result.data.map((l: any) => l.employee_id).filter(Boolean))];
-    const userIds = [
-      ...new Set(
-        result.data
-          .map((l: any) => Number(l.empcloud_user_id))
-          .filter((n: any) => Number.isFinite(n) && n > 0),
-      ),
-    ];
+    // Enrich with employee names. Loans created from the new flow store the
+    // EmpCloud user id directly in `employee_id` (the payroll-side `employees`
+    // row may never exist), so we have to resolve names against BOTH:
+    //   1) the legacy payroll `employees` table (when employee_id is a UUID)
+    //   2) EmpCloud `users.id` (when employee_id is numeric, OR when an
+    //      `empcloud_user_id` column was explicitly set)
+    //
+    // #303 — every loan was rendering as "Unknown" because the create path
+    // sets `employee_id` to the EmpCloud user id and leaves `empcloud_user_id`
+    // null, so neither lookup found a match. Now we treat any numeric
+    // `employee_id` as a candidate EmpCloud user id and try both lookups.
+    const empIdsRaw = [...new Set(result.data.map((l: any) => l.employee_id).filter(Boolean))];
+    const numericEmployeeIds = empIdsRaw
+      .map((v: any) => Number(v))
+      .filter((n: any) => Number.isFinite(n) && n > 0);
+    const explicitUserIds = result.data
+      .map((l: any) => Number(l.empcloud_user_id))
+      .filter((n: any) => Number.isFinite(n) && n > 0);
+    const userIds = [...new Set([...numericEmployeeIds, ...explicitUserIds])];
 
     const empMap: Record<string, any> = {};
-    for (const eid of empIds) {
+    for (const eid of empIdsRaw) {
       const emp = await this.db.findById<any>("employees", eid as string).catch(() => null);
       if (emp) empMap[eid as string] = emp;
     }
 
-    let userMap: Record<string, any> = {};
+    const userMap: Record<string, any> = {};
     if (userIds.length > 0) {
       try {
         const ecDb = getEmpCloudDB();
@@ -78,7 +84,9 @@ export class LoanService {
       ...result,
       data: result.data.map((l: any) => {
         const emp = empMap[l.employee_id];
-        const user = l.empcloud_user_id ? userMap[String(l.empcloud_user_id)] : undefined;
+        const userByExplicit = l.empcloud_user_id ? userMap[String(l.empcloud_user_id)] : undefined;
+        const userByEmployeeId = userMap[String(l.employee_id)];
+        const user = userByExplicit || userByEmployeeId;
         const name = emp
           ? `${emp.first_name} ${emp.last_name}`
           : user
@@ -125,8 +133,18 @@ export class LoanService {
           )
         : Math.round(data.principalAmount / data.tenureMonths);
 
+    // #303 — when the supplied employeeId is purely numeric it's an EmpCloud
+    // user id (the new dropdown sets `value={user.id}`), so also stamp
+    // empcloud_user_id so the list query can do a clean join even after the
+    // row is created. Older UUID-style ids (legacy employees table) leave it
+    // null and fall back to the employees-table lookup.
+    const numericEmployeeId = Number(data.employeeId);
+    const empcloudUserId =
+      Number.isFinite(numericEmployeeId) && numericEmployeeId > 0 ? numericEmployeeId : null;
+
     return this.db.create("loans", {
       employee_id: data.employeeId,
+      empcloud_user_id: empcloudUserId,
       org_id: orgId,
       type: data.type,
       description: data.description,

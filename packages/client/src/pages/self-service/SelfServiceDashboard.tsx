@@ -179,7 +179,9 @@ function AnnouncementsWidget() {
               className={`rounded-lg border p-3 ${a.is_pinned ? "border-brand-200 bg-brand-50/30" : "border-gray-100"}`}
             >
               <div className="mb-1 flex items-center gap-2">
-                {a.is_pinned && <Pin className="text-brand-600 h-3 w-3" />}
+                {/* #298 — same JSX boolean trap as #297; is_pinned is a
+                    MySQL TINYINT, so the bare && renders "0" on each card. */}
+                {!!a.is_pinned && <Pin className="text-brand-600 h-3 w-3" />}
                 <h4 className="text-sm font-semibold text-gray-900">{a.title}</h4>
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs font-medium ${priorityColors[a.priority] || priorityColors.normal}`}
