@@ -83,8 +83,14 @@ export function DashboardPage() {
     count,
   }));
 
-  // Monthly payroll trend from paid runs
+  // Monthly payroll trend from paid runs.
+  // #1655 — Filter out any rows whose period is in the future. Until the
+  // future-period guard rolled out, tenants could end up with bogus
+  // "Paid" runs for months that hadn't started; those polluted the chart.
+  const _now = new Date();
+  const _currentPeriodKey = _now.getFullYear() * 12 + _now.getMonth();
   const trendData = paidRuns
+    .filter((r: any) => Number(r.year) * 12 + (Number(r.month) - 1) <= _currentPeriodKey)
     .slice(0, 6)
     .reverse()
     .map((r: any) => ({

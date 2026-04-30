@@ -11,6 +11,28 @@ import { findUsersByOrgId, findOrgById, getEmpCloudDB } from "../db/empcloud";
 import { config } from "../config";
 import * as cloudHRMS from "./cloud-hrms.service";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// All EmpCloud tenants are India-based; payroll periods follow the
+// IST calendar regardless of where the server runs. Hardcoded for now;
+// when multi-region tenants land this should read from org settings.
+const PAYROLL_TZ = "Asia/Kolkata";
+
+// #1655 — true if (year, month) is strictly *after* the current calendar
+// month *in the payroll timezone*. The current month is always allowed
+// (orgs run payroll mid-month). Server-local time is wrong here: a UTC
+// server is up to ~5.5 hours behind IST, which would block the first
+// hours of every IST month from creating the new month's run.
+function isFuturePeriod(year: number, month: number): boolean {
+  const now = dayjs().tz(PAYROLL_TZ);
+  const requested = year * 12 + (month - 1);
+  const current = now.year() * 12 + now.month();
+  return requested > current;
+}
 
 export class PayrollService {
   private db = getDB();
@@ -54,6 +76,18 @@ export class PayrollService {
     userId: string,
     data: { month: number; year: number; payDate?: string; notes?: string },
   ) {
+    // #1655 — Reject future periods. The validator already does this for
+    // calls coming through the route, but the service guard catches any
+    // direct invocation (e.g. seed scripts, future migrations) so the
+    // rule is enforced exactly once and at the layer that owns the data.
+    if (isFuturePeriod(data.year, data.month)) {
+      throw new AppError(
+        400,
+        "FUTURE_PERIOD",
+        `Cannot create a payroll run for ${data.month}/${data.year} — period has not started yet`,
+      );
+    }
+
     const existing = await this.db.findOne<any>("payroll_runs", {
       empcloud_org_id: Number(orgId),
       month: data.month,
@@ -443,6 +477,18 @@ export class PayrollService {
     if (run.status !== "computed") {
       throw new AppError(400, "INVALID_STATUS", "Only computed payroll runs can be approved");
     }
+    // #1655 — Same guard as createRun/markPaid. Without this, a future-
+    // period row that existed before this fix shipped (the production
+    // tenant in the report had several) could still flow computed →
+    // approved, leaving the lifecycle inconsistent. Blocking here keeps
+    // the whole pipeline future-period-free.
+    if (isFuturePeriod(run.year, run.month)) {
+      throw new AppError(
+        400,
+        "FUTURE_PERIOD",
+        `Cannot approve a future-period run (${run.month}/${run.year} has not started yet)`,
+      );
+    }
     return this.db.update("payroll_runs", runId, {
       status: "approved",
       approved_by: userId,
@@ -454,6 +500,18 @@ export class PayrollService {
     const run = await this.getRun(runId, orgId);
     if (run.status !== "approved") {
       throw new AppError(400, "INVALID_STATUS", "Only approved payroll runs can be marked as paid");
+    }
+    // #1655 — A run for a future period that somehow got created and
+    // approved must not be marked paid. Defense in depth — the validator
+    // and createRun guards block creation, but historical bad rows can
+    // still exist (the production tenant in the report had Jul/Aug/Dec
+    // 2026 runs marked Paid before this fix shipped).
+    if (isFuturePeriod(run.year, run.month)) {
+      throw new AppError(
+        400,
+        "FUTURE_PERIOD",
+        `Cannot mark a future-period run as paid (${run.month}/${run.year} has not started yet)`,
+      );
     }
     await this.db.updateMany("payslips", { payroll_run_id: runId }, { status: "paid" });
     return this.db.update("payroll_runs", runId, { status: "paid" });
