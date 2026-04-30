@@ -72,10 +72,23 @@ export function MyLeavesPage() {
   // found" error (#26).
   const leaveTypes: Array<{ id: number | string; code: string; name: string }> =
     typesData?.data || [];
-  const leaveTypeOptions = leaveTypes.map((t) => ({
-    value: String(t.id),
-    label: t.name,
-  }));
+  // #309 — Some orgs have multiple leave_types rows that share a display
+  // name (e.g. an old "SL" left over after admin recreated "Sick Leave"),
+  // which made the dropdown show "Sick Leave" twice. Dedupe by name —
+  // keeping the first occurrence is fine for picking; the apply call uses
+  // the numeric id so we don't lose precision.
+  const seenNames = new Set<string>();
+  const leaveTypeOptions = leaveTypes
+    .filter((t) => {
+      const key = (t.name || "").trim().toLowerCase();
+      if (!key || seenNames.has(key)) return false;
+      seenNames.add(key);
+      return true;
+    })
+    .map((t) => ({
+      value: String(t.id),
+      label: t.name,
+    }));
 
   const { data: requestsData, isLoading: reqLoading } = useQuery({
     queryKey: ["my-leave-requests", filter],

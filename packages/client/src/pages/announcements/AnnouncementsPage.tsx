@@ -91,7 +91,10 @@ export function AnnouncementsPage() {
               <CardContent className="py-5">
                 <div className="flex-1">
                   <div className="mb-1 flex flex-wrap items-center gap-2">
-                    {a.is_pinned && <Pin className="text-brand-600 h-4 w-4" />}
+                    {/* #297 — `is_pinned` arrives as MySQL TINYINT (0/1);
+                        bare `a.is_pinned && <Pin/>` renders the literal "0"
+                        on every unpinned card. Coerce to boolean. */}
+                    {!!a.is_pinned && <Pin className="text-brand-600 h-4 w-4" />}
                     <h3 className="text-lg font-semibold text-gray-900">{a.title}</h3>
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${priorityColors[a.priority] || priorityColors.normal}`}

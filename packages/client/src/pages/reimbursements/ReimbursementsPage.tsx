@@ -21,11 +21,22 @@ export function ReimbursementsPage() {
     queryFn: () => apiGet<any>("/reimbursements", filter ? { status: filter } : {}),
   });
 
+  // #301 — top stat cards are an org-wide summary; previously they were
+  // derived from `claims` which is already status-filtered server-side, so
+  // clicking "Approved" filtered the table AND zeroed the Pending / Rejected
+  // / Paid cards. Fetch the unfiltered list separately and drive the cards
+  // off it (mirrors the loans-page fix in #158).
+  const { data: allRes } = useQuery({
+    queryKey: ["reimbursements-all"],
+    queryFn: () => apiGet<any>("/reimbursements"),
+  });
+
   const claims = res?.data?.data || [];
-  const pending = claims.filter((c: any) => c.status === "pending");
-  const approved = claims.filter((c: any) => c.status === "approved");
-  const rejected = claims.filter((c: any) => c.status === "rejected");
-  const paid = claims.filter((c: any) => c.status === "paid");
+  const allClaims = allRes?.data?.data || [];
+  const pending = allClaims.filter((c: any) => c.status === "pending");
+  const approved = allClaims.filter((c: any) => c.status === "approved");
+  const rejected = allClaims.filter((c: any) => c.status === "rejected");
+  const paid = allClaims.filter((c: any) => c.status === "paid");
   const totalPending = pending.reduce((s: number, c: any) => s + Number(c.amount), 0);
   const totalApproved = approved.reduce((s: number, c: any) => s + Number(c.amount), 0);
   const totalRejected = rejected.reduce((s: number, c: any) => s + Number(c.amount), 0);
@@ -35,6 +46,7 @@ export function ReimbursementsPage() {
       await apiPost(`/reimbursements/${id}/${action}`);
       toast.success(`Claim ${action}d`);
       qc.invalidateQueries({ queryKey: ["reimbursements"] });
+      qc.invalidateQueries({ queryKey: ["reimbursements-all"] });
     } catch (err: any) {
       toast.error(err.response?.data?.error?.message || "Failed");
     }
@@ -122,7 +134,7 @@ export function ReimbursementsPage() {
           className="focus-visible:ring-brand-500 block rounded-xl transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2"
           aria-label="View all reimbursement claims"
         >
-          <StatCard title="Total Claims" value={String(claims.length)} icon={Receipt} />
+          <StatCard title="Total Claims" value={String(allClaims.length)} icon={Receipt} />
         </Link>
         <Link
           to="/reimbursements"

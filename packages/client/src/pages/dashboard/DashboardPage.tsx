@@ -193,12 +193,30 @@ export function DashboardPage() {
           subtitle={lastRun ? `${MONTHS[lastRun.month]} ${lastRun.year}` : "No payroll yet"}
           icon={TrendingUp}
         />
-        <StatCard
-          title="Total Deductions"
-          value={lastRun ? formatCurrency(lastRun.total_deductions) : "—"}
-          subtitle="PF + ESI + PT + TDS"
-          icon={AlertCircle}
-        />
+        {/* #314 — Card was previously inert; HR wanted it to drill into the
+            breakdown. Link to the latest run's detail page where the per-
+            component deduction split (PF / ESI / PT / TDS) is rendered. */}
+        {lastRun ? (
+          <Link
+            to={`/payroll/runs/${lastRun.id}`}
+            aria-label="View total deductions breakdown for the latest payroll run"
+          >
+            <StatCard
+              title="Total Deductions"
+              value={formatCurrency(lastRun.total_deductions)}
+              subtitle="PF + ESI + PT + TDS"
+              icon={AlertCircle}
+              className="h-full cursor-pointer"
+            />
+          </Link>
+        ) : (
+          <StatCard
+            title="Total Deductions"
+            value="—"
+            subtitle="PF + ESI + PT + TDS"
+            icon={AlertCircle}
+          />
+        )}
       </div>
 
       {/* Charts row */}
@@ -299,7 +317,13 @@ export function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {/* #300 — Compliance card sits in a 2-col grid at lg+ so its
+                width is narrow. Forcing 4 columns on `sm` then made
+                "Provident Fund" / "Professional Tax" / "TDS (Form 24Q)"
+                push the icon and badge past the card border. Drop the
+                `sm:grid-cols-4` step and add `min-w-0 truncate` so the
+                label shrinks rather than overflowing. */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {(
                 [
                   { label: "Provident Fund", filed: true },
@@ -313,12 +337,12 @@ export function DashboardPage() {
                   className="flex items-center gap-3 rounded-lg border border-gray-100 p-4"
                 >
                   {item.filed ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
                   ) : (
-                    <XCircle className="h-5 w-5 text-red-400" />
+                    <XCircle className="h-5 w-5 shrink-0 text-red-400" />
                   )}
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{item.label}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-gray-900">{item.label}</p>
                     <Badge variant={item.filed ? "approved" : "pending"}>
                       {item.filed ? "Filed" : "Pending"}
                     </Badge>

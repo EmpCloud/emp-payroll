@@ -71,32 +71,66 @@ export class AttendanceService {
       .groupBy("ar.user_id", "u.first_name", "u.last_name", "u.emp_code");
 
     if (records.length === 0) {
-      // No attendance records in EmpCloud for this month — return all org users with zero attendance
+      // No attendance records in EmpCloud for this month. #308 — but the
+      // local `attendance_summaries` table may have rows from "Mark All
+      // Present" writes; surface those before falling back to all-zero.
       const users = await empcloudDb("users")
         .where({ organization_id: orgIdNum, status: 1 })
         .whereNot("role", "super_admin")
         .select("id as empcloud_user_id", "first_name", "last_name", "emp_code");
 
-      const zeroData = users.map((u: any) => ({
-        ...u,
-        month,
-        year,
-        total_days: totalWorkingDays,
-        present_days: 0,
-        half_days: 0,
-        absent_days: 0,
-        leave_days: 0,
-        overtime_hours: 0,
-        paid_leave: 0,
-        unpaid_leave: 0,
-        lop_days: 0,
-        holidays: 0,
-        weekoffs: 0,
-        overtime_rate: 0,
-        overtime_amount: 0,
-      }));
+      const localOverrides = await this.db.findMany<any>("attendance_summaries", {
+        filters: { month, year },
+        limit: 10000,
+      });
+      const localMap: Record<number, any> = {};
+      for (const r of localOverrides.data) {
+        if (r.empcloud_user_id != null) localMap[Number(r.empcloud_user_id)] = r;
+      }
 
-      return { data: zeroData, total: zeroData.length, page: 1, limit: 1000, totalPages: 1 };
+      const data = users.map((u: any) => {
+        const local = localMap[u.empcloud_user_id];
+        if (local) {
+          return {
+            ...u,
+            month,
+            year,
+            total_days: Number(local.total_days) || totalWorkingDays,
+            present_days: Number(local.present_days) || 0,
+            half_days: Number(local.half_days) || 0,
+            absent_days: Number(local.absent_days) || 0,
+            leave_days: Number(local.paid_leave || 0) + Number(local.unpaid_leave || 0),
+            overtime_hours: Number(local.overtime_hours) || 0,
+            paid_leave: Number(local.paid_leave) || 0,
+            unpaid_leave: Number(local.unpaid_leave) || 0,
+            lop_days: Number(local.lop_days) || 0,
+            holidays: Number(local.holidays) || 0,
+            weekoffs: Number(local.weekoffs) || 0,
+            overtime_rate: Number(local.overtime_rate) || 0,
+            overtime_amount: Number(local.overtime_amount) || 0,
+          };
+        }
+        return {
+          ...u,
+          month,
+          year,
+          total_days: totalWorkingDays,
+          present_days: 0,
+          half_days: 0,
+          absent_days: 0,
+          leave_days: 0,
+          overtime_hours: 0,
+          paid_leave: 0,
+          unpaid_leave: 0,
+          lop_days: 0,
+          holidays: 0,
+          weekoffs: 0,
+          overtime_rate: 0,
+          overtime_amount: 0,
+        };
+      });
+
+      return { data, total: data.length, page: 1, limit: 1000, totalPages: 1 };
     }
 
     // Get approved leaves from EmpCloud for the same period
@@ -134,6 +168,21 @@ export class AttendanceService {
     const recordMap: Record<number, any> = {};
     for (const r of records) recordMap[r.empcloud_user_id] = r;
 
+    // #308 — Mark All Present writes to the local `attendance_summaries`
+    // table (importRecords), but bulkSummary previously only read from
+    // EmpCloud's `attendance_records`. The result was a "Marked successful"
+    // toast followed by an unchanged dashboard. Pull the local override
+    // rows for this period and use them as a fallback for users who
+    // have no EmpCloud rows yet.
+    const localOverrides = await this.db.findMany<any>("attendance_summaries", {
+      filters: { month, year },
+      limit: 10000,
+    });
+    const localMap: Record<number, any> = {};
+    for (const r of localOverrides.data) {
+      if (r.empcloud_user_id != null) localMap[Number(r.empcloud_user_id)] = r;
+    }
+
     const enriched = allUsers.map((u: any) => {
       const r = recordMap[u.empcloud_user_id];
       const userLeave = leaveMap[u.empcloud_user_id] || { paid: 0, unpaid: 0 };
@@ -147,6 +196,30 @@ export class AttendanceService {
           weekoffs: 0,
           overtime_rate: 0,
           overtime_amount: 0,
+        };
+      }
+      const local = localMap[u.empcloud_user_id];
+      if (local) {
+        return {
+          empcloud_user_id: u.empcloud_user_id,
+          first_name: u.first_name,
+          last_name: u.last_name,
+          emp_code: u.emp_code,
+          month,
+          year,
+          total_days: Number(local.total_days) || totalWorkingDays,
+          present_days: Number(local.present_days) || 0,
+          half_days: Number(local.half_days) || 0,
+          absent_days: Number(local.absent_days) || 0,
+          leave_days: Number(local.paid_leave || 0) + Number(local.unpaid_leave || 0),
+          overtime_hours: Number(local.overtime_hours) || 0,
+          paid_leave: Number(local.paid_leave) || userLeave.paid,
+          unpaid_leave: Number(local.unpaid_leave) || userLeave.unpaid,
+          lop_days: Number(local.lop_days) || userLeave.unpaid,
+          holidays: Number(local.holidays) || 0,
+          weekoffs: Number(local.weekoffs) || 0,
+          overtime_rate: Number(local.overtime_rate) || 0,
+          overtime_amount: Number(local.overtime_amount) || 0,
         };
       }
       // Employee has no attendance rows this month — surface as a

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getDB } from "../db/adapters";
+import { getEmpCloudDB } from "../db/empcloud";
 import { AppError } from "../api/middleware/error.middleware";
 
 // #38 — Reject negative or non-finite amounts server-side. Using Zod here
@@ -61,12 +62,46 @@ export class ReimbursementService {
       limit: 100,
     });
 
+    // #290 — `employee_payroll_profiles` has NO first_name / last_name columns
+    // (it stores payroll-specific data only — bank, tax, PF/ESI). When the
+    // matched row was a profile rather than a legacy employees row, the
+    // template literal `${row.first_name} ${row.last_name}` rendered the
+    // literal string "undefined undefined" instead of the employee's name.
+    // Resolve names from EmpCloud users for any row that doesn't come with
+    // first_name populated.
+    const userIds = new Set<number>();
+    for (const r of result.data) {
+      const row = empMap[r.employee_id];
+      const ecUid = Number(row?.empcloud_user_id ?? r.empcloud_user_id);
+      if (Number.isFinite(ecUid) && ecUid > 0 && !row?.first_name) {
+        userIds.add(ecUid);
+      }
+    }
+    const userMap: Record<string, { first_name: string; last_name: string; emp_code?: string }> =
+      {};
+    if (userIds.size > 0) {
+      try {
+        const ecDb = getEmpCloudDB();
+        const users = await ecDb("users")
+          .whereIn("id", Array.from(userIds))
+          .select("id", "first_name", "last_name", "emp_code");
+        for (const u of users) userMap[String(u.id)] = u;
+      } catch {
+        // EmpCloud unreachable — names will fall through to "Unknown".
+      }
+    }
+
     const enriched = result.data.map((r: any) => {
       const row = empMap[r.employee_id];
+      const ecUid = String(row?.empcloud_user_id ?? r.empcloud_user_id ?? "");
+      const ecUser = userMap[ecUid];
+      const first = row?.first_name ?? ecUser?.first_name;
+      const last = row?.last_name ?? ecUser?.last_name;
+      const employee_name = first || last ? [first, last].filter(Boolean).join(" ") : "Unknown";
       return {
         ...r,
-        employee_name: row ? `${row.first_name} ${row.last_name}` : "Unknown",
-        employee_code: row?.employee_code || "",
+        employee_name,
+        employee_code: row?.employee_code || ecUser?.emp_code || "",
       };
     });
 
