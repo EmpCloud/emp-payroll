@@ -411,13 +411,7 @@ export function SalaryStructuresPage() {
                         className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-1 disabled:bg-gray-50 disabled:text-gray-300"
                         type="number"
                         min={0}
-                        value={
-                          c.calculationType === "balance"
-                            ? ""
-                            : c.value === 0 && (c as any)._cleared
-                              ? ""
-                              : c.value
-                        }
+                        value={c.calculationType === "balance" ? "" : c.value === 0 ? "" : c.value}
                         placeholder={c.calculationType === "balance" ? "auto" : "0"}
                         // #316 — pre-select the contents on focus so typing
                         // overwrites the leading 0 instead of producing "01",
