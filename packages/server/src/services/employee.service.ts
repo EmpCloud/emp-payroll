@@ -31,16 +31,26 @@ async function mergeUserWithProfile(ecUser: EmpCloudUser, payrollDb: any): Promi
     empcloud_user_id: ecUser.id,
   });
 
-  const bankDetails = profile
-    ? typeof profile.bank_details === "string"
-      ? JSON.parse(profile.bank_details || "{}")
-      : profile.bank_details
-    : {};
-  const taxInfo = profile
-    ? typeof profile.tax_info === "string"
-      ? JSON.parse(profile.tax_info || "{}")
-      : profile.tax_info
-    : {};
+  // Normalise the JSON-ish columns. They may arrive as:
+  //   - a JSON string (older rows / mysql JSON column read as text)
+  //   - an already-parsed object (knex JSON binding)
+  //   - null (column was never written)
+  //   - undefined (whole `profile` row missing)
+  // Any of those must end up as a plain object so downstream `.foo` lookups
+  // don't crash. Fall back to {} for nullish AND non-object values.
+  const parseJsonish = (v: unknown): Record<string, any> => {
+    if (v == null) return {};
+    if (typeof v === "string") {
+      try {
+        return JSON.parse(v || "{}") || {};
+      } catch {
+        return {};
+      }
+    }
+    return typeof v === "object" ? (v as Record<string, any>) : {};
+  };
+  const bankDetails = parseJsonish(profile?.bank_details);
+  const taxInfo = parseJsonish(profile?.tax_info);
 
   // PAN / Aadhar / UAN are entered on EmpCloud's profile screen
   // (employee_profiles table). The payroll-side tax_info JSON may have
@@ -55,21 +65,22 @@ async function mergeUserWithProfile(ecUser: EmpCloudUser, payrollDb: any): Promi
     if (!taxInfo.aadhar && ecStatutory.aadhar_number) taxInfo.aadhar = ecStatutory.aadhar_number;
     if (!taxInfo.uan && ecStatutory.uan_number) taxInfo.uan = ecStatutory.uan_number;
   }
-  const pfDetails = profile
-    ? typeof profile.pf_details === "string"
-      ? JSON.parse(profile.pf_details || "{}")
-      : profile.pf_details
-    : {};
-  const esiDetails = profile
-    ? typeof profile.esi_details === "string"
-      ? JSON.parse(profile.esi_details || "{}")
-      : profile.esi_details
-    : {};
-  const address = profile
-    ? typeof profile.address === "string"
-      ? JSON.parse(profile.address || "null")
-      : profile.address
-    : null;
+  const pfDetails = parseJsonish(profile?.pf_details);
+  const esiDetails = parseJsonish(profile?.esi_details);
+  // Address can legitimately be null (no address on file) — preserve that
+  // instead of normalising to {}.
+  const address =
+    profile?.address == null
+      ? null
+      : typeof profile.address === "string"
+        ? (() => {
+            try {
+              return JSON.parse(profile.address);
+            } catch {
+              return null;
+            }
+          })()
+        : profile.address;
 
   return {
     // EmpCloud identity (id = empcloudUserId for backward compat)
