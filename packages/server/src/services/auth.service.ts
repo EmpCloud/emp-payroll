@@ -460,16 +460,30 @@ export class AuthService {
 
   /**
    * Map EmpCloud role string to payroll role.
-   * EmpCloud roles may use different naming; normalize here.
+   *
+   * Payroll-side scope is NOT the same as EmpCloud-side scope. EmpCloud's
+   * `manager` is a team lead (sees team attendance / leave / etc.) but has
+   * no HR-side payroll responsibility. Mapping them to payroll's hr_manager
+   * would let team leads see every employee's salary and run payroll.
+   *
+   * Mapping:
+   *   - super_admin / org_admin / hr_admin → keep as-is (HR-side payroll access)
+   *   - everyone else (manager, hr_manager, employee) → employee
+   *
+   * Specific payroll actions for non-admins are unlocked via the JWT
+   * permissions claim (e.g. a custom role granting `payroll:run` lets a
+   * designated user run payroll without granting them HR-side visibility).
    */
   private mapRole(role: string): AuthPayload["role"] {
     const roleMap: Record<string, AuthPayload["role"]> = {
       super_admin: "super_admin",
       org_admin: "org_admin",
       hr_admin: "hr_admin",
-      hr_manager: "hr_manager",
-      manager: "hr_manager",
       admin: "hr_admin",
+      // Everything else collapses to employee in payroll context.
+      // Per-action access is granted via the permissions claim.
+      hr_manager: "employee",
+      manager: "employee",
       employee: "employee",
     };
     return roleMap[role?.toLowerCase()] || "employee";

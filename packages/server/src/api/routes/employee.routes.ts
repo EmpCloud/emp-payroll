@@ -2,7 +2,7 @@ import { Router } from "express";
 import { EmployeeService } from "../../services/employee.service";
 import { ExportService } from "../../services/export.service";
 import { createNote, getNotes, deleteNote } from "../../services/notes.service";
-import { authenticate, authorize } from "../middleware/auth.middleware";
+import { authenticate, authorize, requirePermission } from "../middleware/auth.middleware";
 import {
   validate,
   createEmployeeSchema,
@@ -21,7 +21,10 @@ const numParam = (req: any, name: string) => Number(param(req, name));
 
 router.get(
   "/",
-  authorize("hr_admin", "hr_manager"),
+  // RBAC: only users with explicit "see all employees in payroll" perms.
+  // System role defaults: org_admin + hr_admin only. Manager / employee
+  // are blocked even if the legacy hr_manager mapping ever leaks through.
+  requirePermission("payroll:view_all", "salary:view_all", "employees:view_all"),
   wrap(async (req, res) => {
     const { page, limit, sort, order, department } = req.query as any;
     const options: any = { page: Number(page) || 1, limit: Number(limit) || 20 };
@@ -48,7 +51,7 @@ router.get(
 // GET /employees/available-from-empcloud — List EmpCloud employees not yet in payroll
 router.get(
   "/available-from-empcloud",
-  authorize("hr_admin", "hr_manager"),
+  requirePermission("payroll:view_all", "employees:view_all"),
   wrap(async (req, res) => {
     const data = await svc.listAvailableForImport(req.user!.empcloudOrgId);
     res.json({ success: true, data });
