@@ -227,6 +227,13 @@ export class AuthService {
     // Get department name for response
     const departmentName = await getUserDepartmentName(ecUser.department_id);
 
+    // RBAC v1 — copy effective permissions out of the EmpCloud RS256 JWT
+    // into payroll's AuthPayload. EmpCloud computes them at issue/refresh
+    // time so the keys here reflect the user's current custom roles.
+    const ecPermissions = Array.isArray((decoded as any).permissions)
+      ? ((decoded as any).permissions as string[])
+      : [];
+
     const payload: AuthPayload = {
       empcloudUserId: ecUser.id,
       empcloudOrgId: ecUser.organization_id,
@@ -236,6 +243,7 @@ export class AuthService {
       firstName: ecUser.first_name,
       lastName: ecUser.last_name,
       orgName: ecOrg.name,
+      permissions: ecPermissions,
     };
 
     const tokens = this.generateTokens(payload);
@@ -287,6 +295,10 @@ export class AuthService {
         firstName: ecUser.first_name,
         lastName: ecUser.last_name,
         orgName: ecOrg?.name || "",
+        // Preserve the permissions claim across refresh. To pick up role
+        // changes the user must re-SSO from EmpCloud (15-min access TTL
+        // bounds the staleness window).
+        permissions: payload.permissions ?? [],
       });
     } catch (err: any) {
       if (err instanceof AppError) throw err;
@@ -448,16 +460,30 @@ export class AuthService {
 
   /**
    * Map EmpCloud role string to payroll role.
-   * EmpCloud roles may use different naming; normalize here.
+   *
+   * Payroll-side scope is NOT the same as EmpCloud-side scope. EmpCloud's
+   * `manager` is a team lead (sees team attendance / leave / etc.) but has
+   * no HR-side payroll responsibility. Mapping them to payroll's hr_manager
+   * would let team leads see every employee's salary and run payroll.
+   *
+   * Mapping:
+   *   - super_admin / org_admin / hr_admin → keep as-is (HR-side payroll access)
+   *   - everyone else (manager, hr_manager, employee) → employee
+   *
+   * Specific payroll actions for non-admins are unlocked via the JWT
+   * permissions claim (e.g. a custom role granting `payroll:run` lets a
+   * designated user run payroll without granting them HR-side visibility).
    */
   private mapRole(role: string): AuthPayload["role"] {
     const roleMap: Record<string, AuthPayload["role"]> = {
       super_admin: "super_admin",
       org_admin: "org_admin",
       hr_admin: "hr_admin",
-      hr_manager: "hr_manager",
-      manager: "hr_manager",
       admin: "hr_admin",
+      // Everything else collapses to employee in payroll context.
+      // Per-action access is granted via the permissions claim.
+      hr_manager: "employee",
+      manager: "employee",
       employee: "employee",
     };
     return roleMap[role?.toLowerCase()] || "employee";
