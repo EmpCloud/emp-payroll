@@ -145,7 +145,11 @@ export class SalaryService {
     // (structure_id, code) that ignores is_active, so a soft-delete followed
     // by re-insert of the same code collides with the zombie row and MySQL
     // returns ER_DUP_ENTRY. employee_salaries stores a JSON snapshot of
-    // components (not an FK to this row), so deleting is safe for history.
+    // components (not an FK to this row), so deleting the old rows is safe
+    // for history — but we DO need to refresh that snapshot for active
+    // assignments below, otherwise the UI keeps showing stale component
+    // amounts after a structure change.
+    let propagatedToEmployees = 0;
     if (Array.isArray(data.components)) {
       await this.db.deleteMany("salary_components", { structure_id: id });
       for (let i = 0; i < data.components.length; i++) {
@@ -166,9 +170,48 @@ export class SalaryService {
           sort_order: c.sortOrder ?? i,
         });
       }
+
+      // Propagate the new component split to every ACTIVE employee_salaries
+      // row using this structure. Each row's CTC stays the same; we recompute
+      // the per-component breakdown from the new structure + that CTC.
+      // Without this, HR would update the structure (e.g. shift HRA from
+      // 30% to 50%) and existing assignees would still draw the old split.
+      propagatedToEmployees = await this.propagateStructureToAssignments(id);
     }
 
-    return updated;
+    return { ...updated, propagated_to_employees: propagatedToEmployees };
+  }
+
+  /**
+   * Recompute and update the JSON `components` snapshot on every active
+   * employee_salaries row for the given structure. CTC stays the same;
+   * components and gross_salary are derived afresh from the structure's
+   * current component definitions. Returns the count of rows touched.
+   */
+  private async propagateStructureToAssignments(structureId: string): Promise<number> {
+    const result = await this.db.findMany<any>("employee_salaries", {
+      filters: { structure_id: structureId, is_active: true },
+    });
+    const assignments = result.data;
+    let touched = 0;
+    for (const a of assignments) {
+      const ctc = Number(a.ctc);
+      if (!Number.isFinite(ctc) || ctc <= 0) continue;
+      const components = await this.resolveComponentsForCTC(structureId, ctc);
+      const grossSalary = components.reduce(
+        (sum: number, c: any) => sum + Number(c.monthlyAmount || 0) * 12,
+        0,
+      );
+      await this.db.update("employee_salaries", a.id, {
+        components: JSON.stringify(components),
+        gross_salary: grossSalary,
+        // net_salary is recomputed during payroll; refresh the gross-equal
+        // baseline so the UI doesn't show a stale net.
+        net_salary: grossSalary,
+      });
+      touched++;
+    }
+    return touched;
   }
 
   async deleteStructure(id: string, orgId: string) {
@@ -185,7 +228,7 @@ export class SalaryService {
   }
 
   async addComponent(structureId: string, data: any) {
-    return this.db.create("salary_components", {
+    const created = await this.db.create("salary_components", {
       structure_id: structureId,
       name: data.name,
       code: data.code,
@@ -200,6 +243,10 @@ export class SalaryService {
       is_active: true,
       sort_order: data.sortOrder || 0,
     });
+    // Refresh active assignment snapshots so HR sees the new component
+    // immediately on every assigned employee.
+    await this.propagateStructureToAssignments(structureId);
+    return created;
   }
 
   async updateComponent(structureId: string, componentId: string, data: any) {
@@ -208,7 +255,9 @@ export class SalaryService {
       structure_id: structureId,
     });
     if (!component) throw new AppError(404, "NOT_FOUND", "Component not found");
-    return this.db.update("salary_components", componentId, data);
+    const updated = await this.db.update("salary_components", componentId, data);
+    await this.propagateStructureToAssignments(structureId);
+    return updated;
   }
 
   async assignToEmployee(data: any) {
