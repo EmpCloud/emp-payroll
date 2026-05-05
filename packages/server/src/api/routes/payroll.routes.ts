@@ -5,7 +5,7 @@ import { ReportsService } from "../../services/reports.service";
 import { EmailService } from "../../services/email.service";
 import { AccountingExportService } from "../../services/accounting-export.service";
 import { GovtFormatsService } from "../../services/govt-formats.service";
-import { authenticate, authorize } from "../middleware/auth.middleware";
+import { authenticate, authorize, requirePermission } from "../middleware/auth.middleware";
 import { enforcePayrollLock } from "../middleware/payroll-lock.middleware";
 import { validate, createPayrollRunSchema } from "../validators";
 import { wrap, param } from "../helpers";
@@ -14,10 +14,15 @@ import { AppError } from "../middleware/error.middleware";
 const router = Router();
 const svc = new PayrollService();
 
+// RBAC v1 — every payroll route still requires the legacy hr_admin / hr_manager
+// role gate AND the payroll-lock check. Specific actions below add per-permission
+// checks via requirePermission() so custom roles can grant access without bumping
+// a user up to hr_admin.
 router.use(authenticate, authorize("hr_admin", "hr_manager"), enforcePayrollLock);
 
 router.get(
   "/",
+  requirePermission("payroll:view_all", "payroll:view_reports"),
   wrap(async (req, res) => {
     const data = await svc.listRuns(String(req.user!.empcloudOrgId));
     res.json({ success: true, data });
@@ -34,6 +39,7 @@ router.get(
 
 router.post(
   "/",
+  requirePermission("payroll:run"),
   validate(createPayrollRunSchema),
   wrap(async (req, res) => {
     const data = await svc.createRun(
@@ -61,7 +67,7 @@ router.post(
 
 router.post(
   "/:id/approve",
-  authorize("hr_admin"),
+  requirePermission("payroll:approve_run"),
   wrap(async (req, res) => {
     const data = await svc.approveRun(
       param(req, "id"),

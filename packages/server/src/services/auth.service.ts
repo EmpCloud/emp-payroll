@@ -227,6 +227,13 @@ export class AuthService {
     // Get department name for response
     const departmentName = await getUserDepartmentName(ecUser.department_id);
 
+    // RBAC v1 — copy effective permissions out of the EmpCloud RS256 JWT
+    // into payroll's AuthPayload. EmpCloud computes them at issue/refresh
+    // time so the keys here reflect the user's current custom roles.
+    const ecPermissions = Array.isArray((decoded as any).permissions)
+      ? ((decoded as any).permissions as string[])
+      : [];
+
     const payload: AuthPayload = {
       empcloudUserId: ecUser.id,
       empcloudOrgId: ecUser.organization_id,
@@ -236,6 +243,7 @@ export class AuthService {
       firstName: ecUser.first_name,
       lastName: ecUser.last_name,
       orgName: ecOrg.name,
+      permissions: ecPermissions,
     };
 
     const tokens = this.generateTokens(payload);
@@ -287,6 +295,10 @@ export class AuthService {
         firstName: ecUser.first_name,
         lastName: ecUser.last_name,
         orgName: ecOrg?.name || "",
+        // Preserve the permissions claim across refresh. To pick up role
+        // changes the user must re-SSO from EmpCloud (15-min access TTL
+        // bounds the staleness window).
+        permissions: payload.permissions ?? [],
       });
     } catch (err: any) {
       if (err instanceof AppError) throw err;
