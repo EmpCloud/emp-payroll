@@ -293,7 +293,16 @@ export function EmployeeCreatePage() {
                 placeholder="1234567890"
                 required
               />
-              <Input id="ifsc" name="ifsc" label="IFSC Code" placeholder="HDFC0001234" required />
+              <Input
+                id="ifsc"
+                name="ifsc"
+                label="IFSC Code"
+                placeholder="HDFC0001234"
+                pattern="[A-Z]{4}0[A-Z0-9]{6}"
+                title="11 chars: 4 capital letters, then 0, then 6 alphanumerics (e.g. HDFC0001234)"
+                style={{ textTransform: "uppercase" }}
+                required
+              />
             </div>
           </CardContent>
         </Card>
