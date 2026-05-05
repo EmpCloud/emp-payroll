@@ -266,13 +266,19 @@ export const assignSalarySchema = z.object({
     employeeId: z.union([z.string(), z.number()]).transform(String),
     structureId: z.string(),
     ctc: z.number().positive(),
-    components: z.array(
-      z.object({
-        code: z.string(),
-        monthlyAmount: z.number(),
-        annualAmount: z.number(),
-      }),
-    ),
+    // Components are optional — the service derives them from the structure
+    // + CTC via resolveComponentsForCTC() when omitted. The legacy frontend
+    // path that posted pre-computed components still works because the array
+    // is accepted here and passed through to the service.
+    components: z
+      .array(
+        z.object({
+          code: z.string(),
+          monthlyAmount: z.number(),
+          annualAmount: z.number(),
+        }),
+      )
+      .optional(),
     effectiveFrom: z.string(),
   }),
 });
