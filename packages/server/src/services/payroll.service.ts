@@ -4,6 +4,8 @@ import {
   computePF,
   computeESI,
   computeProfessionalTax,
+  applyRounding,
+  type OrgStatutoryOverrides,
 } from "./compliance/india-statutory.service";
 import { computeIncomeTax } from "./tax/india-tax.service";
 import { TaxRegime } from "@emp-payroll/shared";
@@ -21,6 +23,26 @@ dayjs.extend(timezone);
 // IST calendar regardless of where the server runs. Hardcoded for now;
 // when multi-region tenants land this should read from org settings.
 const PAYROLL_TZ = "Asia/Kolkata";
+
+/**
+ * Lift the migration-029 columns off an `organization_payroll_settings`
+ * row into the camelCase shape the statutory service expects. Centralised
+ * so every call site (PF, ESI, future Form 16 / gratuity) reads from one
+ * place and the snake_case ↔ camelCase mapping doesn't drift.
+ */
+function buildOrgStatutoryOverrides(orgSettings: any): OrgStatutoryOverrides {
+  if (!orgSettings) return {};
+  const num = (v: unknown): number | null =>
+    v == null || v === "" ? null : Number.isFinite(Number(v)) ? Number(v) : null;
+  return {
+    pfApplyFullBasic:
+      orgSettings.pf_apply_full_basic == null ? null : !!Number(orgSettings.pf_apply_full_basic),
+    pfMaxEmployeeContribution: num(orgSettings.pf_max_employee_contribution),
+    pfDefaultEmployeeRate: num(orgSettings.pf_default_employee_rate),
+    esiWageCeiling: num(orgSettings.esi_wage_ceiling),
+    roundingPolicy: orgSettings.rounding_policy ?? null,
+  };
+}
 
 // #1655 — true if (year, month) is strictly *after* the current calendar
 // month *in the payroll timezone*. The current month is always allowed
@@ -300,6 +322,10 @@ export class PayrollService {
           : profile.pf_details
         : {};
       if (!pfDetails?.isOptedOut) {
+        // Pass org-level statutory overrides (migration 029) so PF can
+        // honour pf_apply_full_basic, pf_max_employee_contribution, and
+        // pf_default_employee_rate when the org has set them.
+        const orgOverrides = buildOrgStatutoryOverrides(orgSettings);
         const pf = computePF({
           employeeId: String(ecEmp.id),
           month: run.month,
@@ -308,6 +334,7 @@ export class PayrollService {
           contributionRate: pfDetails?.contributionRate || undefined,
           isVoluntaryPF: !!pfDetails?.vpfRate,
           vpfRate: pfDetails?.vpfRate || 0,
+          orgOverrides,
         });
         deductions.push({ code: "EPF", name: "Employee PF", amount: pf.employeeEPF });
         totalDed += pf.employeeEPF;
@@ -326,6 +353,7 @@ export class PayrollService {
           month: run.month,
           year: run.year,
           grossSalary: grossEarnings,
+          orgOverrides: buildOrgStatutoryOverrides(orgSettings),
         });
         if (esi) {
           deductions.push({ code: "ESI", name: "Employee ESI", amount: esi.employeeContribution });
@@ -412,7 +440,20 @@ export class PayrollService {
         if (activeLoans.data.length > 0) break; // Found loans, don't query again
       }
 
-      const netPay = grossEarnings - totalDed;
+      // Apply org-level rounding policy (migration 029) to the per-employee
+      // totals so the payslip and the payroll-run roll-up use consistent
+      // numbers. Default ("none" or unset) is a no-op so existing orgs see
+      // no change. Only the totals are rounded -- per-component line items
+      // stay at their natural Math.round precision so the math still adds
+      // up: rounding the totals is what HR cares about for bank transfers.
+      const roundingPolicy = orgSettings?.rounding_policy ?? null;
+      const roundedGross = applyRounding(grossEarnings, roundingPolicy);
+      const roundedDed = applyRounding(totalDed, roundingPolicy);
+      const netPay = roundedGross - roundedDed;
+      const roundedEmployerCost = applyRounding(
+        roundedGross + employeeEmployerContributions,
+        roundingPolicy,
+      );
 
       // Create payslip
       await this.db.create("payslips", {
@@ -428,15 +469,15 @@ export class PayrollService {
         deductions: JSON.stringify(deductions),
         employer_contributions: JSON.stringify([]),
         reimbursements: JSON.stringify([]),
-        gross_earnings: grossEarnings,
-        total_deductions: totalDed,
+        gross_earnings: roundedGross,
+        total_deductions: roundedDed,
         net_pay: netPay,
-        total_employer_cost: grossEarnings + employeeEmployerContributions,
+        total_employer_cost: roundedEmployerCost,
         status: "generated",
       });
 
-      totalGross += grossEarnings;
-      totalDeductions += totalDed;
+      totalGross += roundedGross;
+      totalDeductions += roundedDed;
       totalNet += netPay;
       totalEmployerContributions += employeeEmployerContributions;
       employeeCount++;
