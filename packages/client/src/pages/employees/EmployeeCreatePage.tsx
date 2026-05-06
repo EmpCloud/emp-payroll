@@ -83,10 +83,13 @@ export function EmployeeCreatePage() {
     }
 
     // #1658 — emp_code permissive: letters, digits, dots, dashes,
-    // underscores. Whitespace and other punctuation rejected.
+    // underscores, and slashes (for path-style codes like
+    // "GLB/BHI/2013/03/254"). Whitespace and other punctuation rejected.
     const empCode = get("employee_id").trim();
-    if (empCode && !/^[A-Za-z0-9._-]+$/.test(empCode)) {
-      toast.error("Employee code may only contain letters, digits, dots, dashes or underscores");
+    if (empCode && !/^[A-Za-z0-9._\-/]+$/.test(empCode)) {
+      toast.error(
+        "Employee code may only contain letters, digits, dots, dashes, slashes or underscores",
+      );
       return;
     }
 
