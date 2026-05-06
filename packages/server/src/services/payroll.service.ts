@@ -313,62 +313,86 @@ export class PayrollService {
       const startDate = monthStart;
       const endDate = monthEnd;
 
-      // Per-employee attendance lookup. The canonical `totalDays` is the
-      // org-wide working-days-in-month value computed once outside this
-      // loop (workingDaysInMonth) so EVERY employee in the run shares the
-      // same denominator. The imported summary used to be allowed to
-      // override total_days, which made employees with a manually-imported
-      // summary show 22 days while others showed 21 -- a bug HR couldn't
-      // reconcile. The summary now contributes ONLY presentDays and the
-      // leave splits; total_days is canonical.
-      const importedSummary = await this.db.findOne<any>("attendance_summaries", {
-        empcloud_user_id: ecEmp.id,
-        month: run.month,
-        year: run.year,
-      });
+      // Per-employee attendance lookup.
+      //
+      // Source-of-truth order (EmpCloud-first):
+      //   1. EmpCloud `attendance_records` + `leave_applications`
+      //   2. Local payroll DB `attendance_summaries` (cache / legacy
+      //      Mark All Present writes that haven't been replayed to
+      //      EmpCloud yet)
+      //
+      // Previously the order was inverted -- the local summary won
+      // whenever it existed, even if EmpCloud had fresher data. That
+      // meant marking attendance on the EmpCloud HRMS UI didn't show
+      // up in payroll until HR also re-clicked Mark All Present on
+      // the payroll side. The fix flips the preference so EmpCloud
+      // is the canonical source and the local summary is a fallback
+      // for periods where EmpCloud has no rows yet.
+      //
+      // The org-wide `workingDaysInMonth` (already hoisted above) is
+      // the canonical totalDays for every employee in the run.
+      const [attRecord] = (await empcloudDb("attendance_records")
+        .where("user_id", ecEmp.id)
+        .where("organization_id", Number(orgId))
+        .whereBetween("date", [startDate, endDate])
+        .select(
+          empcloudDb.raw(
+            "SUM(CASE WHEN status IN ('present','checked_in') THEN 1 WHEN status = 'half_day' THEN 0.5 ELSE 0 END) as present_days",
+          ),
+          empcloudDb.raw("SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_days"),
+          empcloudDb.raw("SUM(CASE WHEN status = 'on_leave' THEN 1 ELSE 0 END) as leave_days"),
+          empcloudDb.raw("COUNT(*) as total_records"),
+        )) as any[];
+
+      const leaveResult = (await empcloudDb("leave_applications as la")
+        .join("leave_types as lt", "la.leave_type_id", "lt.id")
+        .where("la.user_id", ecEmp.id)
+        .where("la.organization_id", Number(orgId))
+        .where("la.status", "approved")
+        .where("la.start_date", "<=", endDate)
+        .where("la.end_date", ">=", startDate)
+        .select(
+          empcloudDb.raw(
+            "SUM(CASE WHEN lt.is_paid = 1 THEN la.days_count ELSE 0 END) as paid_leave",
+          ),
+          empcloudDb.raw(
+            "SUM(CASE WHEN lt.is_paid = 0 THEN la.days_count ELSE 0 END) as unpaid_leave",
+          ),
+        )
+        .first()) as any;
 
       let presentDays: number;
       let paidLeaveDays: number;
       let unpaidLeaveDays: number;
 
-      if (importedSummary) {
-        presentDays =
-          Number(importedSummary.present_days || 0) + Number(importedSummary.half_days || 0) * 0.5;
-        paidLeaveDays = Number(importedSummary.paid_leave || 0);
-        unpaidLeaveDays = Number(importedSummary.unpaid_leave || 0);
-      } else {
-        const [attRecord] = (await empcloudDb("attendance_records")
-          .where("user_id", ecEmp.id)
-          .where("organization_id", Number(orgId))
-          .whereBetween("date", [startDate, endDate])
-          .select(
-            empcloudDb.raw(
-              "SUM(CASE WHEN status IN ('present','checked_in') THEN 1 WHEN status = 'half_day' THEN 0.5 ELSE 0 END) as present_days",
-            ),
-            empcloudDb.raw("SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_days"),
-            empcloudDb.raw("SUM(CASE WHEN status = 'on_leave' THEN 1 ELSE 0 END) as leave_days"),
-          )) as any[];
-
-        const leaveResult = (await empcloudDb("leave_applications as la")
-          .join("leave_types as lt", "la.leave_type_id", "lt.id")
-          .where("la.user_id", ecEmp.id)
-          .where("la.organization_id", Number(orgId))
-          .where("la.status", "approved")
-          .where("la.start_date", "<=", endDate)
-          .where("la.end_date", ">=", startDate)
-          .select(
-            empcloudDb.raw(
-              "SUM(CASE WHEN lt.is_paid = 1 THEN la.days_count ELSE 0 END) as paid_leave",
-            ),
-            empcloudDb.raw(
-              "SUM(CASE WHEN lt.is_paid = 0 THEN la.days_count ELSE 0 END) as unpaid_leave",
-            ),
-          )
-          .first()) as any;
-
+      const empcloudHasData = Number(attRecord?.total_records || 0) > 0;
+      if (empcloudHasData) {
         presentDays = Number(attRecord?.present_days || 0);
         paidLeaveDays = Number(leaveResult?.paid_leave || 0);
         unpaidLeaveDays = Number(leaveResult?.unpaid_leave || 0);
+      } else {
+        // Fallback: local summary cache (only used when EmpCloud has no
+        // attendance rows at all for this employee+period). Importing
+        // attendance via the payroll UI now also writes to EmpCloud
+        // (see attendance.service.importRecords), so this branch is the
+        // legacy / migration path for orgs that pre-date the bi-direction
+        // sync.
+        const importedSummary = await this.db.findOne<any>("attendance_summaries", {
+          empcloud_user_id: ecEmp.id,
+          month: run.month,
+          year: run.year,
+        });
+        if (importedSummary) {
+          presentDays =
+            Number(importedSummary.present_days || 0) +
+            Number(importedSummary.half_days || 0) * 0.5;
+          paidLeaveDays = Number(importedSummary.paid_leave || 0);
+          unpaidLeaveDays = Number(importedSummary.unpaid_leave || 0);
+        } else {
+          presentDays = 0;
+          paidLeaveDays = Number(leaveResult?.paid_leave || 0);
+          unpaidLeaveDays = Number(leaveResult?.unpaid_leave || 0);
+        }
       }
 
       const totalDays = workingDaysInMonth;
