@@ -4,6 +4,7 @@ import { EmployeeService } from "./employee.service";
 import { findUserByEmpCode, findUserById } from "../db/empcloud";
 import {
   resolveSalaryComponents,
+  checkResolvedComponents,
   SalaryResolverError,
   type ResolverComponent,
 } from "@emp-payroll/shared";
@@ -297,7 +298,13 @@ export class SalaryService {
       .filter((c: any) => !c.type || c.type === "earning")
       .reduce((sum: number, c: any) => sum + Number(c.monthlyAmount || 0) * 12, 0);
 
-    return this.db.create("employee_salaries", {
+    // Soft sanity-check: HRA > Basic, components don't sum to CTC, etc.
+    // Surfaced in the response so HR sees the issue at save time --
+    // doesn't block the save, since some legacy structures depend on
+    // the existing math and we don't want to brick salary edits.
+    const warnings = checkResolvedComponents(components, Number(data.ctc));
+
+    const created = await this.db.create("employee_salaries", {
       employee_id: "00000000-0000-0000-0000-000000000000",
       empcloud_user_id: Number(data.employeeId),
       structure_id: data.structureId,
@@ -308,6 +315,7 @@ export class SalaryService {
       effective_from: data.effectiveFrom,
       is_active: true,
     });
+    return { ...(created as any), warnings };
   }
 
   async getEmployeeSalary(employeeId: string) {
