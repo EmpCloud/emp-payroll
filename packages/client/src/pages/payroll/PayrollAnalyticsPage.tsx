@@ -105,6 +105,21 @@ export function PayrollAnalyticsPage() {
   return (
     <div className="space-y-8">
       <PageHeader title="Payroll Analytics" description="Cost trends, comparisons, and insights" />
+      {/* BUG-022 — Distortion banner. Headcount on this page is the
+          number of employees who APPEAR in each payroll run, not the
+          org's total active headcount. Employees skipped during compute
+          (no salary structure, joined after the period, exited before
+          the period, etc.) don't show up here, so the "Headcount Trend"
+          line and "Avg Net Pay / Employee" can dip sharply across
+          consecutive months even when actual hiring is flat. The
+          subtitle is more reliable than removing the chart -- HR still
+          wants the comparison, they just need the caveat. */}
+      <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+        Numbers below reflect employees included in each payroll run. Employees skipped during
+        compute (no active salary structure, hired after the pay period, exited before it) are not
+        counted, so headcount and per-employee averages can shift between months independently of
+        actual hiring activity.
+      </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
