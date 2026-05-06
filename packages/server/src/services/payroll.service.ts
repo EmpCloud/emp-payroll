@@ -368,6 +368,13 @@ export class PayrollService {
           ? JSON.parse(profile.pf_details)
           : profile.pf_details
         : {};
+      // Track per-component employer contributions so the payslip and
+      // payroll detail page can show "the employer also pays X / Y / Z on
+      // top of gross" -- previously the breakdown was computed but only
+      // the rolled-up total was kept (employer_contributions on the
+      // payslip was always JSON.stringify([])), so HR had no way to see
+      // where the employer cost came from.
+      const employerContribs: Array<{ code: string; name: string; amount: number }> = [];
       if (!pfDetails?.isOptedOut) {
         // Pass org-level statutory overrides (migration 029) so PF can
         // honour pf_apply_full_basic, pf_max_employee_contribution, and
@@ -386,6 +393,18 @@ export class PayrollService {
         deductions.push({ code: "EPF", name: "Employee PF", amount: pf.employeeEPF });
         totalDed += pf.employeeEPF;
         employeeEmployerContributions += pf.totalEmployer;
+        if (pf.employerEPF > 0)
+          employerContribs.push({ code: "EMP_EPF", name: "Employer EPF", amount: pf.employerEPF });
+        if (pf.employerEPS > 0)
+          employerContribs.push({ code: "EMP_EPS", name: "Employer EPS", amount: pf.employerEPS });
+        if (pf.adminCharges > 0)
+          employerContribs.push({
+            code: "EPF_ADMIN",
+            name: "EPF Admin Charges",
+            amount: pf.adminCharges,
+          });
+        if (pf.edliCharges > 0)
+          employerContribs.push({ code: "EDLI", name: "EDLI Charges", amount: pf.edliCharges });
       }
 
       // ESI — check eligibility from profile
@@ -406,6 +425,12 @@ export class PayrollService {
           deductions.push({ code: "ESI", name: "Employee ESI", amount: esi.employeeContribution });
           totalDed += esi.employeeContribution;
           employeeEmployerContributions += esi.employerContribution;
+          if (esi.employerContribution > 0)
+            employerContribs.push({
+              code: "EMP_ESI",
+              name: "Employer ESI",
+              amount: esi.employerContribution,
+            });
         }
       }
 
@@ -544,7 +569,12 @@ export class PayrollService {
         lop_days: lopDays,
         earnings: JSON.stringify(earnings),
         deductions: JSON.stringify(deductions),
-        employer_contributions: JSON.stringify([]),
+        // Per-component employer contributions (Employer EPF / EPS / EDLI
+        // / Admin / Employer ESI). Sum of `amount` here equals
+        // employeeEmployerContributions, which feeds total_employer_cost
+        // below. Stored so the payslip / payroll detail page can render
+        // "Employer also pays X" without recomputing.
+        employer_contributions: JSON.stringify(employerContribs),
         reimbursements: JSON.stringify([]),
         gross_earnings: roundedGross,
         total_deductions: roundedDed,
