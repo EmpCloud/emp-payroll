@@ -123,6 +123,38 @@ const columns = [
     ),
   },
   {
+    // Employer-side cost on top of gross — Employer EPF / EPS / EDLI /
+    // Admin / Employer ESI etc. The row stores them per-component on
+    // employer_contributions (populated by computePayroll); fall back
+    // to total_employer_cost − gross when the breakdown isn't there
+    // (older payslips computed before that JSON was persisted).
+    key: "employer_cost",
+    header: "Employer Cost (extra)",
+    render: (row: any) => {
+      const list =
+        typeof row.employer_contributions === "string"
+          ? JSON.parse(row.employer_contributions)
+          : row.employer_contributions || [];
+      const total = list.length
+        ? list.reduce((s: number, c: any) => s + Number(c.amount || 0), 0)
+        : Math.max(0, Number(row.total_employer_cost || 0) - Number(row.gross_earnings || 0));
+      return (
+        <div>
+          <p className="text-gray-700">{formatCurrency(total)}</p>
+          {list.length > 0 && (
+            <div className="mt-0.5 text-xs text-gray-400">
+              {list.map((c: any) => (
+                <span key={c.code} className="mr-1.5">
+                  {c.code}: {formatCurrency(c.amount)}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    },
+  },
+  {
     key: "status",
     header: "Status",
     render: (row: any) => <Badge variant={row.status}>{row.status}</Badge>,
