@@ -768,8 +768,25 @@ export class PayrollService {
         });
 
         if (taxResult.monthlyTds > 0) {
-          deductions.push({ code: "TDS", name: "Income Tax (TDS)", amount: taxResult.monthlyTds });
-          totalDed += taxResult.monthlyTds;
+          // BUG (May retest) — TDS cap. The tax engine projects monthly
+          // TDS off ANNUAL gross divided by remaining months. When an
+          // employee has a partial-month payslip (LOP-heavy month), the
+          // pro-rated grossEarnings can be tiny while the monthly TDS
+          // slug is unchanged -- producing net pay BELOW zero (Abhishek
+          // saw -₹1,154 with gross ₹318 vs TDS ₹1,455).
+          //
+          // Cap TDS at the room left after gross minus other deductions
+          // so this month's TDS withholding never pushes net negative.
+          // The under-collected portion gets re-projected next month
+          // because `taxAlreadyPaid` (YTD lookup) will see the smaller
+          // amount, so the engine catches up automatically -- no money
+          // lost to the IT department, just smoothed across months.
+          const tdsRoom = Math.max(0, grossEarnings - totalDed);
+          const cappedTds = Math.min(taxResult.monthlyTds, tdsRoom);
+          if (cappedTds > 0) {
+            deductions.push({ code: "TDS", name: "Income Tax (TDS)", amount: cappedTds });
+            totalDed += cappedTds;
+          }
         }
         if (!resolvedPan) {
           missingPan.push({ empcloudUserId: ecEmp.id, code: ecEmp.emp_code || "" });
