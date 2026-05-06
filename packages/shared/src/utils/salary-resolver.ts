@@ -30,6 +30,7 @@ export interface ResolverComponent {
 export interface ResolvedComponent {
   code: string;
   name: string;
+  type: "earning" | "deduction" | "reimbursement";
   monthlyAmount: number;
   annualAmount: number;
 }
@@ -88,8 +89,27 @@ export function validateComponents(components: ResolverComponent[]): void {
 
 /**
  * Resolve component definitions into monthly amounts for a given annual CTC.
- * Only earnings are returned (deductions/reimbursements are computed elsewhere
- * during payroll). Throws if the structure is invalid or balance underflows.
+ *
+ * Returns BOTH earnings and deductions (and reimbursements) defined on the
+ * structure. The original implementation filtered to earnings only --
+ * deductions configured on the salary structure (e.g. canteen, welfare
+ * fund, professional development levy) were silently dropped from the
+ * output, which meant they were also missing from `employee_salaries.components`
+ * when salary was assigned, and therefore never deducted in payroll
+ * compute even though HR added them on the structure.
+ *
+ * Resolution rules:
+ *   - earnings: as before -- fixed / percentage / balance, balance must
+ *     be unique and absorbs the remainder of monthly CTC after fixed and
+ *     percentage components are settled.
+ *   - deductions / reimbursements: NEVER counted toward the gross-vs-CTC
+ *     overflow check (they're not part of the CTC; they reduce / supplement
+ *     the gross at payroll time). Resolved as:
+ *       * fixed -> value as monthly amount
+ *       * percentage of CTC / GROSS -> against monthly CTC
+ *       * percentage of another component -> resolved after pass 2
+ *     `balance` calc-type is rejected for non-earnings (validateComponents
+ *     already checks this).
  */
 export function resolveSalaryComponents(
   components: ResolverComponent[],
@@ -104,10 +124,13 @@ export function resolveSalaryComponents(
 
   const monthlyCTC = ctcAnnual / 12;
   const earnings = components.filter((c) => c.type === "earning");
+  const nonEarnings = components.filter((c) => c.type !== "earning");
   const resolved = new Map<string, number>(); // code → monthly amount
 
-  // Pass 1: percentages of CTC and fixed amounts.
-  for (const c of earnings) {
+  // Pass 1: percentages of CTC and fixed amounts. Run for ALL components
+  // (earnings AND non-earnings) so deductions like "12% of CTC" or fixed
+  // ₹500 canteen charges resolve in the same pipeline.
+  for (const c of components) {
     if (c.calculationType === "fixed" || c.calculationType === "formula") {
       resolved.set(c.code, c.value || 0);
     } else if (c.calculationType === "percentage") {
@@ -118,11 +141,13 @@ export function resolveSalaryComponents(
     }
   }
 
-  // Pass 2: percentages that reference another component (e.g. HRA = 50% of BASIC).
-  // Loop until stable to allow chains. Bail after N iterations to detect cycles.
-  for (let iter = 0; iter < earnings.length + 1; iter++) {
+  // Pass 2: percentages that reference another component (e.g. HRA = 50%
+  // of BASIC, or PF = 12% of BASIC). Loop until stable to allow chains
+  // (deductions that reference earnings are common -- PF, ESI when stored
+  // as structure components rather than computed by the statutory engine).
+  for (let iter = 0; iter < components.length + 1; iter++) {
     let progressed = false;
-    for (const c of earnings) {
+    for (const c of components) {
       if (resolved.has(c.code)) continue;
       if (c.calculationType !== "percentage") continue;
       const ref = (c.percentageOf || "").toUpperCase();
@@ -135,8 +160,9 @@ export function resolveSalaryComponents(
     if (!progressed) break;
   }
 
-  // Any unresolved non-balance earning is a bad reference (cycle or unknown code).
-  const unresolved = earnings.filter(
+  // Any unresolved non-balance component is a bad reference (cycle or
+  // unknown code). Apply this check across earnings AND non-earnings now.
+  const unresolved = components.filter(
     (c) => !resolved.has(c.code) && c.calculationType !== "balance",
   );
   if (unresolved.length) {
@@ -148,34 +174,37 @@ export function resolveSalaryComponents(
     );
   }
 
-  // Pass 3: balance row absorbs the remainder. Even when there is NO
-  // balance row we still need to validate that the fixed + percentage
-  // components don't exceed the requested CTC -- previously the
-  // overflow check only fired for structures *with* a balance row, so
-  // a structure with a fixed Basic of ₹13,000/month would silently pass
-  // for an Annual CTC of ₹8 (the user actually triggered this with the
-  // "fresher" structure). Validate first, then assign the balance.
+  // Pass 3: balance row absorbs the remainder of monthly CTC. The
+  // overflow check uses ONLY earnings -- deductions/reimbursements live
+  // outside the gross-vs-CTC math. Without this distinction a structure
+  // with a fixed ₹500/month canteen deduction + Basic 40% CTC would have
+  // its 500 wrongly counted as "allocated" against the CTC.
   const balanceRow = earnings.find((c) => c.calculationType === "balance");
-  const allocated = Array.from(resolved.values()).reduce((s, v) => s + v, 0);
-  if (allocated > monthlyCTC + 0.5) {
+  const earningsAllocated = earnings.reduce((s, c) => s + (resolved.get(c.code) ?? 0), 0);
+  if (earningsAllocated > monthlyCTC + 0.5) {
     throw new SalaryResolverError(
       "BALANCE_UNDERFLOW",
-      `Components exceed CTC: allocated ${Math.round(allocated)}/month vs CTC ${Math.round(
+      `Components exceed CTC: allocated ${Math.round(earningsAllocated)}/month vs CTC ${Math.round(
         monthlyCTC,
       )}/month. Reduce other components or increase CTC.`,
     );
   }
   if (balanceRow) {
-    resolved.set(balanceRow.code, monthlyCTC - allocated);
+    resolved.set(balanceRow.code, monthlyCTC - earningsAllocated);
   }
 
-  // Preserve input order in the output.
-  return earnings.map((c) => {
+  // Preserve input order in the output. Emit earnings first, then
+  // deductions/reimbursements -- this matches what payroll.service expects
+  // when iterating componentList (it branches on `type` per row anyway,
+  // but earnings-first reads more naturally on the payslip).
+  const orderedOutput = [...earnings, ...nonEarnings];
+  return orderedOutput.map((c) => {
     const monthly = resolved.get(c.code) ?? 0;
     const monthlyAmount = round ? Math.round(monthly) : monthly;
     return {
       code: c.code,
       name: c.name || c.code,
+      type: c.type,
       monthlyAmount,
       annualAmount: monthlyAmount * 12,
     };
