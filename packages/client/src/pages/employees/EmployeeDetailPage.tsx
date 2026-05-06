@@ -529,6 +529,7 @@ export function EmployeeDetailPage() {
             return Array.isArray(p) ? p : Array.isArray(p?.data) ? p.data : [];
           })()}
           currentCTC={salary ? Number(salary.ctc) : undefined}
+          pfDetails={pfDetails}
           loading={salaryAssigning}
           onSubmit={async (data) => {
             setSalaryAssigning(true);
@@ -1151,6 +1152,7 @@ function SalaryAssignForm({
   employeeId,
   structures,
   currentCTC,
+  pfDetails,
   loading,
   onSubmit,
   onCancel,
@@ -1158,6 +1160,7 @@ function SalaryAssignForm({
   employeeId: string;
   structures: any[];
   currentCTC?: number;
+  pfDetails?: { isOptedOut?: boolean; contributionRate?: number | string };
   loading: boolean;
   onSubmit: (data: any) => void;
   onCancel: () => void;
@@ -1193,7 +1196,17 @@ function SalaryAssignForm({
   }
   const monthlyBasic = resolved.find((c) => c.code === "BASIC")?.monthlyAmount || 0;
   const monthlyGross = resolved.reduce((s, c) => s + c.monthlyAmount, 0);
-  const monthlyEPF = Math.round(Math.min(monthlyBasic, 15000) * 0.12);
+  // Honour the employee's actual PF config rather than hard-coding 12% for
+  // everyone:
+  //   - PF Opted Out -> EPF deduction is zero
+  //   - Custom contribution rate (default 12%) drives the percentage
+  // Wage ceiling stays at the statutory ₹15,000 because that's what the
+  // server-side calculator (india-statutory.service.ts) applies; voluntary
+  // PF on the full basic is a separate component handled at payroll-run
+  // time, not in this preview.
+  const pfOptedOut = pfDetails?.isOptedOut === true;
+  const pfRate = Number(pfDetails?.contributionRate ?? 12) || 12;
+  const monthlyEPF = pfOptedOut ? 0 : Math.round((Math.min(monthlyBasic, 15000) * pfRate) / 100);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1251,8 +1264,10 @@ function SalaryAssignForm({
                 <span>{formatCurrency(monthlyGross)}</span>
               </div>
               <div className="flex justify-between text-sm text-red-600">
-                <span>EPF Deduction</span>
-                <span>-{formatCurrency(monthlyEPF)}</span>
+                <span>
+                  EPF Deduction{pfOptedOut ? " (opted out)" : pfRate !== 12 ? ` (${pfRate}%)` : ""}
+                </span>
+                <span>{monthlyEPF > 0 ? `-${formatCurrency(monthlyEPF)}` : formatCurrency(0)}</span>
               </div>
               <div className="text-brand-700 flex justify-between border-t border-gray-200 pt-2 text-sm font-bold">
                 <span>Approx Net Pay</span>
