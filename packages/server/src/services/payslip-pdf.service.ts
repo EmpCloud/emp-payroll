@@ -43,12 +43,17 @@ export class PayslipPDFService {
         // Primary path: employee found in EmpCloud
         const departmentName = await getUserDepartmentName(ecUser.department_id);
 
+        // BUG-014 — render missing scalar fields as the en-dash placeholder
+        // ("—") rather than the literal string "N/A". The previous "N/A"
+        // confused several employees who thought it was a system-assigned
+        // employee code. Using "—" matches the visual treatment used in
+        // the rest of the payslip (bank, PAN/TAN, etc.).
         employee = {
           first_name: ecUser.first_name,
           last_name: ecUser.last_name,
-          employee_code: ecUser.emp_code || profile?.employee_code || "N/A",
-          department: departmentName || "N/A",
-          designation: ecUser.designation || "N/A",
+          employee_code: ecUser.emp_code || profile?.employee_code || "—",
+          department: departmentName || "—",
+          designation: ecUser.designation || "—",
         };
 
         // Get org from payroll settings + EmpCloud org for name fallback
@@ -68,9 +73,9 @@ export class PayslipPDFService {
         employee = {
           first_name: profile?.employee_code || "Employee",
           last_name: `#${empcloudUserId}`,
-          employee_code: profile?.employee_code || "N/A",
-          department: "N/A",
-          designation: "N/A",
+          employee_code: profile?.employee_code || "—",
+          department: "—",
+          designation: "—",
         };
 
         // Resolve org from profile or from the payroll run
@@ -135,12 +140,52 @@ export class PayslipPDFService {
         maximumFractionDigits: 0,
       }).format(n);
 
+    // BUG-020 — Component name normalisation. The salary resolver stores
+    // `name: c.name || c.code`, so a structure that didn't have a friendly
+    // `name` populated at compute time leaves payslips with the bare code
+    // ("SA"). When HR later edited the structure to add the friendly name
+    // ("Special Allowance"), only NEW payslips picked it up -- the
+    // already-stored ones still showed "SA". Normalise common standard
+    // codes at render time so payslips read consistently regardless of
+    // when they were computed.
+    const STANDARD_COMPONENT_NAMES: Record<string, string> = {
+      BASIC: "Basic Salary",
+      HRA: "House Rent Allowance",
+      SA: "Special Allowance",
+      SPL: "Special Allowance",
+      CONV: "Conveyance Allowance",
+      LTA: "Leave Travel Allowance",
+      MEDICAL: "Medical Allowance",
+      DA: "Dearness Allowance",
+      EPF: "Employee PF",
+      EEPF: "Employee PF",
+      "EEPF D": "Employee PF",
+      PF: "Employee PF",
+      ESI: "Employee ESI",
+      EESI: "Employee ESI",
+      PT: "Professional Tax",
+      TDS: "Income Tax (TDS)",
+      LOAN: "Loan EMI",
+    };
+    const friendlyName = (row: any): string => {
+      const code = String(row.code || "")
+        .toUpperCase()
+        .trim();
+      const name = String(row.name || "").trim();
+      // If name is missing or equals the code (resolver fallback case),
+      // try the standard map; otherwise use whatever name is stored.
+      if (!name || name.toUpperCase() === code) {
+        return STANDARD_COMPONENT_NAMES[code] || name || code;
+      }
+      return name;
+    };
+
     const earningsRows = earnings
-      .map((e: any) => `<tr><td>${e.name || e.code}</td><td class="amt">${fmt(e.amount)}</td></tr>`)
+      .map((e: any) => `<tr><td>${friendlyName(e)}</td><td class="amt">${fmt(e.amount)}</td></tr>`)
       .join("");
 
     const deductionsRows = deductions
-      .map((d: any) => `<tr><td>${d.name || d.code}</td><td class="amt">${fmt(d.amount)}</td></tr>`)
+      .map((d: any) => `<tr><td>${friendlyName(d)}</td><td class="amt">${fmt(d.amount)}</td></tr>`)
       .join("");
 
     return `<!DOCTYPE html>
@@ -208,7 +253,17 @@ export class PayslipPDFService {
     <div>
       <div class="company-name">${org?.name || "Company"}</div>
       <div class="company-detail">${org?.legal_name || ""}</div>
-      <div class="company-detail">PAN: ${org?.pan || "—"} | TAN: ${org?.tan || "—"}</div>
+      ${
+        // BUG-015 — Hide the PAN/TAN row entirely when the org hasn't
+        // configured either. Rendering "PAN: — | TAN: —" looked like
+        // the data was meant to be there but was missing from THIS
+        // payslip; suppressing the line removes the false alarm. When
+        // either is set, we still show both halves so HR can see at a
+        // glance which field is missing on the org record.
+        org?.pan || org?.tan
+          ? `<div class="company-detail">PAN: ${org?.pan || "—"} | TAN: ${org?.tan || "—"}</div>`
+          : ""
+      }
     </div>
     <div>
       <div class="payslip-title">Payslip</div>
@@ -220,9 +275,27 @@ export class PayslipPDFService {
     <div class="info-box">
       <h4>Employee Details</h4>
       <div class="info-row"><span class="label">Name</span><span class="value">${employee.first_name} ${employee.last_name}</span></div>
-      <div class="info-row"><span class="label">Employee ID</span><span class="value">${employee.employee_code}</span></div>
-      <div class="info-row"><span class="label">Department</span><span class="value">${employee.department}</span></div>
-      <div class="info-row"><span class="label">Designation</span><span class="value">${employee.designation}</span></div>
+      ${
+        // BUG-014 — Suppress info rows whose value is the en-dash
+        // placeholder (i.e. the underlying field is unset). Showing
+        // "Employee ID —" on a final payslip looked like a system
+        // glitch. Better to omit the row so the section reads cleanly
+        // and HR sees immediately which fields need backfilling on
+        // the employee profile.
+        employee.employee_code && employee.employee_code !== "—"
+          ? `<div class="info-row"><span class="label">Employee ID</span><span class="value">${employee.employee_code}</span></div>`
+          : ""
+      }
+      ${
+        employee.department && employee.department !== "—"
+          ? `<div class="info-row"><span class="label">Department</span><span class="value">${employee.department}</span></div>`
+          : ""
+      }
+      ${
+        employee.designation && employee.designation !== "—"
+          ? `<div class="info-row"><span class="label">Designation</span><span class="value">${employee.designation}</span></div>`
+          : ""
+      }
     </div>
     <div class="info-box">
       <h4>Bank Details</h4>
@@ -261,7 +334,18 @@ export class PayslipPDFService {
   </div>
 
   <div class="footer">
-    This is a system-generated payslip. | ${org?.name || "Company"} | Generated on ${new Date().toLocaleDateString("en-IN")}
+    This is a system-generated payslip. | ${org?.name || "Company"} | Generated on ${
+      // BUG-028 — Use unambiguous DD MMM YYYY format. The previous
+      // toLocaleDateString("en-IN") output was "06/05/2026", which a US
+      // reader would parse as June 5 -- a real concern on a statutory
+      // document that may be shown to non-IN reviewers. "06 May 2026"
+      // can only be read one way.
+      new Date().toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    }
   </div>
 </body>
 </html>`;

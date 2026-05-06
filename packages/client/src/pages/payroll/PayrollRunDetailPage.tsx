@@ -234,6 +234,14 @@ export function PayrollRunDetailPage() {
   const [rerunOpen, setRerunOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  // Compute response carries `skipped` and `missingPan` lists. Persist
+  // them in component state so HR can see who was excluded from the run
+  // and why, without having to dig through server logs or run notes.
+  // Cleared on revert/rerun so stale info doesn't linger.
+  const [skipped, setSkipped] = useState<
+    Array<{ empcloudUserId: number; reason: string; code: string }>
+  >([]);
+  const [missingPan, setMissingPan] = useState<Array<{ empcloudUserId: number; code: string }>>([]);
 
   if (isLoading) {
     return (
@@ -250,8 +258,24 @@ export function PayrollRunDetailPage() {
 
   async function handleCompute() {
     try {
-      await computeMutation.mutateAsync();
-      toast.success("Payroll computed successfully");
+      const res = await computeMutation.mutateAsync();
+      // The /compute endpoint returns the run row plus `skipped` (employees
+      // excluded from this run, with reasons) and `missingPan` (employees
+      // whose TDS used Section 206AA flat 20% because PAN was missing).
+      // Capture both into local state so the page can render actionable
+      // banners. The shape comes from PayrollService.computePayroll.
+      const data = (res as any)?.data ?? res;
+      const newSkipped = Array.isArray(data?.skipped) ? data.skipped : [];
+      const newMissingPan = Array.isArray(data?.missingPan) ? data.missingPan : [];
+      setSkipped(newSkipped);
+      setMissingPan(newMissingPan);
+      const generated = Number(data?.employee_count ?? 0);
+      const skipCount = newSkipped.length;
+      toast.success(
+        skipCount > 0
+          ? `Computed ${generated} payslip(s) — ${skipCount} employee(s) skipped (see details below)`
+          : `Computed ${generated} payslip(s)`,
+      );
     } catch (err: any) {
       toast.error(err.response?.data?.error?.message || "Compute failed");
     }
@@ -324,6 +348,8 @@ export function PayrollRunDetailPage() {
                     return;
                   try {
                     await apiPost(`/payroll/${id}/revert`);
+                    setSkipped([]);
+                    setMissingPan([]);
                     toast.success("Reverted to draft — fix data and recompute");
                     window.location.reload();
                   } catch (err: any) {
@@ -475,11 +501,16 @@ export function PayrollRunDetailPage() {
       {/* Cost Breakdown */}
       {Number(run.total_gross) > 0 &&
         (() => {
+          // BUG-021 — Pie slice labels are rendered AROUND the pie, so a
+          // long name + percentage (e.g. "Employer Cost 13%") gets
+          // clipped past the chart's right edge by the parent container.
+          // Use shorter labels here to keep labels fully inside the
+          // visible area without resorting to a separate legend.
           const data = [
-            { name: "Net Pay", value: Number(run.total_net), fill: "#6366F1" },
+            { name: "Net", value: Number(run.total_net), fill: "#6366F1" },
             { name: "Deductions", value: Number(run.total_deductions), fill: "#F59E0B" },
             {
-              name: "Employer Cost",
+              name: "Employer",
               value: Number(run.total_employer_contributions || 0),
               fill: "#10B981",
             },
@@ -581,9 +612,84 @@ export function PayrollRunDetailPage() {
           ) : null;
         })()}
 
+      {/* Compute-result banners. After Compute, the API returns `skipped`
+          (employees excluded with reason codes) and `missingPan`
+          (employees TDS'd at flat 20% per Section 206AA). HR needs to
+          see WHO was excluded and WHY before approving the run -- the
+          payslips table alone hides the silent skips. Both lists clear
+          on revert/rerun. */}
+      {skipped.length > 0 && (
+        <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-orange-600" />
+            <h3 className="font-semibold text-orange-800">
+              {skipped.length} employee{skipped.length === 1 ? "" : "s"} skipped — not in this run
+            </h3>
+          </div>
+          <p className="mb-3 text-sm text-orange-700">
+            The compute excluded these employees. Most common reasons: no salary structure assigned,
+            joined after the period, exited before the period, or no attendance recorded.
+          </p>
+          <ul className="space-y-1">
+            {skipped.slice(0, 20).map((s, i) => (
+              <li key={i} className="text-sm text-orange-800">
+                <span className="font-mono text-xs uppercase text-orange-600">{s.code}</span>
+                {" — "}
+                <span>employee #{s.empcloudUserId}</span>: {s.reason}
+              </li>
+            ))}
+            {skipped.length > 20 && (
+              <li className="text-xs italic text-orange-600">…and {skipped.length - 20} more</li>
+            )}
+          </ul>
+        </div>
+      )}
+
+      {missingPan.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-600" />
+            <h3 className="font-semibold text-amber-800">
+              {missingPan.length} employee{missingPan.length === 1 ? "" : "s"} TDS'd at flat 20% (no
+              PAN)
+            </h3>
+          </div>
+          <p className="mb-3 text-sm text-amber-700">
+            Section 206AA — when PAN is missing on both the payroll profile and the EmpCloud
+            employee record, TDS defaults to a flat 20% of annual gross. Ask these employees to
+            update their PAN, then re-run to recompute at slab rates.
+          </p>
+          <ul className="space-y-1">
+            {missingPan.slice(0, 20).map((s, i) => (
+              <li key={i} className="text-sm text-amber-800">
+                {s.code ? (
+                  <>
+                    <span className="font-mono text-xs">{s.code}</span> — employee #
+                    {s.empcloudUserId}
+                  </>
+                ) : (
+                  <>employee #{s.empcloudUserId}</>
+                )}
+              </li>
+            ))}
+            {missingPan.length > 20 && (
+              <li className="text-xs italic text-amber-600">…and {missingPan.length - 20} more</li>
+            )}
+          </ul>
+        </div>
+      )}
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Employee Payslips</CardTitle>
+          <CardTitle>
+            Employee Payslips
+            {(payslips.length > 0 || skipped.length > 0) && (
+              <span className="ml-2 text-sm font-normal text-gray-500">
+                ({payslips.length} generated
+                {skipped.length > 0 ? `, ${skipped.length} skipped` : ""})
+              </span>
+            )}
+          </CardTitle>
           {payslips.length > 0 && (
             <Button variant="outline" size="sm" onClick={() => exportPayrollCSV(payslips, run)}>
               <Download className="h-4 w-4" /> Export CSV

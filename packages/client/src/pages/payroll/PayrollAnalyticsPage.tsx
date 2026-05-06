@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatAxisAmount } from "@/lib/utils";
 import { usePayrollRuns } from "@/api/hooks";
 import {
   BarChart,
@@ -74,12 +74,27 @@ export function PayrollAnalyticsPage() {
   // Calculate stats
   const latest = runs[runs.length - 1];
   const prev = runs[runs.length - 2];
-  const grossChange =
+
+  // BUG-017 — Suppress month-over-month % when the employee count
+  // changed by more than 25%. A run that paid 1 employee last month and
+  // 14 this month produces "+1318% Gross" which is technically true but
+  // useless as a signal (it's hiring, not a cost spike). When the
+  // headcount delta is too large to compare apples-to-apples we render
+  // "—" with a tooltip explaining why instead.
+  const COUNT_DRIFT_THRESHOLD = 0.25;
+  const headcountUnstable =
     latest && prev
+      ? Math.abs(Number(latest.employee_count || 0) - Number(prev.employee_count || 0)) /
+          Math.max(1, Number(prev.employee_count || 0)) >
+        COUNT_DRIFT_THRESHOLD
+      : false;
+
+  const grossChange =
+    latest && prev && !headcountUnstable
       ? safePct(Number(latest.total_gross) - Number(prev.total_gross), Number(prev.total_gross))
       : null;
   const netChange =
-    latest && prev
+    latest && prev && !headcountUnstable
       ? safePct(Number(latest.total_net) - Number(prev.total_net), Number(prev.total_net))
       : null;
   const avgPerEmployee = latest
@@ -105,35 +120,78 @@ export function PayrollAnalyticsPage() {
   return (
     <div className="space-y-8">
       <PageHeader title="Payroll Analytics" description="Cost trends, comparisons, and insights" />
-
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Avg Net Pay / Employee"
-          value={formatCurrency(avgPerEmployee)}
-          subtitle={latest ? `${latest.employee_count} employees` : "—"}
-          icon={Users}
-        />
-        <StatCard
-          title="Gross Pay Change"
-          value={
-            grossChange === null ? "—" : `${grossChange >= 0 ? "+" : ""}${grossChange.toFixed(1)}%`
-          }
-          subtitle="vs previous month"
-          icon={(grossChange ?? 0) >= 0 ? TrendingUp : TrendingDown}
-        />
-        <StatCard
-          title="Net Pay Change"
-          value={netChange === null ? "—" : `${netChange >= 0 ? "+" : ""}${netChange.toFixed(1)}%`}
-          subtitle="vs previous month"
-          icon={(netChange ?? 0) >= 0 ? TrendingUp : TrendingDown}
-        />
-        <StatCard
-          title="Deduction Rate"
-          value={deductionRate === null ? "—" : `${Math.round(deductionRate)}%`}
-          subtitle="of gross pay"
-          icon={Wallet}
-        />
+      {/* BUG-022 — Distortion banner. Headcount on this page is the
+          number of employees who APPEAR in each payroll run, not the
+          org's total active headcount. Employees skipped during compute
+          (no salary structure, joined after the period, exited before
+          the period, etc.) don't show up here, so the "Headcount Trend"
+          line and "Avg Net Pay / Employee" can dip sharply across
+          consecutive months even when actual hiring is flat. The
+          subtitle is more reliable than removing the chart -- HR still
+          wants the comparison, they just need the caveat. */}
+      <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+        Numbers below reflect employees included in each payroll run. Employees skipped during
+        compute (no active salary structure, hired after the pay period, exited before it) are not
+        counted, so headcount and per-employee averages can shift between months independently of
+        actual hiring activity.
       </div>
+
+      {/* BUG-017 — Identify the source run on every KPI subtitle. The
+          stats below are computed from the most recent run available
+          (paid OR computed OR approved). Without telling HR WHICH run,
+          the Deduction Rate / Avg Net Pay numbers shifted between
+          page loads (during a recompute) with no explanation. The
+          subtitle now spells out the period AND status so HR can
+          correlate the figure with a specific run row. */}
+      {(() => {
+        const sourceLabel = latest
+          ? `${MONTHS[latest.month]} ${latest.year} · ${latest.status}`
+          : "no runs yet";
+        return (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Avg Net Pay / Employee"
+              value={formatCurrency(avgPerEmployee)}
+              subtitle={
+                latest ? `${latest.employee_count} employees · ${sourceLabel}` : sourceLabel
+              }
+              icon={Users}
+            />
+            <StatCard
+              title="Gross Pay Change"
+              value={
+                grossChange === null
+                  ? "—"
+                  : `${grossChange >= 0 ? "+" : ""}${grossChange.toFixed(1)}%`
+              }
+              subtitle={
+                headcountUnstable
+                  ? "headcount changed >25% — comparison suppressed"
+                  : `vs previous month · ${sourceLabel}`
+              }
+              icon={(grossChange ?? 0) >= 0 ? TrendingUp : TrendingDown}
+            />
+            <StatCard
+              title="Net Pay Change"
+              value={
+                netChange === null ? "—" : `${netChange >= 0 ? "+" : ""}${netChange.toFixed(1)}%`
+              }
+              subtitle={
+                headcountUnstable
+                  ? "headcount changed >25% — comparison suppressed"
+                  : `vs previous month · ${sourceLabel}`
+              }
+              icon={(netChange ?? 0) >= 0 ? TrendingUp : TrendingDown}
+            />
+            <StatCard
+              title="Deduction Rate"
+              value={deductionRate === null ? "—" : `${Math.round(deductionRate)}%`}
+              subtitle={`of gross pay · ${sourceLabel}`}
+              icon={Wallet}
+            />
+          </div>
+        );
+      })()}
 
       {/* Payroll trend */}
       <Card>
@@ -147,10 +205,7 @@ export function PayrollAnalyticsPage() {
                 <AreaChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="period" tick={{ fontSize: 12 }} />
-                  <YAxis
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(v: number) => `${(v / 100000).toFixed(0)}L`}
-                  />
+                  <YAxis tick={{ fontSize: 12 }} tickFormatter={formatAxisAmount} />
                   <Tooltip formatter={(value: number) => formatCurrency(value)} />
                   <Legend />
                   <Area
@@ -200,10 +255,7 @@ export function PayrollAnalyticsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={costBreakdown} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis
-                      type="number"
-                      tickFormatter={(v: number) => `${(v / 100000).toFixed(1)}L`}
-                    />
+                    <XAxis type="number" tickFormatter={formatAxisAmount} />
                     <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 12 }} />
                     <Tooltip formatter={(value: number) => formatCurrency(value)} />
                     <Bar dataKey="value" radius={[0, 4, 4, 0]}>
@@ -354,10 +406,7 @@ export function PayrollAnalyticsPage() {
                 <BarChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="period" tick={{ fontSize: 12 }} />
-                  <YAxis
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(v: number) => `${(v / 100000).toFixed(0)}L`}
-                  />
+                  <YAxis tick={{ fontSize: 12 }} tickFormatter={formatAxisAmount} />
                   <Tooltip formatter={(value: number) => formatCurrency(value)} />
                   <Legend />
                   <Bar

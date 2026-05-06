@@ -22,24 +22,47 @@ export function TaxOverviewPage() {
   const searchParams = new URLSearchParams(location.search);
   const regimeFilter = searchParams.get("regime"); // "new" | "old" | null
 
+  // BUG-FY — Compute the running Indian financial year dynamically. The
+  // page used to hardcode "FY 2025-26" in the header even months after
+  // FY rollover; for May 2026 the correct label is FY 2026-27 (Apr 2026
+  // → Mar 2027).
+  const _now = new Date();
+  const fyStartYear = _now.getMonth() >= 3 ? _now.getFullYear() : _now.getFullYear() - 1;
+  const fyLabel = `FY ${fyStartYear}-${String(fyStartYear + 1).slice(-2)}`;
+
   const allTaxData = employees.map((e: any) => {
     const taxInfo = typeof e.tax_info === "string" ? JSON.parse(e.tax_info) : e.tax_info || {};
     const rawPan = typeof taxInfo.pan === "string" ? taxInfo.pan.trim() : "";
     const panValid = PAN_RE.test(rawPan);
+    // BUG-011 — The previous estimate fell back to a HARDCODED ₹12L CTC
+    // when the employee had no salary structure assigned, producing a
+    // fake "₹1,44,000 estimated tax" line for every unassigned employee
+    // (12L × 12% flat). HR couldn't tell who was actually projected for
+    // that much tax versus who simply had no salary on file.
+    //
+    // Now: when CTC is missing/zero, return null for the projection so
+    // the table renders "—" and HR can drill in to set the structure.
+    // For employees WITH a CTC, keep the rough 12% flat-rate projection
+    // (the precise per-employee figure comes from the tax engine on the
+    // payroll detail page; this overview is a quick first-cut).
+    const ctc = Number(e.ctc || 0);
+    const hasSalary = ctc > 0;
     return {
       ...e,
       pan: rawPan || "—",
       panValid,
       regime: taxInfo.regime || "new",
-      estimated_tax: Math.round((Number(e.ctc || 0) || 1200000) * 0.12),
-      tds_deducted: Math.round((Number(e.ctc || 0) || 1200000) * 0.12 * (3 / 12)),
+      hasSalary,
+      estimated_tax: hasSalary ? Math.round(ctc * 0.12) : null,
+      tds_deducted: hasSalary ? Math.round(ctc * 0.12 * (3 / 12)) : null,
     };
   });
+  const employeesWithSalary = allTaxData.filter((e: any) => e.hasSalary).length;
 
   const missingPanCount = allTaxData.filter((e: any) => !e.panValid).length;
 
-  const totalEstimatedTax = allTaxData.reduce((s: number, e: any) => s + e.estimated_tax, 0);
-  const totalTdsDeducted = allTaxData.reduce((s: number, e: any) => s + e.tds_deducted, 0);
+  const totalEstimatedTax = allTaxData.reduce((s: number, e: any) => s + (e.estimated_tax || 0), 0);
+  const totalTdsDeducted = allTaxData.reduce((s: number, e: any) => s + (e.tds_deducted || 0), 0);
   const newRegimeCount = allTaxData.filter((e: any) => e.regime === "new").length;
 
   // Apply regime filter to table
@@ -86,18 +109,30 @@ export function TaxOverviewPage() {
     {
       key: "estimated_tax",
       header: "Estimated Tax",
-      render: (row: any) => formatCurrency(row.estimated_tax),
+      render: (row: any) =>
+        row.estimated_tax == null ? (
+          <span className="text-gray-400" title="No salary structure assigned">
+            —
+          </span>
+        ) : (
+          formatCurrency(row.estimated_tax)
+        ),
     },
     {
       key: "tds_deducted",
       header: "TDS Deducted YTD",
-      render: (row: any) => formatCurrency(row.tds_deducted),
+      render: (row: any) =>
+        row.tds_deducted == null ? (
+          <span className="text-gray-400">—</span>
+        ) : (
+          formatCurrency(row.tds_deducted)
+        ),
     },
   ];
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Tax Overview" description="FY 2025-26 income tax summary" />
+      <PageHeader title="Tax Overview" description={`${fyLabel} income tax summary`} />
 
       {/* #1657 — banner highlighting the count of employees missing a valid
           PAN, since each one is being TDS'd at Section 206AA flat 20%
@@ -125,6 +160,7 @@ export function TaxOverviewPage() {
           <StatCard
             title="Estimated Tax (Annual)"
             value={formatCurrency(totalEstimatedTax)}
+            subtitle={`${employeesWithSalary} of ${allTaxData.length} employees`}
             icon={Calculator}
           />
         </Link>
@@ -132,6 +168,7 @@ export function TaxOverviewPage() {
           <StatCard
             title="TDS Deducted YTD"
             value={formatCurrency(totalTdsDeducted)}
+            subtitle={`${employeesWithSalary} of ${allTaxData.length} employees`}
             icon={IndianRupee}
           />
         </Link>

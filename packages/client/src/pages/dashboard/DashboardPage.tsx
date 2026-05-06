@@ -3,7 +3,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatAxisAmount } from "@/lib/utils";
 import { useEmployees, usePayrollRuns } from "@/api/hooks";
 import { getUser } from "@/api/auth";
 import { apiGet } from "@/api/client";
@@ -70,8 +70,23 @@ export function DashboardPage() {
   const employees = empRes?.data?.data || [];
   const totalEmployees = empRes?.data?.total || employees.length;
   const runs = runsRes?.data?.data || [];
+  // BUG-012 — "Last Payroll" was previously the most recent run with
+  // status === "paid", which made the dashboard stale: a freshly
+  // computed/approved May run was ignored in favour of the previously
+  // paid April one even though May's numbers are what HR cares about.
+  // Pick the latest run by (year, month) regardless of status, with a
+  // tie-break preferring `paid > approved > computed > draft`. Also
+  // surface the run's status alongside the figures so HR can see at a
+  // glance whether they're looking at the in-flight or signed-off
+  // numbers.
+  const STATUS_RANK: Record<string, number> = { paid: 4, approved: 3, computed: 2, draft: 1 };
+  const sortedRuns = runs.slice().sort((a: any, b: any) => {
+    if (a.year !== b.year) return Number(b.year) - Number(a.year);
+    if (a.month !== b.month) return Number(b.month) - Number(a.month);
+    return (STATUS_RANK[b.status] || 0) - (STATUS_RANK[a.status] || 0);
+  });
   const paidRuns = runs.filter((r: any) => r.status === "paid");
-  const lastRun = paidRuns[0];
+  const lastRun = sortedRuns[0] || paidRuns[0];
 
   // Department headcount
   const deptMap: Record<string, number> = {};
@@ -83,14 +98,23 @@ export function DashboardPage() {
     count,
   }));
 
-  // Monthly payroll trend from paid runs.
+  // Monthly payroll trend.
   // #1655 — Filter out any rows whose period is in the future. Until the
   // future-period guard rolled out, tenants could end up with bogus
   // "Paid" runs for months that hadn't started; those polluted the chart.
+  // BUG-012 — Include `computed` and `approved` runs alongside `paid`
+  // here too. Using only paid runs meant the trend chart hid the
+  // current month until HR clicked "Mark Paid", so the dashboard's
+  // x-axis often lagged by one month even when fresh data existed.
   const _now = new Date();
   const _currentPeriodKey = _now.getFullYear() * 12 + _now.getMonth();
-  const trendData = paidRuns
-    .filter((r: any) => Number(r.year) * 12 + (Number(r.month) - 1) <= _currentPeriodKey)
+  const trendableStatuses = new Set(["paid", "approved", "computed"]);
+  const trendData = sortedRuns
+    .filter(
+      (r: any) =>
+        trendableStatuses.has(r.status) &&
+        Number(r.year) * 12 + (Number(r.month) - 1) <= _currentPeriodKey,
+    )
     .slice(0, 6)
     .reverse()
     .map((r: any) => ({
@@ -239,10 +263,7 @@ export function DashboardPage() {
                   <BarChart data={trendData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                    <YAxis
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(v: number) => `${(v / 100000).toFixed(0)}L`}
-                    />
+                    <YAxis tick={{ fontSize: 12 }} tickFormatter={formatAxisAmount} />
                     <Tooltip
                       formatter={(value: number) => formatCurrency(value)}
                       labelStyle={{ fontWeight: 600 }}
@@ -380,28 +401,38 @@ function RecentActivity() {
     enabled: !!user?.orgId,
   });
 
-  const activities = res?.data?.data || [];
+  const activities = (res?.data?.data?.data || res?.data?.data || []) as any[];
 
-  // If no audit logs yet, show a placeholder timeline
-  const items =
-    activities.length > 0
-      ? activities.map((a: any) => ({
-          icon: ACTIVITY_ICONS[a.action] || Clock,
-          text: a.action.replace(".", " → "),
-          time: new Date(a.created_at).toLocaleString("en-IN", {
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        }))
-      : [
-          { icon: CreditCard, text: "Payroll paid for last month", time: "Recently" },
-          { icon: CheckCircle2, text: "Payroll approved", time: "Recently" },
-          { icon: Play, text: "Payroll computed for 10 employees", time: "Recently" },
-          { icon: UserPlus, text: "10 employees onboarded", time: "Recently" },
-          { icon: Clock, text: "System initialized", time: "Recently" },
-        ];
+  // BUG-027 — Drop the seeded "Payroll computed for 10 employees /
+  // 10 employees onboarded / System initialized" placeholder list.
+  // It was indistinguishable from real activity for tenants who had
+  // never wired up the audit log, and several customers escalated
+  // the bogus "10 employees" line as a real metric inconsistency.
+  // Render real audit rows when present; otherwise show an honest
+  // empty state so users know there's simply nothing to display yet
+  // rather than seeing demo data dressed up as production.
+  const ACTION_LABELS: Record<string, string> = {
+    "payroll_run.created": "Payroll run created",
+    "payroll_run.computed": "Payroll computed",
+    "payroll_run.approved": "Payroll approved",
+    "payroll_run.paid": "Payroll marked paid",
+    "payroll_run.cancelled": "Payroll cancelled",
+    "payroll_run.reverted_to_draft": "Payroll reverted to draft",
+    "payroll_run.rerun": "Payroll re-run",
+    "payroll_run.deleted": "Payroll run deleted",
+  };
+  const items = activities.map((a: any) => ({
+    icon: ACTIVITY_ICONS[a.action] || Clock,
+    text: ACTION_LABELS[a.action] || String(a.action || "Activity").replace(/\./g, " → "),
+    time: a.created_at
+      ? new Date(a.created_at).toLocaleString("en-IN", {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "—",
+  }));
 
   return (
     <Card>
@@ -411,22 +442,26 @@ function RecentActivity() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {items.slice(0, 8).map((item: any, i: number) => {
-            const Icon = item.icon;
-            return (
-              <div key={i} className="flex items-start gap-3">
-                <div className="mt-0.5 rounded-full bg-gray-100 p-1.5">
-                  <Icon className="h-3.5 w-3.5 text-gray-500" />
+        {items.length === 0 ? (
+          <div className="py-6 text-center text-sm text-gray-400">No recent activity yet.</div>
+        ) : (
+          <div className="space-y-4">
+            {items.slice(0, 8).map((item: any, i: number) => {
+              const Icon = item.icon;
+              return (
+                <div key={i} className="flex items-start gap-3">
+                  <div className="mt-0.5 rounded-full bg-gray-100 p-1.5">
+                    <Icon className="h-3.5 w-3.5 text-gray-500" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm capitalize text-gray-700">{item.text}</p>
+                    <p className="text-xs text-gray-400">{item.time}</p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm capitalize text-gray-700">{item.text}</p>
-                  <p className="text-xs text-gray-400">{item.time}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

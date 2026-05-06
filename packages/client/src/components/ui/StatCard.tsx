@@ -42,13 +42,22 @@ export function StatCard({
   //        and scaling the font down for long strings keeps the full
   //        value readable at a glance. Tooltip via `title=` is preserved
   //        so hover reveals the exact value without reflow.
-  const longValue = valueStr.length >= 10;
+  // BUG-016 — drop the threshold to 8 chars and switch to `break-normal`
+  //        so an Indian-format number like `₹5,04,000` (9 chars) no longer
+  //        wraps the trailing `0` to a second line on the /tax KPI cards.
+  //        The previous 10-char threshold meant 8-9 character values kept
+  //        the larger `text-2xl` font AND the aggressive `break-words`
+  //        rule, which let the digit run break at the comma boundary.
+  const longValue = valueStr.length >= 8;
   const valueClass = longValue ? "text-lg" : "text-2xl";
   const body = (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1 space-y-1">
         <p className="text-sm font-medium text-gray-500">{title}</p>
-        <p className={cn("break-words font-bold text-gray-900", valueClass)} title={valueStr}>
+        <p
+          className={cn("break-normal font-bold tabular-nums text-gray-900", valueClass)}
+          title={valueStr}
+        >
           {value}
         </p>
         {subtitle && <p className="truncate text-sm text-gray-500">{subtitle}</p>}

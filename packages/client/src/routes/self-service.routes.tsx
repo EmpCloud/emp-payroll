@@ -31,9 +31,10 @@ const MyReimbursementsPage = lazy(() =>
     default: m.MyReimbursementsPage,
   })),
 );
-const MyLeavesPage = lazy(() =>
-  import("@/pages/self-service/MyLeavesPage").then((m) => ({ default: m.MyLeavesPage })),
-);
+// MyLeavesPage was deleted -- self-service leaves are owned by EmpCloud's
+// HRMS app. Employees use the EmpCloud portal for apply / view balance /
+// cancel; payroll only consumes the resulting leave_applications rows
+// during compute.
 
 export function SelfServiceRoutes() {
   return (
@@ -44,7 +45,6 @@ export function SelfServiceRoutes() {
       <Route path="/my/tax" element={<MyTaxPage />} />
       <Route path="/my/declarations" element={<MyDeclarationsPage />} />
       <Route path="/my/reimbursements" element={<MyReimbursementsPage />} />
-      <Route path="/my/leaves" element={<MyLeavesPage />} />
       <Route path="/my/profile" element={<MyProfilePage />} />
       <Route path="/notifications" element={<NotificationsPage />} />
     </>

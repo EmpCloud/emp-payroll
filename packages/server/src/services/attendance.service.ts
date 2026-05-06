@@ -311,8 +311,36 @@ export class AttendanceService {
     }
   }
 
-  async importRecords(_orgId: string, month: number, year: number, records: any[]) {
+  async importRecords(orgId: string, month: number, year: number, records: any[]) {
+    // Bi-directional attendance sync. When HR uses Mark All Present /
+    // Mark Attendance / CSV import on the payroll Attendance page, we
+    // (a) update the local payroll-side `attendance_summaries` cache so
+    //     existing UIs that read the cache stay snappy, AND
+    // (b) project the summary onto EmpCloud's `attendance_records` table
+    //     (one row per workday, status='present' for the present-day
+    //     count, 'absent' for absent days). EmpCloud is the canonical
+    //     source of truth and payroll compute reads from it first now,
+    //     so we MUST write through to keep the two stores aligned.
+    //
+    // We never overwrite an existing EmpCloud row -- if HR or the
+    // employee already marked a day on EmpCloud, that record wins.
     const results = [];
+    const orgIdNum = Number(orgId);
+    const empcloudDb = getEmpCloudDB();
+    const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
+    const monthEnd = new Date(year, month, 0).toISOString().slice(0, 10);
+
+    // Pre-compute the workday list once -- the same set of dates is
+    // used for every employee in this batch.
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const allWorkdays: string[] = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dow = new Date(year, month - 1, d).getDay();
+      if (dow !== 0 && dow !== 6) {
+        allWorkdays.push(`${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
+      }
+    }
+
     for (const record of records) {
       const empcloudUserId = Number(record.employeeId);
       const existing = await this.db.findOne<any>("attendance_summaries", {
@@ -350,6 +378,72 @@ export class AttendanceService {
         results.push(await this.db.update("attendance_summaries", existing.id, data));
       } else {
         results.push(await this.db.create("attendance_summaries", data));
+      }
+
+      // -- Project to EmpCloud attendance_records --------------------
+      // Skip if the user_id can't be resolved (defensive).
+      if (!empcloudUserId) continue;
+      try {
+        const presentTarget = Math.min(Number(record.presentDays) || 0, allWorkdays.length);
+        // Find dates already populated on EmpCloud so we don't touch
+        // anything HR/the employee marked themselves.
+        const existingRows = await empcloudDb("attendance_records")
+          .where("user_id", empcloudUserId)
+          .where("organization_id", orgIdNum)
+          .whereBetween("date", [monthStart, monthEnd])
+          .select("date");
+        const existingDates = new Set<string>(
+          existingRows.map((r: any) =>
+            typeof r.date === "string"
+              ? r.date.slice(0, 10)
+              : new Date(r.date).toISOString().slice(0, 10),
+          ),
+        );
+        const availableDates = allWorkdays.filter((d) => !existingDates.has(d));
+
+        const presentDates = availableDates.slice(0, presentTarget);
+        const absentTarget = Math.min(
+          Number(record.absentDays) || 0,
+          availableDates.length - presentDates.length,
+        );
+        const absentDates = availableDates.slice(presentTarget, presentTarget + absentTarget);
+
+        const inserts: any[] = [];
+        const now = new Date();
+        for (const d of presentDates) {
+          inserts.push({
+            user_id: empcloudUserId,
+            organization_id: orgIdNum,
+            date: d,
+            status: "present",
+            created_at: now,
+            updated_at: now,
+          });
+        }
+        for (const d of absentDates) {
+          inserts.push({
+            user_id: empcloudUserId,
+            organization_id: orgIdNum,
+            date: d,
+            status: "absent",
+            created_at: now,
+            updated_at: now,
+          });
+        }
+        if (inserts.length > 0) {
+          await empcloudDb("attendance_records").insert(inserts);
+        }
+      } catch (err) {
+        // Don't fail the whole import if EmpCloud write fails (table
+        // schema mismatch on older EmpCloud DBs, transient connection
+        // issue, etc.). The local cache write succeeded above so the
+        // payroll UI still reflects the import; surface the cause to
+        // the server log for triage.
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[attendance.import] EmpCloud projection failed for user ${empcloudUserId} ${month}/${year}:`,
+          (err as any)?.message || err,
+        );
       }
     }
     return { imported: results.length, records: results };

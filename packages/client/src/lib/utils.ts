@@ -13,6 +13,32 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+/**
+ * Compact axis-tick formatter for Recharts. BUG-018: the previous
+ * `(v / 100000).toFixed(0) + "L"` rounded everything below ₹1L to "0L",
+ * so a chart with values in the 5-90K range showed an axis of 0L, 0L,
+ * 0L, 0L. This picks the right unit (₹ / K / L / Cr) AND the right
+ * precision (1 decimal under 10 of the unit, 0 above) so adjacent
+ * ticks differ.
+ */
+export function formatAxisAmount(value: number): string {
+  if (!Number.isFinite(value)) return "0";
+  const abs = Math.abs(value);
+  if (abs >= 10000000) {
+    const cr = value / 10000000;
+    return `${cr >= 10 || cr <= -10 ? cr.toFixed(0) : cr.toFixed(1)}Cr`;
+  }
+  if (abs >= 100000) {
+    const lk = value / 100000;
+    return `${lk >= 10 || lk <= -10 ? lk.toFixed(0) : lk.toFixed(1)}L`;
+  }
+  if (abs >= 1000) {
+    const k = value / 1000;
+    return `${k >= 10 || k <= -10 ? k.toFixed(0) : k.toFixed(1)}K`;
+  }
+  return `${Math.round(value)}`;
+}
+
 export function formatDate(date: string | Date): string {
   return new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",

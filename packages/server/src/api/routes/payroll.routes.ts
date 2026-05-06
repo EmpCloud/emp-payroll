@@ -1,10 +1,11 @@
-import { Router } from "express";
+import { Router, Request } from "express";
 import { PayrollService } from "../../services/payroll.service";
 import { BankFileService } from "../../services/bank-file.service";
 import { ReportsService } from "../../services/reports.service";
 import { EmailService } from "../../services/email.service";
 import { AccountingExportService } from "../../services/accounting-export.service";
 import { GovtFormatsService } from "../../services/govt-formats.service";
+import { AuditService } from "../../services/audit.service";
 import { authenticate, authorize, requirePermission } from "../middleware/auth.middleware";
 import { enforcePayrollLock } from "../middleware/payroll-lock.middleware";
 import { validate, createPayrollRunSchema } from "../validators";
@@ -13,6 +14,36 @@ import { AppError } from "../middleware/error.middleware";
 
 const router = Router();
 const svc = new PayrollService();
+const auditSvc = new AuditService();
+
+// BUG-030 — Payroll lifecycle actions (create / compute / approve / pay /
+// cancel / revert / rerun / delete) had no audit-log entries. Compliance
+// teams couldn't reconstruct who approved or marked-paid a run, and
+// disputes about "who deleted the December run?" had no answer. Helper
+// fires after the service call succeeds so failed actions don't pollute
+// the trail. Captures runId + status snapshot in `new_value`.
+async function logRunAction(
+  req: Request,
+  action: string,
+  runId: string,
+  newValue?: unknown,
+): Promise<void> {
+  try {
+    await auditSvc.log({
+      orgId: String(req.user!.empcloudOrgId),
+      userId: String(req.user!.empcloudUserId),
+      action,
+      entityType: "payroll_run",
+      entityId: runId,
+      newValue,
+      ipAddress: req.ip,
+    });
+  } catch {
+    // Audit logging must never break the user action -- swallow.
+    // The audit gap shows up as a missing row in the audit table; the
+    // payroll action itself has already succeeded.
+  }
+}
 
 // RBAC v1 — every payroll route still requires the legacy hr_admin / hr_manager
 // role gate AND the payroll-lock check. Specific actions below add per-permission
@@ -42,11 +73,15 @@ router.post(
   requirePermission("payroll:run"),
   validate(createPayrollRunSchema),
   wrap(async (req, res) => {
-    const data = await svc.createRun(
+    const data = (await svc.createRun(
       String(req.user!.empcloudOrgId),
       String(req.user!.empcloudUserId),
       req.body,
-    );
+    )) as any;
+    await logRunAction(req, "payroll_run.created", String(data?.id || ""), {
+      month: req.body?.month,
+      year: req.body?.year,
+    });
     res.status(201).json({ success: true, data });
   }),
 );
@@ -61,6 +96,11 @@ router.post(
       String(req.user!.empcloudOrgId),
       authToken,
     );
+    await logRunAction(req, "payroll_run.computed", param(req, "id"), {
+      employee_count: data?.employee_count ?? null,
+      total_net: data?.total_net ?? null,
+      skipped_count: Array.isArray(data?.skipped) ? data.skipped.length : 0,
+    });
     res.json({ success: true, data });
   }),
 );
@@ -74,6 +114,7 @@ router.post(
       String(req.user!.empcloudOrgId),
       String(req.user!.empcloudUserId),
     );
+    await logRunAction(req, "payroll_run.approved", param(req, "id"));
     res.json({ success: true, data });
   }),
 );
@@ -82,7 +123,17 @@ router.post(
   "/:id/pay",
   authorize("hr_admin"),
   wrap(async (req, res) => {
-    const data = await svc.markPaid(param(req, "id"), String(req.user!.empcloudOrgId));
+    // `force` (body or query) overrides the bank-details readiness gate
+    // (BUG-029). Used by orgs that pay via cheque/cash or want to
+    // proceed knowing some employees will need manual follow-up.
+    const force = req.body?.force === true || req.query?.force === "true";
+    const data = await svc.markPaid(param(req, "id"), String(req.user!.empcloudOrgId), { force });
+    await logRunAction(
+      req,
+      "payroll_run.paid",
+      param(req, "id"),
+      force ? { force: true } : undefined,
+    );
     res.json({ success: true, data });
   }),
 );
@@ -92,6 +143,7 @@ router.post(
   authorize("hr_admin"),
   wrap(async (req, res) => {
     const data = await svc.cancelRun(param(req, "id"), String(req.user!.empcloudOrgId));
+    await logRunAction(req, "payroll_run.cancelled", param(req, "id"));
     res.json({ success: true, data });
   }),
 );
@@ -101,6 +153,7 @@ router.post(
   authorize("hr_admin"),
   wrap(async (req, res) => {
     const data = await svc.revertToDraft(param(req, "id"), String(req.user!.empcloudOrgId));
+    await logRunAction(req, "payroll_run.reverted_to_draft", param(req, "id"));
     res.json({ success: true, data });
   }),
 );
@@ -116,6 +169,7 @@ router.post(
   authorize("hr_admin"),
   wrap(async (req, res) => {
     const data = await svc.rerunRun(param(req, "id"), String(req.user!.empcloudOrgId));
+    await logRunAction(req, "payroll_run.rerun", param(req, "id"));
     res.json({ success: true, data });
   }),
 );
@@ -127,7 +181,16 @@ router.delete(
   "/:id",
   authorize("hr_admin"),
   wrap(async (req, res) => {
+    // Capture identifying info BEFORE the delete so we can record what
+    // was wiped. The service returns the deleted row's identifiers too,
+    // but logging from the response keeps us resilient if that contract
+    // ever drifts.
     const data = await svc.deleteRun(param(req, "id"), String(req.user!.empcloudOrgId));
+    await logRunAction(req, "payroll_run.deleted", param(req, "id"), {
+      month: data?.month,
+      year: data?.year,
+      payslips_deleted: data?.payslips_deleted,
+    });
     res.json({ success: true, data });
   }),
 );
