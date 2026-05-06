@@ -198,10 +198,14 @@ export class SalaryService {
       const ctc = Number(a.ctc);
       if (!Number.isFinite(ctc) || ctc <= 0) continue;
       const components = await this.resolveComponentsForCTC(structureId, ctc);
-      const grossSalary = components.reduce(
-        (sum: number, c: any) => sum + Number(c.monthlyAmount || 0) * 12,
-        0,
-      );
+      // Gross is the sum of EARNINGS only. The resolver now returns
+      // deductions and reimbursements as well (so the payslip can show
+      // them), and naively summing every monthlyAmount inflated gross
+      // by the deduction value -- e.g. for Priya with a ₹1,801 EPF line
+      // her gross was being saved as 845,004 + 21,612 = 866,616.
+      const grossSalary = components
+        .filter((c: any) => !c.type || c.type === "earning")
+        .reduce((sum: number, c: any) => sum + Number(c.monthlyAmount || 0) * 12, 0);
       await this.db.update("employee_salaries", a.id, {
         components: JSON.stringify(components),
         gross_salary: grossSalary,
@@ -286,7 +290,12 @@ export class SalaryService {
       { is_active: false },
     );
 
-    const grossSalary = components.reduce((sum: number, c: any) => sum + c.monthlyAmount * 12, 0);
+    // Gross = sum of EARNINGS only. See propagateStructureToAssignments
+    // for the same guard -- without it, a deduction component (EPF,
+    // canteen, welfare fund) gets added into gross_salary too.
+    const grossSalary = components
+      .filter((c: any) => !c.type || c.type === "earning")
+      .reduce((sum: number, c: any) => sum + Number(c.monthlyAmount || 0) * 12, 0);
 
     return this.db.create("employee_salaries", {
       employee_id: "00000000-0000-0000-0000-000000000000",
