@@ -190,6 +190,42 @@ export class PayrollService {
     // Get active employees from EmpCloud
     const ecEmployees = await findUsersByOrgId(Number(orgId), { limit: 1000 });
 
+    // Org-wide working-days-in-month, computed ONCE for the whole run so
+    // every employee shares the same denominator. Previously each employee
+    // recomputed their own value AND an imported attendance_summaries row
+    // could override it with a different number, so two employees in the
+    // same month could end up with totalDays = 21 vs 22 -- a mismatch HR
+    // surfaced as BUG-024. Holidays from `organization_holidays` are
+    // subtracted from the weekday count to cover BUG-025 (Good Friday
+    // wasn't reducing the working-days base).
+    const daysInMonth = new Date(run.year, run.month, 0).getDate();
+    let weekdayCount = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dow = new Date(run.year, run.month - 1, d).getDay();
+      if (dow !== 0 && dow !== 6) weekdayCount++;
+    }
+    const empcloudDb = getEmpCloudDB();
+    const monthStart = `${run.year}-${String(run.month).padStart(2, "0")}-01`;
+    const monthEnd = new Date(run.year, run.month, 0).toISOString().slice(0, 10);
+    const orgHolidaysRows = await empcloudDb("organization_holidays")
+      .where("organization_id", Number(orgId))
+      .whereBetween("holiday_date", [monthStart, monthEnd])
+      .select("holiday_date");
+    // Only count holidays that fall on weekdays -- weekend holidays don't
+    // reduce the working-days count further. Use an ISO YYYY-MM-DD string
+    // for the dedup key to handle both Date and string returns from mysql2.
+    const weekdayHolidayDates = new Set<string>();
+    for (const h of orgHolidaysRows) {
+      const dStr =
+        typeof h.holiday_date === "string"
+          ? h.holiday_date.slice(0, 10)
+          : new Date(h.holiday_date).toISOString().slice(0, 10);
+      const [y, m, d] = dStr.split("-").map(Number);
+      const dow = new Date(y, m - 1, d).getDay();
+      if (dow !== 0 && dow !== 6) weekdayHolidayDates.add(dStr);
+    }
+    const workingDaysInMonth = Math.max(1, weekdayCount - weekdayHolidayDates.size);
+
     let totalGross = 0;
     let totalDeductions = 0;
     let totalNet = 0;
@@ -218,6 +254,9 @@ export class PayrollService {
       });
       if (!salary) continue;
 
+      // (workingDaysInMonth + holiday count are hoisted above this loop --
+      //  see the orgHolidays / workingDaysInMonth declarations.)
+
       // Resolve attendance for the period.
       //
       // Two data sources can carry the truth:
@@ -236,18 +275,19 @@ export class PayrollService {
       // EmpCloud data was incomplete). Fall back to the live EmpCloud
       // counts otherwise so attendance flows through automatically for
       // orgs that don't manually import.
-      const empcloudDb = getEmpCloudDB();
-      const startDate = `${run.year}-${String(run.month).padStart(2, "0")}-01`;
-      const endDate = new Date(run.year, run.month, 0).toISOString().slice(0, 10);
-      const daysInMonth = new Date(run.year, run.month, 0).getDate();
+      // empcloudDb / monthStart / monthEnd are hoisted above the loop so the
+      // holiday and per-employee attendance lookups share the same instance.
+      const startDate = monthStart;
+      const endDate = monthEnd;
 
-      // Count working days (exclude weekends)
-      let workingDays = 0;
-      for (let d = 1; d <= daysInMonth; d++) {
-        const day = new Date(run.year, run.month - 1, d).getDay();
-        if (day !== 0 && day !== 6) workingDays++;
-      }
-
+      // Per-employee attendance lookup. The canonical `totalDays` is the
+      // org-wide working-days-in-month value computed once outside this
+      // loop (workingDaysInMonth) so EVERY employee in the run shares the
+      // same denominator. The imported summary used to be allowed to
+      // override total_days, which made employees with a manually-imported
+      // summary show 22 days while others showed 21 -- a bug HR couldn't
+      // reconcile. The summary now contributes ONLY presentDays and the
+      // leave splits; total_days is canonical.
       const importedSummary = await this.db.findOne<any>("attendance_summaries", {
         empcloud_user_id: ecEmp.id,
         month: run.month,
@@ -257,16 +297,12 @@ export class PayrollService {
       let presentDays: number;
       let paidLeaveDays: number;
       let unpaidLeaveDays: number;
-      let totalDays: number;
 
       if (importedSummary) {
         presentDays =
           Number(importedSummary.present_days || 0) + Number(importedSummary.half_days || 0) * 0.5;
         paidLeaveDays = Number(importedSummary.paid_leave || 0);
         unpaidLeaveDays = Number(importedSummary.unpaid_leave || 0);
-        // Trust the imported total_days when set; otherwise fall back to the
-        // computed working-days count so half-imported rows don't blow up.
-        totalDays = Number(importedSummary.total_days) || workingDays;
       } else {
         const [attRecord] = (await empcloudDb("attendance_records")
           .where("user_id", ecEmp.id)
@@ -300,10 +336,14 @@ export class PayrollService {
         presentDays = Number(attRecord?.present_days || 0);
         paidLeaveDays = Number(leaveResult?.paid_leave || 0);
         unpaidLeaveDays = Number(leaveResult?.unpaid_leave || 0);
-        totalDays = workingDays;
       }
 
-      const paidDays = presentDays + paidLeaveDays;
+      const totalDays = workingDaysInMonth;
+      // Cap presentDays at totalDays so an over-imported row (e.g. 30
+      // present days against 22 working days) doesn't push proRatio
+      // above 1 and inflate gross beyond CTC.
+      if (presentDays > totalDays) presentDays = totalDays;
+      const paidDays = Math.min(presentDays + paidLeaveDays, totalDays);
       const lopDays = Math.max(0, totalDays - paidDays);
 
       // Parse salary components
