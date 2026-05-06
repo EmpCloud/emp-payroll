@@ -531,22 +531,33 @@ export class PayrollService {
       }
 
       // BUG-003 — Double EPF deduction. If the salary structure already
-      // defines an EPF-style deduction (codes commonly used: EPF, EEPF,
-      // EEPF D, PF, EE_PF), the statutory engine MUST NOT add another
-      // standard EPF row on top of it. Without this check Priya Patel
-      // saw "EEPF D ₹1,801" + "EPF ₹1,800" both deducted in the same
-      // run, doubling the employee's PF outflow. The structure-defined
-      // row wins (HR set it explicitly), so we skip the statutory EPF
-      // when any deduction code matches the EPF family. ESI gets the
-      // same treatment for symmetry -- a structure-level "ESI" row
-      // suppresses the engine's automatic ESI line too.
+      // defines an EPF-style deduction, the statutory engine MUST NOT
+      // add another standard EPF row on top. Without this check Priya
+      // Patel saw "EEPF D ₹1,801" + "EPF ₹1,800" both deducted, and
+      // Abhishek saw "EEPF D ₹86" + "Employee PF ₹152" too -- a
+      // previous narrow match list ("EPF" / "EEPF" / "PF" /
+      // "EMPLOYEEPF" / "EEPFDED") missed real-world variants like
+      // "EEPF D" (which strips to "EEPFD") and any future code that
+      // simply CONTAINS "PF" / "EPF". Broadened to a substring test so
+      // any code containing "EPF" or starting with "PF" matches. The
+      // structure-defined row wins (HR set it explicitly), engine
+      // skips its statutory equivalent. ESI mirrors the same rule.
+      const normCode = (code: string | undefined): string =>
+        (code || "").toUpperCase().replace(/[^A-Z]/g, "");
       const isEpfishCode = (code: string | undefined): boolean => {
-        const c = (code || "").toUpperCase().replace(/[^A-Z]/g, "");
-        return c === "EPF" || c === "EEPF" || c === "PF" || c === "EMPLOYEEPF" || c === "EEPFDED";
+        const c = normCode(code);
+        if (!c) return false;
+        // Any code containing "EPF" (matches EPF, EEPF, EEPFD, EMPEPF,
+        // VPF wouldn't match -- VPF is voluntary and NOT a duplicate).
+        if (c.includes("EPF")) return true;
+        // Bare "PF" prefix (covers "PF", "PF1", "PFEMP", but not "EPF"
+        // since that's already caught above). The empty/CONTRIBPF case
+        // is a deliberate inclusion.
+        return c === "PF" || c.startsWith("PFE") || c.startsWith("PFC");
       };
       const isEsiishCode = (code: string | undefined): boolean => {
-        const c = (code || "").toUpperCase().replace(/[^A-Z]/g, "");
-        return c === "ESI" || c === "EMPLOYEEESI" || c === "EESI";
+        const c = normCode(code);
+        return !!c && c.includes("ESI");
       };
       const structureHasEpf = componentList.some(
         (c: any) => c.type === "deduction" && isEpfishCode(c.code),
@@ -829,7 +840,33 @@ export class PayrollService {
       // up: rounding the totals is what HR cares about for bank transfers.
       const roundingPolicy = orgSettings?.rounding_policy ?? null;
       const roundedGross = applyRounding(grossEarnings, roundingPolicy);
-      const roundedDed = applyRounding(totalDed, roundingPolicy);
+
+      // Belt-and-braces net-pay floor. The TDS cap further up already
+      // tries to keep net pay non-negative, but loan EMIs and other
+      // structure-defined deductions can still push it below zero on a
+      // partial-month payslip (Abhishek: gross ₹3,174 with TDS ₹14,546
+      // produced -₹11,834). Trim the TDS line one more time here so
+      // total deductions never exceed gross. Any TDS shortfall gets
+      // re-projected next month via the YTD `taxAlreadyPaid` lookup.
+      // Loans / canteen / etc. are NOT trimmed -- those are HR-bound
+      // commitments that shouldn't quietly skip; if they push net
+      // negative without TDS in the picture, the alert banner already
+      // flags it for HR review.
+      let totalDedFloored = totalDed;
+      if (totalDedFloored > grossEarnings) {
+        const overflow = totalDedFloored - grossEarnings;
+        const tdsRow = deductions.find((d) => d.code === "TDS");
+        if (tdsRow && tdsRow.amount > 0) {
+          const reduceBy = Math.min(overflow, tdsRow.amount);
+          tdsRow.amount = Math.max(0, tdsRow.amount - reduceBy);
+          totalDedFloored -= reduceBy;
+          if (tdsRow.amount === 0) {
+            const idx = deductions.indexOf(tdsRow);
+            if (idx >= 0) deductions.splice(idx, 1);
+          }
+        }
+      }
+      const roundedDed = applyRounding(totalDedFloored, roundingPolicy);
       const netPay = roundedGross - roundedDed;
       const roundedEmployerCost = applyRounding(
         roundedGross + employeeEmployerContributions,

@@ -1,6 +1,36 @@
 import { getDB } from "../db/adapters";
 import { getEmpCloudDB } from "../db/empcloud";
 import { AppError } from "../api/middleware/error.middleware";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Fallback when an employee has no `location_id` or the location row
+// has no timezone configured. India default keeps existing single-region
+// orgs running unchanged. Multi-region orgs override per-location via
+// `organization_locations.timezone` (IANA: "Asia/Kolkata", "America/Chicago", ...).
+const DEFAULT_TIMEZONE = "Asia/Kolkata";
+
+/**
+ * Format a SQL DATE value (string OR JS Date) as YYYY-MM-DD in the
+ * supplied IANA timezone. Used everywhere we compare attendance row
+ * dates -- toISOString() shifts dates by the server's UTC offset and
+ * silently breaks dedupe sets (a row stored as 2026-05-01 in IST
+ * becomes "2026-04-30" when stringified through UTC). Honoring the
+ * employee's location timezone (rather than the server's local time)
+ * also keeps multi-region orgs correct -- a Chicago-based employee's
+ * "May 1" stays May 1 regardless of where the payroll server runs.
+ */
+function dateToIso(v: unknown, tz: string = DEFAULT_TIMEZONE): string {
+  if (v == null) return "";
+  if (typeof v === "string") return v.slice(0, 10);
+  const d = v instanceof Date ? v : new Date(v as any);
+  if (Number.isNaN(d.getTime())) return "";
+  return dayjs(d).tz(tz).format("YYYY-MM-DD");
+}
 
 export class AttendanceService {
   private db = getDB();
@@ -331,7 +361,10 @@ export class AttendanceService {
     const monthEnd = new Date(year, month, 0).toISOString().slice(0, 10);
 
     // Pre-compute the workday list once -- the same set of dates is
-    // used for every employee in this batch.
+    // used for every employee in this batch. Days are tagged in YYYY-MM-DD
+    // form (no timezone) since the calendar question is "which dates of
+    // this month are weekdays" -- the answer is identical in every
+    // timezone (no DST ambiguity in India).
     const daysInMonth = new Date(year, month, 0).getDate();
     const allWorkdays: string[] = [];
     for (let d = 1; d <= daysInMonth; d++) {
@@ -339,6 +372,32 @@ export class AttendanceService {
       if (dow !== 0 && dow !== 6) {
         allWorkdays.push(`${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
       }
+    }
+
+    // Resolve each employee's timezone via their EmpCloud location
+    // (`users.location_id` -> `organization_locations.timezone`). Pre-fetch
+    // ALL active locations for the org so we don't N+1 -- the map is
+    // small (<10 rows for almost every org). Falls back to
+    // DEFAULT_TIMEZONE when the user has no location or the location
+    // row has no timezone string.
+    const locationRows = await empcloudDb("organization_locations")
+      .where("organization_id", orgIdNum)
+      .select("id", "timezone");
+    const tzByLocation = new Map<number, string>();
+    for (const loc of locationRows) {
+      if (loc.timezone) tzByLocation.set(Number(loc.id), String(loc.timezone));
+    }
+    // Fetch user.location_id for everyone in this batch so per-row
+    // timezone resolution doesn't trigger another N+1.
+    const userIds = records.map((r: any) => Number(r.employeeId)).filter((n: number) => !!n);
+    const userRows =
+      userIds.length > 0
+        ? await empcloudDb("users").whereIn("id", userIds).select("id", "location_id")
+        : [];
+    const tzByUser = new Map<number, string>();
+    for (const u of userRows) {
+      const tz = u.location_id ? tzByLocation.get(Number(u.location_id)) : null;
+      tzByUser.set(Number(u.id), tz || DEFAULT_TIMEZONE);
     }
 
     for (const record of records) {
@@ -384,20 +443,24 @@ export class AttendanceService {
       // Skip if the user_id can't be resolved (defensive).
       if (!empcloudUserId) continue;
       try {
+        const userTz = tzByUser.get(empcloudUserId) || DEFAULT_TIMEZONE;
         const presentTarget = Math.min(Number(record.presentDays) || 0, allWorkdays.length);
         // Find dates already populated on EmpCloud so we don't touch
-        // anything HR/the employee marked themselves.
+        // anything HR/the employee marked themselves. Normalise existing
+        // dates in the EMPLOYEE's location timezone -- not via
+        // toISOString() which shifts dates by the server's UTC offset
+        // and silently broke the dedupe set (the IST 2026-05-01 row
+        // was being stringified as "2026-04-30" through UTC, so the
+        // dedupe missed it, the projection re-inserted May 1, hit the
+        // UNIQUE (user_id, date) constraint, and the catch dropped the
+        // whole batch).
         const existingRows = await empcloudDb("attendance_records")
           .where("user_id", empcloudUserId)
           .where("organization_id", orgIdNum)
           .whereBetween("date", [monthStart, monthEnd])
           .select("date");
         const existingDates = new Set<string>(
-          existingRows.map((r: any) =>
-            typeof r.date === "string"
-              ? r.date.slice(0, 10)
-              : new Date(r.date).toISOString().slice(0, 10),
-          ),
+          existingRows.map((r: any) => dateToIso(r.date, userTz)),
         );
         const availableDates = allWorkdays.filter((d) => !existingDates.has(d));
 
@@ -431,7 +494,15 @@ export class AttendanceService {
           });
         }
         if (inserts.length > 0) {
-          await empcloudDb("attendance_records").insert(inserts);
+          // Use ON DUPLICATE KEY UPDATE so a race condition (employee
+          // checks in via EmpCloud while HR clicks Mark All Present)
+          // doesn't tank the whole batch on the UNIQUE (user_id, date)
+          // constraint. EmpCloud's mark wins -- we only update the
+          // row's status if it was somehow missing, otherwise leave it.
+          await empcloudDb("attendance_records")
+            .insert(inserts)
+            .onConflict(["user_id", "date"])
+            .ignore();
         }
       } catch (err) {
         // Don't fail the whole import if EmpCloud write fails (table

@@ -9,6 +9,7 @@ export * from "./constants/uk";
 export {
   resolveSalaryComponents,
   validateComponents,
+  checkResolvedComponents,
   SalaryResolverError,
 } from "./utils/salary-resolver";
 export type {
@@ -16,4 +17,5 @@ export type {
   ResolverComponent,
   ResolvedComponent,
   ResolveOptions,
+  ResolverWarning,
 } from "./utils/salary-resolver";

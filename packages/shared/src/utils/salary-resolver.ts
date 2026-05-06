@@ -49,6 +49,64 @@ export class SalaryResolverError extends Error {
   }
 }
 
+export interface ResolverWarning {
+  code: string;
+  message: string;
+  /** Component code the warning is about (when applicable). */
+  component?: string;
+}
+
+/**
+ * Soft post-resolution checks. These are advisory, not blocking --
+ * the structure still resolves and saves, but the warning surfaces
+ * on the API response so HR sees the issue immediately. Currently
+ * checks two things HR commonly gets wrong:
+ *
+ *   - HRA basis: in Indian payroll convention HRA is typically 40-50%
+ *     of BASIC (metro / non-metro). Configuring HRA as a % of CTC --
+ *     a common mistake -- inflates HRA above Basic and reduces the
+ *     tax-exempt portion (HRA exemption is capped at 50% of basic).
+ *     Warn when resolved HRA > Basic.
+ *
+ *   - Components sum vs CTC: the per-component `monthlyAmount` should
+ *     sum to roughly (CTC ÷ 12). When the sum is way off (e.g. 10×
+ *     out because of a unit confusion at structure save time), all
+ *     downstream payroll math goes wrong. Warn on a > 1 ₹/month gap.
+ */
+export function checkResolvedComponents(
+  resolved: ResolvedComponent[],
+  ctcAnnual: number,
+): ResolverWarning[] {
+  const warnings: ResolverWarning[] = [];
+  const earnings = resolved.filter((c) => c.type === "earning");
+  const basic = earnings.find((c) => c.code.toUpperCase() === "BASIC");
+  const hra = earnings.find((c) => c.code.toUpperCase() === "HRA");
+  if (basic && hra && hra.monthlyAmount > basic.monthlyAmount) {
+    warnings.push({
+      code: "HRA_EXCEEDS_BASIC",
+      component: "HRA",
+      message:
+        `HRA (₹${Math.round(hra.monthlyAmount)}/month) is greater than Basic ` +
+        `(₹${Math.round(basic.monthlyAmount)}/month). Standard Indian payroll convention is ` +
+        `HRA = 40-50% of Basic; configuring HRA as a percent of CTC inflates it and reduces ` +
+        `the tax-exempt portion (HRA exemption is capped at 50% of Basic for metro / 40% for ` +
+        `non-metro). Consider re-basing HRA on Basic.`,
+    });
+  }
+  const monthlyCTC = ctcAnnual / 12;
+  const earningsSum = earnings.reduce((s, c) => s + c.monthlyAmount, 0);
+  if (Math.abs(earningsSum - monthlyCTC) > 1 && monthlyCTC > 0) {
+    warnings.push({
+      code: "COMPONENTS_SUM_MISMATCH",
+      message:
+        `Component monthly amounts sum to ₹${Math.round(earningsSum)}, but CTC ÷ 12 = ` +
+        `₹${Math.round(monthlyCTC)}. A gap this large usually means CTC was entered with the ` +
+        `wrong unit (annual vs monthly) or a structure component is missing.`,
+    });
+  }
+  return warnings;
+}
+
 /**
  * Validate a list of component definitions for a structure. Throws on invalid
  * configuration; safe to call from UI before saving.
