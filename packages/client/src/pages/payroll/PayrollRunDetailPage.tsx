@@ -475,11 +475,16 @@ export function PayrollRunDetailPage() {
       {/* Cost Breakdown */}
       {Number(run.total_gross) > 0 &&
         (() => {
+          // BUG-021 — Pie slice labels are rendered AROUND the pie, so a
+          // long name + percentage (e.g. "Employer Cost 13%") gets
+          // clipped past the chart's right edge by the parent container.
+          // Use shorter labels here to keep labels fully inside the
+          // visible area without resorting to a separate legend.
           const data = [
-            { name: "Net Pay", value: Number(run.total_net), fill: "#6366F1" },
+            { name: "Net", value: Number(run.total_net), fill: "#6366F1" },
             { name: "Deductions", value: Number(run.total_deductions), fill: "#F59E0B" },
             {
-              name: "Employer Cost",
+              name: "Employer",
               value: Number(run.total_employer_contributions || 0),
               fill: "#10B981",
             },

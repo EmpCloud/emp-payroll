@@ -448,6 +448,31 @@ export class PayrollService {
         continue;
       }
 
+      // BUG-003 — Double EPF deduction. If the salary structure already
+      // defines an EPF-style deduction (codes commonly used: EPF, EEPF,
+      // EEPF D, PF, EE_PF), the statutory engine MUST NOT add another
+      // standard EPF row on top of it. Without this check Priya Patel
+      // saw "EEPF D ₹1,801" + "EPF ₹1,800" both deducted in the same
+      // run, doubling the employee's PF outflow. The structure-defined
+      // row wins (HR set it explicitly), so we skip the statutory EPF
+      // when any deduction code matches the EPF family. ESI gets the
+      // same treatment for symmetry -- a structure-level "ESI" row
+      // suppresses the engine's automatic ESI line too.
+      const isEpfishCode = (code: string | undefined): boolean => {
+        const c = (code || "").toUpperCase().replace(/[^A-Z]/g, "");
+        return c === "EPF" || c === "EEPF" || c === "PF" || c === "EMPLOYEEPF" || c === "EEPFDED";
+      };
+      const isEsiishCode = (code: string | undefined): boolean => {
+        const c = (code || "").toUpperCase().replace(/[^A-Z]/g, "");
+        return c === "ESI" || c === "EMPLOYEEESI" || c === "EESI";
+      };
+      const structureHasEpf = componentList.some(
+        (c: any) => c.type === "deduction" && isEpfishCode(c.code),
+      );
+      const structureHasEsi = componentList.some(
+        (c: any) => c.type === "deduction" && isEsiishCode(c.code),
+      );
+
       // PF
       const pfDetails = profile?.pf_details
         ? typeof profile.pf_details === "string"
@@ -461,7 +486,7 @@ export class PayrollService {
       // payslip was always JSON.stringify([])), so HR had no way to see
       // where the employer cost came from.
       const employerContribs: Array<{ code: string; name: string; amount: number }> = [];
-      if (!pfDetails?.isOptedOut) {
+      if (!pfDetails?.isOptedOut && !structureHasEpf) {
         // Pass org-level statutory overrides (migration 029) so PF can
         // honour pf_apply_full_basic, pf_max_employee_contribution, and
         // pf_default_employee_rate when the org has set them.
@@ -499,7 +524,7 @@ export class PayrollService {
           ? JSON.parse(profile.esi_details)
           : profile.esi_details
         : {};
-      if (esiDetails?.isEligible !== false) {
+      if (esiDetails?.isEligible !== false && !structureHasEsi) {
         const esi = computeESI({
           employeeId: String(ecEmp.id),
           month: run.month,
@@ -541,12 +566,27 @@ export class PayrollService {
           (typeof taxInfo?.state === "string" && taxInfo.state.trim()) ||
           orgSettings?.state ||
           "KA";
+        // BUG-013 — PT slab basis. PT is a fixed monthly statutory levy
+        // tied to the employee's contracted gross, NOT the LOP-pro-rated
+        // gross. The previous code passed `grossEarnings` (pro-rated),
+        // so an employee with a single LOP day in Maharashtra (slab kicks
+        // in above ₹10K) saw PT swing to 0 if their pro-rated gross fell
+        // below the slab threshold even though their CTC clearly puts
+        // them in the bracket -- HR reported Priya's April PT as 0 vs
+        // May's ₹200 with the same structure. Use the un-prorated
+        // structure-level monthly gross (sum of earning components at
+        // their resolver-stored monthlyAmount) so PT stays consistent
+        // across LOP months.
+        const structureGrossMonthly = componentList
+          .filter((c: any) => c.type !== "deduction" && c.type !== "reimbursement")
+          .reduce((s: number, c: any) => s + Number(c.monthlyAmount || 0), 0);
+        const ptBasis = structureGrossMonthly > 0 ? structureGrossMonthly : grossEarnings;
         const pt = computeProfessionalTax({
           employeeId: String(ecEmp.id),
           month: run.month,
           year: run.year,
           state: ptState,
-          grossSalary: grossEarnings,
+          grossSalary: ptBasis,
         });
         if (pt.taxAmount > 0) {
           deductions.push({ code: "PT", name: "Professional Tax", amount: pt.taxAmount });
@@ -917,7 +957,22 @@ export class PayrollService {
    */
   async rerunRun(runId: string, orgId: string) {
     const run = await this.getRun(runId, orgId);
+    // BUG-005 — Capture how many payslips were wiped + whether the run
+    // had been previously emailed so the response can warn HR. Once
+    // rerun completes, any payslip PDFs that were previously
+    // downloaded or emailed are stale: the URLs 404 (payslip rows
+    // deleted) and the next compute will produce different numbers.
+    // We can't recall an email, but we can: (a) tell the caller how
+    // many payslips just became stale, (b) record that fact in the
+    // run's notes so it shows up on the run-detail page forever.
+    let priorPayslipCount = 0;
+    let priorStatus = run.status;
     if (run.status !== "draft") {
+      const priorRes = await this.db.findMany<any>("payslips", {
+        filters: { payroll_run_id: runId },
+        limit: 1,
+      });
+      priorPayslipCount = Number(priorRes?.total) || 0;
       // Wipe computed payslips so a fresh compute starts from zero. We
       // intentionally permit this for `paid` runs because the alternative
       // (cancel + create new run) loses the original period reference and
@@ -925,14 +980,32 @@ export class PayrollService {
       // run's id.
       await this.db.deleteMany("payslips", { payroll_run_id: runId });
     }
-    return this.db.update("payroll_runs", runId, {
+    let updatedNotes: string | null = run.notes || null;
+    if (priorPayslipCount > 0) {
+      const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+      const warning = `[rerun ${stamp} UTC — wiped ${priorPayslipCount} payslip(s) from prior ${priorStatus} state; previously generated/emailed PDFs are now stale]`;
+      updatedNotes = updatedNotes ? `${updatedNotes}\n${warning}` : warning;
+    }
+    const updated = await this.db.update("payroll_runs", runId, {
       status: "draft",
       total_gross: 0,
       total_deductions: 0,
       total_net: 0,
       total_employer_contributions: 0,
       employee_count: 0,
+      ...(updatedNotes !== run.notes ? { notes: updatedNotes } : {}),
     });
+    return {
+      ...updated,
+      // Surface to the caller so the UI can render a warning toast.
+      _rerun_warning: priorPayslipCount
+        ? {
+            wiped_payslips: priorPayslipCount,
+            prior_status: priorStatus,
+            message: `${priorPayslipCount} previously generated payslip(s) were deleted. Any PDFs already emailed to employees are now out of date — re-send after the next compute.`,
+          }
+        : null,
+    } as any;
   }
 
   /**

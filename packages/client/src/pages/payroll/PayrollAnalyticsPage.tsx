@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatAxisAmount } from "@/lib/utils";
 import { usePayrollRuns } from "@/api/hooks";
 import {
   BarChart,
@@ -121,34 +121,54 @@ export function PayrollAnalyticsPage() {
         actual hiring activity.
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Avg Net Pay / Employee"
-          value={formatCurrency(avgPerEmployee)}
-          subtitle={latest ? `${latest.employee_count} employees` : "—"}
-          icon={Users}
-        />
-        <StatCard
-          title="Gross Pay Change"
-          value={
-            grossChange === null ? "—" : `${grossChange >= 0 ? "+" : ""}${grossChange.toFixed(1)}%`
-          }
-          subtitle="vs previous month"
-          icon={(grossChange ?? 0) >= 0 ? TrendingUp : TrendingDown}
-        />
-        <StatCard
-          title="Net Pay Change"
-          value={netChange === null ? "—" : `${netChange >= 0 ? "+" : ""}${netChange.toFixed(1)}%`}
-          subtitle="vs previous month"
-          icon={(netChange ?? 0) >= 0 ? TrendingUp : TrendingDown}
-        />
-        <StatCard
-          title="Deduction Rate"
-          value={deductionRate === null ? "—" : `${Math.round(deductionRate)}%`}
-          subtitle="of gross pay"
-          icon={Wallet}
-        />
-      </div>
+      {/* BUG-017 — Identify the source run on every KPI subtitle. The
+          stats below are computed from the most recent run available
+          (paid OR computed OR approved). Without telling HR WHICH run,
+          the Deduction Rate / Avg Net Pay numbers shifted between
+          page loads (during a recompute) with no explanation. The
+          subtitle now spells out the period AND status so HR can
+          correlate the figure with a specific run row. */}
+      {(() => {
+        const sourceLabel = latest
+          ? `${MONTHS[latest.month]} ${latest.year} · ${latest.status}`
+          : "no runs yet";
+        return (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Avg Net Pay / Employee"
+              value={formatCurrency(avgPerEmployee)}
+              subtitle={
+                latest ? `${latest.employee_count} employees · ${sourceLabel}` : sourceLabel
+              }
+              icon={Users}
+            />
+            <StatCard
+              title="Gross Pay Change"
+              value={
+                grossChange === null
+                  ? "—"
+                  : `${grossChange >= 0 ? "+" : ""}${grossChange.toFixed(1)}%`
+              }
+              subtitle={`vs previous month · ${sourceLabel}`}
+              icon={(grossChange ?? 0) >= 0 ? TrendingUp : TrendingDown}
+            />
+            <StatCard
+              title="Net Pay Change"
+              value={
+                netChange === null ? "—" : `${netChange >= 0 ? "+" : ""}${netChange.toFixed(1)}%`
+              }
+              subtitle={`vs previous month · ${sourceLabel}`}
+              icon={(netChange ?? 0) >= 0 ? TrendingUp : TrendingDown}
+            />
+            <StatCard
+              title="Deduction Rate"
+              value={deductionRate === null ? "—" : `${Math.round(deductionRate)}%`}
+              subtitle={`of gross pay · ${sourceLabel}`}
+              icon={Wallet}
+            />
+          </div>
+        );
+      })()}
 
       {/* Payroll trend */}
       <Card>
@@ -162,10 +182,7 @@ export function PayrollAnalyticsPage() {
                 <AreaChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="period" tick={{ fontSize: 12 }} />
-                  <YAxis
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(v: number) => `${(v / 100000).toFixed(0)}L`}
-                  />
+                  <YAxis tick={{ fontSize: 12 }} tickFormatter={formatAxisAmount} />
                   <Tooltip formatter={(value: number) => formatCurrency(value)} />
                   <Legend />
                   <Area
@@ -215,10 +232,7 @@ export function PayrollAnalyticsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={costBreakdown} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis
-                      type="number"
-                      tickFormatter={(v: number) => `${(v / 100000).toFixed(1)}L`}
-                    />
+                    <XAxis type="number" tickFormatter={formatAxisAmount} />
                     <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 12 }} />
                     <Tooltip formatter={(value: number) => formatCurrency(value)} />
                     <Bar dataKey="value" radius={[0, 4, 4, 0]}>
@@ -369,10 +383,7 @@ export function PayrollAnalyticsPage() {
                 <BarChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="period" tick={{ fontSize: 12 }} />
-                  <YAxis
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(v: number) => `${(v / 100000).toFixed(0)}L`}
-                  />
+                  <YAxis tick={{ fontSize: 12 }} tickFormatter={formatAxisAmount} />
                   <Tooltip formatter={(value: number) => formatCurrency(value)} />
                   <Legend />
                   <Bar
