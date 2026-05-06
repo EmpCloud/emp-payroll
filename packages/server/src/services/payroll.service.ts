@@ -806,7 +806,7 @@ export class PayrollService {
     });
   }
 
-  async markPaid(runId: string, orgId: string) {
+  async markPaid(runId: string, orgId: string, opts?: { force?: boolean }) {
     const run = await this.getRun(runId, orgId);
     if (run.status !== "approved") {
       throw new AppError(400, "INVALID_STATUS", "Only approved payroll runs can be marked as paid");
@@ -823,6 +823,50 @@ export class PayrollService {
         `Cannot mark a future-period run as paid (${run.month}/${run.year} has not started yet)`,
       );
     }
+
+    // BUG-029 — Bank-details readiness gate. Marking a run as paid
+    // without first reconciling bank details meant HR could check off
+    // "paid" while several employees had no account/IFSC on file --
+    // they'd later complain "I never got my salary" and HR couldn't
+    // tell whether the bank rejected the row or it was simply never
+    // attempted. Now we list employees on this run who lack a usable
+    // account/IFSC pair and refuse the transition unless `force=true`
+    // is passed (the override exists for orgs that pay via cheque or
+    // cash). The list is returned in the AppError details so the UI
+    // can render a fix-then-retry banner.
+    if (!opts?.force) {
+      const payslipsRes = await this.db.findMany<any>("payslips", {
+        filters: { payroll_run_id: runId },
+        limit: 10000,
+      });
+      const offenders: string[] = [];
+      for (const ps of payslipsRes.data) {
+        if (!ps.empcloud_user_id) continue;
+        const profile = await this.db.findOne<any>("employee_payroll_profiles", {
+          empcloud_user_id: ps.empcloud_user_id,
+        });
+        const bank = profile?.bank_details
+          ? typeof profile.bank_details === "string"
+            ? JSON.parse(profile.bank_details)
+            : profile.bank_details
+          : {};
+        const acct = String(bank?.accountNumber || "").trim();
+        const ifsc = String(bank?.ifscCode || "").trim();
+        if (!acct || !ifsc) {
+          offenders.push(`#${ps.empcloud_user_id}`);
+          if (offenders.length >= 10) break;
+        }
+      }
+      if (offenders.length > 0) {
+        throw new AppError(
+          400,
+          "BANK_DETAILS_MISSING",
+          `Cannot mark paid: ${offenders.length}+ employee(s) on this run have missing bank details (${offenders.slice(0, 5).join(", ")}${offenders.length > 5 ? "..." : ""}). Fix the bank details on each employee profile and retry, or pass force=true to override (for cheque/cash payouts).`,
+          { offenders },
+        );
+      }
+    }
+
     await this.db.updateMany("payslips", { payroll_run_id: runId }, { status: "paid" });
     return this.db.update("payroll_runs", runId, { status: "paid" });
   }

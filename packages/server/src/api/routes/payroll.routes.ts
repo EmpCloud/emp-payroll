@@ -123,8 +123,17 @@ router.post(
   "/:id/pay",
   authorize("hr_admin"),
   wrap(async (req, res) => {
-    const data = await svc.markPaid(param(req, "id"), String(req.user!.empcloudOrgId));
-    await logRunAction(req, "payroll_run.paid", param(req, "id"));
+    // `force` (body or query) overrides the bank-details readiness gate
+    // (BUG-029). Used by orgs that pay via cheque/cash or want to
+    // proceed knowing some employees will need manual follow-up.
+    const force = req.body?.force === true || req.query?.force === "true";
+    const data = await svc.markPaid(param(req, "id"), String(req.user!.empcloudOrgId), { force });
+    await logRunAction(
+      req,
+      "payroll_run.paid",
+      param(req, "id"),
+      force ? { force: true } : undefined,
+    );
     res.json({ success: true, data });
   }),
 );

@@ -275,9 +275,26 @@ export class LeaveService {
         "You already have a pending/approved leave for overlapping dates",
       );
 
-    // Get reporting manager
+    // BUG-023 — Approver assignment. The previous code set
+    // `current_approver_id = user.reporting_manager_id`. When the user
+    // had no reporting manager (the CEO, founders, fresh hires whose
+    // manager wasn't assigned yet, or anyone whose manager left and
+    // was deactivated), the leave was created with `current_approver_id
+    // = NULL` and stayed pending forever -- only an `hr_admin` could
+    // approve, but they had no notification because the assignee was
+    // null. Fall through to the org's first active hr_admin / org_admin
+    // so every leave has a real approver and the standard "approve from
+    // your inbox" flow works.
     const user = await empcloudDb("users").where({ id: userIdNum }).first();
-    const approverId = user?.reporting_manager_id || null;
+    let approverId: number | null = user?.reporting_manager_id || null;
+    if (!approverId) {
+      const fallback = await empcloudDb("users")
+        .where({ organization_id: orgIdNum, status: 1 })
+        .whereIn("role", ["hr_admin", "org_admin"])
+        .orderBy("id", "asc")
+        .first();
+      if (fallback) approverId = fallback.id;
+    }
 
     const [id] = await empcloudDb("leave_applications").insert({
       organization_id: orgIdNum,
