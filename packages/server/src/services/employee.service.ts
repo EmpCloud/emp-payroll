@@ -67,6 +67,19 @@ async function mergeUserWithProfile(ecUser: EmpCloudUser, payrollDb: any): Promi
   }
   const pfDetails = parseJsonish(profile?.pf_details);
   const esiDetails = parseJsonish(profile?.esi_details);
+
+  // BUG (May retest) — Tax Overview was rendering ₹0 for every employee
+  // because /employees never included a `ctc` field. The page key'd off
+  // `e.ctc`, never found a value, and fell through to "—" everywhere.
+  // Pull the active salary row here so the merged employee shape carries
+  // CTC + the structure name -- the Tax Overview, dashboard cards, and
+  // the employee detail page all benefit without an extra API round-trip.
+  const activeSalary = await (payrollDb as any).findOne("employee_salaries", {
+    empcloud_user_id: ecUser.id,
+    is_active: true,
+  });
+  const ctc = activeSalary?.gross_salary != null ? Number(activeSalary.gross_salary) : null;
+  const salaryStructureName = activeSalary?.structure_name || null;
   // Address can legitimately be null (no address on file) — preserve that
   // instead of normalising to {}.
   const address =
@@ -128,6 +141,12 @@ async function mergeUserWithProfile(ecUser: EmpCloudUser, payrollDb: any): Promi
     esi_details: esiDetails,
     isActive: ecUser.status === 1,
     is_active: ecUser.status === 1,
+    // Active salary (null when no `employee_salaries` row with is_active=1).
+    // Consumers can use `ctc > 0` to differentiate "salary not yet assigned"
+    // from "salary set to zero". `salaryStructureName` is the friendly
+    // structure label HR picked when assigning -- handy for list views.
+    ctc,
+    salaryStructureName,
     createdAt: ecUser.created_at,
     updatedAt: ecUser.updated_at,
   };
