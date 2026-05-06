@@ -257,6 +257,25 @@ export class PayrollService {
       // Reset per-employee employer contributions each iteration
       let employeeEmployerContributions = 0;
 
+      // BUG-019 — Status sync. Skip employees whose join/exit dates put
+      // them outside this run's pay period. Without these guards an
+      // employee who joined in May still got a payslip for the April
+      // run, and an employee terminated in February still got payslips
+      // for March, April, May... because findUsersByOrgId only filters
+      // on `users.status` and HR commonly forgets to flip that flag.
+      // Note: a *partial* month (joined mid-month / exited mid-month)
+      // still generates a payslip; pro-ration via `paidDays` handles
+      // that downstream once attendance reflects the partial period.
+      const ecAny = ecEmp as any;
+      const doj = ecAny.date_of_joining ? String(ecAny.date_of_joining).slice(0, 10) : null;
+      const doe = ecAny.date_of_exit ? String(ecAny.date_of_exit).slice(0, 10) : null;
+      if (doj && doj > monthEnd) {
+        continue; // joined after this run's pay period
+      }
+      if (doe && doe < monthStart) {
+        continue; // exited before this run's pay period
+      }
+
       // Get payroll profile for this employee
       const profile = await this.db.findOne<any>("employee_payroll_profiles", {
         empcloud_user_id: ecEmp.id,
