@@ -148,20 +148,25 @@ export function resolveSalaryComponents(
     );
   }
 
-  // Pass 3: balance row absorbs the remainder.
+  // Pass 3: balance row absorbs the remainder. Even when there is NO
+  // balance row we still need to validate that the fixed + percentage
+  // components don't exceed the requested CTC -- previously the
+  // overflow check only fired for structures *with* a balance row, so
+  // a structure with a fixed Basic of ₹13,000/month would silently pass
+  // for an Annual CTC of ₹8 (the user actually triggered this with the
+  // "fresher" structure). Validate first, then assign the balance.
   const balanceRow = earnings.find((c) => c.calculationType === "balance");
+  const allocated = Array.from(resolved.values()).reduce((s, v) => s + v, 0);
+  if (allocated > monthlyCTC + 0.5) {
+    throw new SalaryResolverError(
+      "BALANCE_UNDERFLOW",
+      `Components exceed CTC: allocated ${Math.round(allocated)}/month vs CTC ${Math.round(
+        monthlyCTC,
+      )}/month. Reduce other components or increase CTC.`,
+    );
+  }
   if (balanceRow) {
-    const allocated = Array.from(resolved.values()).reduce((s, v) => s + v, 0);
-    const remainder = monthlyCTC - allocated;
-    if (remainder < 0) {
-      throw new SalaryResolverError(
-        "BALANCE_UNDERFLOW",
-        `Components exceed CTC: allocated ${Math.round(allocated)}/month vs CTC ${Math.round(
-          monthlyCTC,
-        )}/month. Reduce other components or increase CTC.`,
-      );
-    }
-    resolved.set(balanceRow.code, remainder);
+    resolved.set(balanceRow.code, monthlyCTC - allocated);
   }
 
   // Preserve input order in the output.
