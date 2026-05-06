@@ -9,7 +9,12 @@ import {
 } from "./compliance/india-statutory.service";
 import { computeIncomeTax } from "./tax/india-tax.service";
 import { TaxRegime } from "@emp-payroll/shared";
-import { findUsersByOrgId, findOrgById, getEmpCloudDB } from "../db/empcloud";
+import {
+  findUsersByOrgId,
+  findOrgById,
+  getEmpCloudDB,
+  findEmployeeProfileByUserId,
+} from "../db/empcloud";
 import { v4 as uuidv4 } from "uuid";
 import { config } from "../config";
 import * as cloudHRMS from "./cloud-hrms.service";
@@ -238,6 +243,15 @@ export class PayrollService {
     // components), producing huge negative net pay. Skip the row, surface
     // the failure in the run summary so the admin can fix the structure.
     const skipped: Array<{ empcloudUserId: number; reason: string; code: string }> = [];
+    // BUG-008 — PAN-missing soft warning. Track employees whose TDS was
+    // computed under Section 206AA (flat 20% because PAN was missing on
+    // both payroll-side `tax_info.pan` AND EmpCloud-side
+    // `employee_profiles.pan_number`). Surfaced in the run summary so HR
+    // can chase those employees for their PAN before approving the run.
+    // We do NOT block compute -- the legal compliance default is to
+    // withhold at 20% when PAN is missing, so the calculation is correct
+    // even though over-withheld.
+    const missingPan: Array<{ empcloudUserId: number; code: string }> = [];
 
     for (const ecEmp of ecEmployees) {
       // Reset per-employee employer contributions each iteration
@@ -350,6 +364,19 @@ export class PayrollService {
       const components =
         typeof salary.components === "string" ? JSON.parse(salary.components) : salary.components;
       const componentList = Array.isArray(components) ? components : [];
+
+      // BUG-004 — Capture the un-prorated (contracted) Basic and HRA so the
+      // annual TDS projection can use the FULL year-equivalent values rather
+      // than this month's pro-rated ones. Using pro-rated values for annual
+      // TDS shrank the 50%-of-basic HRA exemption cap during LOP months and
+      // pulled `employeePfAnnual` below the actual year-end PF, both of
+      // which inflated TDS for any employee with even a single day of LOP.
+      const structureBasicMonthly = Number(
+        componentList.find((c: any) => c.code === "BASIC")?.monthlyAmount || 0,
+      );
+      const structureHraMonthly = Number(
+        componentList.find((c: any) => c.code === "HRA")?.monthlyAmount || 0,
+      );
 
       // Calculate earnings (pro-rated for LOP)
       const proRatio = totalDays > 0 ? paidDays / totalDays : 0;
@@ -519,29 +546,92 @@ export class PayrollService {
           ? 12 - (currentMonth - fyStartMonth)
           : fyStartMonth - currentMonth;
 
+      // BUG-006 — YTD TDS lookup. Without this, `taxAlreadyPaid` is always
+      // 0, so the engine treats every month as if it's the first one of
+      // the FY: in March it tries to recoup the full annual tax in a
+      // single payslip, blowing out net pay. Sum TDS deducted on the
+      // employee's earlier payslips that fall inside the same FY (Apr →
+      // Mar of the next year). Reads from `payslips.deductions` JSON,
+      // matching code === "TDS".
+      const fyAnchorYear = run.month >= fyStartMonth ? run.year : run.year - 1;
+      const fyStartDate = `${fyAnchorYear}-04-01`;
+      const fyEndDate = `${fyAnchorYear + 1}-03-31`;
+      const priorPayslips = await this.db.findMany<any>("payslips", {
+        filters: { empcloud_user_id: ecEmp.id },
+        limit: 100,
+      });
+      let taxAlreadyPaid = 0;
+      for (const ps of priorPayslips.data) {
+        if (ps.payroll_run_id === runId) continue; // current run -- skip
+        const psYear = Number(ps.year);
+        const psMonth = Number(ps.month);
+        if (!psYear || !psMonth) continue;
+        const psDate = `${psYear}-${String(psMonth).padStart(2, "0")}-01`;
+        if (psDate < fyStartDate || psDate > fyEndDate) continue;
+        // Don't include the very same period (defensive — should be
+        // wiped already by deleteMany at the top of compute).
+        if (psYear === run.year && psMonth === run.month) continue;
+        const dedList =
+          typeof ps.deductions === "string" ? JSON.parse(ps.deductions || "[]") : ps.deductions;
+        if (!Array.isArray(dedList)) continue;
+        for (const d of dedList) {
+          if (d?.code === "TDS") taxAlreadyPaid += Number(d.amount) || 0;
+        }
+      }
+
       if (taxInfo?.deductTDS !== false) {
+        // BUG-002 / BUG-001 — PAN merge. The HR/payroll profile's `tax_info.pan`
+        // is often empty because the source of truth lives on the EmpCloud
+        // side (`employee_profiles.pan_number` -- where the employee fills
+        // it during onboarding). When payroll computed TDS off the raw
+        // payroll-side JSON, every employee whose PAN sat only on the
+        // EmpCloud side fell into Section 206AA and got a flat 20% TDS,
+        // producing the "everyone's TDS is identical at ₹1.44L" symptom
+        // and the "low-income employee still owes TDS" symptom (low income
+        // would normally hit the rebate but 206AA bypasses slabs entirely).
+        // Fall through to EmpCloud's PAN here so the tax engine sees the
+        // same PAN that the My Profile page sees.
+        let resolvedPan: string | null =
+          typeof taxInfo?.pan === "string" && taxInfo.pan.trim() ? taxInfo.pan.trim() : null;
+        if (!resolvedPan) {
+          const ecProfile = await findEmployeeProfileByUserId(ecEmp.id);
+          if (ecProfile?.pan_number && ecProfile.pan_number.trim()) {
+            resolvedPan = ecProfile.pan_number.trim();
+          }
+        }
+
         const taxResult = computeIncomeTax({
           employeeId: String(ecEmp.id),
           financialYear:
             run.month >= 4 ? `${run.year}-${run.year + 1}` : `${run.year - 1}-${run.year}`,
           regime: taxInfo?.regime === "old" ? TaxRegime.OLD : TaxRegime.NEW,
           annualGross: Number(salary.gross_salary),
-          basicAnnual: basicMonthly * 12,
-          hraAnnual: (components.find((c: any) => c.code === "HRA")?.monthlyAmount || 0) * 12,
+          // BUG-004 — These three feed the ANNUAL tax projection and must
+          // use the contracted (un-prorated) salary-structure values, not
+          // this month's pro-rated `basicMonthly`. Pro-rating these would
+          // make the 50%-of-basic HRA exemption cap shrink during LOP
+          // months and the projected employee PF dip below the year-end
+          // total — both of which artificially inflate TDS.
+          basicAnnual: structureBasicMonthly * 12,
+          hraAnnual: structureHraMonthly * 12,
           rentPaidAnnual: 0,
           isMetroCity: false,
           declarations: [],
-          employeePfAnnual: basicMonthly * 0.12 * 12,
+          employeePfAnnual: structureBasicMonthly * 0.12 * 12,
           monthsWorked: monthsRemaining,
-          taxAlreadyPaid: 0,
+          taxAlreadyPaid,
           // #1657 — Section 206AA: when PAN is missing, the tax engine
           // applies a flat 20% rate. Empty / null pan triggers that branch.
-          panNumber: typeof taxInfo?.pan === "string" ? taxInfo.pan : null,
+          // `resolvedPan` already covers the payroll → EmpCloud merge above.
+          panNumber: resolvedPan,
         });
 
         if (taxResult.monthlyTds > 0) {
           deductions.push({ code: "TDS", name: "Income Tax (TDS)", amount: taxResult.monthlyTds });
           totalDed += taxResult.monthlyTds;
+        }
+        if (!resolvedPan) {
+          missingPan.push({ empcloudUserId: ecEmp.id, code: ecEmp.emp_code || "" });
         }
       }
 
@@ -643,6 +733,16 @@ export class PayrollService {
         .join(", ")}${skipped.length > 5 ? "..." : ""}]`;
       runNotes = runNotes ? `${runNotes}\n${skipSummary}` : skipSummary;
     }
+    // BUG-008 — surface the PAN-missing list in the run notes so HR sees
+    // it on the run-detail page without having to drill into individual
+    // payslips. Run still computes (Section 206AA flat 20% applied).
+    if (missingPan.length > 0) {
+      const panSummary = `[PAN missing for ${missingPan.length} employee(s) — Section 206AA flat 20% applied: ${missingPan
+        .slice(0, 5)
+        .map((s) => s.code || `#${s.empcloudUserId}`)
+        .join(", ")}${missingPan.length > 5 ? "..." : ""}]`;
+      runNotes = runNotes ? `${runNotes}\n${panSummary}` : panSummary;
+    }
 
     // Update payroll run
     await this.db.update("payroll_runs", runId, {
@@ -656,8 +756,11 @@ export class PayrollService {
     });
 
     const updated = await this.getRun(runId, orgId);
-    // Surface skip details to the API caller so the UI can show a banner.
-    return { ...updated, skipped };
+    // Surface skip + PAN-missing details to the API caller so the UI can
+    // show banners. `skipped` are employees whose payslip was NOT generated
+    // (empty structure); `missingPan` are employees whose payslip WAS
+    // generated but TDS used the 206AA flat rate.
+    return { ...updated, skipped, missingPan };
   }
 
   async approveRun(runId: string, orgId: string, userId: string) {
