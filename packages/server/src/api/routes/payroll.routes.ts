@@ -105,6 +105,33 @@ router.post(
   }),
 );
 
+// Re-run an existing payroll run. Wipes computed payslips, resets totals,
+// flips status back to draft so the caller can recompute. Unlike /revert,
+// this also accepts `paid` runs -- the "if something went wrong" escape
+// hatch HR needs when a salary structure change or attendance correction
+// arrives after the run was marked paid. Gated by hr_admin and the UI
+// requires explicit confirmation before invoking.
+router.post(
+  "/:id/rerun",
+  authorize("hr_admin"),
+  wrap(async (req, res) => {
+    const data = await svc.rerunRun(param(req, "id"), String(req.user!.empcloudOrgId));
+    res.json({ success: true, data });
+  }),
+);
+
+// Hard-delete a payroll run + every payslip attached to it. There is no
+// undo. The UI gates this behind a type-to-confirm modal because the
+// destructive action is irreversible and there's no built-in trash bin.
+router.delete(
+  "/:id",
+  authorize("hr_admin"),
+  wrap(async (req, res) => {
+    const data = await svc.deleteRun(param(req, "id"), String(req.user!.empcloudOrgId));
+    res.json({ success: true, data });
+  }),
+);
+
 router.get(
   "/:id/summary",
   wrap(async (req, res) => {

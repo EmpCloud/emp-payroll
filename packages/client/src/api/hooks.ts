@@ -139,6 +139,36 @@ export function usePayPayroll(id: string) {
   });
 }
 
+// Re-run an existing payroll. Wipes payslips, resets totals, flips back
+// to draft for any status (including paid). The detail page invalidates
+// the per-run query so the freshly-zeroed totals render immediately.
+export function useRerunPayroll(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiPost<any>(`/payroll/${id}/rerun`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["payroll-runs"] });
+      qc.invalidateQueries({ queryKey: ["payroll-run", id] });
+      qc.invalidateQueries({ queryKey: ["payroll-run-payslips", id] });
+    },
+  });
+}
+
+// Hard-delete a payroll run + its payslips. Returns the deleted row's
+// identifying fields so the toast can show what was removed. Refreshes
+// only the runs list -- the detail page is unmounting / navigating away.
+export function useDeletePayroll(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiDelete<any>(`/payroll/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["payroll-runs"] });
+      qc.removeQueries({ queryKey: ["payroll-run", id] });
+      qc.removeQueries({ queryKey: ["payroll-run-payslips", id] });
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Payslips
 // ---------------------------------------------------------------------------

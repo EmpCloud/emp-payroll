@@ -12,7 +12,11 @@ import {
   useComputePayroll,
   useApprovePayroll,
   usePayPayroll,
+  useRerunPayroll,
+  useDeletePayroll,
 } from "@/api/hooks";
+import { Modal } from "@/components/ui/Modal";
+import { Input } from "@/components/ui/Input";
 import {
   ArrowLeft,
   Users,
@@ -27,6 +31,7 @@ import {
   Mail,
   AlertTriangle,
   RotateCcw,
+  Trash2,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { api, apiPost } from "@/api/client";
@@ -187,7 +192,16 @@ export function PayrollRunDetailPage() {
   const computeMutation = useComputePayroll(id!);
   const approveMutation = useApprovePayroll(id!);
   const payMutation = usePayPayroll(id!);
+  const rerunMutation = useRerunPayroll(id!);
+  const deleteMutation = useDeletePayroll(id!);
   const [emailing, setEmailing] = useState(false);
+  // Two destructive actions get their own modal so the consequences are
+  // spelled out explicitly. The delete modal additionally requires the
+  // user to type "DELETE" before the button enables -- typical safeguard
+  // for actions that wipe data with no undo.
+  const [rerunOpen, setRerunOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   if (isLoading) {
     return (
@@ -288,28 +302,24 @@ export function PayrollRunDetailPage() {
                 Revert to Draft
               </Button>
             )}
-            {run.status === "cancelled" && (
-              <Button
-                variant="outline"
-                onClick={async () => {
-                  if (
-                    !confirm(
-                      "Rerun this payroll? It will be reverted to draft so you can recompute.",
-                    )
-                  )
-                    return;
-                  try {
-                    await apiPost(`/payroll/${id}/revert`);
-                    toast.success("Payroll run restored to draft — you can now recompute");
-                    window.location.reload();
-                  } catch (err: any) {
-                    toast.error(err.response?.data?.error?.message || "Failed to rerun");
-                  }
-                }}
-              >
+            {/* Re-run is the "if something went wrong" escape hatch -- works
+                for any non-draft status, including paid. Backend wipes
+                payslips, resets totals, flips back to draft. */}
+            {run.status !== "draft" && (
+              <Button variant="outline" onClick={() => setRerunOpen(true)}>
                 <RotateCcw className="h-4 w-4" /> Rerun Payroll
               </Button>
             )}
+            <Button
+              variant="outline"
+              className="text-red-600 hover:text-red-700"
+              onClick={() => {
+                setDeleteConfirmText("");
+                setDeleteOpen(true);
+              }}
+            >
+              <Trash2 className="h-4 w-4" /> Delete Run
+            </Button>
             {run.status === "draft" && (
               <Button onClick={handleCompute} loading={computeMutation.isPending}>
                 <Play className="h-4 w-4" /> Compute Payroll
@@ -552,6 +562,115 @@ export function PayrollRunDetailPage() {
           <DataTable columns={columns} data={payslips} emptyMessage="Payroll not yet computed" />
         </CardContent>
       </Card>
+
+      {/* Re-run confirm modal */}
+      <Modal open={rerunOpen} onClose={() => setRerunOpen(false)} title="Re-run this payroll?">
+        <div className="space-y-4">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <p className="font-medium">This will:</p>
+            <ul className="mt-1 list-inside list-disc space-y-0.5">
+              <li>
+                Delete all <strong>{payslips.length}</strong> computed payslips for this run
+              </li>
+              <li>Reset totals (gross / deductions / net) to zero</li>
+              <li>
+                Revert the run to <strong>draft</strong> so you can re-compute
+              </li>
+            </ul>
+            {run.status === "paid" && (
+              <p className="mt-2 font-medium">
+                Note: this run is currently marked as <strong>paid</strong>. Re-running will not
+                reverse any actual bank transfers — only the recorded payslip data.
+              </p>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setRerunOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              loading={rerunMutation.isPending}
+              onClick={async () => {
+                try {
+                  await rerunMutation.mutateAsync();
+                  toast.success("Payroll reverted to draft — you can now recompute");
+                  setRerunOpen(false);
+                } catch (err: any) {
+                  toast.error(err?.response?.data?.error?.message || "Failed to re-run payroll");
+                }
+              }}
+            >
+              <RotateCcw className="h-4 w-4" /> Yes, re-run
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete confirm modal — type-to-confirm because there's no undo */}
+      <Modal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Delete this payroll run?"
+      >
+        <div className="space-y-4">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+            <p className="font-semibold">⚠ This action cannot be undone.</p>
+            <p className="mt-2">
+              Deleting{" "}
+              <strong>{run.month && run.year ? formatMonth(run.month, run.year) : run.code}</strong>{" "}
+              will permanently remove:
+            </p>
+            <ul className="mt-1 list-inside list-disc space-y-0.5">
+              <li>The payroll run record itself</li>
+              <li>
+                All <strong>{payslips.length}</strong> employee payslips for this period
+              </li>
+              <li>Any payslip PDFs / report links pointing at this run will 404</li>
+            </ul>
+            {run.status === "paid" && (
+              <p className="mt-2">
+                This run is currently marked as <strong>paid</strong>. Bank transfers already made
+                will <strong>not</strong> be reversed — they live outside this system.
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Type <span className="font-mono font-bold">DELETE</span> to confirm
+            </label>
+            <Input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="DELETE"
+              autoFocus
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700"
+              loading={deleteMutation.isPending}
+              disabled={deleteConfirmText.trim() !== "DELETE"}
+              onClick={async () => {
+                try {
+                  await deleteMutation.mutateAsync();
+                  toast.success("Payroll run deleted");
+                  setDeleteOpen(false);
+                  navigate("/payroll/runs");
+                } catch (err: any) {
+                  toast.error(
+                    err?.response?.data?.error?.message || "Failed to delete payroll run",
+                  );
+                }
+              }}
+            >
+              <Trash2 className="h-4 w-4" /> Permanently delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
