@@ -157,6 +157,28 @@ export function SettingsPage() {
     if (esiEstab) settingsPayload.esiEstablishmentCode = esiEstab;
     if (orgStateVal) settingsPayload.state = orgStateVal;
 
+    // Tier-1 statutory overrides (migration 029). Each field is opt-in:
+    // empty string -> null which clears the override and falls back to
+    // the India default constant. Numeric fields are coerced; booleans
+    // come from the select value "true" / "false" / "" (default).
+    const pfWageMode = val("pf_wage_mode"); // "" (default) | "ceiling" | "actual"
+    if (pfWageMode === "ceiling") settingsPayload.pfApplyFullBasic = false;
+    else if (pfWageMode === "actual") settingsPayload.pfApplyFullBasic = true;
+    else if (pfWageMode === "") settingsPayload.pfApplyFullBasic = null;
+
+    const pfMaxRaw = val("pf_max_contribution").trim();
+    settingsPayload.pfMaxEmployeeContribution = pfMaxRaw === "" ? null : Number(pfMaxRaw);
+
+    const pfDefaultRateRaw = val("pf_default_rate").trim();
+    settingsPayload.pfDefaultEmployeeRate =
+      pfDefaultRateRaw === "" ? null : Number(pfDefaultRateRaw);
+
+    const esiCeilingRaw = val("esi_ceiling").trim();
+    settingsPayload.esiWageCeiling = esiCeilingRaw === "" ? null : Number(esiCeilingRaw);
+
+    const roundingRaw = val("rounding_policy");
+    settingsPayload.roundingPolicy = roundingRaw === "" ? null : roundingRaw;
+
     setSaving(true);
     try {
       if (Object.keys(orgPayload).length > 0) {
@@ -280,13 +302,85 @@ export function SettingsPage() {
                 ""
               }
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tier-1 statutory overrides — every field falls back to the India
+          default constant when left as "Use default". */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" /> Statutory Overrides
+          </CardTitle>
+          <p className="text-sm text-gray-500">
+            Customise PF / ESI defaults for your organization. Leave any field on{" "}
+            <em>Use default</em> / blank to inherit the India statutory value.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <SelectField
-              id="pf_restrict"
-              label="PF Wage Ceiling"
-              defaultValue="15000"
+              id="pf_wage_mode"
+              label="PF Wage Calculation"
+              defaultValue={
+                settings?.pfApplyFullBasic === true
+                  ? "actual"
+                  : settings?.pfApplyFullBasic === false
+                    ? "ceiling"
+                    : ""
+              }
               options={[
-                { value: "15000", label: "Restricted to ₹15,000" },
-                { value: "actual", label: "Actual Basic (no ceiling)" },
+                { value: "", label: "Use default (₹15,000 ceiling)" },
+                { value: "ceiling", label: "Restrict to ₹15,000 ceiling" },
+                { value: "actual", label: "Apply to actual Basic + DA (no ceiling)" },
+              ]}
+            />
+            <Input
+              id="pf_max_contribution"
+              label="Max Employee PF / month (₹)"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="e.g. 1800 — blank = no cap"
+              defaultValue={
+                settings?.pfMaxEmployeeContribution != null
+                  ? String(settings.pfMaxEmployeeContribution)
+                  : ""
+              }
+            />
+            <Input
+              id="pf_default_rate"
+              label="Default PF Rate (%)"
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              placeholder="e.g. 12 — blank = use 12% default"
+              defaultValue={
+                settings?.pfDefaultEmployeeRate != null
+                  ? String(settings.pfDefaultEmployeeRate)
+                  : ""
+              }
+            />
+            <Input
+              id="esi_ceiling"
+              label="ESI Wage Ceiling (₹/month)"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="e.g. 21000 — blank = use ₹21,000 default"
+              defaultValue={settings?.esiWageCeiling != null ? String(settings.esiWageCeiling) : ""}
+            />
+            <SelectField
+              id="rounding_policy"
+              label="Payslip Rounding"
+              defaultValue={settings?.roundingPolicy || ""}
+              options={[
+                { value: "", label: "Use default (no rounding)" },
+                { value: "nearest_1", label: "Round to nearest ₹1" },
+                { value: "nearest_10", label: "Round to nearest ₹10" },
+                { value: "nearest_100", label: "Round to nearest ₹100" },
               ]}
             />
           </div>

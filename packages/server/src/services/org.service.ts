@@ -172,6 +172,14 @@ export class OrgService {
    */
   async getSettings(empcloudOrgId: number) {
     const org = await this.getById(empcloudOrgId);
+    // Pull the migration-029 statutory override columns from the raw row
+    // (camelCase serialiser doesn't always surface new columns until the
+    // model is regenerated, and the values are nullable opt-ins anyway).
+    const raw = await this.payrollDb.findOne<any>("organization_payroll_settings", {
+      empcloud_org_id: empcloudOrgId,
+    });
+    const num = (v: unknown): number | null =>
+      v == null || v === "" ? null : Number.isFinite(Number(v)) ? Number(v) : null;
     return {
       payFrequency: org.payFrequency,
       payDay: (org as any).payDay ?? 7,
@@ -182,6 +190,14 @@ export class OrgService {
       pfEstablishmentCode: org.pfEstablishmentCode,
       esiEstablishmentCode: org.esiEstablishmentCode,
       ptRegistrationNumber: org.ptRegistrationNumber,
+      // Migration 029 — org-level statutory overrides. NULL means "use
+      // the India default constant" so the form can render an "inherit
+      // default" state.
+      pfApplyFullBasic: raw?.pf_apply_full_basic == null ? null : !!Number(raw.pf_apply_full_basic),
+      pfMaxEmployeeContribution: num(raw?.pf_max_employee_contribution),
+      pfDefaultEmployeeRate: num(raw?.pf_default_employee_rate),
+      esiWageCeiling: num(raw?.esi_wage_ceiling),
+      roundingPolicy: raw?.rounding_policy ?? null,
     };
   }
 
@@ -204,6 +220,26 @@ export class OrgService {
     if (data.pfEstablishmentCode) updates.pf_establishment_code = data.pfEstablishmentCode;
     if (data.esiEstablishmentCode) updates.esi_establishment_code = data.esiEstablishmentCode;
     if (data.ptRegistrationNumber) updates.pt_registration_number = data.ptRegistrationNumber;
+
+    // Migration 029 — explicit `null` clears the override so the org
+    // returns to the India default. `undefined` means "don't touch".
+    if (data.pfApplyFullBasic !== undefined) {
+      updates.pf_apply_full_basic = data.pfApplyFullBasic == null ? null : !!data.pfApplyFullBasic;
+    }
+    if (data.pfMaxEmployeeContribution !== undefined) {
+      updates.pf_max_employee_contribution =
+        data.pfMaxEmployeeContribution == null ? null : Number(data.pfMaxEmployeeContribution);
+    }
+    if (data.pfDefaultEmployeeRate !== undefined) {
+      updates.pf_default_employee_rate =
+        data.pfDefaultEmployeeRate == null ? null : Number(data.pfDefaultEmployeeRate);
+    }
+    if (data.esiWageCeiling !== undefined) {
+      updates.esi_wage_ceiling = data.esiWageCeiling == null ? null : Number(data.esiWageCeiling);
+    }
+    if (data.roundingPolicy !== undefined) {
+      updates.rounding_policy = data.roundingPolicy || null;
+    }
 
     if (Object.keys(updates).length > 0) {
       await this.payrollDb.update("organization_payroll_settings", payrollSettings.id, updates);
