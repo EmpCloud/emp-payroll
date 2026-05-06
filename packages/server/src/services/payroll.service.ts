@@ -287,10 +287,20 @@ export class PayrollService {
       const doj = isoDate(ecAny.date_of_joining);
       const doe = isoDate(ecAny.date_of_exit);
       if (doj && doj > monthEnd) {
-        continue; // joined after this run's pay period
+        skipped.push({
+          empcloudUserId: ecEmp.id,
+          code: "JOINED_AFTER_PERIOD",
+          reason: `Joined ${doj} — after the pay period (${monthStart} → ${monthEnd})`,
+        });
+        continue;
       }
       if (doe && doe < monthStart) {
-        continue; // exited before this run's pay period
+        skipped.push({
+          empcloudUserId: ecEmp.id,
+          code: "EXITED_BEFORE_PERIOD",
+          reason: `Exited ${doe} — before the pay period (${monthStart} → ${monthEnd})`,
+        });
+        continue;
       }
 
       // Get payroll profile for this employee
@@ -302,7 +312,18 @@ export class PayrollService {
         empcloud_user_id: ecEmp.id,
         is_active: true,
       });
-      if (!salary) continue;
+      if (!salary) {
+        // Surface the silent skip so HR sees why N-X employees in the
+        // org didn't appear in the run. Previously this was a bare
+        // `continue` and HR had no signal -- the most common reason a
+        // run produces fewer payslips than active headcount.
+        skipped.push({
+          empcloudUserId: ecEmp.id,
+          code: "NO_SALARY_ASSIGNED",
+          reason: "No active salary structure assigned",
+        });
+        continue;
+      }
 
       // (workingDaysInMonth + holiday count are hoisted above this loop --
       //  see the orgHolidays / workingDaysInMonth declarations.)
