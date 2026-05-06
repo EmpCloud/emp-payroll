@@ -23,7 +23,6 @@ import { attendanceRoutes } from "./api/routes/attendance.routes";
 import { orgRoutes } from "./api/routes/org.routes";
 import { selfServiceRoutes } from "./api/routes/self-service.routes";
 import { reimbursementRoutes } from "./api/routes/reimbursement.routes";
-import { leaveRoutes } from "./api/routes/leave.routes";
 import { loanRoutes } from "./api/routes/loan.routes";
 import { errorHandler } from "./api/middleware/error.middleware";
 import { apiDocsHandler, swaggerUIHandler } from "./api/docs";
@@ -107,7 +106,10 @@ v1.use("/tax", taxRoutes);
 v1.use("/attendance", attendanceRoutes);
 v1.use("/self-service", selfServiceRoutes);
 v1.use("/reimbursements", reimbursementRoutes);
-v1.use("/leaves", leaveRoutes);
+// /leaves was removed -- leave management is owned by EmpCloud (HRMS).
+// Payroll compute reads leave_applications + leave_types directly from
+// the EmpCloud DB during attendance resolution; we no longer expose
+// apply / approve / balance-adjust endpoints from the payroll service.
 v1.use("/loans", loanRoutes);
 v1.use("/uploads", uploadRoutes);
 v1.use("/adjustments", adjustmentRoutes);

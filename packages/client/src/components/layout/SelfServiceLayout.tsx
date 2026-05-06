@@ -11,7 +11,6 @@ import {
   DollarSign,
   ArrowLeft,
   Receipt,
-  CalendarDays,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { isLoggedIn, getUser, logout } from "@/api/auth";
@@ -22,7 +21,9 @@ const navItems = [
   { to: "/my/salary", label: "My Salary", icon: Wallet },
   { to: "/my/tax", label: "My Tax", icon: Calculator },
   { to: "/my/declarations", label: "Declarations", icon: ClipboardList },
-  { to: "/my/leaves", label: "My Leaves", icon: CalendarDays },
+  // "My Leaves" was removed from payroll's self-service nav -- employees
+  // file and view leave via EmpCloud's HRMS app, not via the payroll
+  // self-service portal.
   { to: "/my/reimbursements", label: "Reimbursements", icon: Receipt },
   { to: "/my/profile", label: "Profile", icon: User },
 ];

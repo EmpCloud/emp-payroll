@@ -1,3 +1,19 @@
+/**
+ * @deprecated Leave management is owned by EmpCloud (HRMS), NOT by the
+ * payroll service. The payroll-side `/leaves` routes were removed and the
+ * client-side LeavesPage / LeaveManagementPage / MyLeavesPage were
+ * deleted -- HR uses EmpCloud's leave UI for apply / approve / reject /
+ * balance-adjust workflows. Payroll compute reads directly from EmpCloud's
+ * `leave_applications` + `leave_types` tables (see payroll.service.ts
+ * `attendance` resolution block) so leave data still flows through to
+ * payslips, but write paths no longer live here.
+ *
+ * This class is kept ONLY so the legacy import-coverage tests in
+ * `__tests__/coverage-push/*` continue to compile. Do NOT add new callers
+ * -- if you need a leave operation from payroll, hit EmpCloud's API
+ * instead. The class will be deleted entirely once the coverage tests
+ * are reorganised.
+ */
 import { getDB } from "../db/adapters";
 import { getEmpCloudDB } from "../db/empcloud";
 import { AppError } from "../api/middleware/error.middleware";

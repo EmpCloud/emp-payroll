@@ -16,7 +16,6 @@ import {
   ScrollText,
   Receipt,
   Calendar,
-  TreePalm,
   Network,
   Activity,
   Banknote,
@@ -112,12 +111,10 @@ const navItems: NavItem[] = [
     icon: CalendarDays,
     roles: ["org_admin", "hr_admin", "hr_manager"],
   },
-  {
-    to: "/leaves",
-    label: "Leaves",
-    icon: TreePalm,
-    roles: ["org_admin", "hr_admin", "hr_manager"],
-  },
+  // Leaves link removed -- leave management is owned by EmpCloud (HRMS).
+  // Payroll still factors paid/unpaid leave into compute via the
+  // EmpCloud DB read in payroll.service.ts; HR users go to EmpCloud
+  // for the apply/approve/balance UI.
   {
     to: "/reimbursements",
     label: "Reimbursements",

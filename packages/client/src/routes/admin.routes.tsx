@@ -60,9 +60,9 @@ const ReimbursementsPage = lazy(() =>
 const HolidaysPage = lazy(() =>
   import("@/pages/holidays/HolidaysPage").then((m) => ({ default: m.HolidaysPage })),
 );
-const LeavesPage = lazy(() =>
-  import("@/pages/leaves/LeaveManagementPage").then((m) => ({ default: m.LeaveManagementPage })),
-);
+// /leaves is owned by EmpCloud (HRMS); the payroll-side leave pages were
+// removed. Leave data still feeds payroll via the EmpCloud DB read path
+// in payroll.service.ts -- there's just no admin UI for it here anymore.
 const SystemHealthPage = lazy(() =>
   import("@/pages/system/SystemHealthPage").then((m) => ({ default: m.SystemHealthPage })),
 );
@@ -155,7 +155,6 @@ export function AdminRoutes() {
       <Route path="/reimbursements" element={<ReimbursementsPage />} />
       <Route path="/holidays" element={<HolidaysPage />} />
       <Route path="/loans" element={<LoansPage />} />
-      <Route path="/leaves" element={<LeavesPage />} />
       <Route path="/reports" element={<ReportsPage />} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/audit" element={<AuditLogPage />} />
