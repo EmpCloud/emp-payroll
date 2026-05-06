@@ -113,6 +113,12 @@ export function useComputePayroll(id: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["payroll-runs"] });
       qc.invalidateQueries({ queryKey: ["payroll-run", id] });
+      // Match the key used by `useRunPayslips` ("run-payslips") so the
+      // freshly-generated payslips show up immediately after Compute
+      // instead of forcing the user to refresh. The DataTable was
+      // rendering "Payroll not yet computed" because nothing
+      // invalidated this key.
+      qc.invalidateQueries({ queryKey: ["run-payslips", id] });
     },
   });
 }
@@ -124,6 +130,7 @@ export function useApprovePayroll(id: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["payroll-runs"] });
       qc.invalidateQueries({ queryKey: ["payroll-run", id] });
+      qc.invalidateQueries({ queryKey: ["run-payslips", id] });
     },
   });
 }
@@ -135,6 +142,7 @@ export function usePayPayroll(id: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["payroll-runs"] });
       qc.invalidateQueries({ queryKey: ["payroll-run", id] });
+      qc.invalidateQueries({ queryKey: ["run-payslips", id] });
     },
   });
 }
@@ -149,7 +157,7 @@ export function useRerunPayroll(id: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["payroll-runs"] });
       qc.invalidateQueries({ queryKey: ["payroll-run", id] });
-      qc.invalidateQueries({ queryKey: ["payroll-run-payslips", id] });
+      qc.invalidateQueries({ queryKey: ["run-payslips", id] });
     },
   });
 }
@@ -164,7 +172,7 @@ export function useDeletePayroll(id: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["payroll-runs"] });
       qc.removeQueries({ queryKey: ["payroll-run", id] });
-      qc.removeQueries({ queryKey: ["payroll-run-payslips", id] });
+      qc.removeQueries({ queryKey: ["run-payslips", id] });
     },
   });
 }
