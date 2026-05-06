@@ -126,8 +126,8 @@ export const createEmployeeSchema = z.object({
       .min(1)
       .max(50)
       .regex(
-        /^[A-Za-z0-9._-]+$/,
-        "Employee code may only contain letters, digits, dots, dashes or underscores",
+        /^[A-Za-z0-9._\-/]+$/,
+        "Employee code may only contain letters, digits, dots, dashes, slashes or underscores",
       )
       .optional(),
     firstName: firstNameSchema,
