@@ -255,6 +255,9 @@ export function EmployeeDetailPage() {
                 ["Tax Regime", taxInfo.regime === "old" ? "Old Regime" : "New Regime"],
                 ["PAN", taxInfo.pan || "N/A"],
                 ["UAN", taxInfo.uan || "N/A"],
+                ["Deduct TDS", taxInfo.deductTDS === false ? "No" : "Yes"],
+                ["Deduct PT", taxInfo.deductPT === false ? "No" : "Yes"],
+                ["State (PT override)", taxInfo.state || "Use org default"],
                 ["PF Number", pfDetails.pfNumber || "N/A"],
                 ["PF Rate", `${pfDetails.contributionRate || 12}%`],
                 ["PF Opted Out", pfDetails.isOptedOut ? "Yes" : "No"],
@@ -652,6 +655,13 @@ export function EmployeeDetailPage() {
                   pan: (fd.get("pan") as string) || taxInfo.pan,
                   uan: (fd.get("uan") as string) || taxInfo.uan,
                   regime: fd.get("regime") as string,
+                  // Per-employee deduction toggles (default true). The
+                  // payroll compute reads these and skips the deduction
+                  // when false. State override applies only to PT slab
+                  // lookup -- empty means "use the org's primary state".
+                  deductTDS: fd.get("deductTDS") === "true",
+                  deductPT: fd.get("deductPT") === "true",
+                  state: ((fd.get("ptState") as string) || "").trim() || null,
                 }),
                 apiPut(`/employees/${id}/pf-details`, {
                   pfNumber: fd.get("pfNumber") as string,
@@ -698,6 +708,62 @@ export function EmployeeDetailPage() {
                 options={[
                   { value: "new", label: "New Regime (Default)" },
                   { value: "old", label: "Old Regime" },
+                ]}
+              />
+              <SelectField
+                id="deductTDS"
+                name="deductTDS"
+                label="Deduct TDS?"
+                defaultValue={taxInfo.deductTDS === false ? "false" : "true"}
+                options={[
+                  { value: "true", label: "Yes — withhold monthly TDS" },
+                  { value: "false", label: "No — skip TDS for this employee" },
+                ]}
+              />
+              <SelectField
+                id="deductPT"
+                name="deductPT"
+                label="Deduct Professional Tax?"
+                defaultValue={taxInfo.deductPT === false ? "false" : "true"}
+                options={[
+                  { value: "true", label: "Yes — apply state slab" },
+                  { value: "false", label: "No — no PT (e.g. Delhi/Haryana)" },
+                ]}
+              />
+              <SelectField
+                id="ptState"
+                name="ptState"
+                label="State for PT (override)"
+                defaultValue={taxInfo.state || ""}
+                options={[
+                  { value: "", label: "Use org default" },
+                  { value: "AP", label: "Andhra Pradesh" },
+                  { value: "AS", label: "Assam" },
+                  { value: "BR", label: "Bihar" },
+                  { value: "CG", label: "Chhattisgarh" },
+                  { value: "DL", label: "Delhi (No PT)" },
+                  { value: "GA", label: "Goa" },
+                  { value: "GJ", label: "Gujarat" },
+                  { value: "HR", label: "Haryana (No PT)" },
+                  { value: "HP", label: "Himachal Pradesh (No PT)" },
+                  { value: "JH", label: "Jharkhand" },
+                  { value: "JK", label: "Jammu & Kashmir (No PT)" },
+                  { value: "KA", label: "Karnataka" },
+                  { value: "KL", label: "Kerala" },
+                  { value: "MP", label: "Madhya Pradesh" },
+                  { value: "MH", label: "Maharashtra" },
+                  { value: "MN", label: "Manipur" },
+                  { value: "ML", label: "Meghalaya" },
+                  { value: "OD", label: "Odisha" },
+                  { value: "PB", label: "Punjab" },
+                  { value: "RJ", label: "Rajasthan" },
+                  { value: "SK", label: "Sikkim" },
+                  { value: "TN", label: "Tamil Nadu" },
+                  { value: "TS", label: "Telangana" },
+                  { value: "TR", label: "Tripura" },
+                  { value: "UP", label: "Uttar Pradesh (No PT)" },
+                  { value: "UK", label: "Uttarakhand (No PT)" },
+                  { value: "WB", label: "West Bengal" },
                 ]}
               />
             </div>

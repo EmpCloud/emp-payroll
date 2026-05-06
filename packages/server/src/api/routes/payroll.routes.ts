@@ -240,6 +240,23 @@ router.get(
     const file = await bankSvc.generateBankFile(param(req, "id"), String(req.user!.empcloudOrgId));
     res.setHeader("Content-Type", "text/csv");
     res.setHeader("Content-Disposition", `attachment; filename=${file.filename}`);
+    // Surface the validation summary via custom headers so the client can
+    // toast a warning when employees were skipped (missing / invalid bank
+    // details). Headers are CORS-exposed via `Access-Control-Expose-Headers`
+    // in the global cors() config; if a header isn't visible to the client
+    // the download still works -- this is informational, not load-bearing.
+    res.setHeader("X-Bank-File-Total-Employees", String(file.summary.totalEmployees));
+    res.setHeader("X-Bank-File-Total-Amount", String(file.summary.totalAmount.toFixed(2)));
+    res.setHeader("X-Bank-File-Skipped-Count", String(file.summary.skipped.length));
+    if (file.summary.skipped.length > 0) {
+      // Keep the header value compact: count + first reason. Full list
+      // is on the next line of the JSON header for clients that want it.
+      const firstSkip = file.summary.skipped[0];
+      res.setHeader(
+        "X-Bank-File-Skipped-Sample",
+        `${firstSkip.name || firstSkip.employeeCode || "?"}: ${firstSkip.reason}`,
+      );
+    }
     res.send(file.content);
   }),
 );
