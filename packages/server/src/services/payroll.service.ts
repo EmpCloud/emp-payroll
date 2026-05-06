@@ -10,6 +10,7 @@ import {
 import { computeIncomeTax } from "./tax/india-tax.service";
 import { TaxRegime } from "@emp-payroll/shared";
 import { findUsersByOrgId, findOrgById, getEmpCloudDB } from "../db/empcloud";
+import { v4 as uuidv4 } from "uuid";
 import { config } from "../config";
 import * as cloudHRMS from "./cloud-hrms.service";
 import dayjs from "dayjs";
@@ -172,6 +173,15 @@ export class PayrollService {
       throw new AppError(400, "INVALID_STATUS", "Only draft payroll runs can be computed");
     }
 
+    // Make compute idempotent. A previous failed compute (or a /rerun
+    // that found the run already in draft and short-circuited the
+    // payslip delete) can leave orphan payslip rows. The next compute
+    // then trips the (payroll_run_id, empcloud_user_id) UNIQUE index
+    // on the very first employee already present, taking the entire
+    // run down with it. Wipe before we begin so /compute is always
+    // safe to retry.
+    await this.db.deleteMany("payslips", { payroll_run_id: runId });
+
     // Get org payroll settings for state info
     const orgSettings = await this.db.findOne<any>("organization_payroll_settings", {
       empcloud_org_id: Number(orgId),
@@ -208,7 +218,24 @@ export class PayrollService {
       });
       if (!salary) continue;
 
-      // Get attendance from EmpCloud DB directly
+      // Resolve attendance for the period.
+      //
+      // Two data sources can carry the truth:
+      //   1. payroll DB → `attendance_summaries`   (populated by Mark All
+      //      Present / CSV import / manual entry on the Attendance page)
+      //   2. EmpCloud DB → `attendance_records` + `leave_applications`
+      //      (live punches and approved leaves from HRMS)
+      //
+      // Previously this code only read source #2, which is why clicking
+      // Mark All Present on the payroll Attendance page made the page show
+      // "22 days" but the payroll run still skipped every employee --
+      // computePayroll was looking at a different table in a different DB.
+      //
+      // Prefer the payroll-side summary when present (it's the explicit
+      // override -- HR clicked Mark All Present specifically because the
+      // EmpCloud data was incomplete). Fall back to the live EmpCloud
+      // counts otherwise so attendance flows through automatically for
+      // orgs that don't manually import.
       const empcloudDb = getEmpCloudDB();
       const startDate = `${run.year}-${String(run.month).padStart(2, "0")}-01`;
       const endDate = new Date(run.year, run.month, 0).toISOString().slice(0, 10);
@@ -221,41 +248,61 @@ export class PayrollService {
         if (day !== 0 && day !== 6) workingDays++;
       }
 
-      const [attRecord] = (await empcloudDb("attendance_records")
-        .where("user_id", ecEmp.id)
-        .where("organization_id", Number(orgId))
-        .whereBetween("date", [startDate, endDate])
-        .select(
-          empcloudDb.raw(
-            "SUM(CASE WHEN status IN ('present','checked_in') THEN 1 WHEN status = 'half_day' THEN 0.5 ELSE 0 END) as present_days",
-          ),
-          empcloudDb.raw("SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_days"),
-          empcloudDb.raw("SUM(CASE WHEN status = 'on_leave' THEN 1 ELSE 0 END) as leave_days"),
-        )) as any[];
+      const importedSummary = await this.db.findOne<any>("attendance_summaries", {
+        empcloud_user_id: ecEmp.id,
+        month: run.month,
+        year: run.year,
+      });
 
-      // Get approved paid leave days from EmpCloud
-      const leaveResult = (await empcloudDb("leave_applications as la")
-        .join("leave_types as lt", "la.leave_type_id", "lt.id")
-        .where("la.user_id", ecEmp.id)
-        .where("la.organization_id", Number(orgId))
-        .where("la.status", "approved")
-        .where("la.start_date", "<=", endDate)
-        .where("la.end_date", ">=", startDate)
-        .select(
-          empcloudDb.raw(
-            "SUM(CASE WHEN lt.is_paid = 1 THEN la.days_count ELSE 0 END) as paid_leave",
-          ),
-          empcloudDb.raw(
-            "SUM(CASE WHEN lt.is_paid = 0 THEN la.days_count ELSE 0 END) as unpaid_leave",
-          ),
-        )
-        .first()) as any;
+      let presentDays: number;
+      let paidLeaveDays: number;
+      let unpaidLeaveDays: number;
+      let totalDays: number;
 
-      const presentDays = Number(attRecord?.present_days || 0);
-      const paidLeaveDays = Number(leaveResult?.paid_leave || 0);
-      const unpaidLeaveDays = Number(leaveResult?.unpaid_leave || 0);
+      if (importedSummary) {
+        presentDays =
+          Number(importedSummary.present_days || 0) + Number(importedSummary.half_days || 0) * 0.5;
+        paidLeaveDays = Number(importedSummary.paid_leave || 0);
+        unpaidLeaveDays = Number(importedSummary.unpaid_leave || 0);
+        // Trust the imported total_days when set; otherwise fall back to the
+        // computed working-days count so half-imported rows don't blow up.
+        totalDays = Number(importedSummary.total_days) || workingDays;
+      } else {
+        const [attRecord] = (await empcloudDb("attendance_records")
+          .where("user_id", ecEmp.id)
+          .where("organization_id", Number(orgId))
+          .whereBetween("date", [startDate, endDate])
+          .select(
+            empcloudDb.raw(
+              "SUM(CASE WHEN status IN ('present','checked_in') THEN 1 WHEN status = 'half_day' THEN 0.5 ELSE 0 END) as present_days",
+            ),
+            empcloudDb.raw("SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_days"),
+            empcloudDb.raw("SUM(CASE WHEN status = 'on_leave' THEN 1 ELSE 0 END) as leave_days"),
+          )) as any[];
 
-      const totalDays = workingDays;
+        const leaveResult = (await empcloudDb("leave_applications as la")
+          .join("leave_types as lt", "la.leave_type_id", "lt.id")
+          .where("la.user_id", ecEmp.id)
+          .where("la.organization_id", Number(orgId))
+          .where("la.status", "approved")
+          .where("la.start_date", "<=", endDate)
+          .where("la.end_date", ">=", startDate)
+          .select(
+            empcloudDb.raw(
+              "SUM(CASE WHEN lt.is_paid = 1 THEN la.days_count ELSE 0 END) as paid_leave",
+            ),
+            empcloudDb.raw(
+              "SUM(CASE WHEN lt.is_paid = 0 THEN la.days_count ELSE 0 END) as unpaid_leave",
+            ),
+          )
+          .first()) as any;
+
+        presentDays = Number(attRecord?.present_days || 0);
+        paidLeaveDays = Number(leaveResult?.paid_leave || 0);
+        unpaidLeaveDays = Number(leaveResult?.unpaid_leave || 0);
+        totalDays = workingDays;
+      }
+
       const paidDays = presentDays + paidLeaveDays;
       const lopDays = Math.max(0, totalDays - paidDays);
 
@@ -455,10 +502,19 @@ export class PayrollService {
         roundingPolicy,
       );
 
-      // Create payslip
+      // Create payslip.
+      // `employee_id` is a legacy UUID column (the pre-EmpCloud schema's FK
+      // to a local `employees` table that was dropped). The original
+      // implementation used the same dummy zero-UUID for every row, which
+      // collided with the legacy `UNIQUE (payroll_run_id, employee_id)`
+      // index -- the second employee in any run hit ER_DUP_ENTRY and the
+      // entire compute aborted. Migration 030 swaps the unique index to
+      // (payroll_run_id, empcloud_user_id) which is the correct semantic
+      // key; generating a fresh UUID here keeps the insert valid both
+      // before and after that migration runs.
       await this.db.create("payslips", {
         payroll_run_id: runId,
-        employee_id: "00000000-0000-0000-0000-000000000000",
+        employee_id: uuidv4(),
         empcloud_user_id: ecEmp.id,
         month: run.month,
         year: run.year,
