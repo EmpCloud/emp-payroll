@@ -552,6 +552,64 @@ export class PayrollService {
     });
   }
 
+  /**
+   * Re-run a payroll regardless of status -- the "if something went wrong"
+   * escape hatch. Wipes payslips, resets totals, and flips status back to
+   * draft so the user can recompute. Unlike revertToDraft, this also
+   * accepts `paid` runs (with the assumption HR knows what they're doing
+   * since the operation is gated by hr_admin and the UI confirm modal
+   * spells out the consequences). For `draft` runs it is a no-op except
+   * to reset stale totals.
+   */
+  async rerunRun(runId: string, orgId: string) {
+    const run = await this.getRun(runId, orgId);
+    if (run.status !== "draft") {
+      // Wipe computed payslips so a fresh compute starts from zero. We
+      // intentionally permit this for `paid` runs because the alternative
+      // (cancel + create new run) loses the original period reference and
+      // breaks salary continuity for any downstream report keyed off this
+      // run's id.
+      await this.db.deleteMany("payslips", { payroll_run_id: runId });
+    }
+    return this.db.update("payroll_runs", runId, {
+      status: "draft",
+      total_gross: 0,
+      total_deductions: 0,
+      total_net: 0,
+      total_employer_contributions: 0,
+      employee_count: 0,
+    });
+  }
+
+  /**
+   * Hard-delete a payroll run and all its payslips. Destructive, so the
+   * route is gated by hr_admin AND the UI requires an explicit
+   * type-to-confirm modal. There is no undo: payslips are wiped, the run
+   * row is wiped, and any historical payslip URLs / report links for the
+   * run will 404 afterwards.
+   *
+   * Returns the deleted run row's identifying fields so the caller can
+   * confirm what was removed (used by the audit log on the API layer).
+   */
+  async deleteRun(runId: string, orgId: string) {
+    // getRun already enforces org-scoping (404 if the run doesn't belong
+    // to this org), so by the time we delete we know the row is the
+    // caller's. Use deleteMany with both id and org constraint as a
+    // belt-and-braces guard against any future change to the adapter
+    // delete() signature, which currently doesn't accept an org filter.
+    const run = await this.getRun(runId, orgId);
+    const payslipCount = await this.db.deleteMany("payslips", { payroll_run_id: runId });
+    await this.db.deleteMany("payroll_runs", { id: runId, empcloud_org_id: Number(orgId) });
+    return {
+      id: run.id,
+      code: run.code,
+      month: run.month,
+      year: run.year,
+      status: run.status,
+      payslips_deleted: payslipCount,
+    };
+  }
+
   async getRunSummary(runId: string, orgId: string) {
     const run = await this.getRun(runId, orgId);
     const payslips = await this.db.findMany<any>("payslips", {
