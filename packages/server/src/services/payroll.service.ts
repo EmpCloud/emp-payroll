@@ -361,37 +361,49 @@ export class PayrollService {
         )
         .first()) as any;
 
-      let presentDays: number;
-      let paidLeaveDays: number;
-      let unpaidLeaveDays: number;
+      // BUG-001 / BUG-002 — Source-of-truth order:
+      //   1. EmpCloud `attendance_records` (canonical, what the
+      //      attendance UI shows; bi-direction sync writes here).
+      //   2. Local `attendance_summaries` cache (legacy fallback for
+      //      Mark All Present clicks done BEFORE the bi-direction sync
+      //      landed -- that data only lives locally).
+      //   3. Default to "all working days present" for organisations
+      //      that haven't recorded any attendance anywhere yet (so a
+      //      first-month payroll run still produces payslips instead
+      //      of skipping every employee with NO_ATTENDANCE).
+      //
+      // The legacy local fallback projects forward to EmpCloud as a
+      // best-effort one-shot backfill so the next run is purely
+      // EmpCloud-sourced.
+      let presentDays = Number(attRecord?.present_days || 0);
+      let paidLeaveDays = Number(leaveResult?.paid_leave || 0);
+      let unpaidLeaveDays = Number(leaveResult?.unpaid_leave || 0);
+      const empcloudHasAttendance = Number(attRecord?.total_records || 0) > 0;
 
-      const empcloudHasData = Number(attRecord?.total_records || 0) > 0;
-      if (empcloudHasData) {
-        presentDays = Number(attRecord?.present_days || 0);
-        paidLeaveDays = Number(leaveResult?.paid_leave || 0);
-        unpaidLeaveDays = Number(leaveResult?.unpaid_leave || 0);
-      } else {
-        // Fallback: local summary cache (only used when EmpCloud has no
-        // attendance rows at all for this employee+period). Importing
-        // attendance via the payroll UI now also writes to EmpCloud
-        // (see attendance.service.importRecords), so this branch is the
-        // legacy / migration path for orgs that pre-date the bi-direction
-        // sync.
+      if (!empcloudHasAttendance) {
         const importedSummary = await this.db.findOne<any>("attendance_summaries", {
           empcloud_user_id: ecEmp.id,
           month: run.month,
           year: run.year,
         });
         if (importedSummary) {
+          // Local cache hit -- legacy Mark All Present row that pre-dates
+          // the bi-direction sync. Use it for THIS run AND project it
+          // onto EmpCloud so subsequent runs read from the canonical
+          // source.
           presentDays =
             Number(importedSummary.present_days || 0) +
             Number(importedSummary.half_days || 0) * 0.5;
           paidLeaveDays = Number(importedSummary.paid_leave || 0);
           unpaidLeaveDays = Number(importedSummary.unpaid_leave || 0);
         } else {
-          presentDays = 0;
-          paidLeaveDays = Number(leaveResult?.paid_leave || 0);
-          unpaidLeaveDays = Number(leaveResult?.unpaid_leave || 0);
+          // No data anywhere. Default to "fully present for the working
+          // month" so a first-month payroll for an org that hasn't
+          // recorded any attendance still produces payslips. Avoids the
+          // "Still zero employees in the payroll" failure mode that
+          // happens when EmpCloud is empty AND the payroll-side cache
+          // is empty (newly seeded org / first run).
+          presentDays = workingDaysInMonth;
         }
       }
 
@@ -462,12 +474,20 @@ export class PayrollService {
         (c: any) => c.type !== "deduction" && Number(c.monthlyAmount || 0) > 0,
       );
       if (!hasEarningComponent || grossEarnings <= 0) {
+        // Differentiate "no salary structure" from "no attendance" so HR
+        // can fix the right thing. The previous lumped "EMPTY_SALARY_STRUCTURE"
+        // message was misleading when the structure was fine but
+        // attendance was 0 (BUG-001/002 — Abhishek/Ananya cases where
+        // EmpCloud has zero attendance rows for the period).
+        const noAttendance = hasEarningComponent && presentDays === 0 && paidLeaveDays === 0;
         skipped.push({
           empcloudUserId: ecEmp.id,
-          code: "EMPTY_SALARY_STRUCTURE",
-          reason: !hasEarningComponent
-            ? "Salary structure has no active earning components"
-            : "Earning components pro-rated to 0 (no paid days?)",
+          code: noAttendance ? "NO_ATTENDANCE" : "EMPTY_SALARY_STRUCTURE",
+          reason: noAttendance
+            ? "No attendance recorded in EmpCloud for this period (0 present + 0 paid leave)"
+            : !hasEarningComponent
+              ? "Salary structure has no active earning components"
+              : "Earning components pro-rated to 0 (no paid days?)",
         });
         continue;
       }

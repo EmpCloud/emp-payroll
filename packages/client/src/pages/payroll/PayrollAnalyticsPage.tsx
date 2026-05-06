@@ -74,12 +74,27 @@ export function PayrollAnalyticsPage() {
   // Calculate stats
   const latest = runs[runs.length - 1];
   const prev = runs[runs.length - 2];
-  const grossChange =
+
+  // BUG-017 — Suppress month-over-month % when the employee count
+  // changed by more than 25%. A run that paid 1 employee last month and
+  // 14 this month produces "+1318% Gross" which is technically true but
+  // useless as a signal (it's hiring, not a cost spike). When the
+  // headcount delta is too large to compare apples-to-apples we render
+  // "—" with a tooltip explaining why instead.
+  const COUNT_DRIFT_THRESHOLD = 0.25;
+  const headcountUnstable =
     latest && prev
+      ? Math.abs(Number(latest.employee_count || 0) - Number(prev.employee_count || 0)) /
+          Math.max(1, Number(prev.employee_count || 0)) >
+        COUNT_DRIFT_THRESHOLD
+      : false;
+
+  const grossChange =
+    latest && prev && !headcountUnstable
       ? safePct(Number(latest.total_gross) - Number(prev.total_gross), Number(prev.total_gross))
       : null;
   const netChange =
-    latest && prev
+    latest && prev && !headcountUnstable
       ? safePct(Number(latest.total_net) - Number(prev.total_net), Number(prev.total_net))
       : null;
   const avgPerEmployee = latest
@@ -149,7 +164,11 @@ export function PayrollAnalyticsPage() {
                   ? "—"
                   : `${grossChange >= 0 ? "+" : ""}${grossChange.toFixed(1)}%`
               }
-              subtitle={`vs previous month · ${sourceLabel}`}
+              subtitle={
+                headcountUnstable
+                  ? "headcount changed >25% — comparison suppressed"
+                  : `vs previous month · ${sourceLabel}`
+              }
               icon={(grossChange ?? 0) >= 0 ? TrendingUp : TrendingDown}
             />
             <StatCard
@@ -157,7 +176,11 @@ export function PayrollAnalyticsPage() {
               value={
                 netChange === null ? "—" : `${netChange >= 0 ? "+" : ""}${netChange.toFixed(1)}%`
               }
-              subtitle={`vs previous month · ${sourceLabel}`}
+              subtitle={
+                headcountUnstable
+                  ? "headcount changed >25% — comparison suppressed"
+                  : `vs previous month · ${sourceLabel}`
+              }
               icon={(netChange ?? 0) >= 0 ? TrendingUp : TrendingDown}
             />
             <StatCard

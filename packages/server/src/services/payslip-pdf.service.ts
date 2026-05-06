@@ -275,9 +275,27 @@ export class PayslipPDFService {
     <div class="info-box">
       <h4>Employee Details</h4>
       <div class="info-row"><span class="label">Name</span><span class="value">${employee.first_name} ${employee.last_name}</span></div>
-      <div class="info-row"><span class="label">Employee ID</span><span class="value">${employee.employee_code}</span></div>
-      <div class="info-row"><span class="label">Department</span><span class="value">${employee.department}</span></div>
-      <div class="info-row"><span class="label">Designation</span><span class="value">${employee.designation}</span></div>
+      ${
+        // BUG-014 — Suppress info rows whose value is the en-dash
+        // placeholder (i.e. the underlying field is unset). Showing
+        // "Employee ID —" on a final payslip looked like a system
+        // glitch. Better to omit the row so the section reads cleanly
+        // and HR sees immediately which fields need backfilling on
+        // the employee profile.
+        employee.employee_code && employee.employee_code !== "—"
+          ? `<div class="info-row"><span class="label">Employee ID</span><span class="value">${employee.employee_code}</span></div>`
+          : ""
+      }
+      ${
+        employee.department && employee.department !== "—"
+          ? `<div class="info-row"><span class="label">Department</span><span class="value">${employee.department}</span></div>`
+          : ""
+      }
+      ${
+        employee.designation && employee.designation !== "—"
+          ? `<div class="info-row"><span class="label">Designation</span><span class="value">${employee.designation}</span></div>`
+          : ""
+      }
     </div>
     <div class="info-box">
       <h4>Bank Details</h4>
