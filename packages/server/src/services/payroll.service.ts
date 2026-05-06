@@ -267,8 +267,25 @@ export class PayrollService {
       // still generates a payslip; pro-ration via `paidDays` handles
       // that downstream once attendance reflects the partial period.
       const ecAny = ecEmp as any;
-      const doj = ecAny.date_of_joining ? String(ecAny.date_of_joining).slice(0, 10) : null;
-      const doe = ecAny.date_of_exit ? String(ecAny.date_of_exit).slice(0, 10) : null;
+      // Knex returns DATE columns as JS Date objects, not strings. We
+      // need an ISO YYYY-MM-DD slice for lexicographic comparison
+      // against monthStart / monthEnd. The previous `String(dateObj)`
+      // produced "Wed Jan 15 2025 ..." which sorts AFTER any
+      // "2026-XX-XX" string, so every employee was wrongly skipped as
+      // "joined after the pay period" and the run finished with 0
+      // payslips.
+      const isoDate = (v: unknown): string | null => {
+        if (!v) return null;
+        if (v instanceof Date) return v.toISOString().slice(0, 10);
+        const s = String(v);
+        // Already an ISO-ish string like "2025-01-15" or
+        // "2025-01-15T00:00:00.000Z" -- safe to slice the head.
+        if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+        const d = new Date(s);
+        return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+      };
+      const doj = isoDate(ecAny.date_of_joining);
+      const doe = isoDate(ecAny.date_of_exit);
       if (doj && doj > monthEnd) {
         continue; // joined after this run's pay period
       }
