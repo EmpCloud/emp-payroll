@@ -409,25 +409,44 @@ export class PayrollService {
         }
       }
 
-      // Professional Tax
-      const pt = computeProfessionalTax({
-        employeeId: String(ecEmp.id),
-        month: run.month,
-        year: run.year,
-        state: orgSettings?.state || "KA",
-        grossSalary: grossEarnings,
-      });
-      if (pt.taxAmount > 0) {
-        deductions.push({ code: "PT", name: "Professional Tax", amount: pt.taxAmount });
-        totalDed += pt.taxAmount;
-      }
-
-      // TDS (income tax)
+      // Tax info is needed for both PT (to read deductPT + state override)
+      // and TDS (to read regime + deductTDS + PAN), so parse it once up
+      // front instead of separately in each block.
       const taxInfo = profile?.tax_info
         ? typeof profile.tax_info === "string"
           ? JSON.parse(profile.tax_info)
           : profile.tax_info
         : {};
+
+      // Professional Tax. Two per-employee escape hatches:
+      //   - tax_info.deductPT === false: skip entirely (e.g. employee
+      //     in a no-PT state like Delhi/Haryana even though the org's
+      //     primary state has PT)
+      //   - tax_info.state: override the org state for slab lookup so
+      //     a Bangalore-HQ company with a Mumbai-resident employee
+      //     applies Maharashtra slabs to that one person.
+      if (taxInfo?.deductPT !== false) {
+        const ptState =
+          (typeof taxInfo?.state === "string" && taxInfo.state.trim()) ||
+          orgSettings?.state ||
+          "KA";
+        const pt = computeProfessionalTax({
+          employeeId: String(ecEmp.id),
+          month: run.month,
+          year: run.year,
+          state: ptState,
+          grossSalary: grossEarnings,
+        });
+        if (pt.taxAmount > 0) {
+          deductions.push({ code: "PT", name: "Professional Tax", amount: pt.taxAmount });
+          totalDed += pt.taxAmount;
+        }
+      }
+
+      // TDS (income tax). tax_info.deductTDS === false skips the
+      // calculation entirely -- some employees are below taxable
+      // threshold or have a Lower Deduction Certificate from the IT
+      // dept and HR doesn't want monthly TDS withheld.
       const fyStartMonth = 4;
       const currentMonth = run.month;
       const monthsRemaining =
@@ -435,28 +454,30 @@ export class PayrollService {
           ? 12 - (currentMonth - fyStartMonth)
           : fyStartMonth - currentMonth;
 
-      const taxResult = computeIncomeTax({
-        employeeId: String(ecEmp.id),
-        financialYear:
-          run.month >= 4 ? `${run.year}-${run.year + 1}` : `${run.year - 1}-${run.year}`,
-        regime: taxInfo?.regime === "old" ? TaxRegime.OLD : TaxRegime.NEW,
-        annualGross: Number(salary.gross_salary),
-        basicAnnual: basicMonthly * 12,
-        hraAnnual: (components.find((c: any) => c.code === "HRA")?.monthlyAmount || 0) * 12,
-        rentPaidAnnual: 0,
-        isMetroCity: false,
-        declarations: [],
-        employeePfAnnual: basicMonthly * 0.12 * 12,
-        monthsWorked: monthsRemaining,
-        taxAlreadyPaid: 0,
-        // #1657 — Section 206AA: when PAN is missing, the tax engine
-        // applies a flat 20% rate. Empty / null pan triggers that branch.
-        panNumber: typeof taxInfo?.pan === "string" ? taxInfo.pan : null,
-      });
+      if (taxInfo?.deductTDS !== false) {
+        const taxResult = computeIncomeTax({
+          employeeId: String(ecEmp.id),
+          financialYear:
+            run.month >= 4 ? `${run.year}-${run.year + 1}` : `${run.year - 1}-${run.year}`,
+          regime: taxInfo?.regime === "old" ? TaxRegime.OLD : TaxRegime.NEW,
+          annualGross: Number(salary.gross_salary),
+          basicAnnual: basicMonthly * 12,
+          hraAnnual: (components.find((c: any) => c.code === "HRA")?.monthlyAmount || 0) * 12,
+          rentPaidAnnual: 0,
+          isMetroCity: false,
+          declarations: [],
+          employeePfAnnual: basicMonthly * 0.12 * 12,
+          monthsWorked: monthsRemaining,
+          taxAlreadyPaid: 0,
+          // #1657 — Section 206AA: when PAN is missing, the tax engine
+          // applies a flat 20% rate. Empty / null pan triggers that branch.
+          panNumber: typeof taxInfo?.pan === "string" ? taxInfo.pan : null,
+        });
 
-      if (taxResult.monthlyTds > 0) {
-        deductions.push({ code: "TDS", name: "Income Tax (TDS)", amount: taxResult.monthlyTds });
-        totalDed += taxResult.monthlyTds;
+        if (taxResult.monthlyTds > 0) {
+          deductions.push({ code: "TDS", name: "Income Tax (TDS)", amount: taxResult.monthlyTds });
+          totalDed += taxResult.monthlyTds;
+        }
       }
 
       // Loan EMI auto-deduction — find active loans for this employee
