@@ -1250,7 +1250,18 @@ function SalaryAssignForm({
     percentageOf: c.percentage_of || undefined,
   }));
 
-  let resolved: { code: string; name: string; monthlyAmount: number }[] = [];
+  // The resolver returns each component with its `type` ("earning" /
+  // "deduction" / "reimbursement"). Older code lumped all rows together
+  // under "Monthly Breakdown" AND summed everything into Monthly Gross,
+  // so a structure with WELFARE / CANTEEN deductions showed those as
+  // earnings and inflated gross by their value. Track the type and
+  // bucket properly below.
+  let resolved: {
+    code: string;
+    name: string;
+    type: "earning" | "deduction" | "reimbursement";
+    monthlyAmount: number;
+  }[] = [];
   let resolveError: string | null = null;
   if (ctc > 0 && definitions.length) {
     try {
@@ -1260,8 +1271,15 @@ function SalaryAssignForm({
         err instanceof SalaryResolverError ? err.message : "Could not compute breakdown.";
     }
   }
-  const monthlyBasic = resolved.find((c) => c.code === "BASIC")?.monthlyAmount || 0;
-  const monthlyGross = resolved.reduce((s, c) => s + c.monthlyAmount, 0);
+  const earningRows = resolved.filter((c) => c.type === "earning");
+  const deductionRows = resolved.filter((c) => c.type === "deduction");
+  const reimbursementRows = resolved.filter((c) => c.type === "reimbursement");
+  const monthlyBasic = earningRows.find((c) => c.code === "BASIC")?.monthlyAmount || 0;
+  // Monthly Gross is EARNINGS only -- deductions reduce net, reimbursements
+  // are paid on top but not part of taxable gross.
+  const monthlyGross = earningRows.reduce((s, c) => s + c.monthlyAmount, 0);
+  const monthlyStructureDeductions = deductionRows.reduce((s, c) => s + c.monthlyAmount, 0);
+  const monthlyReimbursements = reimbursementRows.reduce((s, c) => s + c.monthlyAmount, 0);
   // Honour the employee's actual PF config rather than hard-coding 12% for
   // everyone:
   //   - PF Opted Out -> EPF deduction is zero
@@ -1317,7 +1335,8 @@ function SalaryAssignForm({
             <p className="text-sm text-gray-400">Select a structure to see the breakdown.</p>
           ) : (
             <div className="space-y-2">
-              {resolved.map((c) => (
+              {/* Earnings */}
+              {earningRows.map((c) => (
                 <div key={c.code} className="flex justify-between text-sm">
                   <span className="text-gray-500">{c.name}</span>
                   <span className="font-medium text-gray-900">
@@ -1329,6 +1348,43 @@ function SalaryAssignForm({
                 <span>Monthly Gross</span>
                 <span>{formatCurrency(monthlyGross)}</span>
               </div>
+
+              {/* Reimbursements -- on top of gross, not taxable wages */}
+              {reimbursementRows.length > 0 && (
+                <>
+                  <div className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                    Reimbursements
+                  </div>
+                  {reimbursementRows.map((c) => (
+                    <div key={c.code} className="flex justify-between text-sm">
+                      <span className="text-gray-500">{c.name}</span>
+                      <span className="font-medium text-emerald-700">
+                        +{formatCurrency(c.monthlyAmount)}
+                      </span>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Structure-defined deductions (Welfare Fund, Canteen, etc.).
+                  Statutory deductions (EPF, ESI, PT, TDS) are computed at
+                  payroll-run time and shown separately below. */}
+              {deductionRows.length > 0 && (
+                <>
+                  <div className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                    Deductions (from structure)
+                  </div>
+                  {deductionRows.map((c) => (
+                    <div key={c.code} className="flex justify-between text-sm">
+                      <span className="text-gray-500">{c.name}</span>
+                      <span className="font-medium text-red-600">
+                        -{formatCurrency(c.monthlyAmount)}
+                      </span>
+                    </div>
+                  ))}
+                </>
+              )}
+
               <div className="flex justify-between text-sm text-red-600">
                 <span>
                   EPF Deduction{pfOptedOut ? " (opted out)" : pfRate !== 12 ? ` (${pfRate}%)` : ""}
@@ -1337,7 +1393,15 @@ function SalaryAssignForm({
               </div>
               <div className="text-brand-700 flex justify-between border-t border-gray-200 pt-2 text-sm font-bold">
                 <span>Approx Net Pay</span>
-                <span>{formatCurrency(monthlyGross - monthlyEPF - 200)}</span>
+                <span>
+                  {formatCurrency(
+                    monthlyGross +
+                      monthlyReimbursements -
+                      monthlyStructureDeductions -
+                      monthlyEPF -
+                      200,
+                  )}
+                </span>
               </div>
             </div>
           )}
