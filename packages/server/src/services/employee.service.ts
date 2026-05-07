@@ -80,6 +80,25 @@ async function mergeUserWithProfile(ecUser: EmpCloudUser, payrollDb: any): Promi
   });
   const ctc = activeSalary?.gross_salary != null ? Number(activeSalary.gross_salary) : null;
   const salaryStructureName = activeSalary?.structure_name || null;
+
+  // Look up the location name from EmpCloud's organization_locations so
+  // the attendance dashboard / payroll list pages can show + filter by
+  // location without an extra API round-trip per employee. Best-effort:
+  // older EmpCloud schemas without the table are tolerated by treating
+  // the lookup as null. ecUser.location_id is the FK.
+  let locationName: string | null = null;
+  if (ecUser.location_id) {
+    try {
+      const ecDb = getEmpCloudDB();
+      const loc = await ecDb("organization_locations")
+        .where({ id: ecUser.location_id })
+        .select("name")
+        .first();
+      locationName = loc?.name || null;
+    } catch {
+      locationName = null;
+    }
+  }
   // Address can legitimately be null (no address on file) — preserve that
   // instead of normalising to {}.
   const address =
@@ -122,6 +141,9 @@ async function mergeUserWithProfile(ecUser: EmpCloudUser, payrollDb: any): Promi
     departmentId: ecUser.department_id,
     department_id: ecUser.department_id,
     locationId: ecUser.location_id,
+    location_id: ecUser.location_id,
+    location: locationName,
+    location_name: locationName,
     reportingManagerId: ecUser.reporting_manager_id,
     reporting_manager_id: ecUser.reporting_manager_id,
     employmentType: ecUser.employment_type,
