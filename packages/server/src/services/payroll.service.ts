@@ -405,14 +405,19 @@ export class PayrollService {
       //   2. Local `attendance_summaries` cache (legacy fallback for
       //      Mark All Present clicks done BEFORE the bi-direction sync
       //      landed -- that data only lives locally).
-      //   3. Default to "all working days present" for organisations
-      //      that haven't recorded any attendance anywhere yet (so a
-      //      first-month payroll run still produces payslips instead
-      //      of skipping every employee with NO_ATTENDANCE).
-      //
-      // The legacy local fallback projects forward to EmpCloud as a
-      // best-effort one-shot backfill so the next run is purely
-      // EmpCloud-sourced.
+      //   3. presentDays = 0  -> the empty-structure / zero-earnings
+      //      guard further down will skip the employee with reason
+      //      NO_ATTENDANCE. We previously defaulted to workingDaysInMonth
+      //      ("fully present") when both sources were empty, which made
+      //      a legitimately-zero-attendance employee (Sachin in HR's
+      //      report: 21 working days, 0 present on the dashboard)
+      //      get paid for 21 days regardless. The dashboard read the
+      //      same EmpCloud table the engine did, so the only "data
+      //      anywhere" source it could have come from is the local
+      //      cache fallback -- and if that's also empty, the right
+      //      answer is "skip with NO_ATTENDANCE" so HR sees the
+      //      employee on the orange skipped banner and can mark them
+      //      via the Attendance Grid before approving.
       let presentDays = Number(attRecord?.present_days || 0);
       let paidLeaveDays = Number(leaveResult?.paid_leave || 0);
       let unpaidLeaveDays = Number(leaveResult?.unpaid_leave || 0);
@@ -434,15 +439,11 @@ export class PayrollService {
             Number(importedSummary.half_days || 0) * 0.5;
           paidLeaveDays = Number(importedSummary.paid_leave || 0);
           unpaidLeaveDays = Number(importedSummary.unpaid_leave || 0);
-        } else {
-          // No data anywhere. Default to "fully present for the working
-          // month" so a first-month payroll for an org that hasn't
-          // recorded any attendance still produces payslips. Avoids the
-          // "Still zero employees in the payroll" failure mode that
-          // happens when EmpCloud is empty AND the payroll-side cache
-          // is empty (newly seeded org / first run).
-          presentDays = workingDaysInMonth;
         }
+        // else: presentDays stays 0 (initialised above). The guard at the
+        // empty-structure / zero-earnings check below pushes the row to
+        // skipped[] with code NO_ATTENDANCE so HR sees it on the run-
+        // detail banner. No payslip is generated.
       }
 
       const totalDays = workingDaysInMonth;
