@@ -315,74 +315,111 @@ export function SettingsPage() {
           </CardTitle>
           <p className="text-sm text-gray-500">
             Customise PF / ESI defaults for your organization. Leave any field on{" "}
-            <em>Use default</em> / blank to inherit the India statutory value.
+            <em>Use default</em> / blank to inherit the India statutory value. The three PF knobs
+            interact: <strong>Rate</strong> sets the percentage, <strong>Wage Basis</strong> decides
+            what amount the percentage is applied to, and <strong>Max Cap</strong> caps the
+            resulting rupee amount per month.
           </p>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <SelectField
-              id="pf_wage_mode"
-              label="PF Wage Calculation"
-              defaultValue={
-                settings?.pfApplyFullBasic === true
-                  ? "actual"
-                  : settings?.pfApplyFullBasic === false
-                    ? "ceiling"
+            <div>
+              <SelectField
+                id="pf_wage_mode"
+                label="PF Wage Basis (what to apply % to)"
+                defaultValue={
+                  settings?.pfApplyFullBasic === true
+                    ? "actual"
+                    : settings?.pfApplyFullBasic === false
+                      ? "ceiling"
+                      : ""
+                }
+                options={[
+                  { value: "", label: "Use default (₹15,000 ceiling)" },
+                  { value: "ceiling", label: "Restrict to ₹15,000 ceiling" },
+                  { value: "actual", label: "Apply to actual Basic + DA (no ceiling)" },
+                ]}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Statutory: 12% × <em>min(Basic+DA, ₹15,000)</em> = max ₹1,800. Pick "actual" if your
+                org pays PF on the FULL basic above the ceiling (some IT / unionised employers do
+                this).
+              </p>
+            </div>
+            <div>
+              <Input
+                id="pf_default_rate"
+                label="PF Rate (%)"
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                placeholder="12 — blank = use 12% statutory"
+                defaultValue={
+                  settings?.pfDefaultEmployeeRate != null
+                    ? String(settings.pfDefaultEmployeeRate)
                     : ""
-              }
-              options={[
-                { value: "", label: "Use default (₹15,000 ceiling)" },
-                { value: "ceiling", label: "Restrict to ₹15,000 ceiling" },
-                { value: "actual", label: "Apply to actual Basic + DA (no ceiling)" },
-              ]}
-            />
-            <Input
-              id="pf_max_contribution"
-              label="Max Employee PF / month (₹)"
-              type="number"
-              step="1"
-              min="0"
-              placeholder="e.g. 1800 — blank = no cap"
-              defaultValue={
-                settings?.pfMaxEmployeeContribution != null
-                  ? String(settings.pfMaxEmployeeContribution)
-                  : ""
-              }
-            />
-            <Input
-              id="pf_default_rate"
-              label="Default PF Rate (%)"
-              type="number"
-              step="0.01"
-              min="0"
-              max="100"
-              placeholder="e.g. 12 — blank = use 12% default"
-              defaultValue={
-                settings?.pfDefaultEmployeeRate != null
-                  ? String(settings.pfDefaultEmployeeRate)
-                  : ""
-              }
-            />
-            <Input
-              id="esi_ceiling"
-              label="ESI Wage Ceiling (₹/month)"
-              type="number"
-              step="1"
-              min="0"
-              placeholder="e.g. 21000 — blank = use ₹21,000 default"
-              defaultValue={settings?.esiWageCeiling != null ? String(settings.esiWageCeiling) : ""}
-            />
-            <SelectField
-              id="rounding_policy"
-              label="Payslip Rounding"
-              defaultValue={settings?.roundingPolicy || ""}
-              options={[
-                { value: "", label: "Use default (no rounding)" },
-                { value: "nearest_1", label: "Round to nearest ₹1" },
-                { value: "nearest_10", label: "Round to nearest ₹10" },
-                { value: "nearest_100", label: "Round to nearest ₹100" },
-              ]}
-            />
+                }
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Org-wide default percentage. An individual employee's profile can override this
+                further (e.g. someone enrolled in VPF at a higher rate).
+              </p>
+            </div>
+            <div>
+              <Input
+                id="pf_max_contribution"
+                label="Max Cap on Employee PF (₹ / month)"
+                type="number"
+                step="1"
+                min="0"
+                placeholder="1800 — blank = no extra cap"
+                defaultValue={
+                  settings?.pfMaxEmployeeContribution != null
+                    ? String(settings.pfMaxEmployeeContribution)
+                    : ""
+                }
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Hard rupee ceiling on the deducted amount AFTER the rate × basis math runs. Set to
+                ₹1,800 to lock employee PF at the statutory ceiling even if "Wage Basis" is set to
+                "actual".
+              </p>
+            </div>
+            <div>
+              <Input
+                id="esi_ceiling"
+                label="ESI Wage Ceiling (₹/month)"
+                type="number"
+                step="1"
+                min="0"
+                placeholder="21000 — blank = use ₹21,000 default"
+                defaultValue={
+                  settings?.esiWageCeiling != null ? String(settings.esiWageCeiling) : ""
+                }
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Employees with monthly gross above this ceiling are NOT eligible for ESI. Statutory:
+                ₹21,000.
+              </p>
+            </div>
+            <div>
+              <SelectField
+                id="rounding_policy"
+                label="Payslip Rounding"
+                defaultValue={settings?.roundingPolicy || ""}
+                options={[
+                  { value: "", label: "Use default (no rounding)" },
+                  { value: "nearest_1", label: "Round to nearest ₹1" },
+                  { value: "nearest_10", label: "Round to nearest ₹10" },
+                  { value: "nearest_100", label: "Round to nearest ₹100" },
+                ]}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Applied to gross + total deductions on each payslip; per-component line items stay
+                at exact paise precision so the math still adds up.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

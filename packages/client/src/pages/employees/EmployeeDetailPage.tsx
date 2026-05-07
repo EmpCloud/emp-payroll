@@ -14,7 +14,9 @@ import {
   useEmployeeSalary,
   useUpdateEmployee,
   useSalaryStructures,
+  useOrgSettings,
 } from "@/api/hooks";
+import { getUser } from "@/api/auth";
 import { apiGet, apiPost, apiDelete, apiPut } from "@/api/client";
 import { useDepartments } from "@/api/hooks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -1234,6 +1236,15 @@ function SalaryAssignForm({
   const [structureId, setStructureId] = useState(structures[0]?.id || "");
   const [ctc, setCTC] = useState(currentCTC || 0);
 
+  // Pull the org's PF/ESI overrides so the EPF preview matches what the
+  // payroll engine actually computes. The previous version hardcoded the
+  // ₹15,000 wage ceiling in the preview, so any HR who flipped
+  // "PF Wage Calculation = Apply to actual" or set a custom max-cap saw a
+  // PREVIEW that disagreed with the resulting payslip.
+  const user = getUser();
+  const { data: orgSettingsRes } = useOrgSettings(user?.orgId ? String(user.orgId) : "");
+  const orgSettings = orgSettingsRes?.data;
+
   // Pull the selected structure's components so the preview reflects what the
   // server will actually compute (including Balance, percentage chains, etc.).
   const { data: compsRes } = useQuery({
@@ -1280,17 +1291,34 @@ function SalaryAssignForm({
   const monthlyGross = earningRows.reduce((s, c) => s + c.monthlyAmount, 0);
   const monthlyStructureDeductions = deductionRows.reduce((s, c) => s + c.monthlyAmount, 0);
   const monthlyReimbursements = reimbursementRows.reduce((s, c) => s + c.monthlyAmount, 0);
-  // Honour the employee's actual PF config rather than hard-coding 12% for
-  // everyone:
-  //   - PF Opted Out -> EPF deduction is zero
-  //   - Custom contribution rate (default 12%) drives the percentage
-  // Wage ceiling stays at the statutory ₹15,000 because that's what the
-  // server-side calculator (india-statutory.service.ts) applies; voluntary
-  // PF on the full basic is a separate component handled at payroll-run
-  // time, not in this preview.
+  // EPF preview math -- mirrors the server's india-statutory.service so
+  // the preview never lies about what payroll will actually deduct.
+  // Resolution order (the preview honours all of them):
+  //   1. employee opted out  -> EPF = 0
+  //   2. employee contributionRate -> overrides default (default 12%)
+  //   3. org pfDefaultEmployeeRate -> overrides 12% across the org
+  //   4. org pfApplyFullBasic == true  -> use the FULL basic, no ceiling
+  //      org pfApplyFullBasic == false / unset -> apply the ₹15,000 ceiling
+  //   5. org pfMaxEmployeeContribution -> hard rupee cap on the result
+  //      (e.g. ₹1,800 = the conservative "12% of ₹15K" cap most orgs use)
   const pfOptedOut = pfDetails?.isOptedOut === true;
-  const pfRate = Number(pfDetails?.contributionRate ?? 12) || 12;
-  const monthlyEPF = pfOptedOut ? 0 : Math.round((Math.min(monthlyBasic, 15000) * pfRate) / 100);
+  const orgDefaultRate = orgSettings?.pfDefaultEmployeeRate;
+  const employeeRate = pfDetails?.contributionRate;
+  const pfRate = Number(employeeRate ?? orgDefaultRate ?? 12) || 12;
+  const applyFullBasic = orgSettings?.pfApplyFullBasic === true;
+  const maxCap =
+    orgSettings?.pfMaxEmployeeContribution != null
+      ? Number(orgSettings.pfMaxEmployeeContribution)
+      : null;
+
+  let monthlyEPF = 0;
+  if (!pfOptedOut) {
+    const pfBase = applyFullBasic ? monthlyBasic : Math.min(monthlyBasic, 15000);
+    monthlyEPF = Math.round((pfBase * pfRate) / 100);
+    if (maxCap != null && Number.isFinite(maxCap)) {
+      monthlyEPF = Math.min(monthlyEPF, maxCap);
+    }
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1387,7 +1415,29 @@ function SalaryAssignForm({
 
               <div className="flex justify-between text-sm text-red-600">
                 <span>
-                  EPF Deduction{pfOptedOut ? " (opted out)" : pfRate !== 12 ? ` (${pfRate}%)` : ""}
+                  EPF Deduction
+                  {pfOptedOut
+                    ? " (opted out)"
+                    : (() => {
+                        // Spell out which org override is in effect so HR
+                        // can verify the preview matches the rule they set
+                        // on Settings > Statutory Overrides. Order: cap >
+                        // wage-mode > rate.
+                        const bits: string[] = [];
+                        if (pfRate !== 12) bits.push(`${pfRate}%`);
+                        bits.push(applyFullBasic ? "on actual Basic" : "₹15K ceiling");
+                        if (
+                          maxCap != null &&
+                          Math.round(
+                            ((applyFullBasic ? monthlyBasic : Math.min(monthlyBasic, 15000)) *
+                              pfRate) /
+                              100,
+                          ) > maxCap
+                        ) {
+                          bits.push(`capped at ₹${maxCap}/mo`);
+                        }
+                        return bits.length > 0 ? ` (${bits.join(", ")})` : "";
+                      })()}
                 </span>
                 <span>{monthlyEPF > 0 ? `-${formatCurrency(monthlyEPF)}` : formatCurrency(0)}</span>
               </div>
