@@ -46,7 +46,12 @@ const columns = [
     key: "period",
     header: "Period",
     render: (row: any) => (
-      <span className="font-medium text-gray-900">{formatMonth(row.month, row.year)}</span>
+      <span className="font-medium text-gray-900">
+        {/* #334 — Fall back to the server-stamped `name` ("May 2026 Payroll")
+            when month/year are missing, instead of rendering "Invalid Date"
+            from the formatMonth call. */}
+        {row.month && row.year ? formatMonth(row.month, row.year) : row.name || "—"}
+      </span>
     ),
   },
   {
@@ -176,7 +181,18 @@ export function PayrollRunsPage() {
         <DataTable
           columns={columns}
           data={runs}
-          onRowClick={(row) => navigate(`/payroll/runs/${row.id}`)}
+          onRowClick={(row) => {
+            // #343 — Guard against missing id (avoids navigating to
+            // "/payroll/runs/undefined" which lands on the detail page
+            // and 404s server-side with a misleading "page not found"
+            // message). Surface a real toast so HR knows the row was
+            // somehow malformed instead of getting a confusing 404.
+            if (!row?.id) {
+              toast.error("This payroll run is missing an id — please refresh the list.");
+              return;
+            }
+            navigate(`/payroll/runs/${row.id}`);
+          }}
           emptyMessage="No payroll runs yet. Click 'New Payroll Run' to get started."
         />
       )}

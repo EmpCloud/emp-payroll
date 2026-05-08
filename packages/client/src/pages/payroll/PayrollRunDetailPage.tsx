@@ -303,7 +303,12 @@ export function PayrollRunDetailPage() {
     <div className="space-y-6">
       <PageHeader
         title={
-          run.month && run.year ? `${formatMonth(run.month, run.year)} Payroll Run` : "Payroll Run"
+          run.month && run.year
+            ? `${formatMonth(run.month, run.year)} Payroll Run`
+            : // #334 — Fall back to the human-readable `name` the server
+              // stamps on every run ("May 2026 Payroll") rather than a
+              // short id slice that looks like a meaningless code.
+              run.name || "Payroll Run"
         }
         // #306 — surface the human-readable period (e.g. "January 2026")
         // alongside the status; the auto-generated `code` is meaningless to
@@ -311,7 +316,10 @@ export function PayrollRunDetailPage() {
         description={
           run.month && run.year
             ? `${formatMonth(run.month, run.year)} · ${run.status?.toUpperCase() || ""}`
-            : `Run ${run.code || run.id?.slice(0, 8) || ""} · ${run.status?.toUpperCase() || ""}`
+            : // #334 — Same fallback chain as the title: prefer `name`, never
+              // fall through to the short id-slice (which reads like a
+              // database hash, not a payroll period).
+              `${run.name || "Payroll run"} · ${run.status?.toUpperCase() || ""}`
         }
         actions={
           <div className="flex items-center gap-3">
@@ -755,7 +763,11 @@ export function PayrollRunDetailPage() {
             <p className="font-semibold">⚠ This action cannot be undone.</p>
             <p className="mt-2">
               Deleting{" "}
-              <strong>{run.month && run.year ? formatMonth(run.month, run.year) : run.code}</strong>{" "}
+              <strong>
+                {run.month && run.year
+                  ? formatMonth(run.month, run.year)
+                  : run.name || "this payroll run"}
+              </strong>{" "}
               will permanently remove:
             </p>
             <ul className="mt-1 list-inside list-disc space-y-0.5">

@@ -1,4 +1,5 @@
 import { getDB } from "../db/adapters";
+import { findUserById } from "../db/empcloud";
 import { AppError } from "../api/middleware/error.middleware";
 import { computeIncomeTax } from "./tax/india-tax.service";
 import { TaxRegime } from "@emp-payroll/shared";
@@ -230,7 +231,42 @@ export class TaxDeclarationService {
     // Resolve employee: callers may pass either the payroll employees.id (UUID)
     // or the EmpCloud user id. The tax_declarations table stores both — the FK
     // employee_id must be a valid employees.id UUID, so we resolve it here.
-    const { empcloudUserId, employeeRowId } = await this.resolveEmployeeIds(employeeId);
+    let { empcloudUserId, employeeRowId } = await this.resolveEmployeeIds(employeeId);
+
+    // #333 — When a user authenticated via the password (non-SSO) flow lands
+    // here without a payroll profile, declaration submit blew up with the
+    // "EMPLOYEE_NOT_IN_PAYROLL" 400. Auto-provision a minimal
+    // employee_payroll_profiles row keyed on empcloud_user_id so the
+    // self-service flow doesn't dead-end on profile-creation. The profile
+    // carries no PII -- it's just enough of a row to satisfy the
+    // tax_declarations.employee_id NOT NULL column. (Same pattern as the
+    // SSO ensurePayrollProfile() in auth.service.)
+    if (!employeeRowId) {
+      const numeric = Number(employeeId);
+      if (Number.isFinite(numeric) && numeric > 0) {
+        try {
+          const ecUser = await findUserById(numeric);
+          if (ecUser) {
+            const newProfile: any = await this.db.create("employee_payroll_profiles", {
+              empcloud_user_id: ecUser.id,
+              empcloud_org_id: ecUser.organization_id,
+              employee_code: ecUser.emp_code,
+              bank_details: JSON.stringify({}),
+              tax_info: JSON.stringify({ pan: "", regime: "new" }),
+              pf_details: JSON.stringify({}),
+              esi_details: JSON.stringify({}),
+              is_active: true,
+            });
+            empcloudUserId = numeric;
+            employeeRowId = newProfile.id;
+          }
+        } catch {
+          // fall through to the original "EMPLOYEE_NOT_IN_PAYROLL" 400 if
+          // auto-provisioning fails (e.g. race with the SSO flow creating
+          // the same row, EmpCloud user not found, etc.).
+        }
+      }
+    }
 
     // #137 — When a user has logged in via SSO but isn't yet onboarded in the
     // payroll `employees` table, employeeRowId is null. The FK is NOT NULL, so
@@ -300,14 +336,32 @@ export class TaxDeclarationService {
       if (byEmpcloud) {
         return { empcloudUserId: numeric, employeeRowId: byEmpcloud.id };
       }
-      const profile = await this.db
+      // #333 — Profile lookup must tolerate both `is_active: 1` and the
+      // legacy `is_active: true` storage shape that older MySQL deployments
+      // returned (boolean comparison can fail when the column is
+      // tinyint(1) but a row was inserted by `is_active: true` from knex
+      // on PostgreSQL/SQLite). Try the strict filter first, then fall back
+      // to "any active-or-not" so a freshly-onboarded SSO user can still
+      // submit declarations the moment they log in -- previously the
+      // strict filter returned null when the row was active=1 but the
+      // findOne adapter's WHERE clause coerced the comparison oddly,
+      // surfacing as "EMPLOYEE_NOT_IN_PAYROLL".
+      const profileActive = await this.db
         .findOne<any>("employee_payroll_profiles", {
           empcloud_user_id: numeric,
           is_active: 1,
         })
         .catch(() => null);
-      if (profile) {
-        return { empcloudUserId: numeric, employeeRowId: profile.id };
+      if (profileActive) {
+        return { empcloudUserId: numeric, employeeRowId: profileActive.id };
+      }
+      const profileAny = await this.db
+        .findOne<any>("employee_payroll_profiles", {
+          empcloud_user_id: numeric,
+        })
+        .catch(() => null);
+      if (profileAny) {
+        return { empcloudUserId: numeric, employeeRowId: profileAny.id };
       }
       return { empcloudUserId: numeric, employeeRowId: null };
     }

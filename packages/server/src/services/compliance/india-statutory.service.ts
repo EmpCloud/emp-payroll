@@ -32,6 +32,13 @@ export interface OrgStatutoryOverrides {
   pfDefaultEmployeeRate?: number | null;
   esiWageCeiling?: number | null;
   roundingPolicy?: "none" | "nearest_1" | "nearest_10" | "nearest_100" | string | null;
+  // Migration 032 — when true, the offer-letter CTC already includes the
+  // employer's PF / ESI / EDLI / admin contributions, so payroll reports
+  // total_employer_cost = gross_salary instead of gross + employer cost
+  // on top. Doesn't change the math the engine returns -- the employer
+  // contribution numbers are still accurate per row -- it just changes
+  // how the payroll-run roll-up frames "Total Cost to Company".
+  employerPfInCtc?: boolean | null;
 }
 
 /**

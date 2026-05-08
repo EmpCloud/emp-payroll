@@ -212,15 +212,24 @@ export function MyProfilePage() {
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault();
-            setBankReqLoading(true);
             const fd = new FormData(e.currentTarget);
+            // #354 — IFSC: 11 chars, 4 letters + "0" + 6 alphanumeric, all caps.
+            const ifscRaw = (fd.get("ifscCode") as string) || "";
+            const ifscCode = ifscRaw.toUpperCase().trim();
+            if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode)) {
+              toast.error(
+                "IFSC must be 11 characters: 4 letters + '0' + 6 letters/digits (e.g. HDFC0001234).",
+              );
+              return;
+            }
+            setBankReqLoading(true);
             try {
               await apiPost("/self-service/bank-update-request", {
                 currentDetails: bankDetails,
                 requestedDetails: {
                   bankName: fd.get("bankName") as string,
                   accountNumber: fd.get("accountNumber") as string,
-                  ifscCode: fd.get("ifscCode") as string,
+                  ifscCode,
                   accountType: fd.get("accountType") as string,
                 },
                 reason: fd.get("reason") as string,
@@ -258,6 +267,15 @@ export function MyProfilePage() {
             name="ifscCode"
             label="New IFSC Code"
             placeholder="e.g. HDFC0001234"
+            // #354 — Enforce IFSC format on the input itself: 11 chars,
+            // 4 letters + "0" + 6 letters/digits, all caps.
+            pattern="^[A-Z]{4}0[A-Z0-9]{6}$"
+            maxLength={11}
+            minLength={11}
+            title="IFSC must be 11 characters: 4 letters + '0' + 6 letters/digits (e.g. HDFC0001234)"
+            onChange={(e) => {
+              e.currentTarget.value = e.currentTarget.value.toUpperCase();
+            }}
             required
           />
           <SelectField

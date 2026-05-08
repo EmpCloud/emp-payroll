@@ -260,11 +260,21 @@ export class ReimbursementService {
       amount = amountCheck.data;
     }
 
+    // #366/#342 — `approved_by` is varchar(36). Earlier callers passed
+    // `String(req.user!.empcloudUserId)` which is fine, but defensively
+    // truncate just in case some legacy auth flow injects a longer string,
+    // and coerce amount to a Number (claim.amount comes back from MySQL
+    // DECIMAL as a string and writing the original string back into the
+    // column has triggered "Out of range" warnings on some MariaDB builds).
+    const approvedBy = approverId ? String(approverId).slice(0, 36) : null;
+    const finalAmount =
+      amount === undefined || amount === null ? Number(claim.amount) : Number(amount);
+
     return this.db.update("reimbursements", id, {
       status: "approved",
-      approved_by: approverId,
+      approved_by: approvedBy,
       approved_at: new Date(),
-      amount: amount || claim.amount,
+      amount: Number.isFinite(finalAmount) ? finalAmount : 0,
     });
   }
 
@@ -274,9 +284,10 @@ export class ReimbursementService {
     if (claim.status !== "pending")
       throw new AppError(400, "INVALID_STATUS", "Only pending claims can be rejected");
 
+    const approvedBy = approverId ? String(approverId).slice(0, 36) : null;
     return this.db.update("reimbursements", id, {
       status: "rejected",
-      approved_by: approverId,
+      approved_by: approvedBy,
       approved_at: new Date(),
     });
   }

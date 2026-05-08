@@ -97,9 +97,17 @@ export function EarnedWagePage() {
       });
       toast.success("Advance request submitted");
       setShowRequest(false);
-      qc.invalidateQueries({ queryKey: ["ewa-requests"] });
-      qc.invalidateQueries({ queryKey: ["ewa-dashboard"] });
-      qc.invalidateQueries({ queryKey: ["ewa-available"] });
+      // #340 — After submitting an advance request, refetch the requests list,
+      // dashboard stats, and available balance, then auto-scope the table to
+      // pending so the user sees their fresh request immediately on the page
+      // (previously the request was created but stayed invisible until the
+      // user manually clicked "Pending" or hard-refreshed).
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["ewa-requests"] }),
+        qc.invalidateQueries({ queryKey: ["ewa-dashboard"] }),
+        qc.invalidateQueries({ queryKey: ["ewa-available"] }),
+      ]);
+      filterAndScroll("pending");
     } catch (err: any) {
       toast.error(err.response?.data?.error?.message || "Failed to submit request");
     } finally {
