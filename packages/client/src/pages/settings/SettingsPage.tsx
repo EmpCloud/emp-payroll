@@ -179,6 +179,12 @@ export function SettingsPage() {
     const roundingRaw = val("rounding_policy");
     settingsPayload.roundingPolicy = roundingRaw === "" ? null : roundingRaw;
 
+    // Migration 032 — Employer PF / ESI included in CTC. Boolean checkbox.
+    const employerPfInCtcEl = document.getElementById(
+      "employer_pf_in_ctc",
+    ) as HTMLInputElement | null;
+    settingsPayload.employerPfInCtc = !!employerPfInCtcEl?.checked;
+
     setSaving(true);
     try {
       if (Object.keys(orgPayload).length > 0) {
@@ -306,123 +312,7 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Tier-1 statutory overrides — every field falls back to the India
-          default constant when left as "Use default". */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" /> Statutory Overrides
-          </CardTitle>
-          <p className="text-sm text-gray-500">
-            Customise PF / ESI defaults for your organization. Leave any field on{" "}
-            <em>Use default</em> / blank to inherit the India statutory value. The three PF knobs
-            interact: <strong>Rate</strong> sets the percentage, <strong>Wage Basis</strong> decides
-            what amount the percentage is applied to, and <strong>Max Cap</strong> caps the
-            resulting rupee amount per month.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <SelectField
-                id="pf_wage_mode"
-                label="PF Wage Basis (what to apply % to)"
-                defaultValue={
-                  settings?.pfApplyFullBasic === true
-                    ? "actual"
-                    : settings?.pfApplyFullBasic === false
-                      ? "ceiling"
-                      : ""
-                }
-                options={[
-                  { value: "", label: "Use default (₹15,000 ceiling)" },
-                  { value: "ceiling", label: "Restrict to ₹15,000 ceiling" },
-                  { value: "actual", label: "Apply to actual Basic + DA (no ceiling)" },
-                ]}
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Statutory: 12% × <em>min(Basic+DA, ₹15,000)</em> = max ₹1,800. Pick "actual" if your
-                org pays PF on the FULL basic above the ceiling (some IT / unionised employers do
-                this).
-              </p>
-            </div>
-            <div>
-              <Input
-                id="pf_default_rate"
-                label="PF Rate (%)"
-                type="number"
-                step="0.01"
-                min="0"
-                max="100"
-                placeholder="12 — blank = use 12% statutory"
-                defaultValue={
-                  settings?.pfDefaultEmployeeRate != null
-                    ? String(settings.pfDefaultEmployeeRate)
-                    : ""
-                }
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Org-wide default percentage. An individual employee's profile can override this
-                further (e.g. someone enrolled in VPF at a higher rate).
-              </p>
-            </div>
-            <div>
-              <Input
-                id="pf_max_contribution"
-                label="Max Cap on Employee PF (₹ / month)"
-                type="number"
-                step="1"
-                min="0"
-                placeholder="1800 — blank = no extra cap"
-                defaultValue={
-                  settings?.pfMaxEmployeeContribution != null
-                    ? String(settings.pfMaxEmployeeContribution)
-                    : ""
-                }
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Hard rupee ceiling on the deducted amount AFTER the rate × basis math runs. Set to
-                ₹1,800 to lock employee PF at the statutory ceiling even if "Wage Basis" is set to
-                "actual".
-              </p>
-            </div>
-            <div>
-              <Input
-                id="esi_ceiling"
-                label="ESI Wage Ceiling (₹/month)"
-                type="number"
-                step="1"
-                min="0"
-                placeholder="21000 — blank = use ₹21,000 default"
-                defaultValue={
-                  settings?.esiWageCeiling != null ? String(settings.esiWageCeiling) : ""
-                }
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Employees with monthly gross above this ceiling are NOT eligible for ESI. Statutory:
-                ₹21,000.
-              </p>
-            </div>
-            <div>
-              <SelectField
-                id="rounding_policy"
-                label="Payslip Rounding"
-                defaultValue={settings?.roundingPolicy || ""}
-                options={[
-                  { value: "", label: "Use default (no rounding)" },
-                  { value: "nearest_1", label: "Round to nearest ₹1" },
-                  { value: "nearest_10", label: "Round to nearest ₹10" },
-                  { value: "nearest_100", label: "Round to nearest ₹100" },
-                ]}
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Applied to gross + total deductions on each payslip; per-component line items stay
-                at exact paise precision so the math still adds up.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <StatutoryOverridesCard settings={settings} />
 
       <Card>
         <CardHeader>
@@ -505,5 +395,252 @@ export function SettingsPage() {
         </Button>
       </div>
     </div>
+  );
+}
+
+// ===========================================================================
+// Statutory Overrides card — preset-based PF picker that hides the three
+// interacting knobs (wage basis / rate / cap) behind one decision most HR
+// teams actually make:
+//
+//   1. "Statutory minimum"  : ceiling ₹15K, 12%, cap ₹1,800
+//      (the law-minimum every Indian employer can default to)
+//   2. "On Full Basic"      : actual basic, 12%, no cap
+//      (typical Indian IT — PF deducted on the full basic, no ceiling)
+//   3. "Custom"             : exposes all three inputs explicitly
+//
+// Plus the new ESI ceiling, payslip rounding, and the migration-032
+// "Employer PF inside CTC" toggle. The hidden inputs (pf_wage_mode /
+// pf_default_rate / pf_max_contribution / employer_pf_in_ctc / etc.)
+// keep their original IDs so the existing handleSave (which reads via
+// document.getElementById) doesn't need to know about presets.
+// ===========================================================================
+
+type PfPreset = "statutory" | "full_basic" | "custom";
+
+function presetFor(settings: any): PfPreset {
+  // Recognise the two named presets; everything else is "custom" so HR
+  // can edit the raw fields. NULL fields collapse to statutory because
+  // that's what the engine defaults to.
+  const basis = settings?.pfApplyFullBasic;
+  const rate = settings?.pfDefaultEmployeeRate;
+  const cap = settings?.pfMaxEmployeeContribution;
+  const isStatutory =
+    (basis === false || basis == null) &&
+    (rate === 12 || rate == null) &&
+    (cap === 1800 || cap == null);
+  if (isStatutory) return "statutory";
+  const isFullBasic = basis === true && (rate === 12 || rate == null) && cap == null;
+  if (isFullBasic) return "full_basic";
+  return "custom";
+}
+
+function StatutoryOverridesCard({ settings }: { settings: any }) {
+  const initialPreset = presetFor(settings);
+  const [preset, setPreset] = useState<PfPreset>(initialPreset);
+  // The three knobs as React state. When a preset is picked, we set the
+  // values to match that preset; in "custom" we let HR type freely. The
+  // inputs are still rendered with their original IDs so handleSave can
+  // read them via document.getElementById -- only the visual presentation
+  // changes.
+  const [wageMode, setWageMode] = useState<"" | "ceiling" | "actual">(
+    settings?.pfApplyFullBasic === true
+      ? "actual"
+      : settings?.pfApplyFullBasic === false
+        ? "ceiling"
+        : "",
+  );
+  const [defaultRate, setDefaultRate] = useState(
+    settings?.pfDefaultEmployeeRate != null ? String(settings.pfDefaultEmployeeRate) : "",
+  );
+  const [maxCap, setMaxCap] = useState(
+    settings?.pfMaxEmployeeContribution != null ? String(settings.pfMaxEmployeeContribution) : "",
+  );
+
+  function applyPreset(p: PfPreset) {
+    setPreset(p);
+    if (p === "statutory") {
+      setWageMode("ceiling");
+      setDefaultRate("12");
+      setMaxCap("1800");
+    } else if (p === "full_basic") {
+      setWageMode("actual");
+      setDefaultRate("12");
+      setMaxCap("");
+    }
+    // "custom" keeps whatever is in state -- HR edits each field directly.
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Shield className="h-5 w-5" /> Statutory Overrides
+        </CardTitle>
+        <p className="text-sm text-gray-500">
+          Pick how PF should be calculated for your organization. Most companies use one of the two
+          named presets — open <strong>Custom</strong> only if you need to tune the rate or rupee
+          cap independently.
+        </p>
+      </CardHeader>
+      <CardContent>
+        {/* PF preset picker */}
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-gray-700">PF Calculation Method</label>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {(
+              [
+                {
+                  key: "statutory",
+                  title: "Statutory minimum",
+                  body: "12% × min(Basic+DA, ₹15,000) — caps at ₹1,800/month. Law-minimum default.",
+                },
+                {
+                  key: "full_basic",
+                  title: "On Full Basic",
+                  body: "12% × actual Basic+DA, no ₹15K ceiling, no cap. Typical Indian IT employers.",
+                },
+                {
+                  key: "custom",
+                  title: "Custom",
+                  body: "Tune rate, wage basis and rupee cap independently below.",
+                },
+              ] as Array<{ key: PfPreset; title: string; body: string }>
+            ).map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => applyPreset(opt.key)}
+                className={`rounded-lg border p-3 text-left transition ${
+                  preset === opt.key
+                    ? "border-brand-500 ring-brand-200 bg-brand-50 ring-2"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }`}
+              >
+                <p className="text-sm font-semibold text-gray-900">{opt.title}</p>
+                <p className="mt-1 text-xs text-gray-500">{opt.body}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Custom inputs — visible always so handleSave can read them, but
+            visually subdued unless Custom preset is selected. */}
+        <div
+          className={`mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3 ${
+            preset === "custom" ? "" : "opacity-60"
+          }`}
+        >
+          <div>
+            <SelectField
+              id="pf_wage_mode"
+              label="Wage Basis"
+              value={wageMode}
+              onChange={(e: any) => {
+                setWageMode(e.target.value);
+                if (preset !== "custom") setPreset("custom");
+              }}
+              options={[
+                { value: "", label: "Use default (₹15,000 ceiling)" },
+                { value: "ceiling", label: "Restrict to ₹15,000 ceiling" },
+                { value: "actual", label: "Apply to actual Basic + DA" },
+              ]}
+            />
+          </div>
+          <div>
+            <Input
+              id="pf_default_rate"
+              label="Rate (%)"
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              placeholder="12"
+              value={defaultRate}
+              onChange={(e) => {
+                setDefaultRate(e.target.value);
+                if (preset !== "custom") setPreset("custom");
+              }}
+            />
+          </div>
+          <div>
+            <Input
+              id="pf_max_contribution"
+              label="Max Cap (₹/month)"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="1800 — blank = no cap"
+              value={maxCap}
+              onChange={(e) => {
+                setMaxCap(e.target.value);
+                if (preset !== "custom") setPreset("custom");
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Employer-PF-in-CTC toggle (migration 032) — separate decision
+            from the PF rate / basis math. This affects how the offer-letter
+            CTC is interpreted, not how PF is computed. */}
+        <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <label className="flex items-start gap-3">
+            <input
+              id="employer_pf_in_ctc"
+              type="checkbox"
+              defaultChecked={!!settings?.employerPfInCtc}
+              className="text-brand-600 focus:ring-brand-500 mt-0.5 h-4 w-4 rounded border-gray-300"
+            />
+            <div>
+              <p className="text-sm font-medium text-gray-900">
+                Employer PF / ESI is included in CTC
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                Tick this if your offer letter's CTC ALREADY bundles the employer's PF, ESI, EDLI
+                and admin contributions. The Total Cost to Company on each payslip will then equal
+                the gross (no extra "+₹X employer cost on top"). Leave unticked if your offers say
+                "CTC + Employer Cost" separately.
+              </p>
+            </div>
+          </label>
+        </div>
+
+        {/* ESI ceiling + rounding policy — independent settings. */}
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <Input
+              id="esi_ceiling"
+              label="ESI Wage Ceiling (₹/month)"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="21000 — blank = use ₹21,000 default"
+              defaultValue={settings?.esiWageCeiling != null ? String(settings.esiWageCeiling) : ""}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Employees with monthly gross above this ceiling are NOT eligible for ESI. Statutory:
+              ₹21,000.
+            </p>
+          </div>
+          <div>
+            <SelectField
+              id="rounding_policy"
+              label="Payslip Rounding"
+              defaultValue={settings?.roundingPolicy || ""}
+              options={[
+                { value: "", label: "Use default (no rounding)" },
+                { value: "nearest_1", label: "Round to nearest ₹1" },
+                { value: "nearest_10", label: "Round to nearest ₹10" },
+                { value: "nearest_100", label: "Round to nearest ₹100" },
+              ]}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Applied to the gross + total deductions on each payslip; per-component line items stay
+              at exact paise precision so the math still adds up.
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

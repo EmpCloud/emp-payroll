@@ -115,6 +115,19 @@ export class PayslipPDFService {
       typeof payslip.deductions === "string"
         ? JSON.parse(payslip.deductions)
         : payslip.deductions || [];
+    // Employer-side contributions (Employer PF / EPS / EDLI / Admin / Employer
+    // ESI). Stored on the payslip by computePayroll. Surfaced on the
+    // payslip PDF as an informational "Employer Contributions" panel
+    // alongside earnings/deductions so the employee sees the full Cost to
+    // Company and not just their take-home.
+    const employerContribs =
+      typeof payslip.employer_contributions === "string"
+        ? JSON.parse(payslip.employer_contributions || "[]")
+        : payslip.employer_contributions || [];
+    const totalEmployerContribs = employerContribs.reduce(
+      (s: number, c: any) => s + Number(c.amount || 0),
+      0,
+    );
 
     const monthNames = [
       "",
@@ -186,6 +199,9 @@ export class PayslipPDFService {
 
     const deductionsRows = deductions
       .map((d: any) => `<tr><td>${friendlyName(d)}</td><td class="amt">${fmt(d.amount)}</td></tr>`)
+      .join("");
+    const employerRows = employerContribs
+      .map((c: any) => `<tr><td>${friendlyName(c)}</td><td class="amt">${fmt(c.amount)}</td></tr>`)
       .join("");
 
     return `<!DOCTYPE html>
@@ -332,6 +348,22 @@ export class PayslipPDFService {
     <div class="label">Net Pay</div>
     <div class="amount">${fmt(payslip.net_pay)}</div>
   </div>
+
+  ${
+    /* Employer Contributions panel — informational only, NOT deducted
+       from take-home. Surfaced so the employee sees the full Cost to
+       Company (gross + Employer PF / EPS / EDLI / Admin / Employer ESI)
+       and can verify what their offer-letter CTC covers. */
+    employerRows
+      ? `<div class="section" style="margin-bottom: 24px;">
+           <div class="section-header" style="background: #eff6ff; color: #1e40af;">Employer Contributions (paid by company, not deducted)</div>
+           <table>
+             ${employerRows}
+             <tr class="total-row"><td>Total Employer Contribution</td><td class="amt">${fmt(totalEmployerContribs)}</td></tr>
+           </table>
+         </div>`
+      : ""
+  }
 
   <div class="footer">
     This is a system-generated payslip. | ${org?.name || "Company"} | Generated on ${

@@ -355,6 +355,10 @@ export class AttendanceService {
     // We never overwrite an existing EmpCloud row -- if HR or the
     // employee already marked a day on EmpCloud, that record wins.
     const results = [];
+    // #337 — Track per-user EmpCloud-projection failures so the route
+    // can surface "marked locally but EmpCloud sync failed" instead of
+    // a misleading flat "successful" toast.
+    const empcloudProjectionFailures: Array<{ empcloudUserId: number; message: string }> = [];
     const orgIdNum = Number(orgId);
     const empcloudDb = getEmpCloudDB();
     const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
@@ -509,15 +513,28 @@ export class AttendanceService {
         // schema mismatch on older EmpCloud DBs, transient connection
         // issue, etc.). The local cache write succeeded above so the
         // payroll UI still reflects the import; surface the cause to
-        // the server log for triage.
+        // the server log for triage AND track the failure so the
+        // response can warn the caller (#337 — Mark All Present
+        // returned a "successful" toast even when the bi-directional
+        // EmpCloud write silently failed for every user).
         // eslint-disable-next-line no-console
         console.warn(
           `[attendance.import] EmpCloud projection failed for user ${empcloudUserId} ${month}/${year}:`,
           (err as any)?.message || err,
         );
+        empcloudProjectionFailures.push({
+          empcloudUserId,
+          message: (err as any)?.message ? String((err as any).message).slice(0, 200) : String(err),
+        });
       }
     }
-    return { imported: results.length, records: results };
+    // #337 — Surface partial-success state so the UI can warn HR when
+    // the local cache wrote OK but the EmpCloud projection failed.
+    return {
+      imported: results.length,
+      records: results,
+      empcloudProjectionFailures,
+    };
   }
 
   async getLopDays(employeeId: string, month: number, year: number) {

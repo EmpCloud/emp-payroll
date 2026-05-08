@@ -93,6 +93,17 @@ export function EmployeeCreatePage() {
       return;
     }
 
+    // #354 — IFSC: 11 chars, uppercase, 5th char must be 0.
+    // Optional on this form (employee may be created before bank details
+    // are known) -- only validate when the user actually filled it in.
+    const ifscRaw = get("ifsc").trim().toUpperCase();
+    if (ifscRaw && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscRaw)) {
+      toast.error(
+        "IFSC must be 11 characters: 4 letters + '0' + 6 letters/digits (e.g. HDFC0001234).",
+      );
+      return;
+    }
+
     try {
       await mutation.mutateAsync({
         employeeCode: empCode,
@@ -108,7 +119,7 @@ export function EmployeeCreatePage() {
         designation: get("designation"),
         bankDetails: {
           accountNumber: get("account_number"),
-          ifscCode: get("ifsc"),
+          ifscCode: ifscRaw,
           bankName: get("bank_name"),
           branchName: "",
         },
@@ -304,6 +315,15 @@ export function EmployeeCreatePage() {
                 pattern="[A-Z]{4}0[A-Z0-9]{6}"
                 title="11 chars: 4 capital letters, then 0, then 6 alphanumerics (e.g. HDFC0001234)"
                 style={{ textTransform: "uppercase" }}
+                maxLength={11}
+                minLength={11}
+                onChange={(e) => {
+                  // #354 — `style` only affects display; the underlying value
+                  // is what's submitted, so coerce to uppercase here so the
+                  // pattern validator and the server both see a canonical
+                  // 11-char IFSC.
+                  e.currentTarget.value = e.currentTarget.value.toUpperCase();
+                }}
                 required
               />
             </div>

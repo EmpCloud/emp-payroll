@@ -47,6 +47,8 @@ function buildOrgStatutoryOverrides(orgSettings: any): OrgStatutoryOverrides {
     pfDefaultEmployeeRate: num(orgSettings.pf_default_employee_rate),
     esiWageCeiling: num(orgSettings.esi_wage_ceiling),
     roundingPolicy: orgSettings.rounding_policy ?? null,
+    employerPfInCtc:
+      orgSettings.employer_pf_in_ctc == null ? null : !!Number(orgSettings.employer_pf_in_ctc),
   };
 }
 
@@ -482,10 +484,39 @@ export class PayrollService {
       const deductions: any[] = [];
       let totalDed = 0;
 
+      // #365 — Apply org-level EPF cap to structure-defined EPF rows.
+      // When HR sets a structure deduction like "EPF = 12% of BASIC",
+      // the resolver computes raw 12% × basic without consulting the
+      // org's pf_max_employee_contribution / pf_apply_full_basic
+      // overrides. The cap-aware engine path below skips when a
+      // structure-EPF row exists, so the structure's uncapped value
+      // ended up on the payslip. Apply the same cap here so a
+      // structure-defined EPF behaves identically to the engine-derived
+      // EPF when the org has set an override.
+      const _normCodeForCap = (code: string | undefined): string =>
+        (code || "").toUpperCase().replace(/[^A-Z]/g, "");
+      const _isEpfishForCap = (code: string | undefined): boolean => {
+        const c = _normCodeForCap(code);
+        if (!c) return false;
+        if (c.includes("EPF")) return true;
+        return c === "PF" || c.startsWith("PFE") || c.startsWith("PFC");
+      };
+      const _orgOverridesForCap = buildOrgStatutoryOverrides(orgSettings);
+      const _epfMaxCap = _orgOverridesForCap.pfMaxEmployeeContribution;
+
       for (const comp of componentList) {
         if (comp.type === "deduction") {
           // Custom deduction from salary structure (canteen, welfare fund, etc.)
-          const amount = Math.round(Number(comp.monthlyAmount || 0) * proRatio);
+          let amount = Math.round(Number(comp.monthlyAmount || 0) * proRatio);
+          if (
+            _isEpfishForCap(comp.code) &&
+            typeof _epfMaxCap === "number" &&
+            Number.isFinite(_epfMaxCap) &&
+            _epfMaxCap >= 0 &&
+            amount > _epfMaxCap
+          ) {
+            amount = Math.round(_epfMaxCap * proRatio);
+          }
           if (amount > 0) {
             deductions.push({ code: comp.code, name: comp.name || comp.code, amount });
             totalDed += amount;
@@ -869,8 +900,20 @@ export class PayrollService {
       }
       const roundedDed = applyRounding(totalDedFloored, roundingPolicy);
       const netPay = roundedGross - roundedDed;
+      // Total Cost to Company (TCC) framing depends on the org-wide
+      // "Employer PF in CTC" toggle (migration 032):
+      //   OFF (default): TCC = gross + employer contributions on top.
+      //                  This is the additive model — the offer letter
+      //                  CTC is the employee gross, and employer PF/ESI
+      //                  are extra company expense.
+      //   ON          : TCC = gross. The offer letter CTC already
+      //                  includes employer contributions, so we DON'T
+      //                  add them on top -- the employer_contributions
+      //                  list still records the breakdown for filings,
+      //                  but the headline TCC matches what HR negotiated.
+      const employerPfInCtc = !!orgSettings?.employer_pf_in_ctc;
       const roundedEmployerCost = applyRounding(
-        roundedGross + employeeEmployerContributions,
+        employerPfInCtc ? roundedGross : roundedGross + employeeEmployerContributions,
         roundingPolicy,
       );
 

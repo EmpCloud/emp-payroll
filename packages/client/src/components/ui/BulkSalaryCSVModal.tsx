@@ -93,6 +93,12 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
       toast.error("Please select salary structure");
       return;
     }
+    // #360 — Effective From cannot be a past date.
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (effectiveFrom < todayStr) {
+      toast.error("Effective From date cannot be in the past.");
+      return;
+    }
     setImporting(true);
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -307,6 +313,7 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
                   <input
                     type="date"
                     value={effectiveFrom}
+                    min={new Date().toISOString().slice(0, 10)}
                     onChange={(e) => setEffectiveFrom(e.target.value)}
                     className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />

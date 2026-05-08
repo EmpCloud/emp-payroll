@@ -423,10 +423,23 @@ function MarkAllForm({
             holidays: 0,
             weekoffs: 0,
           }));
-          await apiPost("/attendance/import", { month, year, records });
-          toast.success(
-            `Marked ${employees.length} employees as present for ${td} days in ${MONTHS[month]} ${year}`,
-          );
+          // #337 — Surface the bi-directional EmpCloud sync result. When
+          // local cache writes succeed but EmpCloud projection fails for
+          // every user (e.g. EmpCloud DB is read-only or schema-out-of-sync),
+          // the toast was previously a clean "Marked successful" while the
+          // dashboard still showed zeros -- looked exactly like a no-op.
+          const res = await apiPost<any>("/attendance/import", { month, year, records });
+          const failures = res?.data?.empcloudProjectionFailures || [];
+          if (failures.length > 0) {
+            toast.error(
+              `Marked locally for ${employees.length} employees, but EmpCloud sync failed for ${failures.length} (dashboard may not reflect the change yet).`,
+              { duration: 8000 },
+            );
+          } else {
+            toast.success(
+              `Marked ${employees.length} employees as present for ${td} days in ${MONTHS[month]} ${year}`,
+            );
+          }
           onClose();
           onSuccess();
         } catch (err: any) {
@@ -475,6 +488,9 @@ function MarkAllForm({
         step={1}
         value={totalDays}
         onChange={(e) => setTotalDays(Number(e.target.value))}
+        // #336 — pre-select on focus so typing replaces the leading 0/value
+        // instead of producing "012", "020", etc.
+        onFocus={(e) => e.currentTarget.select()}
         required
       />
       <p className="text-sm text-gray-500">
@@ -553,7 +569,8 @@ function MarkSingleForm({
 
         setMarking(true);
         try {
-          await apiPost("/attendance/import", {
+          // #337 — Same bi-directional sync warning as Mark All Present.
+          const res = await apiPost<any>("/attendance/import", {
             month,
             year,
             records: [
@@ -569,7 +586,15 @@ function MarkSingleForm({
               },
             ],
           });
-          toast.success(`Attendance recorded for ${MONTHS[month]} ${year}`);
+          const failures = res?.data?.empcloudProjectionFailures || [];
+          if (failures.length > 0) {
+            toast.error(
+              `Marked locally, but EmpCloud sync failed (${failures[0]?.message || "unknown error"}). The dashboard may not reflect this until EmpCloud is reachable.`,
+              { duration: 8000 },
+            );
+          } else {
+            toast.success(`Attendance recorded for ${MONTHS[month]} ${year}`);
+          }
           onClose();
           onSuccess();
         } catch (err: any) {
@@ -641,6 +666,9 @@ function MarkSingleForm({
           step={1}
           value={totalDays}
           onChange={(e) => setTotalDays(Number(e.target.value))}
+          // #336 — pre-select on focus so the leading 0/value clears when
+          // the user starts typing (no more "012", "020").
+          onFocus={(e) => e.currentTarget.select()}
           required
         />
         <Input
@@ -653,6 +681,7 @@ function MarkSingleForm({
           step={1}
           value={presentDays}
           onChange={(e) => setPresentDays(Number(e.target.value))}
+          onFocus={(e) => e.currentTarget.select()}
           required
         />
         <Input
@@ -664,6 +693,7 @@ function MarkSingleForm({
           max={31}
           step={1}
           defaultValue="0"
+          onFocus={(e) => e.currentTarget.select()}
         />
         <Input
           id="lopDays"
@@ -674,6 +704,7 @@ function MarkSingleForm({
           max={31}
           step={1}
           defaultValue="0"
+          onFocus={(e) => e.currentTarget.select()}
         />
         <Input
           id="overtimeHours"
@@ -683,6 +714,7 @@ function MarkSingleForm({
           min={0}
           step="0.1"
           defaultValue="0"
+          onFocus={(e) => e.currentTarget.select()}
         />
       </div>
       <div className="flex justify-end gap-3">

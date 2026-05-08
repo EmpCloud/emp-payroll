@@ -232,12 +232,24 @@ router.post(
 
     // If there were payslips but every single send failed, treat that as a
     // hard error rather than returning a cheerful success toast.
+    // #335 — Include the captured failure reasons so HR can act on the
+    // root cause (bad SMTP creds, no email on file, transport rejected,
+    // etc.) without trawling through server logs.
     if (result.sent === 0 && result.failed > 0) {
+      const reasons = (result.failureReasons || []).join(" · ");
       throw new AppError(
         502,
         "EMAIL_SEND_FAILED",
-        `Unable to send any payslip emails (${result.failed} failed). Check SMTP credentials and that employees have email addresses on file.`,
-        { sent: [String(result.sent)], failed: [String(result.failed)] },
+        `Unable to send any payslip emails (${result.failed} failed). Check SMTP credentials and that employees have email addresses on file.${
+          reasons ? ` Reasons: ${reasons}` : ""
+        }`,
+        {
+          sent: [String(result.sent)],
+          failed: [String(result.failed)],
+          ...(result.failureReasons && result.failureReasons.length > 0
+            ? { reasons: result.failureReasons }
+            : {}),
+        },
       );
     }
 

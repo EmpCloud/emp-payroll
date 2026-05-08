@@ -250,7 +250,9 @@ export class EmailService {
     });
   }
 
-  async sendPayslipsForRun(runId: string): Promise<{ sent: number; failed: number }> {
+  async sendPayslipsForRun(
+    runId: string,
+  ): Promise<{ sent: number; failed: number; failureReasons: string[] }> {
     const payslips = await this.db.findMany<any>("payslips", {
       filters: { payroll_run_id: runId },
       limit: 10000,
@@ -258,9 +260,23 @@ export class EmailService {
 
     let sent = 0;
     let failed = 0;
+    // #335 — Track distinct failure reasons so the route can surface them
+    // to HR (previously every failure was an opaque "false" return; the
+    // operator had to dig through server logs to see why nothing went
+    // out). Keep a set of unique short reasons so a 100-employee run
+    // doesn't return a 100-line message.
+    const failureSet = new Set<string>();
 
     for (const ps of payslips.data) {
-      const success = await this.sendPayslipEmail(ps.id);
+      let success = false;
+      try {
+        success = await this.sendPayslipEmail(ps.id);
+        if (!success) {
+          failureSet.add("send returned false (likely no email on file or transport rejected)");
+        }
+      } catch (err: any) {
+        failureSet.add(err?.message ? String(err.message).slice(0, 120) : "unknown error");
+      }
       if (success) {
         sent++;
         await this.db.update("payslips", ps.id, { sent_at: new Date() });
@@ -269,6 +285,6 @@ export class EmailService {
       }
     }
 
-    return { sent, failed };
+    return { sent, failed, failureReasons: Array.from(failureSet).slice(0, 5) };
   }
 }

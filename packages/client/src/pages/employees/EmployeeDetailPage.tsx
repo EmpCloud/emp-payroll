@@ -72,6 +72,11 @@ export function EmployeeDetailPage() {
   const updateMutation = useUpdateEmployee(id!);
   const { data: structuresRes } = useSalaryStructures();
   const { data: deptsData } = useDepartments();
+  // #365 — Pull org statutory overrides so the Salary Details card can
+  // mirror the cap math used by the payroll engine + SalaryAssignForm
+  // preview.
+  const _user = getUser();
+  const { data: orgSettingsRes } = useOrgSettings(_user?.orgId ? String(_user.orgId) : "");
   const deptOptions = (deptsData?.data?.data || deptsData?.data || []).map((d: any) => ({
     value: d.name,
     label: d.name,
@@ -111,6 +116,30 @@ export function EmployeeDetailPage() {
     : [];
   const monthlyBasic = components.find((c: any) => c.code === "BASIC")?.monthlyAmount || 0;
   const monthlyHRA = components.find((c: any) => c.code === "HRA")?.monthlyAmount || 0;
+  // #365 — Monthly EPF displayed on the read-only Salary Details card,
+  // mirroring the cap math used by both the payroll engine and the
+  // SalaryAssignForm preview so HR sees the SAME number everywhere
+  // (slip / Salary Details card / preview).
+  // Resolution chain: opted out -> 0; rate from employee profile, falling
+  // back to org default (12%); apply org wage-basis (full basic vs ₹15K
+  // ceiling); finally cap with pfMaxEmployeeContribution.
+  const _orgSettings: any = orgSettingsRes?.data;
+  const _pfOptedOut = pfDetails?.isOptedOut === true;
+  const _pfRate =
+    Number(pfDetails?.contributionRate ?? _orgSettings?.pfDefaultEmployeeRate ?? 12) || 12;
+  const _applyFullBasic = _orgSettings?.pfApplyFullBasic === true;
+  const _maxCap =
+    _orgSettings?.pfMaxEmployeeContribution != null
+      ? Number(_orgSettings.pfMaxEmployeeContribution)
+      : null;
+  let monthlyEPFForCard = 0;
+  if (!_pfOptedOut && monthlyBasic > 0) {
+    const _pfBase = _applyFullBasic ? monthlyBasic : Math.min(monthlyBasic, 15000);
+    monthlyEPFForCard = Math.round((_pfBase * _pfRate) / 100);
+    if (_maxCap != null && Number.isFinite(_maxCap) && monthlyEPFForCard > _maxCap) {
+      monthlyEPFForCard = Math.round(_maxCap);
+    }
+  }
 
   async function handleEdit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -205,6 +234,18 @@ export function EmployeeDetailPage() {
                 ["Monthly Basic", monthlyBasic ? formatCurrency(monthlyBasic) : "—"],
                 ["HRA", monthlyHRA ? formatCurrency(monthlyHRA) : "—"],
                 ["Gross (Annual)", salary ? formatCurrency(salary.gross_salary) : "—"],
+                // #365 — Show the cap-aware EPF figure HR sees on the
+                // payslip and the Assign Salary preview, instead of the
+                // raw 12%-of-basic value (which read as "broken" when an
+                // org had pf_max_employee_contribution set).
+                [
+                  "Monthly EPF (Employee)",
+                  _pfOptedOut
+                    ? "Opted out"
+                    : monthlyEPFForCard > 0
+                      ? formatCurrency(monthlyEPFForCard)
+                      : "—",
+                ],
                 ["Employee Code", emp.employee_code],
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between text-sm">
@@ -572,12 +613,25 @@ export function EmployeeDetailPage() {
               toast.error("Bank name must only contain letters, spaces, and . , & -");
               return;
             }
+            // #354 — IFSC: 11 chars, uppercase, 5th char must be 0.
+            // RBI standard: 4 letters + "0" + 6 alphanumeric. Mirrors the
+            // server-side validation in bank-file.service so HR sees the
+            // problem on submit instead of when the bank file is generated.
+            const ifscRaw = (fd.get("ifscCode") as string) || "";
+            const ifscCode = ifscRaw.toUpperCase().trim();
+            const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+            if (!IFSC_REGEX.test(ifscCode)) {
+              toast.error(
+                "IFSC must be 11 characters: 4 letters + '0' + 6 letters/digits (e.g. HDFC0001234).",
+              );
+              return;
+            }
             setBankSaving(true);
             try {
               await apiPut(`/employees/${id}/bank-details`, {
                 bankName,
                 accountNumber: fd.get("accountNumber") as string,
-                ifscCode: fd.get("ifscCode") as string,
+                ifscCode,
                 accountType: fd.get("accountType") as string,
               });
               toast.success("Bank details updated");
@@ -614,6 +668,17 @@ export function EmployeeDetailPage() {
             label="IFSC Code"
             defaultValue={bankDetails.ifscCode || ""}
             placeholder="e.g. HDFC0001234"
+            // #354 — Enforce IFSC format on the input itself: 11 chars,
+            // 4 letters + "0" + 6 letters/digits, all caps. The browser
+            // shows the `title` text on the validation popover when the
+            // pattern doesn't match.
+            pattern="^[A-Z]{4}0[A-Z0-9]{6}$"
+            maxLength={11}
+            minLength={11}
+            title="IFSC must be 11 characters: 4 letters + '0' + 6 letters/digits (e.g. HDFC0001234)"
+            onChange={(e) => {
+              e.currentTarget.value = e.currentTarget.value.toUpperCase();
+            }}
             required
           />
           <SelectField
@@ -941,7 +1006,33 @@ function EmployeeDocuments({ employeeId }: { employeeId: string }) {
                   <FileText className="h-5 w-5 text-gray-400" />
                   <div>
                     <a
-                      href={`${import.meta.env.VITE_API_URL?.replace("/api/v1", "") || ""}${doc.file_url}`}
+                      // #355 — Build the document URL robustly. The previous
+                      // version stripped only "/api/v1" from VITE_API_URL,
+                      // which produced "/uploads/<file>" when the env var
+                      // was unset (dev) and the host:port-prefixed URL when
+                      // it pointed at an absolute API host (prod). Both
+                      // worked when the SPA and API shared a host, but
+                      // when the API is on a different subdomain (or the
+                      // SPA is being viewed from a CDN that lacks a static
+                      // /uploads route), opening the link landed on the
+                      // SPA's catch-all 404. Rebuild the absolute URL when
+                      // VITE_API_URL is absolute, otherwise use the
+                      // current origin — matches what `apiGet` does for
+                      // every other request.
+                      href={(() => {
+                        const apiBase = (import.meta.env.VITE_API_URL || "/api/v1").replace(
+                          /\/api\/v1\/?$/,
+                          "",
+                        );
+                        const fileUrl = String(doc.file_url || "");
+                        if (/^https?:\/\//i.test(fileUrl)) return fileUrl;
+                        if (/^https?:\/\//i.test(apiBase)) return `${apiBase}${fileUrl}`;
+                        // Relative API base — fall back to current origin so
+                        // the new tab navigates somewhere that can serve the
+                        // file (or at least returns a real 404, not the
+                        // SPA's catch-all "page not found").
+                        return `${window.location.origin}${fileUrl}`;
+                      })()}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-brand-600 text-sm font-medium hover:underline"
@@ -1274,17 +1365,56 @@ function SalaryAssignForm({
     monthlyAmount: number;
   }[] = [];
   let resolveError: string | null = null;
-  if (ctc > 0 && definitions.length) {
+  // #359 — Hide intermediate "components exceed CTC" / "balance underflow"
+  // errors while the user is still typing a small number into the CTC
+  // field (e.g. typed "1", "12", "120", before reaching "120000"). Only
+  // surface a resolver error once the CTC is at least ₹12,000/year
+  // (₹1,000/month) -- below that the structure can't possibly fit
+  // realistic component values and the error is just typing noise.
+  if (ctc >= 12000 && definitions.length) {
     try {
       resolved = resolveSalaryComponents(definitions, ctc);
     } catch (err) {
       resolveError =
         err instanceof SalaryResolverError ? err.message : "Could not compute breakdown.";
     }
+  } else if (ctc > 0 && definitions.length) {
+    // Try resolving silently — show the breakdown if it works, but don't
+    // surface a typing-time error.
+    try {
+      resolved = resolveSalaryComponents(definitions, ctc);
+    } catch {
+      /* swallow */
+    }
   }
   const earningRows = resolved.filter((c) => c.type === "earning");
-  const deductionRows = resolved.filter((c) => c.type === "deduction");
   const reimbursementRows = resolved.filter((c) => c.type === "reimbursement");
+  // #365 — Apply org's EPF max-cap to structure-defined EPF deductions in
+  // the preview so HR sees the same number that payroll will actually
+  // deduct. Without this, a structure with "EPF = 12% of BASIC" showed
+  // the raw uncapped value (e.g. ₹2,700) in the deductions list while
+  // the actual payslip honoured the ₹1,800 org cap.
+  const _normCodeEpf = (code: string | undefined) =>
+    (code || "").toUpperCase().replace(/[^A-Z]/g, "");
+  const _isEpfishCode = (code: string | undefined) => {
+    const c = _normCodeEpf(code);
+    if (!c) return false;
+    if (c.includes("EPF")) return true;
+    return c === "PF" || c.startsWith("PFE") || c.startsWith("PFC");
+  };
+  const deductionRows = resolved
+    .filter((c) => c.type === "deduction")
+    .map((c) => {
+      if (!_isEpfishCode(c.code)) return c;
+      const cap =
+        orgSettings?.pfMaxEmployeeContribution != null
+          ? Number(orgSettings.pfMaxEmployeeContribution)
+          : null;
+      if (cap != null && Number.isFinite(cap) && cap >= 0 && c.monthlyAmount > cap) {
+        return { ...c, monthlyAmount: Math.round(cap) };
+      }
+      return c;
+    });
   const monthlyBasic = earningRows.find((c) => c.code === "BASIC")?.monthlyAmount || 0;
   // Monthly Gross is EARNINGS only -- deductions reduce net, reimbursements
   // are paid on top but not part of taxable gross.
@@ -1319,16 +1449,53 @@ function SalaryAssignForm({
       monthlyEPF = Math.min(monthlyEPF, maxCap);
     }
   }
+  // Employer-side preview — Indian PF: employer also pays 12% but it
+  // splits 8.33% to EPS (capped at ₹15K basic = ₹1,250) and 3.67% to
+  // EPF, plus EDLI 0.5% (cap ₹75) and Admin 0.5% (cap ₹75). Both ESI:
+  // 3.25% of gross capped at ESI ceiling (₹21,000). Surfaces these on
+  // the preview so HR and the employee see the full Cost to Company,
+  // not just take-home. Mirrors what india-statutory.service computes
+  // at payroll-run time -- numbers in the preview match the payslip.
+  const monthlyEmployerEPS = pfOptedOut
+    ? 0
+    : Math.round((Math.min(monthlyBasic, 15000) * 8.33) / 100);
+  const monthlyEmployerEPF = pfOptedOut
+    ? 0
+    : Math.max(
+        0,
+        Math.round(((applyFullBasic ? monthlyBasic : Math.min(monthlyBasic, 15000)) * 3.67) / 100),
+      );
+  const monthlyEDLI = pfOptedOut
+    ? 0
+    : Math.min(75, Math.round((Math.min(monthlyBasic, 15000) * 0.5) / 100));
+  const monthlyPFAdmin = pfOptedOut
+    ? 0
+    : Math.min(75, Math.round((Math.min(monthlyBasic, 15000) * 0.5) / 100));
+  const totalEmployerContribution =
+    monthlyEmployerEPS + monthlyEmployerEPF + monthlyEDLI + monthlyPFAdmin;
+  const employerPfInCtc = !!orgSettings?.employerPfInCtc;
+
+  // #360 — Effective From cannot be a past date. Track in state so we
+  // can validate on submit AND apply a `min` attribute to the date input.
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [effectiveFrom, setEffectiveFrom] = useState<string>(todayStr);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // #360 — guard server-side too, in case a manual user agent bypasses
+    // the input min. Compare on local YYYY-MM-DD string -- safer than
+    // Date math here because we only care about the calendar day.
+    if (effectiveFrom < todayStr) {
+      toast.error("Effective From date cannot be in the past.");
+      return;
+    }
     // Don't pre-compute components — let the server resolve from the structure
     // so the math stays in one place (and `balance` is honored authoritatively).
     onSubmit({
       employeeId,
       structureId,
       ctc,
-      effectiveFrom: new Date().toISOString().slice(0, 10),
+      effectiveFrom,
     });
   }
 
@@ -1346,8 +1513,26 @@ function SalaryAssignForm({
         id="ctc"
         label="Annual CTC (₹)"
         type="number"
-        value={ctc || ""}
-        onChange={(e) => setCTC(Number(e.target.value))}
+        // #359 — Keep the input fully controlled with a string value so
+        // React doesn't flip from "uncontrolled" (value="") to
+        // "controlled" (value=number) when the user types into an
+        // empty field. The previous `value={ctc || ""}` mixed a string
+        // and a number which surfaced a React warning + on some
+        // browsers the field briefly cleared mid-keystroke.
+        // Coerce defensively so partial/invalid input ("12.", "1e",
+        // etc.) doesn't throw downstream when the resolver runs.
+        value={ctc > 0 ? String(ctc) : ""}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (raw === "") {
+            setCTC(0);
+            return;
+          }
+          const n = Number(raw);
+          setCTC(Number.isFinite(n) && n >= 0 ? n : 0);
+        }}
+        min={0}
+        step={1000}
         placeholder="e.g. 1200000"
         required
       />
@@ -1453,6 +1638,53 @@ function SalaryAssignForm({
                   )}
                 </span>
               </div>
+
+              {/* Employer Contributions — informational only, NOT deducted
+                  from the employee's take-home. The label below the total
+                  switches based on the org's "Employer PF in CTC" toggle so
+                  HR knows whether the offer-letter CTC already covers it. */}
+              {totalEmployerContribution > 0 && (
+                <div className="mt-3 rounded-md border border-blue-100 bg-blue-50 p-3">
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+                    Employer Contributions (paid by company)
+                  </div>
+                  <div className="space-y-1">
+                    {monthlyEmployerEPF > 0 && (
+                      <div className="flex justify-between text-xs text-blue-900">
+                        <span>Employer EPF (3.67%)</span>
+                        <span>{formatCurrency(monthlyEmployerEPF)}</span>
+                      </div>
+                    )}
+                    {monthlyEmployerEPS > 0 && (
+                      <div className="flex justify-between text-xs text-blue-900">
+                        <span>Employer EPS (8.33%, capped at ₹15K basic)</span>
+                        <span>{formatCurrency(monthlyEmployerEPS)}</span>
+                      </div>
+                    )}
+                    {monthlyEDLI > 0 && (
+                      <div className="flex justify-between text-xs text-blue-900">
+                        <span>EDLI (0.5%)</span>
+                        <span>{formatCurrency(monthlyEDLI)}</span>
+                      </div>
+                    )}
+                    {monthlyPFAdmin > 0 && (
+                      <div className="flex justify-between text-xs text-blue-900">
+                        <span>PF Admin (0.5%)</span>
+                        <span>{formatCurrency(monthlyPFAdmin)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t border-blue-200 pt-1 text-xs font-semibold text-blue-900">
+                      <span>Total Employer Contribution / month</span>
+                      <span>{formatCurrency(totalEmployerContribution)}</span>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[11px] text-blue-700">
+                    {employerPfInCtc
+                      ? "Already included in the negotiated CTC. Total Cost to Company = Gross."
+                      : `Paid by the company on top of CTC. Total Cost to Company = ${formatCurrency(monthlyGross + totalEmployerContribution)} / month.`}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1462,7 +1694,9 @@ function SalaryAssignForm({
         id="effective"
         label="Effective From"
         type="date"
-        defaultValue={new Date().toISOString().slice(0, 10)}
+        value={effectiveFrom}
+        onChange={(e) => setEffectiveFrom(e.target.value)}
+        min={todayStr}
         required
       />
 

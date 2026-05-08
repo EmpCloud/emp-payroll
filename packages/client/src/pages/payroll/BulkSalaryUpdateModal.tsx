@@ -58,6 +58,13 @@ export function BulkSalaryUpdateModal({
       return;
     }
 
+    // #360 — Effective From cannot be a past date.
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (effectiveFrom < todayStr) {
+      toast.error("Effective From date cannot be in the past.");
+      return;
+    }
+
     const assignments = employeeIds
       .filter((id) => (ctcMap[id] || 0) > 0)
       .map((id) => ({ employeeId: id, ctc: ctcMap[id] }));
@@ -109,6 +116,7 @@ export function BulkSalaryUpdateModal({
             label="Effective From"
             type="date"
             value={effectiveFrom}
+            min={new Date().toISOString().slice(0, 10)}
             onChange={(e) => setEffectiveFrom(e.target.value)}
             required
           />

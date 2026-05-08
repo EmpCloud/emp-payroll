@@ -198,6 +198,10 @@ export class OrgService {
       pfDefaultEmployeeRate: num(raw?.pf_default_employee_rate),
       esiWageCeiling: num(raw?.esi_wage_ceiling),
       roundingPolicy: raw?.rounding_policy ?? null,
+      // Migration 032 — when true, the offer-letter CTC already includes
+      // employer PF / ESI / EDLI / admin (typical Indian IT employers).
+      // Default false = additive ("CTC = Gross, employer cost on top").
+      employerPfInCtc: !!Number(raw?.employer_pf_in_ctc),
     };
   }
 
@@ -239,6 +243,9 @@ export class OrgService {
     }
     if (data.roundingPolicy !== undefined) {
       updates.rounding_policy = data.roundingPolicy || null;
+    }
+    if (data.employerPfInCtc !== undefined) {
+      updates.employer_pf_in_ctc = !!data.employerPfInCtc;
     }
 
     if (Object.keys(updates).length > 0) {

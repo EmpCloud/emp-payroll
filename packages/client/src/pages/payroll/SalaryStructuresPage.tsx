@@ -356,7 +356,7 @@ export function SalaryStructuresPage() {
 
               <div className="overflow-hidden rounded-lg border border-gray-200">
                 {/* Header */}
-                <div className="grid grid-cols-[1fr_80px_100px_90px_70px_90px_36px] gap-2 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500">
+                <div className="grid grid-cols-[1fr_80px_100px_90px_120px_90px_36px] gap-2 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500">
                   <span>Name</span>
                   <span>Code</span>
                   <span>Type</span>
@@ -371,7 +371,7 @@ export function SalaryStructuresPage() {
                   {components.map((c, i) => (
                     <div
                       key={i}
-                      className="grid grid-cols-[1fr_80px_100px_90px_70px_90px_36px] items-center gap-2 px-3 py-2"
+                      className="grid grid-cols-[1fr_80px_100px_90px_120px_90px_36px] items-center gap-2 px-3 py-2"
                     >
                       <input
                         className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-1"
@@ -530,6 +530,8 @@ function StructureCard({
   const components = compRes?.data?.data || [];
   const earningCount = components.filter((c: any) => c.type === "earning").length;
   const deductionCount = components.filter((c: any) => c.type === "deduction").length;
+  // #362 — show reimbursement count when the structure has any.
+  const reimbursementCount = components.filter((c: any) => c.type === "reimbursement").length;
 
   return (
     <Card>
@@ -548,6 +550,7 @@ function StructureCard({
             <span className="text-xs text-gray-400">
               {earningCount > 0 && `${earningCount} earnings`}
               {deductionCount > 0 && ` · ${deductionCount} deductions`}
+              {reimbursementCount > 0 && ` · ${reimbursementCount} reimbursements`}
             </span>
           </div>
           <div className="flex items-center gap-1">
