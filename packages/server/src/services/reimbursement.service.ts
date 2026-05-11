@@ -246,7 +246,6 @@ export class ReimbursementService {
     if (claim.status !== "pending")
       throw new AppError(400, "INVALID_STATUS", "Only pending claims can be approved");
 
-    // #38 — Mirror the submit-time nonnegative guard for approver overrides.
     if (amount !== undefined && amount !== null) {
       const amt = typeof amount === "number" ? amount : Number(amount);
       const amountCheck = z.number().finite().nonnegative().safeParse(amt);
@@ -260,22 +259,24 @@ export class ReimbursementService {
       amount = amountCheck.data;
     }
 
-    // #366/#342 — `approved_by` is varchar(36). Earlier callers passed
-    // `String(req.user!.empcloudUserId)` which is fine, but defensively
-    // truncate just in case some legacy auth flow injects a longer string,
-    // and coerce amount to a Number (claim.amount comes back from MySQL
-    // DECIMAL as a string and writing the original string back into the
-    // column has triggered "Out of range" warnings on some MariaDB builds).
     const approvedBy = approverId ? String(approverId).slice(0, 36) : null;
     const finalAmount =
       amount === undefined || amount === null ? Number(claim.amount) : Number(amount);
 
-    return this.db.update("reimbursements", id, {
-      status: "approved",
-      approved_by: approvedBy,
-      approved_at: new Date(),
-      amount: Number.isFinite(finalAmount) ? finalAmount : 0,
-    });
+    try {
+      return await this.db.update("reimbursements", id, {
+        status: "approved",
+        approved_by: approvedBy,
+        approved_at: new Date(),
+        amount: Number.isFinite(finalAmount) ? finalAmount : 0,
+      });
+    } catch (err: any) {
+      throw new AppError(
+        500,
+        "REIMBURSEMENT_APPROVE_FAILED",
+        `Failed to approve reimbursement: ${err?.sqlMessage || err?.message || "database error"}`,
+      );
+    }
   }
 
   async reject(id: string, approverId: string) {
@@ -285,11 +286,19 @@ export class ReimbursementService {
       throw new AppError(400, "INVALID_STATUS", "Only pending claims can be rejected");
 
     const approvedBy = approverId ? String(approverId).slice(0, 36) : null;
-    return this.db.update("reimbursements", id, {
-      status: "rejected",
-      approved_by: approvedBy,
-      approved_at: new Date(),
-    });
+    try {
+      return await this.db.update("reimbursements", id, {
+        status: "rejected",
+        approved_by: approvedBy,
+        approved_at: new Date(),
+      });
+    } catch (err: any) {
+      throw new AppError(
+        500,
+        "REIMBURSEMENT_REJECT_FAILED",
+        `Failed to reject reimbursement: ${err?.sqlMessage || err?.message || "database error"}`,
+      );
+    }
   }
 
   async markPaid(id: string, month: number, year: number) {

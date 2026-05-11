@@ -218,8 +218,6 @@ router.post(
     await svc.getRun(param(req, "id"), String(req.user!.empcloudOrgId));
     const emailSvc = new EmailService();
 
-    // Surface config issues up-front with a clear message instead of silently
-    // failing every send and reporting "Sent 0 payslip emails (N failed)".
     if (!emailSvc.isConfigured()) {
       throw new AppError(
         503,
@@ -228,13 +226,17 @@ router.post(
       );
     }
 
-    const result = await emailSvc.sendPayslipsForRun(param(req, "id"));
+    let result: Awaited<ReturnType<typeof emailSvc.sendPayslipsForRun>>;
+    try {
+      result = await emailSvc.sendPayslipsForRun(param(req, "id"));
+    } catch (err: any) {
+      throw new AppError(
+        500,
+        "EMAIL_SEND_CRASHED",
+        `Email send crashed: ${err?.message || "unknown error"}`,
+      );
+    }
 
-    // If there were payslips but every single send failed, treat that as a
-    // hard error rather than returning a cheerful success toast.
-    // #335 — Include the captured failure reasons so HR can act on the
-    // root cause (bad SMTP creds, no email on file, transport rejected,
-    // etc.) without trawling through server logs.
     if (result.sent === 0 && result.failed > 0) {
       const reasons = (result.failureReasons || []).join(" · ");
       throw new AppError(
@@ -250,6 +252,14 @@ router.post(
             ? { reasons: result.failureReasons }
             : {}),
         },
+      );
+    }
+
+    if (result.sent === 0 && result.failed === 0) {
+      throw new AppError(
+        400,
+        "NO_PAYSLIPS",
+        "No payslips found for this run — compute the run before sending payslip emails.",
       );
     }
 

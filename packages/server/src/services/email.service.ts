@@ -260,11 +260,6 @@ export class EmailService {
 
     let sent = 0;
     let failed = 0;
-    // #335 — Track distinct failure reasons so the route can surface them
-    // to HR (previously every failure was an opaque "false" return; the
-    // operator had to dig through server logs to see why nothing went
-    // out). Keep a set of unique short reasons so a 100-employee run
-    // doesn't return a 100-line message.
     const failureSet = new Set<string>();
 
     for (const ps of payslips.data) {
@@ -279,7 +274,13 @@ export class EmailService {
       }
       if (success) {
         sent++;
-        await this.db.update("payslips", ps.id, { sent_at: new Date() });
+        try {
+          await this.db.update("payslips", ps.id, { sent_at: new Date() });
+        } catch (err: any) {
+          logger.warn(
+            `sendPayslipsForRun: failed to stamp sent_at on payslip ${ps.id}: ${err?.message || err}`,
+          );
+        }
       } else {
         failed++;
       }
