@@ -1,6 +1,8 @@
+import { v4 as uuidv4 } from "uuid";
 import { getDB } from "../db/adapters";
 import { findUserById } from "../db/empcloud";
 import { AppError } from "../api/middleware/error.middleware";
+import { logger } from "../utils/logger";
 import { computeIncomeTax } from "./tax/india-tax.service";
 import { TaxRegime } from "@emp-payroll/shared";
 
@@ -241,29 +243,72 @@ export class TaxDeclarationService {
     // carries no PII -- it's just enough of a row to satisfy the
     // tax_declarations.employee_id NOT NULL column. (Same pattern as the
     // SSO ensurePayrollProfile() in auth.service.)
+    //
+    // #372 — The original implementation silently swallowed every error
+    // from the auto-provision path with `try { ... } catch {}`, then fell
+    // through to the generic EMPLOYEE_NOT_IN_PAYROLL 400. That hid every
+    // real failure: a half-provisioned row from a partial run, a races
+    // with the SSO ensurePayrollProfile inserting the same empcloud_user_id
+    // (the column is UNIQUE), an EmpCloud DB connectivity blip, etc. Now
+    // we (a) explicitly pass an `id: uuidv4()` so we mirror the SSO path
+    // and don't depend on adapter quirks, (b) re-fetch the row by
+    // empcloud_user_id when create() raises a duplicate-key error so we
+    // pick up whatever the racing process inserted, and (c) log the actual
+    // exception so production failures stop being invisible.
     if (!employeeRowId) {
       const numeric = Number(employeeId);
       if (Number.isFinite(numeric) && numeric > 0) {
         try {
           const ecUser = await findUserById(numeric);
           if (ecUser) {
-            const newProfile: any = await this.db.create("employee_payroll_profiles", {
-              empcloud_user_id: ecUser.id,
-              empcloud_org_id: ecUser.organization_id,
-              employee_code: ecUser.emp_code,
-              bank_details: JSON.stringify({}),
-              tax_info: JSON.stringify({ pan: "", regime: "new" }),
-              pf_details: JSON.stringify({}),
-              esi_details: JSON.stringify({}),
-              is_active: true,
-            });
-            empcloudUserId = numeric;
-            employeeRowId = newProfile.id;
+            try {
+              const newProfile: any = await this.db.create("employee_payroll_profiles", {
+                id: uuidv4(),
+                empcloud_user_id: ecUser.id,
+                empcloud_org_id: ecUser.organization_id,
+                employee_code: ecUser.emp_code,
+                bank_details: JSON.stringify({}),
+                tax_info: JSON.stringify({ pan: "", regime: "new" }),
+                pf_details: JSON.stringify({}),
+                esi_details: JSON.stringify({}),
+                is_active: true,
+              });
+              empcloudUserId = numeric;
+              employeeRowId = newProfile.id;
+            } catch (createErr: any) {
+              // Duplicate-key (ER_DUP_ENTRY / 23505) means another request
+              // beat us to it -- re-read the row and continue. Log other
+              // errors so they don't get masked as "not in payroll".
+              const msg = String(createErr?.message || createErr || "");
+              const isDup =
+                createErr?.code === "ER_DUP_ENTRY" ||
+                createErr?.code === "23505" ||
+                /duplicate|unique/i.test(msg);
+              if (isDup) {
+                const existing = await this.db
+                  .findOne<any>("employee_payroll_profiles", {
+                    empcloud_user_id: numeric,
+                  })
+                  .catch(() => null);
+                if (existing) {
+                  empcloudUserId = numeric;
+                  employeeRowId = existing.id;
+                }
+              } else {
+                logger.error(
+                  `tax-declaration auto-provision failed for empcloud_user_id=${numeric}: ${msg}`,
+                );
+              }
+            }
+          } else {
+            logger.warn(`tax-declaration auto-provision: EmpCloud user ${numeric} not found`);
           }
-        } catch {
-          // fall through to the original "EMPLOYEE_NOT_IN_PAYROLL" 400 if
-          // auto-provisioning fails (e.g. race with the SSO flow creating
-          // the same row, EmpCloud user not found, etc.).
+        } catch (lookupErr: any) {
+          logger.error(
+            `tax-declaration auto-provision lookup failed for empcloud_user_id=${numeric}: ${
+              lookupErr?.message || lookupErr
+            }`,
+          );
         }
       }
     }

@@ -386,21 +386,31 @@ function MarkAllForm({
 }) {
   const [month, setMonth] = useState(defaultMonth);
   const [year, setYear] = useState(defaultYear);
-  const [totalDays, setTotalDays] = useState(defaultWorkdays(defaultMonth, defaultYear));
+  // #373 — Hold the working-days field as a STRING, not a number. With a
+  // numeric value+onChange pair the input was effectively unusable: typing
+  // a digit into "21" appended ("212"), pressing Backspace produced "" →
+  // Number("") === 0 → state snapped back to "0", and any non-digit (the
+  // selector dropdown's `e.target.value` on stale browsers, the - sign,
+  // backspace mid-edit) coerced to NaN which React refused to render and
+  // the field froze. Storing the raw string keeps the input fully editable
+  // and we coerce + validate at submit time only.
+  const [totalDaysStr, setTotalDaysStr] = useState(
+    String(defaultWorkdays(defaultMonth, defaultYear)),
+  );
 
   // Recompute the workdays default whenever month/year changes -- HR
   // explicitly chose a different period, the previous default is stale.
   function setMonthYear(m: number, y: number) {
     setMonth(m);
     setYear(y);
-    setTotalDays(defaultWorkdays(m, y));
+    setTotalDaysStr(String(defaultWorkdays(m, y)));
   }
 
   return (
     <form
       onSubmit={async (e) => {
         e.preventDefault();
-        const td = Math.floor(Number(totalDays));
+        const td = Math.floor(Number(totalDaysStr));
         if (!Number.isFinite(td) || td < 1 || td > 31) {
           toast.error("Working days must be a whole number between 1 and 31");
           return;
@@ -475,7 +485,15 @@ function MarkAllForm({
           value={year}
           min={2000}
           max={2099}
-          onChange={(e) => setMonthYear(month, Number(e.target.value))}
+          onChange={(e) => {
+            // Year field is bound to a number; treat empty / partial input
+            // as "keep the current year" so the user can blank it and retype
+            // without the field clamping to 0/NaN mid-edit (#373).
+            const raw = e.target.value;
+            if (raw === "") return;
+            const n = Number(raw);
+            if (Number.isFinite(n)) setMonthYear(month, n);
+          }}
         />
       </div>
       <Input
@@ -486,16 +504,16 @@ function MarkAllForm({
         min={1}
         max={31}
         step={1}
-        value={totalDays}
-        onChange={(e) => setTotalDays(Number(e.target.value))}
+        value={totalDaysStr}
+        onChange={(e) => setTotalDaysStr(e.target.value)}
         // #336 — pre-select on focus so typing replaces the leading 0/value
         // instead of producing "012", "020", etc.
         onFocus={(e) => e.currentTarget.select()}
         required
       />
       <p className="text-sm text-gray-500">
-        This will mark all {employees.length} active employees as present for {totalDays} days in{" "}
-        {MONTHS[month]} {year}. You can edit individual records afterwards.
+        This will mark all {employees.length} active employees as present for {totalDaysStr || 0}{" "}
+        days in {MONTHS[month]} {year}. You can edit individual records afterwards.
       </p>
       <div className="flex justify-end gap-3">
         <Button variant="outline" type="button" onClick={onClose}>
@@ -531,15 +549,22 @@ function MarkSingleForm({
 }) {
   const [month, setMonth] = useState(defaultMonth);
   const [year, setYear] = useState(defaultYear);
-  const [totalDays, setTotalDays] = useState(defaultWorkdays(defaultMonth, defaultYear));
-  const [presentDays, setPresentDays] = useState(defaultWorkdays(defaultMonth, defaultYear));
+  // #373 — String-backed numeric inputs so the user can clear, partially
+  // type, or replace values without React snapping the field back to 0/NaN
+  // on every keystroke. Coerce + validate at submit time only.
+  const [totalDaysStr, setTotalDaysStr] = useState(
+    String(defaultWorkdays(defaultMonth, defaultYear)),
+  );
+  const [presentDaysStr, setPresentDaysStr] = useState(
+    String(defaultWorkdays(defaultMonth, defaultYear)),
+  );
 
   function setMonthYear(m: number, y: number) {
     setMonth(m);
     setYear(y);
     const wd = defaultWorkdays(m, y);
-    setTotalDays(wd);
-    setPresentDays(wd);
+    setTotalDaysStr(String(wd));
+    setPresentDaysStr(String(wd));
   }
 
   return (
@@ -548,8 +573,8 @@ function MarkSingleForm({
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
         const employeeId = String(fd.get("employeeId") || "");
-        const td = Math.floor(Number(totalDays));
-        const pd = Number(presentDays);
+        const td = Math.floor(Number(totalDaysStr));
+        const pd = Number(presentDaysStr);
         const absentDays = Number(fd.get("absentDays") || 0);
         const lopDays = Number(fd.get("lopDays") || 0);
         const overtimeHours = Number(fd.get("overtimeHours") || 0);
@@ -630,7 +655,14 @@ function MarkSingleForm({
           value={year}
           min={2000}
           max={2099}
-          onChange={(e) => setMonthYear(month, Number(e.target.value))}
+          onChange={(e) => {
+            // See MarkAllForm for the rationale (#373) — keep the year intact
+            // when the user temporarily clears the field mid-edit.
+            const raw = e.target.value;
+            if (raw === "") return;
+            const n = Number(raw);
+            if (Number.isFinite(n)) setMonthYear(month, n);
+          }}
         />
       </div>
       <div>
@@ -664,8 +696,8 @@ function MarkSingleForm({
           min={1}
           max={31}
           step={1}
-          value={totalDays}
-          onChange={(e) => setTotalDays(Number(e.target.value))}
+          value={totalDaysStr}
+          onChange={(e) => setTotalDaysStr(e.target.value)}
           // #336 — pre-select on focus so the leading 0/value clears when
           // the user starts typing (no more "012", "020").
           onFocus={(e) => e.currentTarget.select()}
@@ -679,8 +711,8 @@ function MarkSingleForm({
           min={0}
           max={31}
           step={1}
-          value={presentDays}
-          onChange={(e) => setPresentDays(Number(e.target.value))}
+          value={presentDaysStr}
+          onChange={(e) => setPresentDaysStr(e.target.value)}
           onFocus={(e) => e.currentTarget.select()}
           required
         />

@@ -56,6 +56,15 @@ export function EarnedWagePage() {
     setStatusFilter(status);
     requestsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+  // #339 — Total Requests card used to do a silent scroll-to-table; reporters
+  // hit it expecting a redirect to a dedicated page and assumed the click was
+  // dead. EWA lives on a single route so there's no separate page to navigate
+  // to; surface a toast explaining what happened so the click feels intentional
+  // and they know where to look for the data.
+  const showAllAndScrollWithToast = () => {
+    showAllAndScroll();
+    toast.success("Showing all requests below", { id: "ewa-show-all" });
+  };
 
   // --- Data ---
   const { data: dashRes } = useQuery({
@@ -262,7 +271,7 @@ export function EarnedWagePage() {
           title="Total Requests"
           value={stats.totalRequests || 0}
           icon={CheckCircle}
-          onClick={showAllAndScroll}
+          onClick={showAllAndScrollWithToast}
         />
       </div>
 

@@ -617,10 +617,17 @@ export function EmployeeDetailPage() {
             // RBI standard: 4 letters + "0" + 6 alphanumeric. Mirrors the
             // server-side validation in bank-file.service so HR sees the
             // problem on submit instead of when the bank file is generated.
+            // #374 — IFSC is optional during initial onboarding (HR may
+            // capture the account number first and circle back for IFSC
+            // once the employee shares it), so only enforce the format
+            // when a value was actually entered. Empty saves still go
+            // through and the server-side bank-file generator will block
+            // bank files for employees with no IFSC, which is the right
+            // place to gate disbursal.
             const ifscRaw = (fd.get("ifscCode") as string) || "";
             const ifscCode = ifscRaw.toUpperCase().trim();
             const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
-            if (!IFSC_REGEX.test(ifscCode)) {
+            if (ifscCode && !IFSC_REGEX.test(ifscCode)) {
               toast.error(
                 "IFSC must be 11 characters: 4 letters + '0' + 6 letters/digits (e.g. HDFC0001234).",
               );
@@ -668,18 +675,42 @@ export function EmployeeDetailPage() {
             label="IFSC Code"
             defaultValue={bankDetails.ifscCode || ""}
             placeholder="e.g. HDFC0001234"
-            // #354 — Enforce IFSC format on the input itself: 11 chars,
-            // 4 letters + "0" + 6 letters/digits, all caps. The browser
-            // shows the `title` text on the validation popover when the
-            // pattern doesn't match.
-            pattern="^[A-Z]{4}0[A-Z0-9]{6}$"
+            // #374 — Three things were quietly breaking IFSC entry that #354
+            // shipped:
+            //   1. HTML5 `pattern` is implicitly anchored with ^(?:...)$, so
+            //      the explicit ^…$ in the regex turned into ^(?:^…$)$ at the
+            //      browser level. The trailing $$ never matches, so EVERY
+            //      value (including a perfectly valid HDFC0001234) failed
+            //      the constraint and the Save button reported a format
+            //      error.
+            //   2. The lowercase->uppercase coercion ran in onChange AFTER
+            //      the browser had already evaluated the pattern against the
+            //      lowercase keystroke, so typing "abcd0..." flagged a
+            //      pattern mismatch even though the field would have been
+            //      valid the moment the user blurred.
+            //   3. minLength=11 + required made the field reject "" outright,
+            //      but onboarding flows want to save bank rows incrementally
+            //      (account number now, IFSC later). Make IFSC optional and
+            //      only validate the format when something is actually typed.
+            pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}"
             maxLength={11}
-            minLength={11}
             title="IFSC must be 11 characters: 4 letters + '0' + 6 letters/digits (e.g. HDFC0001234)"
-            onChange={(e) => {
-              e.currentTarget.value = e.currentTarget.value.toUpperCase();
+            // Use `input` via onInput to coerce uppercase BEFORE the browser
+            // re-evaluates validity for the next keystroke. Preserve the
+            // caret so the user doesn't get bounced to the end of the field
+            // on every keypress.
+            onInput={(e) => {
+              const el = e.currentTarget;
+              const start = el.selectionStart;
+              const end = el.selectionEnd;
+              const upper = el.value.toUpperCase();
+              if (el.value !== upper) {
+                el.value = upper;
+                if (start !== null && end !== null) {
+                  el.setSelectionRange(start, end);
+                }
+              }
             }}
-            required
           />
           <SelectField
             id="accountType"
