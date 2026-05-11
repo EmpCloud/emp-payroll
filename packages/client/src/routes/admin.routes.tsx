@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import { Route } from "react-router-dom";
+import { Route, Navigate } from "react-router-dom";
 
 const NotificationsPage = lazy(() =>
   import("@/pages/NotificationsPage").then((m) => ({ default: m.NotificationsPage })),
@@ -145,6 +145,7 @@ export function AdminRoutes() {
       <Route path="/employees/:id" element={<EmployeeDetailPage />} />
       <Route path="/employees/org-chart" element={<OrgChartPage />} />
       <Route path="/departments" element={<DepartmentsPage />} />
+      <Route path="/payroll" element={<Navigate to="/payroll/runs" replace />} />
       <Route path="/payroll/structures" element={<SalaryStructuresPage />} />
       <Route path="/payroll/runs" element={<PayrollRunsPage />} />
       <Route path="/payroll/runs/:id" element={<PayrollRunDetailPage />} />

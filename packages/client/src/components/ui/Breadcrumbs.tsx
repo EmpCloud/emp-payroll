@@ -23,9 +23,17 @@ const ROUTE_LABELS: Record<string, string> = {
   onboarding: "Setup",
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const NUMERIC_ID_RE = /^\d+$/;
+
+function isIdSegment(seg: string): boolean {
+  return UUID_RE.test(seg) || NUMERIC_ID_RE.test(seg);
+}
+
 export function Breadcrumbs() {
   const location = useLocation();
-  const segments = location.pathname.split("/").filter(Boolean);
+  const allSegments = location.pathname.split("/").filter(Boolean);
+  const segments = allSegments.filter((seg) => !isIdSegment(seg));
 
   if (segments.length <= 1) return null;
 
