@@ -178,6 +178,14 @@ export class TaxDeclarationService {
 
   async getDeclarations(employeeId: string, financialYear?: string) {
     const fy = financialYear || this.currentFY();
+    // Self-service routes pass the numeric EmpCloud user id; admin routes pass
+    // the payroll employees.id UUID. Submit writes both columns so we filter
+    // by whichever form the caller supplied.
+    if (/^\d+$/.test(employeeId)) {
+      return this.db.findMany<any>("tax_declarations", {
+        filters: { empcloud_user_id: Number(employeeId), financial_year: fy },
+      });
+    }
     return this.db.findMany<any>("tax_declarations", {
       filters: { employee_id: employeeId, financial_year: fy },
     });
