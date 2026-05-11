@@ -1,4 +1,5 @@
 import { getDB } from "../db/adapters";
+import { getEmpCloudDB } from "../db/empcloud";
 import { AppError } from "../api/middleware/error.middleware";
 
 export class EarnedWageService {
@@ -312,23 +313,41 @@ export class EarnedWageService {
       limit: 200,
     });
 
-    // Enrich with employee names
-    const empIds = [...new Set(result.data.map((r: any) => String(r.employee_id)))];
-    const empMap: Record<string, any> = {};
-    for (const eid of empIds) {
-      const emp = await this.db.findOne<any>("employees", { empcloud_user_id: Number(eid) });
-      if (emp) empMap[eid] = emp;
+    const userIds = [
+      ...new Set(
+        result.data
+          .map((r: any) => Number(r.employee_id))
+          .filter((id: number) => Number.isFinite(id) && id > 0),
+      ),
+    ];
+
+    const userMap: Record<string, { first_name?: string; last_name?: string; emp_code?: string }> =
+      {};
+    if (userIds.length > 0) {
+      try {
+        const ecDb = getEmpCloudDB();
+        const users = await ecDb("users")
+          .whereIn("id", userIds)
+          .select("id", "first_name", "last_name", "emp_code");
+        for (const u of users) userMap[String(u.id)] = u;
+      } catch {
+        // EmpCloud unreachable — names will fall through to "Employee #N".
+      }
     }
 
     return {
       ...result,
-      data: result.data.map((r: any) => ({
-        ...r,
-        employee_name: empMap[String(r.employee_id)]
-          ? `${empMap[String(r.employee_id)].first_name} ${empMap[String(r.employee_id)].last_name}`
-          : `Employee #${r.employee_id}`,
-        employee_code: empMap[String(r.employee_id)]?.employee_code || "",
-      })),
+      data: result.data.map((r: any) => {
+        const u = userMap[String(r.employee_id)];
+        const employee_name = u
+          ? [u.first_name, u.last_name].filter(Boolean).join(" ") || `Employee #${r.employee_id}`
+          : `Employee #${r.employee_id}`;
+        return {
+          ...r,
+          employee_name,
+          employee_code: u?.emp_code || "",
+        };
+      }),
     };
   }
 
