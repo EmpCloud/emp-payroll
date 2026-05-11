@@ -107,7 +107,7 @@ router.post(
     }
     const data = await svc.saveDeclarationProof({
       orgId: String(req.user!.empcloudOrgId),
-      employeeId: String(req.user!.empcloudUserId),
+      empcloudUserId: req.user!.empcloudUserId,
       declarationId: param(req, "declId"),
       file: req.file as any,
     });

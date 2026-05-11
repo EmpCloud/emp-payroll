@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { SelectField } from "@/components/ui/SelectField";
 import { Modal } from "@/components/ui/Modal";
 import { formatCurrency } from "@/lib/utils";
-import { apiGet, apiPost } from "@/api/client";
+import { api, apiGet, apiPost } from "@/api/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Upload, FileCheck, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -49,7 +49,10 @@ export function MyDeclarationsPage() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [uploadingProofId, setUploadingProofId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const rowProofInputRef = useRef<HTMLInputElement>(null);
+  const pendingProofDeclIdRef = useRef<string | null>(null);
   const qc = useQueryClient();
 
   const { data: res, isLoading } = useQuery({
@@ -87,6 +90,43 @@ export function MyDeclarationsPage() {
     if (file.size > MAX_FILE_BYTES) return "File is larger than 5MB";
     if (!ALLOWED_FILE_TYPES.includes(file.type)) return "Only PDF, JPG or PNG files are allowed";
     return null;
+  }
+
+  function triggerRowProofUpload(declarationId: string) {
+    pendingProofDeclIdRef.current = declarationId;
+    if (rowProofInputRef.current) {
+      rowProofInputRef.current.value = "";
+      rowProofInputRef.current.click();
+    }
+  }
+
+  async function onRowProofSelected(file: File | null) {
+    const declarationId = pendingProofDeclIdRef.current;
+    pendingProofDeclIdRef.current = null;
+    if (!file || !declarationId) return;
+
+    const validationError = validateFile(file);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    setUploadingProofId(declarationId);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      await api.post(`/uploads/declarations/${declarationId}/proof`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success("Proof uploaded");
+      await qc.invalidateQueries({ queryKey: ["my-declarations"] });
+    } catch (err: any) {
+      const resp = err?.response?.data?.error;
+      const msg = resp?.message || err?.message || "Failed to upload proof";
+      toast.error(msg);
+    } finally {
+      setUploadingProofId(null);
+    }
   }
 
   function handleFileSelected(file: File | null) {
@@ -275,6 +315,13 @@ export function MyDeclarationsPage() {
 
   return (
     <div className="space-y-6">
+      <input
+        ref={rowProofInputRef}
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+        className="hidden"
+        onChange={(e) => onRowProofSelected(e.target.files?.[0] || null)}
+      />
       <PageHeader
         title="Tax Declarations"
         description="FY 2025-26 — Submit investment proofs and claims"
@@ -351,7 +398,12 @@ export function MyDeclarationsPage() {
                       {d.proof_submitted ? (
                         <FileCheck className="h-4 w-4 text-green-500" />
                       ) : (
-                        <Button variant="ghost" size="sm">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          loading={uploadingProofId === d.id}
+                          onClick={() => triggerRowProofUpload(d.id)}
+                        >
                           <Upload className="h-3 w-3" /> Upload
                         </Button>
                       )}

@@ -82,16 +82,15 @@ export class UploadService {
 
   async saveDeclarationProof(params: {
     orgId: string;
-    employeeId: string;
+    empcloudUserId: number;
     declarationId: string;
     file: { filename: string; originalname: string; mimetype: string };
   }) {
     const fileUrl = `/uploads/${params.file.filename}`;
 
-    // Update the declaration with proof info
-    const result = await this.db.raw<any>(
-      `UPDATE tax_declarations SET proof_submitted = 1, proof_url = ? WHERE id = ? AND employee_id = ?`,
-      [fileUrl, params.declarationId, params.employeeId]
+    await this.db.raw<any>(
+      `UPDATE tax_declarations SET proof_submitted = 1, proof_url = ? WHERE id = ? AND empcloud_user_id = ?`,
+      [fileUrl, params.declarationId, params.empcloudUserId],
     );
 
     return { fileUrl, declarationId: params.declarationId };
