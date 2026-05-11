@@ -64,14 +64,29 @@ function OrgNodeCard({ node, depth = 0 }: { node: OrgNode; depth?: number }) {
         {depth > 0 && (
           <div className="absolute -top-6 left-1/2 h-6 w-px -translate-x-1/2 bg-gray-300" />
         )}
-        <Card className="w-48 transition-shadow hover:shadow-md">
-          <CardContent className="py-3 text-center">
-            <Avatar name={node.name} size="sm" className="mx-auto" />
-            <p className="mt-2 text-sm font-semibold text-gray-900">{node.name}</p>
-            <p className="text-xs text-gray-500">{node.designation}</p>
-            <Badge variant="draft" className="mt-1">
-              {node.department}
-            </Badge>
+        {/* #370 — Card was hard-pinned at w-48 (192px) which was too narrow
+            for typical Indian full names + designations: long values like
+            "Senior Software Engineer" or "Chandrasekhar Subramaniam"
+            overflowed the card edge. Bumped to w-56, dropped text-center
+            so the avatar + label stack reads top-aligned, added min-w-0 +
+            truncate so anything still longer than the card shrinks
+            gracefully with an ellipsis instead of breaking the layout. */}
+        <Card className="w-56 transition-shadow hover:shadow-md">
+          <CardContent className="flex flex-col items-center gap-1 py-3">
+            <Avatar name={node.name} size="sm" />
+            <div className="mt-1 w-full min-w-0 text-center">
+              <p className="truncate text-sm font-semibold text-gray-900" title={node.name}>
+                {node.name}
+              </p>
+              <p className="truncate text-xs text-gray-500" title={node.designation || ""}>
+                {node.designation || "—"}
+              </p>
+            </div>
+            {node.department && (
+              <Badge variant="draft" className="mt-1 max-w-full truncate">
+                {node.department}
+              </Badge>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -81,15 +96,14 @@ function OrgNodeCard({ node, depth = 0 }: { node: OrgNode; depth?: number }) {
           {/* Vertical line down */}
           <div className="absolute -top-6 left-1/2 h-6 w-px -translate-x-1/2 bg-gray-300" />
 
-          {/* Horizontal line connecting children */}
+          {/* Horizontal line connecting children — span the full width of
+              the children row so siblings on the far edges still read as
+              connected. The previous calc(100/(n*2)) inset was based on
+              equal column widths but the flex children use gap-6 + their
+              own intrinsic widths, so the line frequently stopped short
+              of the outer cards (#370). */}
           {node.children.length > 1 && (
-            <div
-              className="absolute -top-px h-px bg-gray-300"
-              style={{
-                left: `${100 / (node.children.length * 2)}%`,
-                right: `${100 / (node.children.length * 2)}%`,
-              }}
-            />
+            <div className="absolute -top-px left-0 right-0 h-px bg-gray-300" />
           )}
 
           <div className="flex flex-wrap justify-center gap-6">

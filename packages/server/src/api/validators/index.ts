@@ -172,12 +172,29 @@ export const createEmployeeSchema = z.object({
   }),
 });
 
+// #374 — IFSC is optional during initial onboarding (HR may save the bank
+// row with just account number and circle back for IFSC later). When the
+// caller sends a non-empty value we still enforce the RBI 11-char format
+// (4 letters + "0" + 6 alphanumeric) so we don't persist garbage that
+// would later blow up the bank-file generator. The bank-file generator
+// itself blocks disbursal for any employee missing IFSC, which is the
+// right place to gate payouts.
+const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+const ifscCodeSchema = z
+  .string()
+  .max(20)
+  .optional()
+  .transform((v) => (typeof v === "string" ? v.trim().toUpperCase() : v))
+  .refine((v) => !v || IFSC_REGEX.test(v), {
+    message: "IFSC must be 11 characters: 4 letters + '0' + 6 letters/digits (e.g. HDFC0001234)",
+  });
+
 export const updateBankDetailsSchema = z.object({
   params: z.object({ id: z.string() }),
   body: z.object({
     bankName: bankNameSchema,
     accountNumber: z.string().min(1).max(50),
-    ifscCode: z.string().min(1).max(20),
+    ifscCode: ifscCodeSchema,
     accountType: z.enum(["savings", "current", "salary"]).optional(),
     branchName: z.string().max(100).optional(),
   }),
@@ -191,7 +208,7 @@ export const selfUpdateBankDetailsSchema = z.object({
   body: z.object({
     bankName: bankNameSchema,
     accountNumber: z.string().min(1).max(50),
-    ifscCode: z.string().min(1).max(20),
+    ifscCode: ifscCodeSchema,
     accountType: z.enum(["savings", "current", "salary"]).optional(),
     branchName: z.string().max(100).optional(),
   }),
