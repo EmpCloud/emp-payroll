@@ -78,13 +78,36 @@ export function AdminDeclarationsPage() {
 
   const approveAll = useMutation({
     mutationFn: () => apiPost<any>(`/tax/declarations/${selectedEmpId}/approve`, {}),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       qc.invalidateQueries({ queryKey: ["admin-declarations", selectedEmpId, fy] });
-      toast.success("All pending declarations approved.");
+      const n = Number(res?.data?.approved ?? 0);
+      if (n === 0) {
+        toast("No pending declarations to approve.", { icon: "ℹ️" });
+      } else {
+        toast.success(`Approved ${n} declaration${n === 1 ? "" : "s"}.`);
+      }
     },
     onError: (err: any) => {
       const msg =
         err?.response?.data?.error?.message || err?.message || "Failed to approve declarations";
+      toast.error(msg);
+    },
+  });
+
+  const approveOne = useMutation({
+    mutationFn: (declId: string) =>
+      apiPost<any>(`/tax/declarations/${selectedEmpId}/${declId}/approve`, {}),
+    onSuccess: (res: any) => {
+      qc.invalidateQueries({ queryKey: ["admin-declarations", selectedEmpId, fy] });
+      if (res?.data?.alreadyApproved) {
+        toast("Already approved.", { icon: "ℹ️" });
+      } else {
+        toast.success("Declaration approved.");
+      }
+    },
+    onError: (err: any) => {
+      const msg =
+        err?.response?.data?.error?.message || err?.message || "Failed to approve declaration";
       toast.error(msg);
     },
   });
@@ -226,42 +249,67 @@ export function AdminDeclarationsPage() {
                         <th className="px-4 py-3 text-right">Approved</th>
                         <th className="px-4 py-3 text-left">Status</th>
                         <th className="px-4 py-3 text-left">Proof</th>
+                        <th className="px-4 py-3 text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {declarations.map((d) => (
-                        <tr key={d.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 font-medium text-gray-900">{d.section}</td>
-                          <td className="px-4 py-3 text-gray-600">{d.description}</td>
-                          <td className="px-4 py-3 text-right text-gray-900">
-                            {formatCurrency(Number(d.declared_amount || 0))}
-                          </td>
-                          <td className="px-4 py-3 text-right text-gray-900">
-                            {d.approved_amount != null
-                              ? formatCurrency(Number(d.approved_amount))
-                              : "—"}
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge variant={statusBadgeVariant(d.approval_status)}>
-                              {d.approval_status}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3">
-                            {d.proof_path ? (
-                              <a
-                                href={`/api/v1${d.proof_path.startsWith("/") ? "" : "/"}${d.proof_path}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-brand-600 hover:text-brand-700 inline-flex items-center gap-1 text-xs"
-                              >
-                                View <ExternalLink className="h-3 w-3" />
-                              </a>
-                            ) : (
-                              <span className="text-xs text-gray-400">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                      {declarations.map((d) => {
+                        const isPendingRow = d.approval_status === "pending";
+                        const isThisRowApproving =
+                          approveOne.isPending && approveOne.variables === d.id;
+                        return (
+                          <tr key={d.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 font-medium text-gray-900">{d.section}</td>
+                            <td className="px-4 py-3 text-gray-600">{d.description}</td>
+                            <td className="px-4 py-3 text-right text-gray-900">
+                              {formatCurrency(Number(d.declared_amount || 0))}
+                            </td>
+                            <td className="px-4 py-3 text-right text-gray-900">
+                              {d.approved_amount != null
+                                ? formatCurrency(Number(d.approved_amount))
+                                : "—"}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge variant={statusBadgeVariant(d.approval_status)}>
+                                {d.approval_status}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3">
+                              {d.proof_path ? (
+                                <a
+                                  href={`/api/v1${d.proof_path.startsWith("/") ? "" : "/"}${d.proof_path}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-brand-600 hover:text-brand-700 inline-flex items-center gap-1 text-xs"
+                                >
+                                  View <ExternalLink className="h-3 w-3" />
+                                </a>
+                              ) : (
+                                <span className="text-xs text-gray-400">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {isPendingRow ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => approveOne.mutate(d.id)}
+                                  disabled={approveOne.isPending}
+                                >
+                                  {isThisRowApproving ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <FileCheck className="h-3 w-3" />
+                                  )}
+                                  Approve
+                                </Button>
+                              ) : (
+                                <span className="text-xs text-gray-400">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

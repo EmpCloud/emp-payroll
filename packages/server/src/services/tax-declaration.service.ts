@@ -422,10 +422,21 @@ export class TaxDeclarationService {
     return { empcloudUserId: null, employeeRowId: employeeId };
   }
 
+  // Same numeric-vs-UUID detection as getDeclarations (PR #376) -- the
+  // approve / update paths must filter on empcloud_user_id when the route
+  // hands us the EmpCloud numeric id, otherwise nothing matches and the
+  // operation silently no-ops.
+  private buildEmployeeFilter(employeeId: string): Record<string, any> {
+    if (/^\d+$/.test(employeeId)) {
+      return { empcloud_user_id: Number(employeeId) };
+    }
+    return { employee_id: employeeId };
+  }
+
   async updateDeclaration(employeeId: string, declId: string, data: any) {
     const decl = await this.db.findOne<any>("tax_declarations", {
       id: declId,
-      employee_id: employeeId,
+      ...this.buildEmployeeFilter(employeeId),
     });
     if (!decl) throw new AppError(404, "NOT_FOUND", "Declaration not found");
     return this.db.update("tax_declarations", declId, data);
@@ -435,7 +446,7 @@ export class TaxDeclarationService {
     const financialYear = fy || this.currentFY();
     const pending = await this.db.findMany<any>("tax_declarations", {
       filters: {
-        employee_id: employeeId,
+        ...this.buildEmployeeFilter(employeeId),
         financial_year: financialYear,
         approval_status: "pending",
       },
@@ -452,6 +463,24 @@ export class TaxDeclarationService {
     }
 
     return { approved: pending.data.length };
+  }
+
+  async approveOneDeclaration(employeeId: string, declId: string, approverId: string) {
+    const decl = await this.db.findOne<any>("tax_declarations", {
+      id: declId,
+      ...this.buildEmployeeFilter(employeeId),
+    });
+    if (!decl) throw new AppError(404, "NOT_FOUND", "Declaration not found");
+    if (decl.approval_status === "approved") {
+      return { approved: 0, alreadyApproved: true };
+    }
+    await this.db.update("tax_declarations", declId, {
+      approval_status: "approved",
+      approved_amount: decl.declared_amount,
+      approved_by: approverId,
+      approved_at: new Date(),
+    });
+    return { approved: 1, alreadyApproved: false };
   }
 
   async getRegime(employeeId: string) {

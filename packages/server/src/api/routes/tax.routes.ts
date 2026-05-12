@@ -67,6 +67,19 @@ router.post(
   }),
 );
 
+router.post(
+  "/declarations/:empId/:declId/approve",
+  authorize("hr_admin", "hr_manager"),
+  wrap(async (req, res) => {
+    const data = await svc.approveOneDeclaration(
+      param(req, "empId"),
+      param(req, "declId"),
+      String(req.user!.empcloudUserId),
+    );
+    res.json({ success: true, data });
+  }),
+);
+
 router.get(
   "/regime/:empId",
   wrap(async (req, res) => {
