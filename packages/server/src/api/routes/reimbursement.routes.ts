@@ -26,10 +26,13 @@ router.post(
   "/:id/approve",
   authorize("hr_admin", "hr_manager"),
   wrap(async (req, res) => {
+    // Body is optional -- the UI calls approve with no payload, so axios
+    // sends no Content-Type and express.json() leaves req.body undefined.
+    // Reading .amount off undefined was crashing every approve in prod.
     const data = await svc.approve(
       param(req, "id"),
       String(req.user!.empcloudUserId),
-      req.body.amount,
+      req.body?.amount,
     );
     res.json({ success: true, data });
   }),
@@ -50,7 +53,7 @@ router.post(
   "/:id/pay",
   authorize("hr_admin", "hr_manager"),
   wrap(async (req, res) => {
-    const data = await svc.markPaid(param(req, "id"), req.body.month, req.body.year);
+    const data = await svc.markPaid(param(req, "id"), req.body?.month, req.body?.year);
     res.json({ success: true, data });
   }),
 );
