@@ -222,7 +222,7 @@ router.post(
       throw new AppError(
         503,
         "EMAIL_NOT_CONFIGURED",
-        "Email provider is not configured on the server (SMTP host / user / password missing). Contact your admin to set SMTP_HOST, SMTP_USER and SMTP_PASSWORD.",
+        "Email provider is not configured on the server. Set SENDGRID_API_KEY, or SMTP_HOST + SMTP_USER + SMTP_PASS in the server .env and restart the API.",
       );
     }
 

@@ -12,8 +12,10 @@ interface EmailOptions {
   html: string;
 }
 
-// Lazy-initialize the SendGrid SDK exactly once per process. The API key may
-// be unset (local dev), in which case we fall back to nodemailer SMTP below.
+// Lazy-initialize transports. Both are optional; sendEmail tries SendGrid
+// first and falls through to SMTP on failure, mirroring EmpCloud's pattern
+// so the same .env (SENDGRID_API_KEY + SMTP_HOST/USER/PASS) works in both
+// repos. With neither configured, sendEmail logs and returns false.
 let sendgridReady = false;
 function ensureSendgrid(): boolean {
   if (sendgridReady) return true;
@@ -23,39 +25,41 @@ function ensureSendgrid(): boolean {
   return true;
 }
 
+let smtpTransporter: nodemailer.Transporter | null = null;
+function ensureSmtp(): nodemailer.Transporter | null {
+  if (smtpTransporter) return smtpTransporter;
+  if (!config.email.host) return null;
+  smtpTransporter = nodemailer.createTransport({
+    host: config.email.host,
+    port: config.email.port,
+    secure: config.email.port === 465,
+    // Mailpit/MailHog accept anonymous SMTP -- only attach auth when both
+    // user and pass are set so empty values don't trigger an auth attempt.
+    auth:
+      config.email.user && config.email.password
+        ? { user: config.email.user, pass: config.email.password }
+        : undefined,
+  });
+  return smtpTransporter;
+}
+
 export class EmailService {
-  private transporter: nodemailer.Transporter;
   private db = getDB();
 
-  constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: config.email.host,
-      port: config.email.port,
-      secure: config.email.port === 465,
-      auth: config.email.user
-        ? {
-            user: config.email.user,
-            pass: config.email.password,
-          }
-        : undefined,
-    });
-  }
-
   /**
-   * Returns true when *some* email transport is wired up. SendGrid wins when
-   * SENDGRID_API_KEY is set; otherwise we need full SMTP credentials. Used by
-   * callers (e.g. payroll routes) to surface a clear "email provider not
-   * configured" error instead of the generic "Failed to send emails".
+   * Returns true when *some* email transport is wired up. SendGrid OR SMTP.
+   * Used by callers (e.g. payroll routes) to surface a clear "email provider
+   * not configured" error instead of the generic "Failed to send emails".
    */
   isConfigured(): boolean {
-    if (config.email.sendgridApiKey) return true;
-    return Boolean(config.email.host && config.email.user && config.email.password);
+    return Boolean(config.email.sendgridApiKey) || Boolean(config.email.host);
   }
 
   /**
-   * Send a transactional email. Routes through SendGrid when SENDGRID_API_KEY
-   * is set (preferred), otherwise falls back to SMTP/nodemailer so existing
-   * deployments without a SendGrid account keep working.
+   * Send a transactional email. Tries SendGrid first when SENDGRID_API_KEY
+   * is set; on SendGrid failure (bad key, unverified sender, transient 5xx)
+   * falls through to SMTP/nodemailer if SMTP_HOST is set; finally returns
+   * false with a clear log when neither transport delivered.
    */
   async sendEmail(options: EmailOptions): Promise<boolean> {
     if (ensureSendgrid()) {
@@ -69,32 +73,40 @@ export class EmailService {
         logger.info(`Email sent via SendGrid to ${options.to}: ${options.subject}`);
         return true;
       } catch (err: any) {
-        // SendGrid stuffs error details in err.response.body.errors — surface
+        // SendGrid stuffs error details in err.response.body.errors -- surface
         // them in the log so misconfig (bad API key, unverified sender, etc.)
-        // is debuggable from the prod logs.
+        // is debuggable. Don't return; fall through to SMTP if configured.
         const detail =
           err?.response?.body?.errors?.map((e: any) => e.message).join("; ") ||
           err?.message ||
           String(err);
         logger.error(`SendGrid send failed to ${options.to}: ${detail}`);
+      }
+    }
+
+    const smtp = ensureSmtp();
+    if (smtp) {
+      try {
+        await smtp.sendMail({
+          from: `"${config.email.fromName}" <${config.email.from}>`,
+          to: options.to,
+          subject: options.subject,
+          html: options.html,
+        });
+        logger.info(`Email sent via SMTP to ${options.to}: ${options.subject}`);
+        return true;
+      } catch (err: any) {
+        logger.error(
+          `SMTP send failed to ${options.to} "${options.subject}": ${err?.message || err}`,
+        );
         return false;
       }
     }
 
-    // Fallback: legacy SMTP via nodemailer.
-    try {
-      await this.transporter.sendMail({
-        from: `"${config.email.fromName}" <${config.email.from}>`,
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-      });
-      logger.info(`Email sent via SMTP to ${options.to}: ${options.subject}`);
-      return true;
-    } catch (error) {
-      logger.error(`Failed to send email to ${options.to}:`, error);
-      return false;
-    }
+    logger.warn(
+      `[email] no transport configured (set SENDGRID_API_KEY or SMTP_HOST) -- skipping send to ${options.to} "${options.subject}"`,
+    );
+    return false;
   }
 
   async sendRaw(options: { to: string; subject: string; html: string }): Promise<boolean> {
