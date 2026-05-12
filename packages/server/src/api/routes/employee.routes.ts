@@ -26,10 +26,16 @@ router.get(
   // are blocked even if the legacy hr_manager mapping ever leaks through.
   requirePermission("payroll:view_all", "salary:view_all", "employees:view_all"),
   wrap(async (req, res) => {
-    const { page, limit, sort, order, department } = req.query as any;
+    const { page, limit, sort, order, q, location_id, department_id, department } =
+      req.query as any;
     const options: any = { page: Number(page) || 1, limit: Number(limit) || 20 };
     if (sort) options.sort = { field: sort, order: order || "asc" };
-    if (department) options.filters = { ...options.filters, department };
+    const filters: Record<string, any> = {};
+    if (department) filters.department = department;
+    if (q && String(q).trim()) filters.q = String(q).trim();
+    if (location_id) filters.location_id = Number(location_id);
+    if (department_id) filters.department_id = Number(department_id);
+    if (Object.keys(filters).length) options.filters = filters;
     const result = await svc.list(req.user!.empcloudOrgId, options);
     res.json({ success: true, data: result });
   }),

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getDB } from "../db/adapters";
-import { getEmpCloudDB } from "../db/empcloud";
+import { getEmpCloudDB, findSeatedUserIdsForFilters } from "../db/empcloud";
 import { AppError } from "../api/middleware/error.middleware";
 
 // #38 — Reject negative or non-finite amounts server-side. Using Zod here
@@ -19,7 +19,21 @@ const submitSchema = z.object({
 export class ReimbursementService {
   private db = getDB();
 
-  async list(orgId: string, filters?: { status?: string; employeeId?: string }) {
+  async list(
+    orgId: string,
+    filters?: {
+      status?: string;
+      employeeId?: string;
+      q?: string;
+      locationId?: number;
+      departmentId?: number;
+      page?: number;
+      limit?: number;
+    },
+  ) {
+    const page = Math.max(1, Number(filters?.page) || 1);
+    const limit = Math.min(200, Math.max(1, Number(filters?.limit) || 20));
+
     // The legacy `employees` table is one source of truth; the newer flow
     // writes to `employee_payroll_profiles`. submit() writes
     // reimbursements.employee_id with whichever id matched, so the admin
@@ -49,17 +63,35 @@ export class ReimbursementService {
     }
 
     const empIds = Object.keys(empMap);
-    if (empIds.length === 0) return { data: [], total: 0, page: 1, limit: 50, totalPages: 0 };
+    if (empIds.length === 0) return { data: [], total: 0, page, limit, totalPages: 0 };
 
     const queryFilters: any = filters?.employeeId
       ? { employee_id: filters.employeeId }
       : { employee_id: empIds };
     if (filters?.status) queryFilters.status = filters.status;
 
+    // q / location / department are filters on the EmpCloud `users` row,
+    // not on anything in the reimbursements table. Resolve them to a set
+    // of empcloud_user_ids and intersect at the SQL level.
+    const ecOrgId = Number(orgId);
+    const hasUserFilter = !!(filters?.q || filters?.locationId || filters?.departmentId);
+    if (hasUserFilter && Number.isFinite(ecOrgId)) {
+      const matchedUserIds = await findSeatedUserIdsForFilters(ecOrgId, "emp-payroll", {
+        q: filters?.q,
+        locationId: filters?.locationId,
+        departmentId: filters?.departmentId,
+      });
+      if (matchedUserIds.length === 0) {
+        return { data: [], total: 0, page, limit, totalPages: 0 };
+      }
+      queryFilters.empcloud_user_id = matchedUserIds;
+    }
+
     const result = await this.db.findMany<any>("reimbursements", {
       filters: queryFilters,
       sort: { field: "created_at", order: "desc" },
-      limit: 100,
+      page,
+      limit,
     });
 
     // #290 — `employee_payroll_profiles` has NO first_name / last_name columns

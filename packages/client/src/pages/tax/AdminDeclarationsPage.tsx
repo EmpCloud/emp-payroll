@@ -1,14 +1,23 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Pagination } from "@/components/ui/Pagination";
 import { formatCurrency } from "@/lib/utils";
-import { useEmployees } from "@/api/hooks";
+import { useEmployees, useDepartments, useLocations } from "@/api/hooks";
 import { apiGet, apiPost } from "@/api/client";
-import { Search, Loader2, FileCheck, ExternalLink, ClipboardList } from "lucide-react";
+import {
+  Search,
+  Loader2,
+  FileCheck,
+  ExternalLink,
+  ClipboardList,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import toast from "react-hot-toast";
 
 interface Declaration {
@@ -35,29 +44,49 @@ function currentFY(): string {
   return `${fyStart}-${fyStart + 1}`;
 }
 
+const PAGE_SIZE = 25;
+
 export function AdminDeclarationsPage() {
   const qc = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
   const fy = currentFY();
 
-  const { data: empRes, isLoading: empLoading } = useEmployees({ limit: 1000 });
-  // Same defensive unwrap as for declarations -- /employees returns
-  // { success, data: { data: [...], total, ... } }, so two levels deep.
-  // Falls back to empty array if either layer is missing or non-array.
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
+  const [locationId, setLocationId] = useState("");
+  const [page, setPage] = useState(1);
+  const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(id);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, departmentId, locationId]);
+
+  const { data: deptRes } = useDepartments();
+  const { data: locRes } = useLocations();
+  const departments: { id: string; name: string }[] = Array.isArray(deptRes?.data)
+    ? deptRes.data
+    : [];
+  const locations: { id: string; name: string }[] = Array.isArray(locRes?.data) ? locRes.data : [];
+
+  const queryParams: Record<string, any> = { page, limit: PAGE_SIZE };
+  if (search) queryParams.q = search;
+  if (departmentId) queryParams.department_id = departmentId;
+  if (locationId) queryParams.location_id = locationId;
+
+  const { data: empRes, isLoading: empLoading, isFetching } = useEmployees(queryParams);
+
+  // /employees returns { success, data: { data: [...], total, ... } } — two
+  // levels deep. Falls back to empty array if either layer is missing or
+  // non-array.
   const rawEmployees = empRes?.data?.data ?? empRes?.data;
   const employees: any[] = Array.isArray(rawEmployees) ? rawEmployees : [];
-
-  const filteredEmployees = search
-    ? employees.filter((e) => {
-        const q = search.toLowerCase();
-        return (
-          `${e.first_name || ""} ${e.last_name || ""}`.toLowerCase().includes(q) ||
-          (e.email || "").toLowerCase().includes(q) ||
-          (e.empcloud_user_id ? String(e.empcloud_user_id) : "").includes(q)
-        );
-      })
-    : employees;
+  const total = Number(empRes?.data?.total ?? employees.length);
+  const totalPages = Number(empRes?.data?.totalPages ?? 1);
 
   const selectedEmp = employees.find((e) => String(e.empcloud_user_id ?? e.id) === selectedEmpId);
 
@@ -119,31 +148,74 @@ export function AdminDeclarationsPage() {
         description={`Review investment declarations submitted by employees for ${fy}.`}
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[360px_1fr]">
         {/* Employee picker */}
         <Card>
           <CardHeader>
             <CardTitle>Employees</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="relative mb-3">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Name, email, or ID"
-                className="pl-9"
-              />
+            <div className="space-y-2">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Name, email, or code"
+                  className="pl-9"
+                />
+              </div>
+              <select
+                value={departmentId}
+                onChange={(e) => setDepartmentId(e.target.value)}
+                className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                aria-label="Filter by department"
+              >
+                <option value="">All departments</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={locationId}
+                onChange={(e) => setLocationId(e.target.value)}
+                className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                aria-label="Filter by location"
+              >
+                <option value="">All locations</option>
+                {locations.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+              {(search || departmentId || locationId) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchInput("");
+                    setSearch("");
+                    setDepartmentId("");
+                    setLocationId("");
+                  }}
+                  className="text-xs text-gray-500 underline hover:text-gray-700"
+                >
+                  Clear filters
+                </button>
+              )}
             </div>
-            <div className="max-h-[600px] space-y-1 overflow-y-auto">
+
+            <div className="mt-4 max-h-[480px] space-y-1 overflow-y-auto">
               {empLoading ? (
                 <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-400">
                   <Loader2 className="h-4 w-4 animate-spin" /> Loading…
                 </div>
-              ) : filteredEmployees.length === 0 ? (
+              ) : employees.length === 0 ? (
                 <p className="py-6 text-center text-sm text-gray-400">No matching employees.</p>
               ) : (
-                filteredEmployees.map((e) => {
+                employees.map((e) => {
                   const id = String(e.empcloud_user_id ?? e.id);
                   const isSel = id === selectedEmpId;
                   return (
@@ -159,12 +231,44 @@ export function AdminDeclarationsPage() {
                         <p className="truncate font-medium">
                           {e.first_name} {e.last_name}
                         </p>
-                        <p className="truncate text-xs text-gray-400">{e.email}</p>
+                        <p className="truncate text-xs text-gray-400">
+                          {e.email}
+                          {e.department ? ` · ${e.department}` : ""}
+                        </p>
                       </div>
                     </button>
                   );
                 })
               )}
+            </div>
+
+            <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-3 text-xs text-gray-500 dark:border-gray-700">
+              <span>
+                {employees.length} of {total}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isFetching || page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </Button>
+                <span>
+                  {page} / {Math.max(1, totalPages)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isFetching || page >= totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                  aria-label="Next page"
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

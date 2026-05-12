@@ -237,20 +237,52 @@ export async function countUsersByOrgId(orgId: number): Promise<number> {
 }
 
 /**
+ * Optional WHERE-clause filters that the seated-users queries below honour.
+ * Pushing q / location_id / department_id into the SQL means admin list
+ * pages (employees, loans, reimbursements, tax overview, tax declarations)
+ * can stop fetching all rows just to .filter() in the browser.
+ */
+export interface SeatedUserFilters {
+  q?: string;
+  locationId?: number;
+  departmentId?: number;
+}
+
+function applySeatedUserFilters(query: any, filters?: SeatedUserFilters) {
+  if (!filters) return query;
+  if (filters.locationId) query = query.where("u.location_id", filters.locationId);
+  if (filters.departmentId) query = query.where("u.department_id", filters.departmentId);
+  if (filters.q) {
+    const like = `%${filters.q}%`;
+    query = query.where(function (this: any) {
+      this.where("u.first_name", "like", like)
+        .orWhere("u.last_name", "like", like)
+        .orWhere("u.email", "like", like)
+        .orWhere("u.emp_code", "like", like)
+        .orWhere("u.designation", "like", like)
+        .orWhereRaw("CONCAT(u.first_name, ' ', u.last_name) LIKE ?", [like]);
+    });
+  }
+  return query;
+}
+
+/**
  * Find users who have a seat for a specific module (via org_module_seats).
  * Returns only employees assigned to this module.
  */
 export async function findSeatedUsersForModule(
   orgId: number,
   moduleSlug: string,
-  options?: { limit?: number; offset?: number },
+  options?: { limit?: number; offset?: number; filters?: SeatedUserFilters },
 ): Promise<EmpCloudUser[]> {
   const db = getEmpCloudDB();
   let query = db("users as u")
     .join("org_module_seats as s", "u.id", "s.user_id")
     .join("modules as m", "s.module_id", "m.id")
     .where({ "u.organization_id": orgId, "u.status": 1, "m.slug": moduleSlug })
-    .select("u.*");
+    .select("u.*")
+    .orderBy("u.first_name", "asc");
+  query = applySeatedUserFilters(query, options?.filters);
   if (options?.limit) query = query.limit(options.limit);
   if (options?.offset) query = query.offset(options.offset);
   return query;
@@ -262,14 +294,60 @@ export async function findSeatedUsersForModule(
 export async function countSeatedUsersForModule(
   orgId: number,
   moduleSlug: string,
+  filters?: SeatedUserFilters,
 ): Promise<number> {
   const db = getEmpCloudDB();
-  const [{ count }] = await db("users as u")
+  let query = db("users as u")
+    .join("org_module_seats as s", "u.id", "s.user_id")
+    .join("modules as m", "s.module_id", "m.id")
+    .where({ "u.organization_id": orgId, "u.status": 1, "m.slug": moduleSlug });
+  query = applySeatedUserFilters(query, filters);
+  const [{ count }] = await query.count("* as count");
+  return Number(count);
+}
+
+/**
+ * Find seated EmpCloud user IDs whose location_id / department_id / search
+ * text matches. Used by services that store FK data in the payroll DB
+ * (loans, reimbursements) and need to scope queries to a subset of users.
+ */
+export async function findSeatedUserIdsForFilters(
+  orgId: number,
+  moduleSlug: string,
+  filters: SeatedUserFilters,
+): Promise<number[]> {
+  if (!filters.q && !filters.locationId && !filters.departmentId) return [];
+  const db = getEmpCloudDB();
+  let query = db("users as u")
     .join("org_module_seats as s", "u.id", "s.user_id")
     .join("modules as m", "s.module_id", "m.id")
     .where({ "u.organization_id": orgId, "u.status": 1, "m.slug": moduleSlug })
-    .count("* as count");
-  return Number(count);
+    .select("u.id");
+  query = applySeatedUserFilters(query, filters);
+  const rows = await query;
+  return rows.map((r: any) => Number(r.id));
+}
+
+export interface EmpCloudLocation {
+  id: number;
+  name: string;
+  organization_id: number;
+}
+
+/**
+ * List active locations for an org (best-effort). Older EmpCloud schemas
+ * without `organization_locations` return [] so callers still render.
+ */
+export async function listOrgLocations(orgId: number): Promise<EmpCloudLocation[]> {
+  const db = getEmpCloudDB();
+  try {
+    return await db("organization_locations")
+      .where({ organization_id: orgId })
+      .select("id", "name", "organization_id")
+      .orderBy("name", "asc");
+  } catch {
+    return [];
+  }
 }
 
 /**

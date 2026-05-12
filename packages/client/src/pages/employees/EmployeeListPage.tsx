@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -8,61 +8,64 @@ import { Avatar } from "@/components/ui/Avatar";
 import { DataTable } from "@/components/ui/DataTable";
 import { CSVImportModal } from "@/components/ui/CSVImportModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { formatCurrency } from "@/lib/utils";
-import { useEmployees } from "@/api/hooks";
+import { Pagination } from "@/components/ui/Pagination";
+import { useEmployees, useDepartments, useLocations } from "@/api/hooks";
 import { api, apiGet, apiPost } from "@/api/client";
 import { Plus, Download, Upload, Loader2, Search, AlertCircle, Check, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { BulkSalaryUpdateModal } from "@/pages/payroll/BulkSalaryUpdateModal";
 import { BulkSalaryCSVModal } from "@/components/ui/BulkSalaryCSVModal";
 
+const PAGE_SIZE = 20;
+
 export function EmployeeListPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
-  const { data: res, isLoading } = useEmployees({ limit: 100 });
   const [showImport, setShowImport] = useState(false);
-  const [deptFilter, setDeptFilter] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
+  const [locationId, setLocationId] = useState("");
+  const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkSalary, setShowBulkSalary] = useState(false);
   const [showBulkSalaryCSV, setShowBulkSalaryCSV] = useState(false);
 
-  // #54 — When the Dashboard "Active Employees" card links here with
-  // ?status=active, scope the list to active employees only.
-  const statusFilter = searchParams.get("status"); // "active" | "inactive" | null
-  const allEmployees = Array.isArray(res?.data?.data) ? res.data.data : [];
-  const statusFiltered = Array.isArray(allEmployees)
-    ? statusFilter
-      ? allEmployees.filter((e: any) => {
-          if (statusFilter === "active") return e.is_active === true || e.is_active === 1;
-          if (statusFilter === "inactive") return !(e.is_active === true || e.is_active === 1);
-          return true;
-        })
-      : allEmployees
+  // Debounce search input so the server isn't hammered on every keystroke
+  useEffect(() => {
+    const id = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(id);
+  }, [searchInput]);
+
+  // Reset to page 1 whenever any filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [search, departmentId, locationId]);
+
+  const { data: deptRes } = useDepartments();
+  const { data: locRes } = useLocations();
+  const departments: { id: string; name: string }[] = Array.isArray(deptRes?.data)
+    ? deptRes.data
     : [];
-  const departments = Array.isArray(statusFiltered)
-    ? Array.from(new Set<string>(statusFiltered.map((e: any) => e.department))).sort()
-    : [];
-  const filtered = Array.isArray(statusFiltered)
-    ? deptFilter
-      ? statusFiltered.filter((e: any) => e.department === deptFilter)
-      : statusFiltered
-    : [];
-  const employees = Array.isArray(filtered)
-    ? search
-      ? filtered.filter((e: any) => {
-          const q = search.toLowerCase();
-          return (
-            `${e.first_name} ${e.last_name}`.toLowerCase().includes(q) ||
-            e.email?.toLowerCase().includes(q) ||
-            e.employee_code?.toLowerCase().includes(q) ||
-            e.designation?.toLowerCase().includes(q)
-          );
-        })
-      : filtered
-    : [];
-  const total = res?.data?.total || allEmployees.length;
+  const locations: { id: string; name: string }[] = Array.isArray(locRes?.data) ? locRes.data : [];
+
+  const queryParams: Record<string, any> = { page, limit: PAGE_SIZE };
+  if (search) queryParams.q = search;
+  if (departmentId) queryParams.department_id = departmentId;
+  if (locationId) queryParams.location_id = locationId;
+
+  const { data: res, isLoading, isFetching } = useEmployees(queryParams);
+
+  const employees = Array.isArray(res?.data?.data) ? res.data.data : [];
+  const total = Number(res?.data?.total ?? 0);
+  const totalPages = Number(res?.data?.totalPages ?? 1);
+
+  // ?status=active|inactive deep-link from the dashboard. Active employees
+  // are the only ones the EmpCloud users join returns (status=1), so the
+  // "inactive" branch is intentionally a no-op for now -- the server does
+  // not surface deactivated payroll seats yet.
+  const statusFilter = searchParams.get("status");
 
   // Pending bank update requests
   const { data: bankReqRes } = useQuery({
@@ -130,9 +133,17 @@ export function EmployeeListPage() {
       render: (row: any) => <span className="text-gray-600">{row.email}</span>,
     },
     {
+      key: "location",
+      header: "Location",
+      render: (row: any) => (
+        <span className="text-gray-600">{row.location || row.location_name || "—"}</span>
+      ),
+    },
+    {
       key: "date_of_joining",
       header: "Joined",
-      render: (row: any) => new Date(row.date_of_joining).toLocaleDateString("en-IN"),
+      render: (row: any) =>
+        row.date_of_joining ? new Date(row.date_of_joining).toLocaleDateString("en-IN") : "—",
     },
     {
       key: "status",
@@ -145,9 +156,14 @@ export function EmployeeListPage() {
     },
   ];
 
-  const selectedEmployeeNames = (employees || [])
+  const selectedEmployeeNames = employees
     .filter((e: any) => selectedIds.has(String(e.id)))
     .map((e: any) => `${e.first_name} ${e.last_name}`);
+
+  const description = isLoading
+    ? "Loading..."
+    : `${employees.length} of ${total} employee${total === 1 ? "" : "s"}` +
+      (statusFilter ? ` · ${statusFilter}` : "");
 
   return (
     <ErrorBoundary>
@@ -203,13 +219,7 @@ export function EmployeeListPage() {
 
         <PageHeader
           title="Employees"
-          description={
-            isLoading
-              ? "Loading..."
-              : `${employees.length}${deptFilter ? ` in ${deptFilter}` : ""}${
-                  statusFilter ? ` ${statusFilter}` : ""
-                } of ${total} employees`
-          }
+          description={description}
           actions={
             <>
               <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
@@ -253,48 +263,59 @@ export function EmployeeListPage() {
           }
         />
 
-        {/* Search */}
-        {!isLoading && allEmployees.length > 0 && (
+        {/* Search + filters */}
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px_220px]">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="Search by name, email, code, or designation..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
             />
           </div>
-        )}
-
-        {/* Department filters */}
-        {!isLoading && departments.length > 1 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-gray-500">Filter:</span>
-            <button
-              onClick={() => setDeptFilter("")}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                !deptFilter
-                  ? "bg-brand-600 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"
-              }`}
-            >
-              All
-            </button>
-            {departments.map((dept: string) => (
-              <button
-                key={dept}
-                onClick={() => setDeptFilter(deptFilter === dept ? "" : dept)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  deptFilter === dept
-                    ? "bg-brand-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"
-                }`}
-              >
-                {dept}
-              </button>
+          <select
+            value={departmentId}
+            onChange={(e) => setDepartmentId(e.target.value)}
+            className="focus:border-brand-500 focus:ring-brand-500 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+            aria-label="Filter by department"
+          >
+            <option value="">All departments</option>
+            {departments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
             ))}
-          </div>
+          </select>
+          <select
+            value={locationId}
+            onChange={(e) => setLocationId(e.target.value)}
+            className="focus:border-brand-500 focus:ring-brand-500 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+            aria-label="Filter by location"
+          >
+            <option value="">All locations</option>
+            {locations.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {(search || departmentId || locationId) && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearchInput("");
+              setSearch("");
+              setDepartmentId("");
+              setLocationId("");
+            }}
+            className="text-xs text-gray-500 underline hover:text-gray-700"
+          >
+            Clear filters
+          </button>
         )}
 
         {/* Bulk salary update action bar */}
@@ -320,11 +341,21 @@ export function EmployeeListPage() {
             <Loader2 className="text-brand-600 h-8 w-8 animate-spin" />
           </div>
         ) : (
-          <DataTable
-            columns={columns}
-            data={employees}
-            onRowClick={(row) => navigate(`/employees/${row.id}`)}
-          />
+          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+            <DataTable
+              columns={columns}
+              data={employees}
+              onRowClick={(row) => navigate(`/employees/${row.id}`)}
+            />
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              limit={PAGE_SIZE}
+              onChange={setPage}
+              disabled={isFetching}
+            />
+          </div>
         )}
 
         <CSVImportModal

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
@@ -8,12 +8,15 @@ import { SelectField } from "@/components/ui/SelectField";
 import { Modal } from "@/components/ui/Modal";
 import { DataTable } from "@/components/ui/DataTable";
 import { StatCard } from "@/components/ui/StatCard";
+import { Pagination } from "@/components/ui/Pagination";
 import { formatCurrency } from "@/lib/utils";
 import { apiGet, apiPost } from "@/api/client";
-import { useEmployees } from "@/api/hooks";
+import { useEmployees, useDepartments, useLocations } from "@/api/hooks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Banknote, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { Plus, Banknote, Clock, CheckCircle2, Loader2, Search } from "lucide-react";
 import toast from "react-hot-toast";
+
+const PAGE_SIZE = 20;
 
 export function LoansPage() {
   const [showCreate, setShowCreate] = useState(false);
@@ -23,22 +26,61 @@ export function LoansPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const filter = searchParams.get("status") || "";
   const qc = useQueryClient();
+
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
+  const [locationId, setLocationId] = useState("");
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const id = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(id);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, departmentId, locationId, filter]);
+
+  const { data: deptRes } = useDepartments();
+  const { data: locRes } = useLocations();
+  const departments: { id: string; name: string }[] = Array.isArray(deptRes?.data)
+    ? deptRes.data
+    : [];
+  const locations: { id: string; name: string }[] = Array.isArray(locRes?.data) ? locRes.data : [];
+
+  // Employee picker for the New Loan modal — paginated server-side already.
   const { data: empRes } = useEmployees({ limit: 100 });
 
-  const { data: res, isLoading } = useQuery({
-    queryKey: ["loans", filter],
-    queryFn: () => apiGet<any>("/loans", filter ? { status: filter } : {}),
+  const queryParams: Record<string, any> = { page, limit: PAGE_SIZE };
+  if (filter) queryParams.status = filter;
+  if (search) queryParams.q = search;
+  if (departmentId) queryParams.department_id = departmentId;
+  if (locationId) queryParams.location_id = locationId;
+
+  const {
+    data: res,
+    isLoading,
+    isFetching,
+  } = useQuery({
+    queryKey: ["loans", queryParams],
+    queryFn: () => apiGet<any>("/loans", queryParams),
   });
 
-  // #158 — The top stat cards (Active / Outstanding / Monthly EMI / Completed)
-  // are an org-wide summary, not a view of the current tab. Previously they
-  // were derived from `res.data.data`, which is already filtered by status
-  // server-side — switching to the "active" tab therefore made the
-  // "Completed" card drop to 0 even though completed loans still exist.
-  // Fetch the unfiltered list separately and drive the cards off it.
+  // #158 — top stat cards are an org-wide summary, not a view of the
+  // current filter set. Fetch a small unfiltered slice purely for the
+  // counts (cheap because we only need totals).
   const { data: allRes } = useQuery({
-    queryKey: ["loans-all"],
-    queryFn: () => apiGet<any>("/loans"),
+    queryKey: ["loans-summary"],
+    queryFn: () => apiGet<any>("/loans", { limit: 1, page: 1 }),
+  });
+  const { data: activeRes } = useQuery({
+    queryKey: ["loans-summary-active"],
+    queryFn: () => apiGet<any>("/loans", { status: "active", limit: 200, page: 1 }),
+  });
+  const { data: completedRes } = useQuery({
+    queryKey: ["loans-summary-completed"],
+    queryFn: () => apiGet<any>("/loans", { status: "completed", limit: 1, page: 1 }),
   });
 
   function setFilter(next: string) {
@@ -48,15 +90,19 @@ export function LoansPage() {
     setSearchParams(params, { replace: true });
   }
 
-  const loans = res?.data?.data || [];
-  const allLoans = allRes?.data?.data || [];
-  const active = allLoans.filter((l: any) => l.status === "active");
-  const totalOutstanding = active.reduce(
+  const loans = Array.isArray(res?.data?.data) ? res.data.data : [];
+  const total = Number(res?.data?.total ?? 0);
+  const totalPages = Number(res?.data?.totalPages ?? 1);
+
+  const totalLoans = Number(allRes?.data?.total ?? 0);
+  const activeLoans = Array.isArray(activeRes?.data?.data) ? activeRes.data.data : [];
+  const activeCount = Number(activeRes?.data?.total ?? 0);
+  const totalOutstanding = activeLoans.reduce(
     (s: number, l: any) => s + Number(l.outstanding_amount),
     0,
   );
-  const totalEMI = active.reduce((s: number, l: any) => s + Number(l.emi_amount), 0);
-  const completedCount = allLoans.filter((l: any) => l.status === "completed").length;
+  const totalEMI = activeLoans.reduce((s: number, l: any) => s + Number(l.emi_amount), 0);
+  const completedCount = Number(completedRes?.data?.total ?? 0);
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -96,6 +142,9 @@ export function LoansPage() {
       toast.success("Loan created");
       setShowCreate(false);
       qc.invalidateQueries({ queryKey: ["loans"] });
+      qc.invalidateQueries({ queryKey: ["loans-summary"] });
+      qc.invalidateQueries({ queryKey: ["loans-summary-active"] });
+      qc.invalidateQueries({ queryKey: ["loans-summary-completed"] });
     } catch (err: any) {
       toast.error(err.response?.data?.error?.message || "Failed");
     } finally {
@@ -108,12 +157,14 @@ export function LoansPage() {
       await apiPost(`/loans/${id}/payment`);
       toast.success("Payment recorded");
       qc.invalidateQueries({ queryKey: ["loans"] });
+      qc.invalidateQueries({ queryKey: ["loans-summary-active"] });
+      qc.invalidateQueries({ queryKey: ["loans-summary-completed"] });
     } catch (err: any) {
       toast.error(err.response?.data?.error?.message || "Failed");
     }
   }
 
-  const employees = empRes?.data?.data || [];
+  const employees = Array.isArray(empRes?.data?.data) ? empRes.data.data : [];
   const hasEmployees = employees.length > 0;
 
   const columns = [
@@ -199,8 +250,6 @@ export function LoansPage() {
     },
   ];
 
-  // Each stat card deep-links into the list with a relevant status filter
-  // (#71). "All" is represented by omitting the query param.
   // #113 — hover:shadow-md stacks on top of StatCard's own shadow-sm and
   // draws a thicker rectangle underneath the card that reads as an extra
   // box appearing on hover. Keep the lift via hover:-translate-y-0.5 and
@@ -212,7 +261,7 @@ export function LoansPage() {
     <div className="space-y-6">
       <PageHeader
         title="Loans & Advances"
-        description="Track employee loans, advances, and EMI deductions"
+        description={`${total} of ${totalLoans} loan${totalLoans === 1 ? "" : "s"}`}
         actions={
           <Button size="sm" onClick={() => setShowCreate(true)}>
             <Plus className="h-4 w-4" /> New Loan
@@ -222,7 +271,7 @@ export function LoansPage() {
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <Link to="/loans?status=active" className={cardLinkCls}>
-          <StatCard title="Active Loans" value={String(active.length)} icon={Banknote} />
+          <StatCard title="Active Loans" value={String(activeCount)} icon={Banknote} />
         </Link>
         <Link to="/loans?status=active" className={cardLinkCls}>
           <StatCard title="Outstanding" value={formatCurrency(totalOutstanding)} icon={Clock} />
@@ -240,7 +289,47 @@ export function LoansPage() {
         </Link>
       </div>
 
-      <div className="flex gap-2">
+      {/* Search + filters */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px_220px]">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by employee name, code, or designation..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+          />
+        </div>
+        <select
+          value={departmentId}
+          onChange={(e) => setDepartmentId(e.target.value)}
+          className="focus:border-brand-500 focus:ring-brand-500 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+          aria-label="Filter by department"
+        >
+          <option value="">All departments</option>
+          {departments.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={locationId}
+          onChange={(e) => setLocationId(e.target.value)}
+          className="focus:border-brand-500 focus:ring-brand-500 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+          aria-label="Filter by location"
+        >
+          <option value="">All locations</option>
+          {locations.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
         {["", "active", "completed", "cancelled"].map((f) => (
           <button
             key={f}
@@ -250,6 +339,20 @@ export function LoansPage() {
             {f || "All"}
           </button>
         ))}
+        {(search || departmentId || locationId) && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearchInput("");
+              setSearch("");
+              setDepartmentId("");
+              setLocationId("");
+            }}
+            className="ml-auto text-xs text-gray-500 underline hover:text-gray-700"
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -257,7 +360,17 @@ export function LoansPage() {
           <Loader2 className="text-brand-600 h-6 w-6 animate-spin" />
         </div>
       ) : (
-        <DataTable columns={columns} data={loans} emptyMessage="No loans found" />
+        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+          <DataTable columns={columns} data={loans} emptyMessage="No loans found" />
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            limit={PAGE_SIZE}
+            onChange={setPage}
+            disabled={isFetching}
+          />
+        </div>
       )}
 
       <Modal
