@@ -20,7 +20,11 @@ export function MyTaxPage() {
   });
 
   if (isLoading) {
-    return <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-brand-600" /></div>;
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="text-brand-600 h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   const salary = salRes?.data;
@@ -28,22 +32,41 @@ export function MyTaxPage() {
   const regime = regimeRes?.data?.regime || "new";
 
   // Use tax computation if available, otherwise estimate from salary
-  const annualGross = taxComp ? Number(taxComp.gross_income) : salary ? Number(salary.gross_salary) : 0;
+  const annualGross = taxComp
+    ? Number(taxComp.gross_income)
+    : salary
+      ? Number(salary.gross_salary)
+      : 0;
   const standardDeduction = 75000;
-  const taxableIncome = taxComp ? Number(taxComp.taxable_income) : Math.max(0, annualGross - standardDeduction);
+  const taxableIncome = taxComp
+    ? Number(taxComp.taxable_income)
+    : Math.max(0, annualGross - standardDeduction);
 
-  // Simple estimate if no computation saved
+  // Mirrors india-tax.service.computeTax for the new regime so the
+  // self-service preview matches the server's TDS calculation. Without the
+  // 87A rebate + marginal-relief steps, low-income employees saw a non-zero
+  // monthly TDS here while the actual payslip showed zero.
   function estimateTax(income: number): number {
     const slabs = [
-      { limit: 400000, rate: 0 }, { limit: 800000, rate: 5 }, { limit: 1200000, rate: 10 },
-      { limit: 1600000, rate: 15 }, { limit: 2000000, rate: 20 }, { limit: 2400000, rate: 25 },
+      { limit: 400000, rate: 0 },
+      { limit: 800000, rate: 5 },
+      { limit: 1200000, rate: 10 },
+      { limit: 1600000, rate: 15 },
+      { limit: 2000000, rate: 20 },
+      { limit: 2400000, rate: 25 },
       { limit: Infinity, rate: 30 },
     ];
-    let tax = 0, prev = 0;
+    let tax = 0,
+      prev = 0;
     for (const slab of slabs) {
       if (income <= prev) break;
-      tax += (Math.min(income, slab.limit) - prev) * slab.rate / 100;
+      tax += ((Math.min(income, slab.limit) - prev) * slab.rate) / 100;
       prev = slab.limit;
+    }
+    if (income <= 1200000) {
+      tax = Math.max(0, tax - 60000);
+    } else if (income <= 1275000) {
+      tax = Math.min(tax, income - 1200000);
     }
     return Math.round(tax);
   }
@@ -62,10 +85,14 @@ export function MyTaxPage() {
         title="My Tax"
         description="FY 2025-26 tax computation"
         actions={
-          <Button variant="outline" size="sm" onClick={() => {
-            const url = `${import.meta.env.VITE_API_URL || "/api/v1"}/self-service/tax/form16?token=${localStorage.getItem("access_token")}`;
-            window.open(url, "_blank");
-          }}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const url = `${import.meta.env.VITE_API_URL || "/api/v1"}/self-service/tax/form16?token=${localStorage.getItem("access_token")}`;
+              window.open(url, "_blank");
+            }}
+          >
             <Download className="h-4 w-4" /> Form 16
           </Button>
         }
@@ -93,17 +120,30 @@ export function MyTaxPage() {
               {[
                 { label: "Gross Annual Income", value: annualGross, bold: false },
                 { label: "Less: Standard Deduction", value: -standardDeduction, bold: false },
-                ...(taxComp && Number(taxComp.total_deductions) > 0 ? [{ label: "Less: Chapter VI-A Deductions", value: -Number(taxComp.total_deductions), bold: false }] : []),
+                ...(taxComp && Number(taxComp.total_deductions) > 0
+                  ? [
+                      {
+                        label: "Less: Chapter VI-A Deductions",
+                        value: -Number(taxComp.total_deductions),
+                        bold: false,
+                      },
+                    ]
+                  : []),
                 { label: "Taxable Income", value: taxableIncome, bold: true },
                 { label: "Tax on Income", value: taxOnIncome, bold: false },
                 { label: "Health & Education Cess (4%)", value: cess, bold: false },
                 { label: "Total Tax Liability", value: totalTax, bold: true },
                 { label: "Monthly TDS", value: monthlyTds, bold: true },
               ].map((row) => (
-                <div key={row.label} className={`flex justify-between text-sm ${row.bold ? "border-t border-gray-200 pt-2 font-semibold" : ""}`}>
+                <div
+                  key={row.label}
+                  className={`flex justify-between text-sm ${row.bold ? "border-t border-gray-200 pt-2 font-semibold" : ""}`}
+                >
                   <dt className="text-gray-500">{row.label}</dt>
                   <dd className={row.value < 0 ? "text-red-600" : "text-gray-900"}>
-                    {row.value < 0 ? `-${formatCurrency(Math.abs(row.value))}` : formatCurrency(row.value)}
+                    {row.value < 0
+                      ? `-${formatCurrency(Math.abs(row.value))}`
+                      : formatCurrency(row.value)}
                   </dd>
                 </div>
               ))}
@@ -112,7 +152,9 @@ export function MyTaxPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>TDS Deduction Tracker</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>TDS Deduction Tracker</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between text-sm">
@@ -135,14 +177,15 @@ export function MyTaxPage() {
                 </div>
                 <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100">
                   <div
-                    className="h-full rounded-full bg-brand-500 transition-all"
+                    className="bg-brand-500 h-full rounded-full transition-all"
                     style={{ width: `${progressPct}%` }}
                   />
                 </div>
               </div>
 
               <div className="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
-                Monthly TDS of <strong>{formatCurrency(monthlyTds)}</strong> will be deducted from your salary each month.
+                Monthly TDS of <strong>{formatCurrency(monthlyTds)}</strong> will be deducted from
+                your salary each month.
               </div>
             </div>
           </CardContent>
