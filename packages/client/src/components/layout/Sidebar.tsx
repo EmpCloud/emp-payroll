@@ -106,6 +106,12 @@ const navItems: NavItem[] = [
     section: "Compliance",
   },
   {
+    to: "/tax/declarations",
+    label: "Tax Declarations",
+    icon: ClipboardList,
+    roles: ["org_admin", "hr_admin", "hr_manager"],
+  },
+  {
     to: "/attendance",
     label: "Attendance",
     icon: CalendarDays,
