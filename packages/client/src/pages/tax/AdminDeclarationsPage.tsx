@@ -42,7 +42,11 @@ export function AdminDeclarationsPage() {
   const fy = currentFY();
 
   const { data: empRes, isLoading: empLoading } = useEmployees({ limit: 1000 });
-  const employees: any[] = empRes?.data?.data || [];
+  // Same defensive unwrap as for declarations -- /employees returns
+  // { success, data: { data: [...], total, ... } }, so two levels deep.
+  // Falls back to empty array if either layer is missing or non-array.
+  const rawEmployees = empRes?.data?.data ?? empRes?.data;
+  const employees: any[] = Array.isArray(rawEmployees) ? rawEmployees : [];
 
   const filteredEmployees = search
     ? employees.filter((e) => {
@@ -62,7 +66,12 @@ export function AdminDeclarationsPage() {
     queryFn: () => apiGet<any>(`/tax/declarations/${selectedEmpId}`, { fy }),
     enabled: !!selectedEmpId,
   });
-  const declarations: Declaration[] = declRes?.data || [];
+  // /tax/declarations/:empId returns the paginated envelope
+  // { data: [...], total, page, limit, totalPages } so unwrap one more
+  // level than the bare list endpoints. Also Array.isArray-guard against
+  // an empty/error response so a transient 4xx can't crash the page.
+  const rawDecl = declRes?.data?.data ?? declRes?.data;
+  const declarations: Declaration[] = Array.isArray(rawDecl) ? rawDecl : [];
   const pendingCount = declarations.filter((d) => d.approval_status === "pending").length;
   const totalDeclared = declarations.reduce((s, d) => s + Number(d.declared_amount || 0), 0);
   const totalApproved = declarations.reduce((s, d) => s + Number(d.approved_amount || 0), 0);
