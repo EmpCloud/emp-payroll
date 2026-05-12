@@ -243,6 +243,16 @@ export function useDepartments() {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Locations (read-only proxy over EmpCloud organization_locations)
+// ---------------------------------------------------------------------------
+export function useLocations() {
+  return useQuery({
+    queryKey: ["locations"],
+    queryFn: () => apiGet<any>("/locations"),
+  });
+}
+
 export function useCreateDepartment() {
   const qc = useQueryClient();
   return useMutation({

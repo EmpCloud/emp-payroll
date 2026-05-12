@@ -12,9 +12,15 @@ router.get(
   "/",
   authorize("hr_admin", "hr_manager"),
   wrap(async (req, res) => {
+    const { status, employeeId, q, location_id, department_id, page, limit } = req.query as any;
     const data = await svc.list(String(req.user!.empcloudOrgId), {
-      status: req.query.status as string,
-      employeeId: req.query.employeeId as string,
+      status: status as string,
+      employeeId: employeeId as string,
+      q: typeof q === "string" && q.trim() ? q.trim() : undefined,
+      locationId: location_id ? Number(location_id) : undefined,
+      departmentId: department_id ? Number(department_id) : undefined,
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
     });
     res.json({ success: true, data });
   }),

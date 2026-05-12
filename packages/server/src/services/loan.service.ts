@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getDB } from "../db/adapters";
-import { getEmpCloudDB } from "../db/empcloud";
+import { getEmpCloudDB, findSeatedUserIdsForFilters } from "../db/empcloud";
 import { AppError } from "../api/middleware/error.middleware";
 
 // Zod schema for loan creation — lives in the service so we don't have to
@@ -28,15 +28,49 @@ export type CreateLoanInput = z.infer<typeof createLoanInputSchema>;
 export class LoanService {
   private db = getDB();
 
-  async list(orgId: string, filters?: { status?: string; employeeId?: string }) {
+  async list(
+    orgId: string,
+    filters?: {
+      status?: string;
+      employeeId?: string;
+      q?: string;
+      locationId?: number;
+      departmentId?: number;
+      page?: number;
+      limit?: number;
+    },
+  ) {
+    const page = Math.max(1, Number(filters?.page) || 1);
+    const limit = Math.min(200, Math.max(1, Number(filters?.limit) || 20));
+
     const qf: any = { org_id: orgId };
     if (filters?.status) qf.status = filters.status;
     if (filters?.employeeId) qf.employee_id = filters.employeeId;
 
+    // Push q / location / department through the seated-users join in
+    // EmpCloud, then intersect by `empcloud_user_id`. The list endpoint
+    // belongs to the payroll org admin, so empcloudOrgId is the same as
+    // `Number(orgId)` (the legacy `org_id` column on loans is a stringified
+    // empcloud org id).
+    const ecOrgId = Number(orgId);
+    const hasUserFilter = !!(filters?.q || filters?.locationId || filters?.departmentId);
+    if (hasUserFilter && Number.isFinite(ecOrgId)) {
+      const matchedUserIds = await findSeatedUserIdsForFilters(ecOrgId, "emp-payroll", {
+        q: filters?.q,
+        locationId: filters?.locationId,
+        departmentId: filters?.departmentId,
+      });
+      if (matchedUserIds.length === 0) {
+        return { data: [], total: 0, page, limit, totalPages: 0 };
+      }
+      qf.empcloud_user_id = matchedUserIds;
+    }
+
     const result = await this.db.findMany<any>("loans", {
       filters: qf,
       sort: { field: "created_at", order: "desc" },
-      limit: 100,
+      page,
+      limit,
     });
 
     // Enrich with employee names. Loans created from the new flow store the

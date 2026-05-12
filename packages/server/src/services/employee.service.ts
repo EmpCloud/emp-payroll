@@ -180,14 +180,29 @@ export class EmployeeService {
   /**
    * List employees in an org — only shows employees with a payroll seat.
    * Fetches seated users from EmpCloud, enriches with payroll data.
+   *
+   * `options.filters` honours `q` (free-text), `location_id`,
+   * `department_id`. They are pushed into the SQL JOIN so the page +
+   * limit pagination is applied AFTER filtering -- not before.
    */
   async list(empcloudOrgId: number, options?: QueryOptions) {
     const limit = options?.limit || 20;
     const page = options?.page || 1;
     const offset = (page - 1) * limit;
 
-    const users = await findSeatedUsersForModule(empcloudOrgId, "emp-payroll", { limit, offset });
-    const total = await countSeatedUsersForModule(empcloudOrgId, "emp-payroll");
+    const f = options?.filters || {};
+    const seatedFilters = {
+      q: typeof f.q === "string" && f.q.trim() ? f.q.trim() : undefined,
+      locationId: f.location_id != null ? Number(f.location_id) || undefined : undefined,
+      departmentId: f.department_id != null ? Number(f.department_id) || undefined : undefined,
+    };
+
+    const users = await findSeatedUsersForModule(empcloudOrgId, "emp-payroll", {
+      limit,
+      offset,
+      filters: seatedFilters,
+    });
+    const total = await countSeatedUsersForModule(empcloudOrgId, "emp-payroll", seatedFilters);
 
     const data = await Promise.all(users.map((u) => mergeUserWithProfile(u, this.payrollDb)));
 
@@ -196,7 +211,7 @@ export class EmployeeService {
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / limit) || 1,
     };
   }
 
