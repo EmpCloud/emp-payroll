@@ -60,19 +60,28 @@ export const config = {
   },
 
   // Email (payslip delivery)
-  // Provider preference: SendGrid when SENDGRID_API_KEY is set, else SMTP
-  // (nodemailer). Keeping the SMTP block lets local-dev / on-prem stays
-  // working without a SendGrid account.
+  // Mirrors the EmpCloud HRMS transport selection so the same `.env` works
+  // for both repos. Order: SendGrid → SMTP → no-op.
+  // - SendGrid is preferred when SENDGRID_API_KEY is set.
+  // - On SendGrid send failure we FALL THROUGH to SMTP (not return false),
+  //   matching EmpCloud's behavior.
+  // - Empty SMTP_HOST means "not configured" — we don't silently default to
+  //   smtp.gmail.com and try blank credentials.
   email: {
     sendgridApiKey: process.env.SENDGRID_API_KEY || "",
-    fromEmail: process.env.EMAIL_FROM_EMAIL || process.env.SMTP_FROM || "payroll@empcloud.com",
-    fromName: process.env.EMAIL_FROM_NAME || "EMP Payroll",
-    // SMTP fallback (used only when SENDGRID_API_KEY is empty)
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    // Accept the EmpCloud-style env var names with the legacy payroll names
+    // as fallbacks so existing .env files keep working.
+    fromEmail:
+      process.env.SENDGRID_FROM_EMAIL ||
+      process.env.EMAIL_FROM_EMAIL ||
+      process.env.SMTP_FROM ||
+      "payroll@empcloud.com",
+    fromName: process.env.SENDGRID_FROM_NAME || process.env.EMAIL_FROM_NAME || "EMP Payroll",
+    host: process.env.SMTP_HOST || "",
     port: parseInt(process.env.SMTP_PORT || "587"),
     user: process.env.SMTP_USER || "",
-    password: process.env.SMTP_PASSWORD || "",
-    from: process.env.SMTP_FROM || "payroll@empcloud.com",
+    password: process.env.SMTP_PASS || process.env.SMTP_PASSWORD || "",
+    from: process.env.SMTP_FROM || process.env.SENDGRID_FROM_EMAIL || "payroll@empcloud.com",
   },
 
   // CORS
