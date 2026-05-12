@@ -439,15 +439,23 @@ function MarkAllForm({
           // the toast was previously a clean "Marked successful" while the
           // dashboard still showed zeros -- looked exactly like a no-op.
           const res = await apiPost<any>("/attendance/import", { month, year, records });
-          const failures = res?.data?.empcloudProjectionFailures || [];
+          const data = res?.data || {};
+          const failures = data.empcloudProjectionFailures || [];
+          const inserted = Number(data.empcloudInserted || 0);
+          const preserved = Number(data.empcloudPreserved || 0);
           if (failures.length > 0) {
             toast.error(
               `Marked locally for ${employees.length} employees, but EmpCloud sync failed for ${failures.length} (dashboard may not reflect the change yet).`,
               { duration: 8000 },
             );
+          } else if (inserted === 0 && preserved > 0) {
+            toast.error(
+              `No new attendance added — every workday in ${MONTHS[month]} ${year} already has a record on EmpCloud (${preserved} rows preserved). Edit individual days on the EmpCloud HRMS or the Attendance Grid to change them.`,
+              { duration: 9000 },
+            );
           } else {
             toast.success(
-              `Marked ${employees.length} employees as present for ${td} days in ${MONTHS[month]} ${year}`,
+              `Marked ${employees.length} employees for ${MONTHS[month]} ${year} — ${inserted} new EmpCloud rows added${preserved > 0 ? `, ${preserved} existing rows preserved` : ""}.`,
             );
           }
           onClose();
@@ -611,14 +619,24 @@ function MarkSingleForm({
               },
             ],
           });
-          const failures = res?.data?.empcloudProjectionFailures || [];
+          const data = res?.data || {};
+          const failures = data.empcloudProjectionFailures || [];
+          const inserted = Number(data.empcloudInserted || 0);
+          const preserved = Number(data.empcloudPreserved || 0);
           if (failures.length > 0) {
             toast.error(
               `Marked locally, but EmpCloud sync failed (${failures[0]?.message || "unknown error"}). The dashboard may not reflect this until EmpCloud is reachable.`,
               { duration: 8000 },
             );
+          } else if (inserted === 0 && preserved > 0) {
+            toast.error(
+              `No new attendance added — ${MONTHS[month]} ${year} already has ${preserved} attendance records on EmpCloud for this employee, and the existing-rows-win policy preserved them. Edit them on the EmpCloud HRMS or the Attendance Grid to change them.`,
+              { duration: 9000 },
+            );
           } else {
-            toast.success(`Attendance recorded for ${MONTHS[month]} ${year}`);
+            toast.success(
+              `Attendance recorded for ${MONTHS[month]} ${year} — ${inserted} new EmpCloud rows added${preserved > 0 ? `, ${preserved} existing rows preserved` : ""}.`,
+            );
           }
           onClose();
           onSuccess();

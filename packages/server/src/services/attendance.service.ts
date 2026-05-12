@@ -359,6 +359,12 @@ export class AttendanceService {
     // can surface "marked locally but EmpCloud sync failed" instead of
     // a misleading flat "successful" toast.
     const empcloudProjectionFailures: Array<{ empcloudUserId: number; message: string }> = [];
+    // Track per-batch projection counts so the response can tell HR
+    // whether the EmpCloud write actually added new rows or was a no-op
+    // because EmpCloud already had attendance for those dates (the
+    // existing-rows-win pattern silently skipped them).
+    let empcloudInserted = 0;
+    let empcloudPreserved = 0;
     const orgIdNum = Number(orgId);
     const empcloudDb = getEmpCloudDB();
     const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
@@ -507,7 +513,9 @@ export class AttendanceService {
             .insert(inserts)
             .onConflict(["user_id", "date"])
             .ignore();
+          empcloudInserted += inserts.length;
         }
+        empcloudPreserved += existingDates.size;
       } catch (err) {
         // Don't fail the whole import if EmpCloud write fails (table
         // schema mismatch on older EmpCloud DBs, transient connection
@@ -534,6 +542,8 @@ export class AttendanceService {
       imported: results.length,
       records: results,
       empcloudProjectionFailures,
+      empcloudInserted,
+      empcloudPreserved,
     };
   }
 
