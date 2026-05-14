@@ -49,6 +49,12 @@ function buildOrgStatutoryOverrides(orgSettings: any): OrgStatutoryOverrides {
     roundingPolicy: orgSettings.rounding_policy ?? null,
     employerPfInCtc:
       orgSettings.employer_pf_in_ctc == null ? null : !!Number(orgSettings.employer_pf_in_ctc),
+    // Migration 034 — NOT NULL DEFAULT true; a null here (column absent on
+    // an un-migrated row) also means "enabled" so charges keep applying.
+    pfEdliEnabled:
+      orgSettings.pf_edli_enabled == null ? true : !!Number(orgSettings.pf_edli_enabled),
+    pfAdminEnabled:
+      orgSettings.pf_admin_enabled == null ? true : !!Number(orgSettings.pf_admin_enabled),
   };
 }
 

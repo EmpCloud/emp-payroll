@@ -1496,12 +1496,19 @@ function SalaryAssignForm({
         0,
         Math.round(((applyFullBasic ? monthlyBasic : Math.min(monthlyBasic, 15000)) * 3.67) / 100),
       );
-  const monthlyEDLI = pfOptedOut
-    ? 0
-    : Math.min(75, Math.round((Math.min(monthlyBasic, 15000) * 0.5) / 100));
-  const monthlyPFAdmin = pfOptedOut
-    ? 0
-    : Math.min(75, Math.round((Math.min(monthlyBasic, 15000) * 0.5) / 100));
+  // EDLI / PF Admin are also gated by the org's per-charge toggles
+  // (migration 034). `!== false` so a not-yet-loaded orgSettings keeps
+  // them on -- matching the engine default and the old behaviour.
+  const edliEnabled = orgSettings?.pfEdliEnabled !== false;
+  const pfAdminEnabled = orgSettings?.pfAdminEnabled !== false;
+  const monthlyEDLI =
+    pfOptedOut || !edliEnabled
+      ? 0
+      : Math.min(75, Math.round((Math.min(monthlyBasic, 15000) * 0.5) / 100));
+  const monthlyPFAdmin =
+    pfOptedOut || !pfAdminEnabled
+      ? 0
+      : Math.min(75, Math.round((Math.min(monthlyBasic, 15000) * 0.5) / 100));
   const totalEmployerContribution =
     monthlyEmployerEPS + monthlyEmployerEPF + monthlyEDLI + monthlyPFAdmin;
   const employerPfInCtc = !!orgSettings?.employerPfInCtc;

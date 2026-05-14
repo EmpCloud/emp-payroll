@@ -202,6 +202,10 @@ export class OrgService {
       // employer PF / ESI / EDLI / admin (typical Indian IT employers).
       // Default false = additive ("CTC = Gross, employer cost on top").
       employerPfInCtc: !!Number(raw?.employer_pf_in_ctc),
+      // Migration 034 — employer EDLI / PF Admin charge toggles. Column is
+      // NOT NULL DEFAULT true; a missing row (null raw) also defaults true.
+      pfEdliEnabled: raw?.pf_edli_enabled == null ? true : !!Number(raw.pf_edli_enabled),
+      pfAdminEnabled: raw?.pf_admin_enabled == null ? true : !!Number(raw.pf_admin_enabled),
     };
   }
 
@@ -246,6 +250,15 @@ export class OrgService {
     }
     if (data.employerPfInCtc !== undefined) {
       updates.employer_pf_in_ctc = !!data.employerPfInCtc;
+    }
+
+    // Migration 034 — EDLI / PF Admin charge toggles. Plain booleans, no
+    // "clear to default" state: the column is NOT NULL, so we coerce.
+    if (data.pfEdliEnabled !== undefined) {
+      updates.pf_edli_enabled = !!data.pfEdliEnabled;
+    }
+    if (data.pfAdminEnabled !== undefined) {
+      updates.pf_admin_enabled = !!data.pfAdminEnabled;
     }
 
     if (Object.keys(updates).length > 0) {

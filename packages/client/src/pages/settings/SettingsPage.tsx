@@ -185,6 +185,14 @@ export function SettingsPage() {
     ) as HTMLInputElement | null;
     settingsPayload.employerPfInCtc = !!employerPfInCtcEl?.checked;
 
+    // Migration 034 — EDLI / PF Admin employer-charge toggles. Both default
+    // ON; unchecking either zeroes that charge in the payroll engine and
+    // the Salary Revision preview.
+    const pfEdliEl = document.getElementById("pf_edli_enabled") as HTMLInputElement | null;
+    const pfAdminEl = document.getElementById("pf_admin_enabled") as HTMLInputElement | null;
+    settingsPayload.pfEdliEnabled = !!pfEdliEl?.checked;
+    settingsPayload.pfAdminEnabled = !!pfAdminEl?.checked;
+
     setSaving(true);
     try {
       if (Object.keys(orgPayload).length > 0) {
@@ -312,7 +320,10 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      <StatutoryOverridesCard settings={settings} />
+      {/* key on settings-loaded so the card's defaultChecked / useState
+          initialisers re-run once the async settings actually arrive —
+          otherwise a default-ON toggle can paint OFF on first mount. */}
+      <StatutoryOverridesCard key={settings ? "loaded" : "loading"} settings={settings} />
 
       <Card>
         <CardHeader>
@@ -603,6 +614,50 @@ function StatutoryOverridesCard({ settings }: { settings: any }) {
               </p>
             </div>
           </label>
+        </div>
+
+        {/* Employer EDLI / PF Admin charge toggles (migration 034) — each
+            defaults ON. Unticking either zeroes that charge in both the
+            payroll engine and the Salary Revision preview. defaultChecked
+            uses `!== false` so a not-yet-loaded `settings` paints ON (the
+            engine default); the parent also remounts this card via `key`
+            once settings arrive. */}
+        <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <p className="text-sm font-medium text-gray-900">Employer EPF Charges</p>
+          <p className="mt-1 text-xs text-gray-500">
+            EDLI and PF Admin are employer-side charges added on top of EPF. Untick to exclude them
+            for organisations that don't pay them (e.g. exempted / trust-managed PF setups).
+          </p>
+          <div className="mt-3 space-y-3">
+            <label className="flex items-start gap-3">
+              <input
+                id="pf_edli_enabled"
+                type="checkbox"
+                defaultChecked={settings?.pfEdliEnabled !== false}
+                className="text-brand-600 focus:ring-brand-500 mt-0.5 h-4 w-4 rounded border-gray-300"
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-900">Include EDLI charges (0.5%)</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Employees' Deposit Linked Insurance — 0.5% of PF wages, paid by the employer.
+                </p>
+              </div>
+            </label>
+            <label className="flex items-start gap-3">
+              <input
+                id="pf_admin_enabled"
+                type="checkbox"
+                defaultChecked={settings?.pfAdminEnabled !== false}
+                className="text-brand-600 focus:ring-brand-500 mt-0.5 h-4 w-4 rounded border-gray-300"
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-900">Include PF Admin charges (0.5%)</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  EPFO administrative charges — 0.5% of PF wages, paid by the employer.
+                </p>
+              </div>
+            </label>
+          </div>
         </div>
 
         {/* ESI ceiling + rounding policy — independent settings. */}

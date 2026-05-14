@@ -32,6 +32,11 @@ export interface OrgStatutoryOverrides {
   pfDefaultEmployeeRate?: number | null;
   esiWageCeiling?: number | null;
   roundingPolicy?: "none" | "nearest_1" | "nearest_10" | "nearest_100" | string | null;
+  // Migration 034 — independent on/off switches for the two employer-side
+  // EPF charges. NULL/undefined => enabled (the long-standing default).
+  // Only an explicit `false` zeroes the charge out.
+  pfEdliEnabled?: boolean | null;
+  pfAdminEnabled?: boolean | null;
   // Migration 032 — when true, the offer-letter CTC already includes the
   // employer's PF / ESI / EDLI / admin contributions, so payroll reports
   // total_employer_cost = gross_salary instead of gross + employer cost
@@ -126,8 +131,15 @@ export function computePF(params: {
   }
   const employerEPS = Math.round((epsWages * PF_EMPLOYER_EPS_RATE) / 100);
   const employerEPF = Math.round((pfWages * PF_EMPLOYER_EPF_RATE) / 100);
-  const adminCharges = Math.round((pfWages * PF_ADMIN_CHARGES_RATE) / 100);
-  const edliCharges = Math.round((pfWages * PF_EDLI_CHARGES_RATE) / 100);
+  // EDLI / PF Admin are employer-side charges the org can switch off
+  // independently (migration 034). NULL/undefined keeps them on -- only an
+  // explicit `false` zeroes the charge, so existing orgs see no change.
+  const adminCharges =
+    orgOverrides?.pfAdminEnabled === false
+      ? 0
+      : Math.round((pfWages * PF_ADMIN_CHARGES_RATE) / 100);
+  const edliCharges =
+    orgOverrides?.pfEdliEnabled === false ? 0 : Math.round((pfWages * PF_EDLI_CHARGES_RATE) / 100);
 
   const employeeVPF = isVoluntaryPF ? Math.round(((basicSalary + daAmount) * vpfRate) / 100) : 0;
 
