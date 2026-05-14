@@ -211,33 +211,66 @@ export class PayrollService {
     // surfaced as BUG-024. Holidays from `organization_holidays` are
     // subtracted from the weekday count to cover BUG-025 (Good Friday
     // wasn't reducing the working-days base).
+    //
+    // Migration 035 — orgs that operate on weekends can opt in to count
+    // Sat/Sun as working days. When they do, those weekend days are PAID
+    // rest days: they go into the working-days base AND are credited to
+    // every employee's paidDays below, so they never fall into LOP just
+    // because no attendance is clocked on a weekend. Default (false) keeps
+    // the long-standing weekday-only base and ignores weekends entirely.
+    const includeWeekends = !!Number(orgSettings?.include_weekends_in_working_days);
     const daysInMonth = new Date(run.year, run.month, 0).getDate();
-    let weekdayCount = 0;
+    // Classify every day of the month once: Mon–Fri vs Sat/Sun.
+    let strictWeekdayCount = 0;
+    let weekendDayCount = 0;
     for (let d = 1; d <= daysInMonth; d++) {
       const dow = new Date(run.year, run.month - 1, d).getDay();
-      if (dow !== 0 && dow !== 6) weekdayCount++;
+      if (dow === 0 || dow === 6) weekendDayCount++;
+      else strictWeekdayCount++;
     }
     const empcloudDb = getEmpCloudDB();
     const monthStart = `${run.year}-${String(run.month).padStart(2, "0")}-01`;
-    const monthEnd = new Date(run.year, run.month, 0).toISOString().slice(0, 10);
+    // TZ-safe month end. `new Date(...).toISOString()` shifts "April 30"
+    // to "2026-04-29" on any UTC+ server, which silently dropped the last
+    // calendar day from the attendance/holiday window — an employee
+    // present on the 30th came out one day short. `getDate()` is a local
+    // getter, so build the string from it instead.
+    const monthEnd = `${run.year}-${String(run.month).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
     const orgHolidaysRows = await empcloudDb("organization_holidays")
       .where("organization_id", Number(orgId))
       .whereBetween("holiday_date", [monthStart, monthEnd])
       .select("holiday_date");
-    // Only count holidays that fall on weekdays -- weekend holidays don't
-    // reduce the working-days count further. Use an ISO YYYY-MM-DD string
-    // for the dedup key to handle both Date and string returns from mysql2.
-    const weekdayHolidayDates = new Set<string>();
+    // Split holidays by where they land. Weekday holidays always reduce
+    // the base; weekend holidays only matter when the org counts weekends.
+    // Dedup on a YYYY-MM-DD string built from local getters (not
+    // toISOString — same TZ trap) to handle Date/string returns from mysql2.
+    const holidaySeen = new Set<string>();
+    let weekdayHolidayCount = 0;
+    let weekendHolidayCount = 0;
     for (const h of orgHolidaysRows) {
+      const hd = h.holiday_date;
       const dStr =
-        typeof h.holiday_date === "string"
-          ? h.holiday_date.slice(0, 10)
-          : new Date(h.holiday_date).toISOString().slice(0, 10);
+        typeof hd === "string"
+          ? hd.slice(0, 10)
+          : `${hd.getFullYear()}-${String(hd.getMonth() + 1).padStart(2, "0")}-${String(hd.getDate()).padStart(2, "0")}`;
+      if (holidaySeen.has(dStr)) continue;
+      holidaySeen.add(dStr);
       const [y, m, d] = dStr.split("-").map(Number);
       const dow = new Date(y, m - 1, d).getDay();
-      if (dow !== 0 && dow !== 6) weekdayHolidayDates.add(dStr);
+      if (dow === 0 || dow === 6) weekendHolidayCount++;
+      else weekdayHolidayCount++;
     }
-    const workingDaysInMonth = Math.max(1, weekdayCount - weekdayHolidayDates.size);
+    // Working-days base (the per-employee denominator):
+    //  - default        : Mon–Fri minus weekday holidays.
+    //  - includeWeekends : every calendar day minus every holiday.
+    const workingDaysInMonth = includeWeekends
+      ? Math.max(1, daysInMonth - weekdayHolidayCount - weekendHolidayCount)
+      : Math.max(1, strictWeekdayCount - weekdayHolidayCount);
+    // Weekend rest days auto-credited as paid when the org opts in.
+    // Weekend holidays are already out of the base, so don't double-count.
+    const autoPaidWeekendDays = includeWeekends
+      ? Math.max(0, weekendDayCount - weekendHolidayCount)
+      : 0;
 
     let totalGross = 0;
     let totalDeductions = 0;
@@ -250,7 +283,16 @@ export class PayrollService {
     // (PF/ESI/TDS computed off `salary.gross_salary` rather than the empty
     // components), producing huge negative net pay. Skip the row, surface
     // the failure in the run summary so the admin can fix the structure.
-    const skipped: Array<{ empcloudUserId: number; reason: string; code: string }> = [];
+    const skipped: Array<{
+      empcloudUserId: number;
+      // Display name + emp code so the run-detail "skipped" banner can show
+      // "Aayush Gupta (EMP057)" instead of a bare "employee #57" — HR reads
+      // names, not internal IDs.
+      name: string;
+      empCode: string | null;
+      reason: string;
+      code: string;
+    }> = [];
     // BUG-008 — PAN-missing soft warning. Track employees whose TDS was
     // computed under Section 206AA (flat 20% because PAN was missing on
     // both payroll-side `tax_info.pan` AND EmpCloud-side
@@ -259,7 +301,7 @@ export class PayrollService {
     // We do NOT block compute -- the legal compliance default is to
     // withhold at 20% when PAN is missing, so the calculation is correct
     // even though over-withheld.
-    const missingPan: Array<{ empcloudUserId: number; code: string }> = [];
+    const missingPan: Array<{ empcloudUserId: number; name: string; code: string }> = [];
 
     for (const ecEmp of ecEmployees) {
       // Reset per-employee employer contributions each iteration
@@ -275,6 +317,13 @@ export class PayrollService {
       // still generates a payslip; pro-ration via `paidDays` handles
       // that downstream once attendance reflects the partial period.
       const ecAny = ecEmp as any;
+      // Friendly identifier for the skipped[] / missingPan[] banners — HR
+      // reads names, not numeric IDs. Falls back to the emp code, then the
+      // bare "#id", when the EmpCloud name fields are blank.
+      const ecName =
+        `${ecAny.first_name || ""} ${ecAny.last_name || ""}`.trim() ||
+        ecAny.emp_code ||
+        `#${ecEmp.id}`;
       // Knex returns DATE columns as JS Date objects, not strings. We
       // need an ISO YYYY-MM-DD slice for lexicographic comparison
       // against monthStart / monthEnd. The previous `String(dateObj)`
@@ -297,6 +346,8 @@ export class PayrollService {
       if (doj && doj > monthEnd) {
         skipped.push({
           empcloudUserId: ecEmp.id,
+          name: ecName,
+          empCode: ecAny.emp_code || null,
           code: "JOINED_AFTER_PERIOD",
           reason: `Joined ${doj} — after the pay period (${monthStart} → ${monthEnd})`,
         });
@@ -305,6 +356,8 @@ export class PayrollService {
       if (doe && doe < monthStart) {
         skipped.push({
           empcloudUserId: ecEmp.id,
+          name: ecName,
+          empCode: ecAny.emp_code || null,
           code: "EXITED_BEFORE_PERIOD",
           reason: `Exited ${doe} — before the pay period (${monthStart} → ${monthEnd})`,
         });
@@ -327,6 +380,8 @@ export class PayrollService {
         // run produces fewer payslips than active headcount.
         skipped.push({
           empcloudUserId: ecEmp.id,
+          name: ecName,
+          empCode: ecAny.emp_code || null,
           code: "NO_SALARY_ASSIGNED",
           reason: "No active salary structure assigned",
         });
@@ -459,7 +514,13 @@ export class PayrollService {
       // present days against 22 working days) doesn't push proRatio
       // above 1 and inflate gross beyond CTC.
       if (presentDays > totalDays) presentDays = totalDays;
-      const paidDays = Math.min(presentDays + paidLeaveDays, totalDays);
+      // Migration 035 — when the org counts weekends as working days, the
+      // Sat/Sun rest days are PAID. Fold autoPaidWeekendDays into paidDays
+      // (NOT presentDays — mutating presentDays would mask the genuine
+      // zero-attendance case the NO_ATTENDANCE guard below depends on).
+      // Without this the weekend gap (totalDays − presentDays) is wrongly
+      // booked as LOP for an employee who was never actually absent.
+      const paidDays = Math.min(presentDays + paidLeaveDays + autoPaidWeekendDays, totalDays);
       const lopDays = Math.max(0, totalDays - paidDays);
 
       // Parse salary components
@@ -558,6 +619,8 @@ export class PayrollService {
         const noAttendance = hasEarningComponent && presentDays === 0 && paidLeaveDays === 0;
         skipped.push({
           empcloudUserId: ecEmp.id,
+          name: ecName,
+          empCode: ecAny.emp_code || null,
           code: noAttendance ? "NO_ATTENDANCE" : "EMPTY_SALARY_STRUCTURE",
           reason: noAttendance
             ? "No attendance recorded in EmpCloud for this period (0 present + 0 paid leave)"
@@ -838,7 +901,7 @@ export class PayrollService {
           }
         }
         if (!resolvedPan) {
-          missingPan.push({ empcloudUserId: ecEmp.id, code: ecEmp.emp_code || "" });
+          missingPan.push({ empcloudUserId: ecEmp.id, name: ecName, code: ecEmp.emp_code || "" });
         }
       }
 
@@ -974,7 +1037,7 @@ export class PayrollService {
     if (skipped.length > 0) {
       const skipSummary = `[skipped ${skipped.length} employee(s) — empty/invalid salary structure: ${skipped
         .slice(0, 5)
-        .map((s) => `#${s.empcloudUserId}`)
+        .map((s) => s.name)
         .join(", ")}${skipped.length > 5 ? "..." : ""}]`;
       runNotes = runNotes ? `${runNotes}\n${skipSummary}` : skipSummary;
     }
@@ -984,7 +1047,7 @@ export class PayrollService {
     if (missingPan.length > 0) {
       const panSummary = `[PAN missing for ${missingPan.length} employee(s) — Section 206AA flat 20% applied: ${missingPan
         .slice(0, 5)
-        .map((s) => s.code || `#${s.empcloudUserId}`)
+        .map((s) => s.name)
         .join(", ")}${missingPan.length > 5 ? "..." : ""}]`;
       runNotes = runNotes ? `${runNotes}\n${panSummary}` : panSummary;
     }

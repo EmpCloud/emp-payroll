@@ -206,6 +206,10 @@ export class OrgService {
       // NOT NULL DEFAULT true; a missing row (null raw) also defaults true.
       pfEdliEnabled: raw?.pf_edli_enabled == null ? true : !!Number(raw.pf_edli_enabled),
       pfAdminEnabled: raw?.pf_admin_enabled == null ? true : !!Number(raw.pf_admin_enabled),
+      // Migration 035 — count weekends as working days in payroll. Column is
+      // NOT NULL DEFAULT false; a missing row also defaults false (the
+      // long-standing weekday-only behaviour).
+      includeWeekendsInWorkingDays: !!Number(raw?.include_weekends_in_working_days),
     };
   }
 
@@ -259,6 +263,11 @@ export class OrgService {
     }
     if (data.pfAdminEnabled !== undefined) {
       updates.pf_admin_enabled = !!data.pfAdminEnabled;
+    }
+
+    // Migration 035 — include weekends in payroll working days.
+    if (data.includeWeekendsInWorkingDays !== undefined) {
+      updates.include_weekends_in_working_days = !!data.includeWeekendsInWorkingDays;
     }
 
     if (Object.keys(updates).length > 0) {

@@ -239,9 +239,17 @@ export function PayrollRunDetailPage() {
   // and why, without having to dig through server logs or run notes.
   // Cleared on revert/rerun so stale info doesn't linger.
   const [skipped, setSkipped] = useState<
-    Array<{ empcloudUserId: number; reason: string; code: string }>
+    Array<{
+      empcloudUserId: number;
+      name?: string;
+      empCode?: string | null;
+      reason: string;
+      code: string;
+    }>
   >([]);
-  const [missingPan, setMissingPan] = useState<Array<{ empcloudUserId: number; code: string }>>([]);
+  const [missingPan, setMissingPan] = useState<
+    Array<{ empcloudUserId: number; name?: string; code: string }>
+  >([]);
 
   if (isLoading) {
     return (
@@ -643,7 +651,11 @@ export function PayrollRunDetailPage() {
               <li key={i} className="text-sm text-orange-800">
                 <span className="font-mono text-xs uppercase text-orange-600">{s.code}</span>
                 {" — "}
-                <span>employee #{s.empcloudUserId}</span>: {s.reason}
+                <span className="font-medium">
+                  {s.name || `employee #${s.empcloudUserId}`}
+                  {s.empCode ? ` (${s.empCode})` : ""}
+                </span>
+                : {s.reason}
               </li>
             ))}
             {skipped.length > 20 && (
@@ -670,14 +682,8 @@ export function PayrollRunDetailPage() {
           <ul className="space-y-1">
             {missingPan.slice(0, 20).map((s, i) => (
               <li key={i} className="text-sm text-amber-800">
-                {s.code ? (
-                  <>
-                    <span className="font-mono text-xs">{s.code}</span> — employee #
-                    {s.empcloudUserId}
-                  </>
-                ) : (
-                  <>employee #{s.empcloudUserId}</>
-                )}
+                <span className="font-medium">{s.name || `employee #${s.empcloudUserId}`}</span>
+                {s.code ? <span className="ml-1.5 font-mono text-xs">({s.code})</span> : null}
               </li>
             ))}
             {missingPan.length > 20 && (

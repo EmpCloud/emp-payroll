@@ -193,6 +193,10 @@ export function SettingsPage() {
     settingsPayload.pfEdliEnabled = !!pfEdliEl?.checked;
     settingsPayload.pfAdminEnabled = !!pfAdminEl?.checked;
 
+    // Migration 035 — working-days basis. "all_days" counts weekends as
+    // working days in the payroll run; "weekdays" (default) keeps Mon–Fri.
+    settingsPayload.includeWeekendsInWorkingDays = val("working_days_basis") === "all_days";
+
     setSaving(true);
     try {
       if (Object.keys(orgPayload).length > 0) {
@@ -362,6 +366,25 @@ export function SettingsPage() {
                 { value: "SGD", label: "SGD — Singapore Dollar" },
               ]}
             />
+            {/* Migration 035 — controls the working-days denominator the
+                payroll run pro-rates against. "All calendar days" suits
+                orgs that operate on weekends (retail, manufacturing). */}
+            <div>
+              <SelectField
+                id="working_days_basis"
+                label="Working Days Basis"
+                defaultValue={settings?.includeWeekendsInWorkingDays ? "all_days" : "weekdays"}
+                options={[
+                  { value: "weekdays", label: "Weekdays only (Mon–Fri)" },
+                  { value: "all_days", label: "Include weekends (all calendar days)" },
+                ]}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Sets the Total Working Days each payroll run divides present / paid days by. With
+                "Include weekends", Sat/Sun count as paid rest days — they're never treated as Loss
+                of Pay. Holidays are subtracted either way.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

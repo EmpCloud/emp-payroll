@@ -32,6 +32,17 @@ function dateToIso(v: unknown, tz: string = DEFAULT_TIMEZONE): string {
   return dayjs(d).tz(tz).format("YYYY-MM-DD");
 }
 
+/**
+ * Last calendar day of a month as a YYYY-MM-DD string. Built from
+ * `getDate()` (a local getter) rather than `new Date(...).toISOString()`,
+ * which shifts "April 30" to "2026-04-29" on any UTC+ server and silently
+ * dropped the last day of the month from attendance date-range queries.
+ */
+function monthEndIso(year: number, month: number): string {
+  const lastDay = new Date(year, month, 0).getDate();
+  return `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+}
+
 export class AttendanceService {
   private db = getDB();
 
@@ -69,7 +80,7 @@ export class AttendanceService {
     const empcloudDb = getEmpCloudDB();
     const orgIdNum = Number(orgId);
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-    const endDate = new Date(year, month, 0).toISOString().slice(0, 10);
+    const endDate = monthEndIso(year, month);
     const totalWorkingDays = this.getWorkingDaysInMonth(month, year);
 
     // Get attendance summary from EmpCloud
@@ -288,7 +299,7 @@ export class AttendanceService {
     try {
       const empcloudDb = getEmpCloudDB();
       const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-      const endDate = new Date(year, month, 0).toISOString().slice(0, 10);
+      const endDate = monthEndIso(year, month);
       const totalWorkingDays = this.getWorkingDaysInMonth(month, year);
 
       const [record] = (await empcloudDb("attendance_records")
@@ -368,7 +379,7 @@ export class AttendanceService {
     const orgIdNum = Number(orgId);
     const empcloudDb = getEmpCloudDB();
     const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
-    const monthEnd = new Date(year, month, 0).toISOString().slice(0, 10);
+    const monthEnd = monthEndIso(year, month);
 
     // Pre-compute the workday list once -- the same set of dates is
     // used for every employee in this batch. Days are tagged in YYYY-MM-DD
