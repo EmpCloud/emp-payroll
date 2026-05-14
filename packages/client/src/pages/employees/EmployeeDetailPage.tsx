@@ -1563,7 +1563,12 @@ function SalaryAssignForm({
           setCTC(Number.isFinite(n) && n >= 0 ? n : 0);
         }}
         min={0}
-        step={1000}
+        // step={1} (not 1000) — a 1000-step makes the browser's native
+        // number validation reject any CTC that isn't a round thousand
+        // (e.g. "823392" → "the two nearest valid values are 823000 and
+        // 824000"). HR enters exact negotiated CTCs, so allow any whole
+        // rupee value.
+        step={1}
         placeholder="e.g. 1200000"
         required
       />
