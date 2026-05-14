@@ -80,7 +80,12 @@ export const HRA_NON_METRO_PERCENT = 40;
 // ---------------------------------------------------------------------------
 export const PF_WAGE_CEILING = 15000; // monthly PF wage ceiling
 export const PF_EMPLOYEE_RATE = 12; // % of PF wages
-export const PF_EMPLOYER_EPF_RATE = 3.67; // employer EPF %
+export const PF_EMPLOYER_RATE = 12; // employer's total PF contribution %
+// Conventional label only. EPFO computes the employer EPF share as the
+// 12% total minus the EPS share (8.33% of the EPS-capped wage) — NOT as a
+// direct 3.67% of PF wages, which mis-rounds (e.g. 3.67% of ₹15,000 =
+// ₹550.5 → ₹551, whereas ₹1,800 − ₹1,250 = ₹550).
+export const PF_EMPLOYER_EPF_RATE = 3.67; // employer EPF % (label only)
 export const PF_EMPLOYER_EPS_RATE = 8.33; // employer EPS %
 export const PF_ADMIN_CHARGES_RATE = 0.5; // admin charges %
 export const PF_EDLI_CHARGES_RATE = 0.5; // EDLI charges %

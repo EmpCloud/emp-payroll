@@ -40,9 +40,12 @@ describe("computePF", () => {
     expect(result.employeeEPF).toBe(1800);
   });
 
-  it("should compute employer EPF at 3.67%", () => {
+  it("should compute employer EPF as the 12% total minus EPS, not a direct 3.67%", () => {
     const result = computePF({ ...base, basicSalary: 15000 });
-    expect(result.employerEPF).toBe(Math.round((15000 * 3.67) / 100)); // 551
+    // EPFO method: 12% of 15000 = 1800, minus EPS 1250 = 550. A direct
+    // 3.67% of 15000 would mis-round to 551.
+    expect(result.employerEPF).toBe(550);
+    expect(result.employerEPF + result.employerEPS).toBe(1800);
   });
 
   it("should compute employer EPS at 8.33% of EPS wages", () => {

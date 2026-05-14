@@ -5,7 +5,7 @@
 import {
   PF_WAGE_CEILING,
   PF_EMPLOYEE_RATE,
-  PF_EMPLOYER_EPF_RATE,
+  PF_EMPLOYER_RATE,
   PF_EMPLOYER_EPS_RATE,
   PF_ADMIN_CHARGES_RATE,
   PF_EDLI_CHARGES_RATE,
@@ -130,7 +130,12 @@ export function computePF(params: {
     employeeEPF = Math.round(orgOverrides.pfMaxEmployeeContribution);
   }
   const employerEPS = Math.round((epsWages * PF_EMPLOYER_EPS_RATE) / 100);
-  const employerEPF = Math.round((pfWages * PF_EMPLOYER_EPF_RATE) / 100);
+  // EPFO method: the employer EPF share is the 12% total minus the rounded
+  // EPS share — NOT a direct 3.67% of PF wages. The direct-rate version
+  // mis-rounds (3.67% of ₹15,000 = ₹550.5 → ₹551; correct is ₹1,800 −
+  // ₹1,250 = ₹550). Clamp at 0 in case a custom epsWages exceeds the total.
+  const employerTotal = Math.round((pfWages * PF_EMPLOYER_RATE) / 100);
+  const employerEPF = Math.max(0, employerTotal - employerEPS);
   // EDLI / PF Admin are employer-side charges the org can switch off
   // independently (migration 034). NULL/undefined keeps them on -- only an
   // explicit `false` zeroes the charge, so existing orgs see no change.

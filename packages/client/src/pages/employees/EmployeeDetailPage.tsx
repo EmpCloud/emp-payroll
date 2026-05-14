@@ -576,6 +576,7 @@ export function EmployeeDetailPage() {
           })()}
           currentCTC={salary ? Number(salary.ctc) : undefined}
           pfDetails={pfDetails}
+          taxInfo={taxInfo}
           loading={salaryAssigning}
           onSubmit={async (data) => {
             setSalaryAssigning(true);
@@ -1343,6 +1344,7 @@ function SalaryAssignForm({
   structures,
   currentCTC,
   pfDetails,
+  taxInfo,
   loading,
   onSubmit,
   onCancel,
@@ -1351,6 +1353,10 @@ function SalaryAssignForm({
   structures: any[];
   currentCTC?: number;
   pfDetails?: { isOptedOut?: boolean; contributionRate?: number | string };
+  // Only `deductPT` is consumed here — the preview honours the per-employee
+  // "Deduct Professional Tax?" toggle so it doesn't show a ₹200 PT line for
+  // employees that have PT switched off.
+  taxInfo?: { deductPT?: boolean };
   loading: boolean;
   onSubmit: (data: any) => void;
   onCancel: () => void;
@@ -1480,13 +1486,24 @@ function SalaryAssignForm({
       monthlyEPF = Math.min(monthlyEPF, maxCap);
     }
   }
-  // Employer-side preview — Indian PF: employer also pays 12% but it
-  // splits 8.33% to EPS (capped at ₹15K basic = ₹1,250) and 3.67% to
-  // EPF, plus EDLI 0.5% (cap ₹75) and Admin 0.5% (cap ₹75). Both ESI:
-  // 3.25% of gross capped at ESI ceiling (₹21,000). Surfaces these on
-  // the preview so HR and the employee see the full Cost to Company,
-  // not just take-home. Mirrors what india-statutory.service computes
-  // at payroll-run time -- numbers in the preview match the payslip.
+  // Professional Tax — flat ₹200/month estimate. PT is state-specific
+  // (₹200 is the common top slab; some states levy less, Delhi/Haryana
+  // none) and the engine computes the real figure at payroll-run time.
+  // The preview used to subtract this ₹200 *silently* inside "Approx Net
+  // Pay", so the breakdown never reconciled — Gross − EPF was always ₹200
+  // above the shown Net. Now it's its own line AND it honours the
+  // employee's "Deduct PT" toggle: when PT is off, no ₹200 is applied.
+  const ptDeducted = taxInfo?.deductPT !== false;
+  const monthlyPT = ptDeducted ? 200 : 0;
+  // Employer-side preview — Indian PF: employer also pays 12% of PF wages,
+  // split as 8.33% to EPS (capped at ₹15K basic = ₹1,250) and the REMAINDER
+  // to EPF. The EPF share is `12% total − EPS`, not a direct 3.67% — the
+  // direct rate mis-rounds (3.67% of ₹15,000 = ₹550.5 → ₹551; correct is
+  // ₹1,800 − ₹1,250 = ₹550). Plus EDLI 0.5% (cap ₹75) and Admin 0.5% (cap
+  // ₹75). Both ESI: 3.25% of gross capped at ESI ceiling (₹21,000).
+  // Surfaces these on the preview so HR and the employee see the full Cost
+  // to Company, not just take-home. Mirrors what india-statutory.service
+  // computes at payroll-run time -- numbers in the preview match the payslip.
   const monthlyEmployerEPS = pfOptedOut
     ? 0
     : Math.round((Math.min(monthlyBasic, 15000) * 8.33) / 100);
@@ -1494,7 +1511,8 @@ function SalaryAssignForm({
     ? 0
     : Math.max(
         0,
-        Math.round(((applyFullBasic ? monthlyBasic : Math.min(monthlyBasic, 15000)) * 3.67) / 100),
+        Math.round(((applyFullBasic ? monthlyBasic : Math.min(monthlyBasic, 15000)) * 12) / 100) -
+          monthlyEmployerEPS,
       );
   // EDLI / PF Admin are also gated by the org's per-charge toggles
   // (migration 034). `!== false` so a not-yet-loaded orgSettings keeps
@@ -1669,6 +1687,10 @@ function SalaryAssignForm({
                 </span>
                 <span>{monthlyEPF > 0 ? `-${formatCurrency(monthlyEPF)}` : formatCurrency(0)}</span>
               </div>
+              <div className="flex justify-between text-sm text-red-600">
+                <span>Professional Tax (est.){ptDeducted ? "" : " (not deducted)"}</span>
+                <span>{monthlyPT > 0 ? `-${formatCurrency(monthlyPT)}` : formatCurrency(0)}</span>
+              </div>
               <div className="text-brand-700 flex justify-between border-t border-gray-200 pt-2 text-sm font-bold">
                 <span>Approx Net Pay</span>
                 <span>
@@ -1677,7 +1699,7 @@ function SalaryAssignForm({
                       monthlyReimbursements -
                       monthlyStructureDeductions -
                       monthlyEPF -
-                      200,
+                      monthlyPT,
                   )}
                 </span>
               </div>
