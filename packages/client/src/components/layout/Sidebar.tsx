@@ -106,6 +106,12 @@ const navItems: NavItem[] = [
     section: "Compliance",
   },
   {
+    to: "/tax/calculator",
+    label: "Tax Calculator",
+    icon: Calculator,
+    roles: ["org_admin", "hr_admin", "hr_manager"],
+  },
+  {
     to: "/tax/declarations",
     label: "Tax Declarations",
     icon: ClipboardList,

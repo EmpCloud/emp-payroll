@@ -26,6 +26,56 @@ router.post(
   }),
 );
 
+// --- Admin Tax Calculator ---
+// Returns the employee's current values so the calculator can prefill the
+// form. Does not write anything.
+router.get(
+  "/calculator/:empId/prefill",
+  authorize("hr_admin", "hr_manager", "org_admin"),
+  wrap(async (req, res) => {
+    const data = await svc.getCalculatorPrefill(param(req, "empId"));
+    res.json({ success: true, data });
+  }),
+);
+
+// Runs computeIncomeTax with caller-supplied inputs. Does not persist --
+// purely a what-if projection for HR. taxAlreadyPaid is sourced from real
+// YTD payslip TDS inside the service so the "remaining" number is accurate.
+router.post(
+  "/calculator/simulate",
+  authorize("hr_admin", "hr_manager", "org_admin"),
+  wrap(async (req, res) => {
+    const data = await svc.simulate(req.body);
+    res.json({ success: true, data });
+  }),
+);
+
+// Form-12B / prior-employer TDS. PUT-style upsert keyed by (employeeId, fy)
+// so HR can capture mid-FY joiners' prior income+TDS and have the next
+// payroll run net it out.
+router.put(
+  "/prior-employer-tds/:empId",
+  authorize("hr_admin", "hr_manager", "org_admin"),
+  wrap(async (req, res) => {
+    const fy = String(req.body.financialYear || "").trim();
+    if (!fy) {
+      res.status(400).json({
+        success: false,
+        error: { code: "INVALID_FY", message: "financialYear is required (e.g. 2026-2027)" },
+      });
+      return;
+    }
+    const data = await svc.setPriorEmployerTds(param(req, "empId"), fy, {
+      grossPaid: Number(req.body.grossPaid) || 0,
+      tdsDeducted: Number(req.body.tdsDeducted) || 0,
+      exemptionsClaimed: Number(req.body.exemptionsClaimed) || 0,
+      deductionsClaimed: Number(req.body.deductionsClaimed) || 0,
+      source: typeof req.body.source === "string" ? req.body.source : "",
+    });
+    res.json({ success: true, data });
+  }),
+);
+
 router.get(
   "/declarations/:empId",
   wrap(async (req, res) => {

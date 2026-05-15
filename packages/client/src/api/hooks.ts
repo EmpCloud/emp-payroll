@@ -300,6 +300,56 @@ export function useMyTaxComputation() {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Admin Tax Calculator (what-if projections)
+// ---------------------------------------------------------------------------
+export function useTaxCalculatorPrefill(empId: string) {
+  return useQuery({
+    queryKey: ["tax-calculator-prefill", empId],
+    queryFn: () => apiGet<any>(`/tax/calculator/${empId}/prefill`),
+    enabled: !!empId,
+  });
+}
+
+export function useSimulateTax() {
+  return useMutation({
+    mutationFn: (payload: {
+      employeeId: string;
+      regime: "new" | "old";
+      annualGross: number;
+      basicAnnual: number;
+      hraAnnual: number;
+      rentPaidAnnual: number;
+      isMetroCity: boolean;
+      declarations: { section: string; amount: number }[];
+      employeePfAnnual: number;
+      panNumber?: string | null;
+      priorEmployerGross?: number;
+      priorEmployerTds?: number;
+    }) => apiPost<any>("/tax/calculator/simulate", payload),
+  });
+}
+
+// Save Form-12B / prior-employer TDS onto the employee profile. Persists
+// to tax_info.priorEmployerTds[fy] so future payroll runs net it out.
+export function useSavePriorEmployerTds(empId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      financialYear: string;
+      grossPaid: number;
+      tdsDeducted: number;
+      exemptionsClaimed?: number;
+      deductionsClaimed?: number;
+      source?: string;
+    }) => apiPut<any>(`/tax/prior-employer-tds/${empId}`, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tax-calculator-prefill", empId] });
+      qc.invalidateQueries({ queryKey: ["employee", empId] });
+    },
+  });
+}
+
 export function useMyProfile() {
   return useQuery({
     queryKey: ["my-profile"],

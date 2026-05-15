@@ -45,6 +45,21 @@ interface TaxInput {
   // dominates the slab-rate result for almost all earners and is the
   // documented compliance default.
   panNumber?: string | null;
+  // BUG-MidFY — Form-12B / prior-employer support. When an employee joins
+  // mid-FY, the previous employer has already paid them and deducted some
+  // TDS. Under the Income-Tax Act the new employer is expected to take
+  // both into account (via Form 12B). Without this, the engine would
+  // (a) skip the prior gross for slab purposes and (b) try to recoup the
+  // FULL annual tax in the months remaining at the new employer, causing
+  // massive over-deduction in cash-flow terms.
+  //
+  // Convention used here: `annualGross` is the COMBINED total income for
+  // the FY (prior + this employer), so slab/cess/surcharge already reflect
+  // total earnings. `priorEmployerTds` is what the prior employer
+  // withheld -- summed onto the existing `taxAlreadyPaid` so remaining-tax
+  // math nets it out. Both default to 0 to keep the legacy single-employer
+  // path identical.
+  priorEmployerTds?: number;
 }
 
 // 206AA flat rate when PAN is unavailable. Section 206AA(1)(iii).
@@ -63,7 +78,13 @@ export function computeIncomeTax(input: TaxInput): TaxComputation {
     monthsWorked,
     taxAlreadyPaid,
     panNumber,
+    priorEmployerTds = 0,
   } = input;
+
+  // Effective tax-already-paid baseline = prior employer's withholding +
+  // YTD withholding done by this employer. Treat them identically for the
+  // "how much more do I still need to deduct" math.
+  const effectiveTaxAlreadyPaid = taxAlreadyPaid + priorEmployerTds;
 
   // -----------------------------------------------------------------------
   // Section 206AA short-circuit — no PAN, flat 20% on annual gross.
@@ -73,7 +94,7 @@ export function computeIncomeTax(input: TaxInput): TaxComputation {
   const panMissing = !panNumber || panNumber.trim() === "";
   if (panMissing) {
     const totalTax = Math.round(annualGross * SECTION_206AA_FLAT_RATE);
-    const remainingTax = Math.max(0, totalTax - taxAlreadyPaid);
+    const remainingTax = Math.max(0, totalTax - effectiveTaxAlreadyPaid);
     const remainingMonths = Math.max(1, monthsWorked);
     const monthlyTds = Math.round(remainingTax / remainingMonths);
     return {
@@ -91,7 +112,7 @@ export function computeIncomeTax(input: TaxInput): TaxComputation {
       surcharge: 0,
       healthAndEducationCess: 0,
       totalTax,
-      taxAlreadyPaid,
+      taxAlreadyPaid: effectiveTaxAlreadyPaid,
       remainingTax,
       monthlyTds,
       computedAt: new Date(),
@@ -240,7 +261,7 @@ export function computeIncomeTax(input: TaxInput): TaxComputation {
   // Step 9: Total Tax and Monthly TDS
   // -----------------------------------------------------------------------
   const totalTax = taxOnIncome + surcharge + cess;
-  const remainingTax = Math.max(0, totalTax - taxAlreadyPaid);
+  const remainingTax = Math.max(0, totalTax - effectiveTaxAlreadyPaid);
   const remainingMonths = Math.max(1, monthsWorked);
   const monthlyTds = Math.round(remainingTax / remainingMonths);
 
@@ -259,7 +280,10 @@ export function computeIncomeTax(input: TaxInput): TaxComputation {
     surcharge,
     healthAndEducationCess: cess,
     totalTax,
-    taxAlreadyPaid,
+    // Returned `taxAlreadyPaid` is the COMBINED baseline (prior employer +
+    // this-employer YTD) so the UI's "tax already paid" stat reflects what
+    // the engine actually netted out, not just this-employer YTD.
+    taxAlreadyPaid: effectiveTaxAlreadyPaid,
     remainingTax,
     monthlyTds,
     computedAt: new Date(),
