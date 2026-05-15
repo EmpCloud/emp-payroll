@@ -43,6 +43,9 @@ const TaxOverviewPage = lazy(() =>
 const AdminDeclarationsPage = lazy(() =>
   import("@/pages/tax/AdminDeclarationsPage").then((m) => ({ default: m.AdminDeclarationsPage })),
 );
+const TaxCalculatorPage = lazy(() =>
+  import("@/pages/tax/TaxCalculatorPage").then((m) => ({ default: m.TaxCalculatorPage })),
+);
 const AttendancePage = lazy(() =>
   import("@/pages/attendance/AttendancePage").then((m) => ({ default: m.AttendancePage })),
 );
@@ -155,6 +158,7 @@ export function AdminRoutes() {
       <Route path="/payroll/analytics" element={<PayrollAnalyticsPage />} />
       <Route path="/payslips" element={<PayslipListPage />} />
       <Route path="/tax" element={<TaxOverviewPage />} />
+      <Route path="/tax/calculator" element={<TaxCalculatorPage />} />
       <Route path="/tax/declarations" element={<AdminDeclarationsPage />} />
       <Route path="/attendance" element={<AttendancePage />} />
       <Route path="/reimbursements" element={<ReimbursementsPage />} />

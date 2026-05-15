@@ -853,12 +853,24 @@ export class PayrollService {
           }
         }
 
+        // BUG-MidFY — Mid-FY joiner support via Form 12B. When a new hire
+        // brings prior-employer income+TDS for the same FY, the payroll
+        // engine must treat the prior income as part of the slab base AND
+        // count the prior TDS against `taxAlreadyPaid` -- otherwise the
+        // engine projects the full annual tax against this employer alone
+        // and over-deducts by the prior-TDS amount. Stored per-FY under
+        // `tax_info.priorEmployerTds[fy] = { grossPaid, tdsDeducted, ... }`.
+        const runFy =
+          run.month >= 4 ? `${run.year}-${run.year + 1}` : `${run.year - 1}-${run.year}`;
+        const priorEmp: any = (taxInfo?.priorEmployerTds && taxInfo.priorEmployerTds[runFy]) || {};
+        const priorEmployerGross = Number(priorEmp.grossPaid || 0);
+        const priorEmployerTds = Number(priorEmp.tdsDeducted || 0);
+
         const taxResult = computeIncomeTax({
           employeeId: String(ecEmp.id),
-          financialYear:
-            run.month >= 4 ? `${run.year}-${run.year + 1}` : `${run.year - 1}-${run.year}`,
+          financialYear: runFy,
           regime: taxInfo?.regime === "old" ? TaxRegime.OLD : TaxRegime.NEW,
-          annualGross: Number(salary.gross_salary),
+          annualGross: Number(salary.gross_salary) + priorEmployerGross,
           // BUG-004 — These three feed the ANNUAL tax projection and must
           // use the contracted (un-prorated) salary-structure values, not
           // this month's pro-rated `basicMonthly`. Pro-rating these would
@@ -873,6 +885,7 @@ export class PayrollService {
           employeePfAnnual: structureBasicMonthly * 0.12 * 12,
           monthsWorked: monthsRemaining,
           taxAlreadyPaid,
+          priorEmployerTds,
           // #1657 — Section 206AA: when PAN is missing, the tax engine
           // applies a flat 20% rate. Empty / null pan triggers that branch.
           // `resolvedPan` already covers the payroll → EmpCloud merge above.

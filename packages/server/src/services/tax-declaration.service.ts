@@ -6,6 +6,63 @@ import { logger } from "../utils/logger";
 import { computeIncomeTax } from "./tax/india-tax.service";
 import { TaxRegime } from "@emp-payroll/shared";
 
+/**
+ * Prior-employer TDS payload (Form 12B). Stored as a per-FY map under
+ * `tax_info.priorEmployerTds[fy]` on the employee profile. `grossPaid`
+ * captures the income the previous employer paid out this FY (so it can be
+ * added to the slab base), and `tdsDeducted` is what they actually withheld
+ * (added to `taxAlreadyPaid` so the new employer doesn't try to re-collect
+ * it). `source` is freeform text for HR (e.g. "Form 12B uploaded 2026-09-01").
+ */
+export interface PriorEmployerTds {
+  grossPaid: number;
+  tdsDeducted: number;
+  exemptionsClaimed?: number;
+  deductionsClaimed?: number;
+  source?: string;
+}
+
+/**
+ * Compute how many months remain in the given FY starting from today, with
+ * the joining date as a floor: an employee can't have TDS deducted for
+ * months they hadn't joined yet. Returns at least 1 so the divide-by-zero
+ * guard in computeIncomeTax never fires.
+ *
+ * Example: FY = 2026-2027 (Apr 2026 - Mar 2027), today = Sep 15 2026,
+ * joining = Sep 1 2026 → months = 7 (Sep, Oct, Nov, Dec, Jan, Feb, Mar).
+ */
+function monthsRemainingFromJoining(
+  fy: string,
+  joiningDate?: string | Date | null,
+  asOf?: Date,
+): number {
+  const startYear = Number(fy.split("-")[0]);
+  if (!Number.isFinite(startYear)) return 12;
+
+  const now = asOf || new Date();
+  const fyEnd = new Date(startYear + 1, 2, 31); // March 31 of FY-end year
+  const fyStart = new Date(startYear, 3, 1); // April 1 of FY-start year
+
+  // Anchor = max(today, joiningDate, FY start). Clamp to FY end so a
+  // post-FY date doesn't produce a negative remainder.
+  let anchor = now;
+  if (joiningDate) {
+    const j = joiningDate instanceof Date ? joiningDate : new Date(joiningDate);
+    if (!Number.isNaN(j.getTime()) && j > anchor) anchor = j;
+  }
+  if (anchor < fyStart) anchor = fyStart;
+  if (anchor > fyEnd) return 1;
+
+  // Count whole months from anchor's month up to and including March.
+  const anchorYear = anchor.getFullYear();
+  const anchorMonth = anchor.getMonth() + 1; // 1-12
+  const monthsLeft =
+    anchorYear === startYear
+      ? 12 - (anchorMonth - 4) // Apr-Dec of start year
+      : 4 - anchorMonth; // Jan-Mar of end year (months 1, 2, 3)
+  return Math.max(1, monthsLeft);
+}
+
 export class TaxDeclarationService {
   private db = getDB();
 
@@ -24,7 +81,11 @@ export class TaxDeclarationService {
     // displayed "TDS Deducted YTD: ₹0". Recompute YTD live from payslips
     // every time the computation is fetched, so the value is always
     // current. Also recompute `remaining_tax` for the same reason.
-    const ytdTds = await this.computeYtdTdsFromPayslips(employeeId, fy);
+    // BUG-YTD-201 — resolve the numeric empcloud_user_id so the YTD lookup
+    // has the reliable bridge id available, not just the UUID that was
+    // passed in (which often doesn't match payslips.employee_id).
+    const { empcloudUserId } = await this.resolveEmployeeIds(employeeId);
+    const ytdTds = await this.computeYtdTdsFromPayslips(employeeId, fy, empcloudUserId);
     const totalTax = Number(computation.total_tax || 0);
     return {
       ...computation,
@@ -49,16 +110,37 @@ export class TaxDeclarationService {
    *    DO count — the deduction physically happened from gross even if
    *    the employee is challenging the line items.
    */
-  private async computeYtdTdsFromPayslips(employeeId: string, fy: string): Promise<number> {
+  private async computeYtdTdsFromPayslips(
+    employeeId: string,
+    fy: string,
+    empcloudUserId?: number | null,
+  ): Promise<number> {
     // FY "2026-2027" → startYear 2026
     const startYear = Number(fy.split("-")[0]);
     if (!Number.isFinite(startYear)) return 0;
 
-    // Collect payslips by both id paths so we don't miss any.
-    const numericId = Number(employeeId);
+    // Collect payslips by every id we know. The `payslips` table can be
+    // keyed two ways in practice:
+    //   - `employee_id` — UUID from the legacy `employees` table
+    //   - `empcloud_user_id` — numeric EmpCloud user id, the reliable
+    //     bridge across `employees`, `employee_payroll_profiles`, and
+    //     `payslips`.
+    // The `employee_id` UUID stored on payslips is NOT the same as
+    // `employee_payroll_profiles.id` -- SSO-provisioned users keep their
+    // profile under a different UUID than the legacy employees row.
+    // BUG-YTD-201 (2026-05-15) — previously this function only tried the
+    // `employee_id` UUID and the numeric form, so when a caller handed it
+    // a profile UUID, every payslip lookup missed and YTD came back as
+    // ₹0 -- inflating May+ TDS projections for every employee whose April
+    // payslip had already been generated. Take `empcloudUserId`
+    // explicitly so we always have the reliable numeric path available.
+    const numericFromArg = Number(employeeId);
     const candidateFilters: Array<Record<string, unknown>> = [{ employee_id: employeeId }];
-    if (Number.isFinite(numericId)) {
-      candidateFilters.push({ empcloud_user_id: numericId });
+    if (Number.isFinite(numericFromArg)) {
+      candidateFilters.push({ empcloud_user_id: numericFromArg });
+    }
+    if (empcloudUserId != null && Number.isFinite(empcloudUserId)) {
+      candidateFilters.push({ empcloud_user_id: empcloudUserId });
     }
 
     const seen = new Set<string>();
@@ -121,17 +203,39 @@ export class TaxDeclarationService {
     // resolution match what getComputation() returns. Previously this
     // queried payslips with ONLY `employee_id` and no FY filter, summing
     // TDS across years.
-    const taxAlreadyPaid = await this.computeYtdTdsFromPayslips(employeeId, fy);
+    // BUG-YTD-201 — also pass the resolved empcloud_user_id so the lookup
+    // catches payslips keyed on the numeric bridge id (the common case
+    // for SSO-provisioned users where employee.id != payslips.employee_id).
+    const taxAlreadyPaid = await this.computeYtdTdsFromPayslips(
+      employeeId,
+      fy,
+      employee.empcloud_user_id != null ? Number(employee.empcloud_user_id) : null,
+    );
 
-    const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const monthsRemaining = currentMonth >= 4 ? 12 - (currentMonth - 4) : 4 - currentMonth;
+    // Joining-date aware monthsRemaining, plus Form-12B / prior-employer
+    // values from the profile so mid-FY joiners aren't over-deducted.
+    const ecUser = employee.empcloud_user_id
+      ? await findUserById(employee.empcloud_user_id).catch(() => null)
+      : null;
+    const joiningDate: string | null = ecUser?.date_of_joining
+      ? typeof ecUser.date_of_joining === "string"
+        ? ecUser.date_of_joining.slice(0, 10)
+        : new Date(ecUser.date_of_joining as any).toISOString().slice(0, 10)
+      : null;
+    const monthsRemaining = monthsRemainingFromJoining(fy, joiningDate);
+    const priorEmp: PriorEmployerTds = (taxInfo?.priorEmployerTds &&
+      taxInfo.priorEmployerTds[fy]) || {
+      grossPaid: 0,
+      tdsDeducted: 0,
+    };
+    const priorGross = Number(priorEmp.grossPaid || 0);
+    const priorTds = Number(priorEmp.tdsDeducted || 0);
 
     const result = computeIncomeTax({
       employeeId,
       financialYear: fy,
       regime: taxInfo?.regime === "old" ? TaxRegime.OLD : TaxRegime.NEW,
-      annualGross: Number(salary.gross_salary),
+      annualGross: Number(salary.gross_salary) + priorGross,
       basicAnnual,
       hraAnnual,
       rentPaidAnnual: 0,
@@ -140,6 +244,7 @@ export class TaxDeclarationService {
       employeePfAnnual: basicAnnual * 0.12,
       monthsWorked: monthsRemaining,
       taxAlreadyPaid,
+      priorEmployerTds: priorTds,
     });
 
     // Save computation
@@ -174,6 +279,310 @@ export class TaxDeclarationService {
     }
 
     return result;
+  }
+
+  /**
+   * Pre-fill payload for the admin Tax Calculator page. Loads the employee's
+   * current contracted salary (BASIC/HRA/gross), tax_info (regime + PAN), and
+   * approved declarations for the current FY so the page can render initial
+   * inputs that already match what the payroll run would compute. No DB
+   * writes -- this is read-only.
+   */
+  async getCalculatorPrefill(employeeId: string) {
+    const fy = this.currentFY();
+
+    // BUG-FIX — The employee picker (/employees) returns rows keyed by the
+    // EmpCloud numeric user id, while older code paths assume the payroll
+    // `employees.id` UUID. Resolve both so the calculator works regardless
+    // of which id shape the page sends. Same dual-id resolution that
+    // tax_declarations submit/approve uses.
+    const { employeeRowId, empcloudUserId } = await this.resolveEmployeeIds(employeeId);
+
+    // Fetch tax_info + pan from whichever row exists. Try the legacy
+    // payroll `employees` table first, then fall back to the newer
+    // `employee_payroll_profiles` row that SSO-provisioned users land on.
+    let taxInfo: any = null;
+    let profileId: string | null = employeeRowId;
+    if (employeeRowId) {
+      const emp = await this.db.findById<any>("employees", employeeRowId).catch(() => null);
+      if (emp) {
+        taxInfo =
+          typeof emp.tax_info === "string" ? JSON.parse(emp.tax_info || "{}") : emp.tax_info;
+      }
+    }
+    if (!taxInfo && empcloudUserId != null) {
+      const profile = await this.db
+        .findOne<any>("employee_payroll_profiles", { empcloud_user_id: empcloudUserId })
+        .catch(() => null);
+      if (profile) {
+        taxInfo =
+          typeof profile.tax_info === "string"
+            ? JSON.parse(profile.tax_info || "{}")
+            : profile.tax_info;
+        if (!profileId) profileId = profile.id;
+      }
+    }
+
+    // Active salary — try matching on payroll employee_id first, then fall
+    // back to empcloud_user_id which is what the salary rows for SSO-only
+    // profiles are keyed on.
+    let salary: any = null;
+    if (profileId) {
+      salary = await this.db
+        .findOne<any>("employee_salaries", { employee_id: profileId, is_active: true })
+        .catch(() => null);
+    }
+    if (!salary && empcloudUserId != null) {
+      salary = await this.db
+        .findOne<any>("employee_salaries", {
+          empcloud_user_id: empcloudUserId,
+          is_active: true,
+        })
+        .catch(() => null);
+    }
+
+    const components = salary
+      ? typeof salary.components === "string"
+        ? JSON.parse(salary.components || "[]")
+        : salary.components
+      : [];
+
+    const basicMonthly = Array.isArray(components)
+      ? Number(components.find((c: any) => c.code === "BASIC")?.monthlyAmount || 0)
+      : 0;
+    const hraMonthly = Array.isArray(components)
+      ? Number(components.find((c: any) => c.code === "HRA")?.monthlyAmount || 0)
+      : 0;
+    const basicAnnual = basicMonthly * 12;
+    const hraAnnual = hraMonthly * 12;
+
+    // Declarations — same dual-id filter pattern as getDeclarations.
+    const declFilter: Record<string, any> = profileId
+      ? { employee_id: profileId, financial_year: fy, approval_status: "approved" }
+      : empcloudUserId != null
+        ? {
+            empcloud_user_id: empcloudUserId,
+            financial_year: fy,
+            approval_status: "approved",
+          }
+        : { financial_year: fy, approval_status: "approved" };
+
+    const decls = await this.db
+      .findMany<any>("tax_declarations", { filters: declFilter, limit: 100 })
+      .catch(() => ({ data: [] as any[] }));
+
+    // Joining date + mid-FY check. Pulled from the EmpCloud user record
+    // (single source of truth -- the payroll-side profile doesn't store
+    // a separate date_of_joining). Used by the UI to flag mid-FY joiners
+    // and to size the "months at this employer" projection.
+    let joiningDate: string | null = null;
+    if (empcloudUserId != null) {
+      const ecUser = await findUserById(empcloudUserId).catch(() => null);
+      if (ecUser?.date_of_joining) {
+        joiningDate =
+          typeof ecUser.date_of_joining === "string"
+            ? ecUser.date_of_joining.slice(0, 10)
+            : new Date(ecUser.date_of_joining as any).toISOString().slice(0, 10);
+      }
+    }
+    const fyStartYear = Number(fy.split("-")[0]);
+    const fyStart = new Date(fyStartYear, 3, 1); // Apr 1
+    const fyEnd = new Date(fyStartYear + 1, 2, 31); // Mar 31
+    const joinDateObj = joiningDate ? new Date(joiningDate) : null;
+    const isMidFyJoiner =
+      !!joinDateObj && joinDateObj >= fyStart && joinDateObj <= fyEnd && joinDateObj > fyStart;
+    const monthsRemainingInFy = monthsRemainingFromJoining(fy, joiningDate);
+
+    // Prior-employer payload from Form 12B, if HR captured it.
+    const priorEmployer: PriorEmployerTds = (taxInfo?.priorEmployerTds &&
+      taxInfo.priorEmployerTds[fy]) || {
+      grossPaid: 0,
+      tdsDeducted: 0,
+    };
+
+    return {
+      employeeId,
+      resolvedEmployeeId: profileId,
+      financialYear: fy,
+      regime: taxInfo?.regime === "old" ? "old" : "new",
+      pan: typeof taxInfo?.pan === "string" ? taxInfo.pan : "",
+      annualGross: salary ? Number(salary.gross_salary || 0) : 0,
+      basicAnnual,
+      hraAnnual,
+      employeePfAnnual: Math.round(basicAnnual * 0.12),
+      rentPaidAnnual: 0,
+      isMetroCity: false,
+      declarations: decls.data.map((d: any) => ({
+        section: d.section,
+        description: d.description,
+        amount: Number(d.approved_amount || d.declared_amount || 0),
+      })),
+      hasActiveSalary: !!salary,
+      // Joining-date awareness — surfaces a "mid-FY joiner" prompt in the
+      // calculator and lets HR see exactly how the months left were derived.
+      joiningDate,
+      isMidFyJoiner,
+      monthsRemainingInFy,
+      // Form-12B / prior employer values. Returned every time (zeroed when
+      // not set) so the UI can render the field unconditionally.
+      priorEmployerGross: Number(priorEmployer.grossPaid || 0),
+      priorEmployerTds: Number(priorEmployer.tdsDeducted || 0),
+      priorEmployerSource: priorEmployer.source || "",
+    };
+  }
+
+  /**
+   * What-if tax calculation for the admin Tax Calculator. Runs the same
+   * computeIncomeTax engine the payroll run uses, but with caller-supplied
+   * inputs and WITHOUT persisting anything to tax_computations. The
+   * `taxAlreadyPaid` figure is sourced from real YTD payslip TDS so the
+   * "remaining" projection reflects reality.
+   */
+  async simulate(input: {
+    employeeId: string;
+    regime: "new" | "old";
+    annualGross: number;
+    basicAnnual: number;
+    hraAnnual: number;
+    rentPaidAnnual: number;
+    isMetroCity: boolean;
+    declarations: { section: string; amount: number }[];
+    employeePfAnnual: number;
+    panNumber?: string | null;
+    // Form 12B / prior-employer additions. Both optional so the existing
+    // single-employer path produces identical numbers when callers don't
+    // supply them.
+    priorEmployerGross?: number;
+    priorEmployerTds?: number;
+  }) {
+    const fy = this.currentFY();
+
+    // Resolve dual ids so we can look up payslips, joining date, and the
+    // profile row regardless of which id shape the page sends.
+    const { employeeRowId, empcloudUserId } = await this.resolveEmployeeIds(input.employeeId);
+    // BUG-YTD-201 — pass BOTH the resolved UUID and the numeric empcloud
+    // user id so the YTD lookup can match payslips keyed on either.
+    // Previously only employeeRowId was passed, which silently missed
+    // every payslip whose `employee_id` UUID didn't equal the profile
+    // UUID (the common case for SSO-provisioned users). Result was
+    // `taxAlreadyPaid = 0` whenever the calculator was run for someone
+    // who actually had prior payslips this FY.
+    const idForYtd = employeeRowId || (empcloudUserId != null ? String(empcloudUserId) : null);
+    const taxAlreadyPaid = idForYtd
+      ? await this.computeYtdTdsFromPayslips(idForYtd, fy, empcloudUserId)
+      : 0;
+
+    // Joining-date aware months remaining. For a mid-FY joiner the months
+    // available to spread TDS over starts at their joining date, not at
+    // April -- otherwise the engine would project zero TDS for months they
+    // weren't actually employed.
+    let joiningDate: string | null = null;
+    if (empcloudUserId != null) {
+      const ecUser = await findUserById(empcloudUserId).catch(() => null);
+      if (ecUser?.date_of_joining) {
+        joiningDate =
+          typeof ecUser.date_of_joining === "string"
+            ? ecUser.date_of_joining.slice(0, 10)
+            : new Date(ecUser.date_of_joining as any).toISOString().slice(0, 10);
+      }
+    }
+    const monthsRemaining = monthsRemainingFromJoining(fy, joiningDate);
+
+    // The engine treats `annualGross` as the COMBINED FY income across all
+    // employers (so slab/cess apply to total earnings). Add prior employer
+    // gross here so the caller can pass just this-employer CTC and let the
+    // service handle the combination.
+    const priorGross = Number(input.priorEmployerGross || 0);
+    const priorTds = Number(input.priorEmployerTds || 0);
+    const combinedAnnualGross = Number(input.annualGross || 0) + priorGross;
+
+    const result = computeIncomeTax({
+      employeeId: input.employeeId,
+      financialYear: fy,
+      regime: input.regime === "old" ? TaxRegime.OLD : TaxRegime.NEW,
+      annualGross: combinedAnnualGross,
+      basicAnnual: input.basicAnnual,
+      hraAnnual: input.hraAnnual,
+      rentPaidAnnual: input.rentPaidAnnual,
+      isMetroCity: input.isMetroCity,
+      declarations: input.declarations,
+      employeePfAnnual: input.employeePfAnnual,
+      monthsWorked: monthsRemaining,
+      taxAlreadyPaid,
+      priorEmployerTds: priorTds,
+      panNumber: input.panNumber ?? null,
+    });
+
+    // Surface the joining-date inputs alongside the result so the UI can
+    // explain how `remainingMonths` was derived without making another
+    // call.
+    return {
+      ...result,
+      joiningDate,
+      monthsRemainingUsed: monthsRemaining,
+      priorEmployerGross: priorGross,
+      priorEmployerTdsInput: priorTds,
+    };
+  }
+
+  /**
+   * Persist Form-12B / prior-employer values onto the employee's
+   * `tax_info.priorEmployerTds[fy]` blob so future payroll runs and tax
+   * computations factor it in. Idempotent — overwrites whatever was there
+   * for the same FY.
+   */
+  async setPriorEmployerTds(
+    employeeId: string,
+    fy: string,
+    payload: PriorEmployerTds,
+  ): Promise<PriorEmployerTds> {
+    const { employeeRowId, empcloudUserId } = await this.resolveEmployeeIds(employeeId);
+
+    // Try `employees` first, fall back to `employee_payroll_profiles`
+    // (SSO-provisioned users live there only).
+    let table: "employees" | "employee_payroll_profiles" | null = null;
+    let rowId: string | null = null;
+    let taxInfo: any = null;
+
+    if (employeeRowId) {
+      const emp = await this.db.findById<any>("employees", employeeRowId).catch(() => null);
+      if (emp) {
+        table = "employees";
+        rowId = employeeRowId;
+        taxInfo =
+          typeof emp.tax_info === "string" ? JSON.parse(emp.tax_info || "{}") : emp.tax_info || {};
+      }
+    }
+    if (!table && empcloudUserId != null) {
+      const profile = await this.db
+        .findOne<any>("employee_payroll_profiles", { empcloud_user_id: empcloudUserId })
+        .catch(() => null);
+      if (profile) {
+        table = "employee_payroll_profiles";
+        rowId = profile.id;
+        taxInfo =
+          typeof profile.tax_info === "string"
+            ? JSON.parse(profile.tax_info || "{}")
+            : profile.tax_info || {};
+      }
+    }
+    if (!table || !rowId) {
+      throw new AppError(404, "NOT_FOUND", "Employee profile not found");
+    }
+
+    taxInfo = taxInfo || {};
+    taxInfo.priorEmployerTds = taxInfo.priorEmployerTds || {};
+    const sanitized: PriorEmployerTds = {
+      grossPaid: Math.max(0, Number(payload.grossPaid) || 0),
+      tdsDeducted: Math.max(0, Number(payload.tdsDeducted) || 0),
+      exemptionsClaimed: Math.max(0, Number(payload.exemptionsClaimed) || 0),
+      deductionsClaimed: Math.max(0, Number(payload.deductionsClaimed) || 0),
+      source: typeof payload.source === "string" ? payload.source.slice(0, 200) : "",
+    };
+    taxInfo.priorEmployerTds[fy] = sanitized;
+
+    await this.db.update(table, rowId, { tax_info: JSON.stringify(taxInfo) });
+    return sanitized;
   }
 
   async getDeclarations(employeeId: string, financialYear?: string) {
