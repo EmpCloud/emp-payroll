@@ -52,18 +52,44 @@ export class AttendanceService {
    */
   async getSummary(employeeId: string, month?: number, year?: number) {
     if (month && year) {
-      // Try EmpCloud first
-      const cloud = await this.getFromEmpCloud(Number(employeeId), month, year);
-      if (cloud) return cloud;
+      // #397 — Fetch both sources in parallel, then merge. The cloud result
+      // carries per-day aggregates (present / absent / leave / overtime
+      // minutes from EmpCloud's attendance_records). The local row carries
+      // HR's manual overrides for fields EmpCloud doesn't model (lop_days
+      // entered through the Mark Attendance popup, overtime_hours /
+      // overtime_rate / overtime_amount, holidays, weekoffs). Previously
+      // this method short-circuited on `cloud` and never consulted the
+      // local row -- so manually-entered LOP and overtime values silently
+      // disappeared the moment any present/absent row landed in EmpCloud.
+      const [cloud, local] = await Promise.all([
+        this.getFromEmpCloud(Number(employeeId), month, year),
+        this.db
+          .findOne<any>("attendance_summaries", {
+            empcloud_user_id: Number(employeeId),
+            month,
+            year,
+          })
+          .catch(() => null),
+      ]);
 
-      // Fall back to local
-      const record = await this.db.findOne<any>("attendance_summaries", {
-        empcloud_user_id: Number(employeeId),
-        month,
-        year,
-      });
-      if (!record) throw new AppError(404, "NOT_FOUND", "Attendance summary not found");
-      return record;
+      if (!cloud && !local) {
+        throw new AppError(404, "NOT_FOUND", "Attendance summary not found");
+      }
+      if (!cloud) return local;
+      if (!local) return cloud;
+
+      // Both sides exist — merge, preferring local for the HR-manual fields.
+      const localLop = Number(local.lop_days) || 0;
+      const localOt = Number(local.overtime_hours) || 0;
+      return {
+        ...cloud,
+        lop_days: localLop > 0 ? localLop : Number(cloud.lop_days) || 0,
+        overtime_hours: localOt > 0 ? localOt : Number(cloud.overtime_hours) || 0,
+        overtime_rate: Number(local.overtime_rate) || Number(cloud.overtime_rate) || 0,
+        overtime_amount: Number(local.overtime_amount) || Number(cloud.overtime_amount) || 0,
+        holidays: Number(local.holidays) || Number(cloud.holidays) || 0,
+        weekoffs: Number(local.weekoffs) || Number(cloud.weekoffs) || 0,
+      };
     }
 
     return this.db.findMany<any>("attendance_summaries", {
@@ -228,15 +254,31 @@ export class AttendanceService {
       const r = recordMap[u.empcloud_user_id];
       const userLeave = leaveMap[u.empcloud_user_id] || { paid: 0, unpaid: 0 };
       if (r) {
+        // #397 — When EmpCloud has any attendance row, this branch used to
+        // drop the local `attendance_summaries` overrides entirely, so
+        // HR's manually-entered `lop_days`, `overtime_hours`,
+        // `overtime_rate`, and `overtime_amount` never made it to the
+        // dashboard (only `present`/`absent` are projected to EmpCloud's
+        // per-day attendance_records). Still consult the local row and
+        // prefer it for fields EmpCloud doesn't carry. Order of precedence
+        // per field: explicit HR input (local) → EmpCloud aggregate (where
+        // applicable) → leave-applications fallback → zero.
+        const local = localMap[u.empcloud_user_id];
+        const localLop = local ? Number(local.lop_days) : 0;
+        const localOt = local ? Number(local.overtime_hours) : 0;
         return {
           ...r,
           paid_leave: userLeave.paid,
           unpaid_leave: userLeave.unpaid,
-          lop_days: userLeave.unpaid,
-          holidays: 0,
-          weekoffs: 0,
-          overtime_rate: 0,
-          overtime_amount: 0,
+          lop_days: localLop > 0 ? localLop : userLeave.unpaid,
+          holidays: local ? Number(local.holidays) || 0 : 0,
+          weekoffs: local ? Number(local.weekoffs) || 0 : 0,
+          // EmpCloud `attendance_records.overtime_minutes` is aggregated into
+          // `r.overtime_hours` by the SELECT above; fall back to it if HR
+          // didn't enter an explicit override.
+          overtime_hours: localOt > 0 ? localOt : Number(r.overtime_hours) || 0,
+          overtime_rate: local ? Number(local.overtime_rate) || 0 : 0,
+          overtime_amount: local ? Number(local.overtime_amount) || 0 : 0,
         };
       }
       const local = localMap[u.empcloud_user_id];
