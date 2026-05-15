@@ -12,6 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Receipt, CheckCircle2, XCircle, Clock, CreditCard, Search } from "lucide-react";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
+import { Modal } from "@/components/ui/Modal";
 
 const PAGE_SIZE = 20;
 
@@ -107,6 +108,42 @@ export function ReimbursementsPage() {
     }
   }
 
+  // #399 — Mark-as-Paid flow. Backend already exposes POST
+  // /reimbursements/:id/pay (month, year); this state drives the modal that
+  // captures which payroll month the disbursement landed in, so reporting
+  // can attribute the payment to the correct period.
+  const today = new Date();
+  const [payClaim, setPayClaim] = useState<{
+    id: string;
+    employeeName?: string;
+    amount?: number;
+  } | null>(null);
+  const [payMonth, setPayMonth] = useState<number>(today.getMonth() + 1);
+  const [payYear, setPayYear] = useState<number>(today.getFullYear());
+  const [paying, setPaying] = useState(false);
+
+  function openPayModal(row: any) {
+    setPayClaim({ id: row.id, employeeName: row.employee_name, amount: Number(row.amount) || 0 });
+    setPayMonth(today.getMonth() + 1);
+    setPayYear(today.getFullYear());
+  }
+
+  async function confirmMarkPaid() {
+    if (!payClaim) return;
+    setPaying(true);
+    try {
+      await apiPost(`/reimbursements/${payClaim.id}/pay`, { month: payMonth, year: payYear });
+      toast.success("Claim marked as paid");
+      qc.invalidateQueries({ queryKey: ["reimbursements"] });
+      qc.invalidateQueries({ queryKey: ["reimbursements-summary"] });
+      setPayClaim(null);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error?.message || "Failed to mark paid");
+    } finally {
+      setPaying(false);
+    }
+  }
+
   const columns = [
     {
       key: "employee",
@@ -146,28 +183,71 @@ export function ReimbursementsPage() {
     {
       key: "actions",
       header: "",
-      render: (r: any) =>
-        r.status === "pending" ? (
-          <div className="flex gap-1">
+      render: (r: any) => {
+        if (r.status === "pending") {
+          return (
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleAction(r.id, "approve")}
+                className="text-green-600 hover:text-green-700"
+                title="Approve"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleAction(r.id, "reject")}
+                className="text-red-600 hover:text-red-700"
+                title="Reject"
+              >
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        }
+        if (r.status === "approved") {
+          // #399 — After approval, HR needs a way to record that the
+          // disbursement actually happened. Opens a modal capturing the
+          // payroll month/year the payment landed in.
+          return (
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              onClick={() => handleAction(r.id, "approve")}
-              className="text-green-600 hover:text-green-700"
+              onClick={() => openPayModal(r)}
+              className="text-brand-600 hover:text-brand-700"
             >
-              <CheckCircle2 className="h-4 w-4" />
+              <CreditCard className="h-3.5 w-3.5" /> Mark as Paid
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleAction(r.id, "reject")}
-              className="text-red-600 hover:text-red-700"
-            >
-              <XCircle className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : null,
+          );
+        }
+        return null;
+      },
     },
+  ];
+
+  const monthOptions = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  // Show ±2 years around today so HR can backdate or pre-date a payment.
+  const yearOptions = [
+    today.getFullYear() - 2,
+    today.getFullYear() - 1,
+    today.getFullYear(),
+    today.getFullYear() + 1,
   ];
 
   const filters = [
@@ -330,6 +410,64 @@ export function ReimbursementsPage() {
           />
         </div>
       )}
+
+      {/* #399 — Mark-as-Paid modal. Captures the payroll month/year the
+          disbursement landed in so reports can attribute it correctly. */}
+      <Modal
+        open={!!payClaim}
+        onClose={() => (paying ? null : setPayClaim(null))}
+        title="Mark reimbursement as paid"
+        description={
+          payClaim
+            ? `${payClaim.employeeName ? payClaim.employeeName + " · " : ""}${formatCurrency(payClaim.amount || 0)}`
+            : undefined
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Record the payroll period this claim was disbursed in. The status will move from{" "}
+            <strong>approved</strong> to <strong>paid</strong>.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-gray-600">Month</span>
+              <select
+                value={payMonth}
+                onChange={(e) => setPayMonth(Number(e.target.value))}
+                className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1"
+              >
+                {monthOptions.map((m, i) => (
+                  <option key={m} value={i + 1}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-gray-600">Year</span>
+              <select
+                value={payYear}
+                onChange={(e) => setPayYear(Number(e.target.value))}
+                className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1"
+              >
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setPayClaim(null)} disabled={paying}>
+              Cancel
+            </Button>
+            <Button onClick={confirmMarkPaid} loading={paying}>
+              <CreditCard className="h-4 w-4" /> Confirm payment
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
