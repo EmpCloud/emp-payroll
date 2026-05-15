@@ -35,8 +35,9 @@ import {
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { api, apiPost } from "@/api/client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { Search, X } from "lucide-react";
 
 const columns = [
   {
@@ -250,6 +251,27 @@ export function PayrollRunDetailPage() {
   const [missingPan, setMissingPan] = useState<
     Array<{ empcloudUserId: number; name?: string; code: string }>
   >([]);
+  // Client-side filter on the Employee Payslips table. Names / employee
+  // codes / department all match, case-insensitive. Filtering happens in
+  // useMemo against the already-loaded payslips array -- no extra API
+  // round-trip since the run detail page fetches all payslips up front.
+  const [payslipSearch, setPayslipSearch] = useState("");
+
+  // Derive payslips + filtered view BEFORE any early returns so the hook
+  // count stays stable across renders (React's rules-of-hooks). Reading
+  // `payslipsRes` is safe even while the run query is still loading -- it
+  // just resolves to an empty array until the data arrives.
+  const payslips: any[] = payslipsRes?.data?.data || [];
+  const filteredPayslips = useMemo(() => {
+    const q = payslipSearch.trim().toLowerCase();
+    if (!q) return payslips;
+    return payslips.filter((p: any) => {
+      const name = `${p.first_name || ""} ${p.last_name || ""}`.trim().toLowerCase();
+      const code = String(p.employee_code || "").toLowerCase();
+      const dept = String(p.department || "").toLowerCase();
+      return name.includes(q) || code.includes(q) || dept.includes(q);
+    });
+  }, [payslips, payslipSearch]);
 
   if (isLoading) {
     return (
@@ -261,8 +283,6 @@ export function PayrollRunDetailPage() {
 
   const run = runRes?.data;
   if (!run) return <div className="p-8 text-gray-500">Payroll run not found</div>;
-
-  const payslips = payslipsRes?.data?.data || [];
 
   async function handleCompute() {
     try {
@@ -699,8 +719,11 @@ export function PayrollRunDetailPage() {
             Employee Payslips
             {(payslips.length > 0 || skipped.length > 0) && (
               <span className="ml-2 text-sm font-normal text-gray-500">
-                ({payslips.length} generated
-                {skipped.length > 0 ? `, ${skipped.length} skipped` : ""})
+                (
+                {payslipSearch.trim()
+                  ? `${filteredPayslips.length} of ${payslips.length} matching`
+                  : `${payslips.length} generated`}
+                {skipped.length > 0 && !payslipSearch.trim() ? `, ${skipped.length} skipped` : ""})
               </span>
             )}
           </CardTitle>
@@ -710,8 +733,40 @@ export function PayrollRunDetailPage() {
             </Button>
           )}
         </CardHeader>
+        {payslips.length > 0 && (
+          <div className="border-b border-gray-100 px-6 py-3">
+            <div className="relative max-w-md">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={payslipSearch}
+                onChange={(e) => setPayslipSearch(e.target.value)}
+                placeholder="Search employee, code, or department…"
+                className="focus:border-brand-500 focus:ring-brand-500 block w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-9 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1"
+              />
+              {payslipSearch && (
+                <button
+                  type="button"
+                  onClick={() => setPayslipSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                  title="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         <CardContent className="p-0">
-          <DataTable columns={columns} data={payslips} emptyMessage="Payroll not yet computed" />
+          <DataTable
+            columns={columns}
+            data={filteredPayslips}
+            emptyMessage={
+              payslipSearch.trim()
+                ? `No payslips match "${payslipSearch.trim()}"`
+                : "Payroll not yet computed"
+            }
+          />
         </CardContent>
       </Card>
 
