@@ -437,11 +437,28 @@ export class PayrollService {
         .where("organization_id", Number(orgId))
         .whereBetween("date", [startDate, endDate])
         .select(
+          // BUG-Leave-LOP — `half_present_half_leave` (HPL) added to the
+          // present-days bucket as 0.5 too, otherwise an employee marked
+          // HPL on the grid lost both halves: the 0.5 present half wasn't
+          // counted as present AND the 0.5 leave half (handled below) was
+          // wrongly booked as LOP.
           empcloudDb.raw(
-            "SUM(CASE WHEN status IN ('present','checked_in') THEN 1 WHEN status = 'half_day' THEN 0.5 ELSE 0 END) as present_days",
+            "SUM(CASE WHEN status IN ('present','checked_in') THEN 1 " +
+              "WHEN status IN ('half_day','half_present_half_leave') THEN 0.5 " +
+              "ELSE 0 END) as present_days",
           ),
           empcloudDb.raw("SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_days"),
-          empcloudDb.raw("SUM(CASE WHEN status = 'on_leave' THEN 1 ELSE 0 END) as leave_days"),
+          // `leave_days` = days marked as 'on_leave' on the attendance row.
+          // HPL contributes 0.5 here too. The engine treats these as PAID by
+          // default unless an explicit UNPAID leave_application exists for
+          // the same range (handled in the merge below) -- HR who marks L
+          // directly on the grid never picks an "unpaid" type, so treating
+          // these as paid matches HR's intent.
+          empcloudDb.raw(
+            "SUM(CASE WHEN status = 'on_leave' THEN 1 " +
+              "WHEN status = 'half_present_half_leave' THEN 0.5 " +
+              "ELSE 0 END) as leave_days",
+          ),
           empcloudDb.raw("COUNT(*) as total_records"),
         )) as any[];
 
@@ -482,8 +499,27 @@ export class PayrollService {
       //      employee on the orange skipped banner and can mark them
       //      via the Attendance Grid before approving.
       let presentDays = Number(attRecord?.present_days || 0);
-      let paidLeaveDays = Number(leaveResult?.paid_leave || 0);
-      let unpaidLeaveDays = Number(leaveResult?.unpaid_leave || 0);
+      // BUG-Leave-LOP — Merge two leave sources:
+      //   (A) attendance_records.status = 'on_leave' (HR marked the cell
+      //       directly on the Attendance Grid, no backing application)
+      //   (B) approved leave_applications (employee-submitted or HR-applied
+      //       through the "Apply leave" flow, classified by leave_type.is_paid)
+      //
+      // Old behaviour read only source B, so any (A)-only days fell into
+      // LOP -- HR's manual grid mark was effectively ignored by payroll.
+      // New behaviour: take the bigger of the two paid views, and
+      // subtract explicit unpaid applications from the attendance count.
+      // The result:
+      //   - on_leave cell + no app          -> PAID (HR's grid intent wins)
+      //   - on_leave cell + paid app        -> PAID (same day, counted once)
+      //   - on_leave cell + unpaid app      -> UNPAID (explicit unpaid wins)
+      //   - no cell + paid app              -> PAID
+      //   - no cell + unpaid app            -> UNPAID
+      const attendanceLeaveDays = Number(attRecord?.leave_days || 0);
+      const leaveAppPaid = Number(leaveResult?.paid_leave || 0);
+      const leaveAppUnpaid = Number(leaveResult?.unpaid_leave || 0);
+      let paidLeaveDays = Math.max(Math.max(0, attendanceLeaveDays - leaveAppUnpaid), leaveAppPaid);
+      let unpaidLeaveDays = leaveAppUnpaid;
       const empcloudHasAttendance = Number(attRecord?.total_records || 0) > 0;
 
       if (!empcloudHasAttendance) {
