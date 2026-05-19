@@ -460,6 +460,16 @@ export class PayrollService {
               "ELSE 0 END) as leave_days",
           ),
           empcloudDb.raw("COUNT(*) as total_records"),
+          // BUG-Weekend-LOP — count weekend rows (Sat/Sun) that already
+          // have ANY attendance status. Used below to avoid double-
+          // counting weekends when the org has include_weekends_in_
+          // working_days=1: presentDays already includes every weekend
+          // that was clocked, so the auto-paid-weekend credit must only
+          // fill the genuine un-clocked-weekend gap. DAYOFWEEK is MySQL:
+          // 1=Sun, 7=Sat.
+          empcloudDb.raw(
+            "SUM(CASE WHEN DAYOFWEEK(date) IN (1, 7) THEN 1 ELSE 0 END) as weekend_records",
+          ),
         )) as any[];
 
       const leaveResult = (await empcloudDb("leave_applications as la")
@@ -556,7 +566,21 @@ export class PayrollService {
       // zero-attendance case the NO_ATTENDANCE guard below depends on).
       // Without this the weekend gap (totalDays − presentDays) is wrongly
       // booked as LOP for an employee who was never actually absent.
-      const paidDays = Math.min(presentDays + paidLeaveDays + autoPaidWeekendDays, totalDays);
+      //
+      // BUG-Weekend-LOP — only auto-credit weekends that DON'T already
+      // have an attendance row. If HR clocks Sat/Sun (presentDays
+      // already includes them), adding the full autoPaidWeekendDays on
+      // top over-counts. The min(..., totalDays) cap then hides the
+      // over-count and erases legitimate weekday LOP -- e.g. an employee
+      // present every weekend but absent on 2 weekdays came out with
+      // lop_days=0 because (weekdaysPresent + weekendsClocked + autoPaid
+      // = workingDays).
+      const weekendRecordsAlreadyCounted = Number(attRecord?.weekend_records || 0);
+      const effectiveAutoPaidWeekend = Math.max(
+        0,
+        autoPaidWeekendDays - weekendRecordsAlreadyCounted,
+      );
+      const paidDays = Math.min(presentDays + paidLeaveDays + effectiveAutoPaidWeekend, totalDays);
       const lopDays = Math.max(0, totalDays - paidDays);
 
       // Parse salary components
