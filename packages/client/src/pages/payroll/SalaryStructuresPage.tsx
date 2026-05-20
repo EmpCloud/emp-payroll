@@ -31,6 +31,7 @@ interface ComponentRow {
     | "balance"
     | "per_night"
     | "per_night_daily"
+    | "per_night_pct"
     | "per_ot"
     | "per_ot_daily";
   value: number;
@@ -159,6 +160,7 @@ export function SalaryStructuresPage() {
       (updated[i].calculationType === "balance" ||
         updated[i].calculationType === "per_night" ||
         updated[i].calculationType === "per_night_daily" ||
+        updated[i].calculationType === "per_night_pct" ||
         updated[i].calculationType === "per_ot" ||
         updated[i].calculationType === "per_ot_daily")
     ) {
@@ -172,14 +174,19 @@ export function SalaryStructuresPage() {
     // "250× day pay" and pay out absurd amounts. Seed × Day Pay with 2
     // (double); flat clears to 0 so admin types the rate.
     if (field === "calculationType" && prev !== value) {
+      const nightModes = ["per_night", "per_night_daily", "per_night_pct"];
       if (
         (value === "per_night_daily" && prev === "per_night") ||
         (value === "per_ot_daily" && prev === "per_ot")
       ) {
         updated[i].value = 2;
+      } else if (value === "per_night_pct" && nightModes.includes(prev)) {
+        // % of net — seed a sensible 10%.
+        updated[i].value = 10;
       } else if (
         (value === "per_night" && prev === "per_night_daily") ||
-        (value === "per_ot" && prev === "per_ot_daily")
+        (value === "per_ot" && prev === "per_ot_daily") ||
+        (nightModes.includes(value) && prev === "per_night_pct")
       ) {
         updated[i].value = 0;
       }
@@ -268,6 +275,11 @@ export function SalaryStructuresPage() {
           toast.error(
             `${c.code}: night multiplier must be at least 1 (1 = same as day pay, 2 = double).`,
           );
+          return;
+        }
+      } else if (c.calculationType === "per_night_pct") {
+        if (!Number.isFinite(val) || val <= 0 || val > 100) {
+          toast.error(`${c.code}: enter a net-pay percentage between 0 and 100 (e.g. 10).`);
           return;
         }
       } else if (c.calculationType === "per_ot") {
@@ -540,10 +552,12 @@ export function SalaryStructuresPage() {
                             shouldn't flip between "regular earning" and a
                             night/overtime line via a dropdown click. */}
                         {c.calculationType === "per_night" ||
-                        c.calculationType === "per_night_daily" ? (
+                        c.calculationType === "per_night_daily" ||
+                        c.calculationType === "per_night_pct" ? (
                           <>
                             <option value="per_night">Per Night ₹</option>
                             <option value="per_night_daily">× Day Pay</option>
+                            <option value="per_night_pct">% of Net Pay</option>
                           </>
                         ) : c.calculationType === "per_ot" ||
                           c.calculationType === "per_ot_daily" ? (
@@ -577,10 +591,12 @@ export function SalaryStructuresPage() {
                               ? "₹/night"
                               : c.calculationType === "per_ot"
                                 ? "₹/day"
-                                : c.calculationType === "per_night_daily" ||
-                                    c.calculationType === "per_ot_daily"
-                                  ? "e.g. 2"
-                                  : "0"
+                                : c.calculationType === "per_night_pct"
+                                  ? "% e.g. 10"
+                                  : c.calculationType === "per_night_daily" ||
+                                      c.calculationType === "per_ot_daily"
+                                    ? "e.g. 2"
+                                    : "0"
                         }
                         // #316 — pre-select the contents on focus so typing
                         // overwrites the leading 0 instead of producing "01",
@@ -612,6 +628,7 @@ export function SalaryStructuresPage() {
                       />
                       {c.calculationType === "per_night" ||
                       c.calculationType === "per_night_daily" ||
+                      c.calculationType === "per_night_pct" ||
                       c.calculationType === "per_ot" ||
                       c.calculationType === "per_ot_daily" ? (
                         // For night / overtime rows the "% Of" column is
@@ -930,11 +947,13 @@ function StructureCard({
                             ? `₹${Number(c.value).toLocaleString("en-IN")} / night`
                             : c.calculation_type === "per_night_daily"
                               ? `${Number(c.value)}× whole salary (night shift)`
-                              : c.calculation_type === "per_ot"
-                                ? `₹${Number(c.value).toLocaleString("en-IN")} / OT day`
-                                : c.calculation_type === "per_ot_daily"
-                                  ? `${Number(c.value)}× day pay / OT day`
-                                  : "Balancing"}
+                              : c.calculation_type === "per_night_pct"
+                                ? `${Number(c.value)}% of net pay (night shift)`
+                                : c.calculation_type === "per_ot"
+                                  ? `₹${Number(c.value).toLocaleString("en-IN")} / OT day`
+                                  : c.calculation_type === "per_ot_daily"
+                                    ? `${Number(c.value)}× day pay / OT day`
+                                    : "Balancing"}
                     </td>
                   </tr>
                 ))}
