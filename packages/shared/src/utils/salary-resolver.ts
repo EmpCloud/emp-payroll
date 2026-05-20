@@ -16,7 +16,15 @@
  * absorbs the remainder of monthly gross.
  */
 
-export type ResolverCalcType = "fixed" | "percentage" | "formula" | "balance";
+export type ResolverCalcType =
+  | "fixed"
+  | "percentage"
+  | "formula"
+  | "balance"
+  | "per_night"
+  | "per_night_daily"
+  | "per_ot"
+  | "per_ot_daily";
 
 export interface ResolverComponent {
   code: string;
@@ -33,6 +41,11 @@ export interface ResolvedComponent {
   type: "earning" | "deduction" | "reimbursement";
   monthlyAmount: number;
   annualAmount: number;
+  // Carried through so the payroll engine can recompute dynamic
+  // components (currently "per_night" — value × night_shift_days). For
+  // static components these are undefined.
+  calculationType?: ResolverCalcType;
+  rate?: number;
 }
 
 export interface ResolveOptions {
@@ -188,9 +201,23 @@ export function resolveSalaryComponents(
   // Pass 1: percentages of CTC and fixed amounts. Run for ALL components
   // (earnings AND non-earnings) so deductions like "12% of CTC" or fixed
   // ₹500 canteen charges resolve in the same pipeline.
+  //
+  // `per_night*` / `per_ot*` components materialize to 0 here -- they're
+  // variable earnings paid at payroll time (rate × nights/OT-days, or
+  // daily_salary × multiplier × nights/OT-days), so they don't contribute
+  // to monthly gross or the CTC math. The rate / multiplier is preserved
+  // on the output ResolvedComponent so the payroll engine can recompute
+  // the actual amount per run.
   for (const c of components) {
     if (c.calculationType === "fixed" || c.calculationType === "formula") {
       resolved.set(c.code, c.value || 0);
+    } else if (
+      c.calculationType === "per_night" ||
+      c.calculationType === "per_night_daily" ||
+      c.calculationType === "per_ot" ||
+      c.calculationType === "per_ot_daily"
+    ) {
+      resolved.set(c.code, 0);
     } else if (c.calculationType === "percentage") {
       const ref = (c.percentageOf || "").toUpperCase();
       if (ref === "CTC" || ref === "GROSS") {
@@ -259,12 +286,27 @@ export function resolveSalaryComponents(
   return orderedOutput.map((c) => {
     const monthly = resolved.get(c.code) ?? 0;
     const monthlyAmount = round ? Math.round(monthly) : monthly;
-    return {
+    const out: ResolvedComponent = {
       code: c.code,
       name: c.name || c.code,
       type: c.type,
       monthlyAmount,
       annualAmount: monthlyAmount * 12,
     };
+    // Preserve metadata for dynamic components so the payroll engine
+    // can recompute them per run. Static components leave these fields
+    // undefined to keep the serialized JSON lean. For the *_daily variants
+    // the `rate` field actually carries the multiplier (e.g. 2 for
+    // double-pay).
+    if (
+      c.calculationType === "per_night" ||
+      c.calculationType === "per_night_daily" ||
+      c.calculationType === "per_ot" ||
+      c.calculationType === "per_ot_daily"
+    ) {
+      out.calculationType = c.calculationType;
+      out.rate = c.value || 0;
+    }
+    return out;
   });
 }
