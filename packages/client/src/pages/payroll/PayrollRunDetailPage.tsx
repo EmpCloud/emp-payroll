@@ -764,18 +764,16 @@ export function PayrollRunDetailPage() {
                 (no PAN)
               </h3>
             </div>
-            {/* Only show here when there's no skipped banner above (which
-                already carries the same combined-export button), so HR
-                doesn't see two identical buttons. */}
-            {skipped.length === 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => exportRunIssuesCSV(skipped, missingPan, run)}
-              >
-                <Download className="h-4 w-4" /> Export issues
-              </Button>
-            )}
+            {/* Export button lives on BOTH banners so it's reachable
+                whichever issue the user is looking at. Both export the full
+                combined issue list (skipped + no-PAN). */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportRunIssuesCSV(skipped, missingPan, run)}
+            >
+              <Download className="h-4 w-4" /> Export issues
+            </Button>
           </div>
           <p className="mb-3 text-sm text-amber-700">
             Section 206AA — when PAN is missing on both the payroll profile and the EmpCloud
