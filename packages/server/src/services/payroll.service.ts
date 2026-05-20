@@ -889,7 +889,10 @@ export class PayrollService {
       // component, to avoid two extra DB round-trips per employee on
       // every other run.
       const hasNightComponent = componentList.some(
-        (c: any) => c.calculationType === "per_night" || c.calculationType === "per_night_daily",
+        (c: any) =>
+          c.calculationType === "per_night" ||
+          c.calculationType === "per_night_daily" ||
+          c.calculationType === "per_night_pct",
       );
       const nightShiftDays = hasNightComponent
         ? await resolveNightShiftDays(empcloudDb, ecEmp.id, Number(orgId), startDate, endDate)
@@ -909,6 +912,9 @@ export class PayrollService {
       // (see below) so the `× Day Pay` mode can multiply the fully-summed
       // base gross.
       const nightComps: any[] = [];
+      // "% of Net Pay" night-allowance components, deferred even further —
+      // past the deductions block — since they need the base net pay.
+      const netPctComps: any[] = [];
       let grossEarnings = 0;
       let basicMonthly = 0;
 
@@ -953,6 +959,11 @@ export class PayrollService {
             deductions.push({ code: comp.code, name: comp.name || comp.code, amount });
             totalDed += amount;
           }
+        } else if (comp.calculationType === "per_night_pct") {
+          // "% of Net Pay" night allowance — deferred all the way past the
+          // deductions block (it needs the base NET, which isn't known until
+          // PF/ESI/PT/TDS are computed). Collected separately from nightComps.
+          netPctComps.push(comp);
         } else if (
           comp.calculationType === "per_night" ||
           comp.calculationType === "per_night_daily" ||
@@ -1297,8 +1308,12 @@ export class PayrollService {
         if (Array.isArray(earnList)) {
           for (const e of earnList) {
             // Night allowance lines carry meta.nights; overtime lines carry
-            // meta.otDays. Both are variable taxable pay — sum either.
-            if (e?.meta && (e.meta.nights != null || e.meta.otDays != null)) {
+            // meta.otDays; the % -of-net night line carries meta.netPct.
+            // All are variable taxable pay — sum any of them.
+            if (
+              e?.meta &&
+              (e.meta.nights != null || e.meta.otDays != null || e.meta.netPct != null)
+            ) {
               nightAllowancePriorThisFy += Number(e.amount) || 0;
             }
           }
@@ -1427,6 +1442,30 @@ export class PayrollService {
           }
         }
         if (activeLoans.data.length > 0) break; // Found loans, don't query again
+      }
+
+      // "% of Net Pay" night allowance — computed LAST because it needs the
+      // base net (gross − all deductions). Paid once when the employee worked
+      // ≥1 night (not scaled by nights). Added to gross so it lands in net.
+      // Its own tax isn't withheld this month (TDS is already computed), but
+      // each line is tagged meta.netPct so next month's FY projection sees it
+      // and trues up the withholding — the same self-correcting path the
+      // other variable night/OT pay uses.
+      if (netPctComps.length > 0 && nightShiftDays > 0) {
+        const baseNetForPct = Math.max(0, grossEarnings - totalDed);
+        for (const comp of netPctComps) {
+          const pct = Number(comp.rate ?? comp.value ?? 0);
+          const amount = Math.max(0, Math.round(baseNetForPct * (pct / 100)));
+          if (amount > 0) {
+            earnings.push({
+              code: comp.code,
+              name: comp.name || comp.code,
+              amount,
+              meta: { netPct: pct, baseNet: baseNetForPct, nights: nightShiftDays },
+            });
+            grossEarnings += amount;
+          }
+        }
       }
 
       // Apply org-level rounding policy (migration 029) to the per-employee

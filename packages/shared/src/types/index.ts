@@ -199,6 +199,10 @@ export interface SalaryComponent {
   //                       2 = double, 1.5 = time-and-a-half).
   //                       daily salary = monthly contracted gross /
   //                       workingDaysInMonth.
+  //   - per_night_pct   : flat percent of the month's NET pay (computed on
+  //                       the base salary, before this allowance). `value` =
+  //                       percent (e.g. 10 = 10% of net). Paid once when the
+  //                       employee worked ≥1 night; not scaled by nights.
   //
   // Overtime variants. Both compute on the number of OT days worked — days
   // marked `weekoff_overtime` / `holiday_overtime` on the attendance grid
@@ -214,6 +218,7 @@ export interface SalaryComponent {
     | "balance"
     | "per_night"
     | "per_night_daily"
+    | "per_night_pct"
     | "per_ot"
     | "per_ot_daily";
   value: number; // fixed amount, percentage, per-night/per-OT ₹, or daily multiplier (ignored when calculationType === "balance")

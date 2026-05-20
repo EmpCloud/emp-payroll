@@ -271,6 +271,7 @@ export const createSalaryStructureSchema = z.object({
             "balance",
             "per_night",
             "per_night_daily",
+            "per_night_pct",
             "per_ot",
             "per_ot_daily",
           ]),

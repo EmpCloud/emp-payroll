@@ -23,6 +23,7 @@ export type ResolverCalcType =
   | "balance"
   | "per_night"
   | "per_night_daily"
+  | "per_night_pct"
   | "per_ot"
   | "per_ot_daily";
 
@@ -214,6 +215,7 @@ export function resolveSalaryComponents(
     } else if (
       c.calculationType === "per_night" ||
       c.calculationType === "per_night_daily" ||
+      c.calculationType === "per_night_pct" ||
       c.calculationType === "per_ot" ||
       c.calculationType === "per_ot_daily"
     ) {
@@ -301,6 +303,7 @@ export function resolveSalaryComponents(
     if (
       c.calculationType === "per_night" ||
       c.calculationType === "per_night_daily" ||
+      c.calculationType === "per_night_pct" ||
       c.calculationType === "per_ot" ||
       c.calculationType === "per_ot_daily"
     ) {
