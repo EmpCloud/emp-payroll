@@ -217,6 +217,66 @@ function exportPayrollCSV(payslips: any[], run: any) {
   URL.revokeObjectURL(url);
 }
 
+// CSV cell escaper — reasons contain commas/colons, so every field is
+// quoted and internal quotes are doubled per RFC 4180.
+function csvField(v: unknown): string {
+  const s = v == null ? "" : String(v);
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
+function triggerCsvDownload(filename: string, headers: string[], rows: string[][]) {
+  const csv = [headers.map(csvField).join(","), ...rows.map((r) => r.map(csvField).join(","))].join(
+    "\n",
+  );
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Export the "issue user list" for a run: every employee who was skipped
+// (with reason code) AND every employee TDS'd at flat 20% for a missing
+// PAN, in one CSV so HR can chase the fixes (assign a structure, collect a
+// PAN, mark attendance) before re-running.
+function exportRunIssuesCSV(
+  skipped: Array<{
+    empcloudUserId: number;
+    name?: string;
+    empCode?: string | null;
+    reason: string;
+    code: string;
+  }>,
+  missingPan: Array<{ empcloudUserId: number; name?: string; code: string }>,
+  run: any,
+) {
+  const headers = ["Issue Type", "Code", "Employee", "Emp Code", "User ID", "Detail"];
+  const rows: string[][] = [];
+  for (const s of skipped) {
+    rows.push([
+      "Skipped",
+      s.code || "",
+      s.name || `#${s.empcloudUserId}`,
+      s.empCode || "",
+      String(s.empcloudUserId),
+      s.reason || "",
+    ]);
+  }
+  for (const m of missingPan) {
+    rows.push([
+      "No PAN (flat 20% TDS)",
+      "MISSING_PAN",
+      m.name || `#${m.empcloudUserId}`,
+      m.code || "",
+      String(m.empcloudUserId),
+      "TDS applied at flat 20% (Section 206AA) — PAN missing on payroll profile and EmpCloud record.",
+    ]);
+  }
+  triggerCsvDownload(`payroll-${run.month}-${run.year}-issues.csv`, headers, rows);
+}
+
 export function PayrollRunDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -656,11 +716,20 @@ export function PayrollRunDetailPage() {
           on revert/rerun. */}
       {skipped.length > 0 && (
         <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
-          <div className="mb-2 flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-orange-600" />
-            <h3 className="font-semibold text-orange-800">
-              {skipped.length} employee{skipped.length === 1 ? "" : "s"} skipped — not in this run
-            </h3>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-600" />
+              <h3 className="font-semibold text-orange-800">
+                {skipped.length} employee{skipped.length === 1 ? "" : "s"} skipped — not in this run
+              </h3>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportRunIssuesCSV(skipped, missingPan, run)}
+            >
+              <Download className="h-4 w-4" /> Export issues
+            </Button>
           </div>
           <p className="mb-3 text-sm text-orange-700">
             The compute excluded these employees. Most common reasons: no salary structure assigned,
@@ -687,12 +756,26 @@ export function PayrollRunDetailPage() {
 
       {missingPan.length > 0 && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <div className="mb-2 flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
-            <h3 className="font-semibold text-amber-800">
-              {missingPan.length} employee{missingPan.length === 1 ? "" : "s"} TDS'd at flat 20% (no
-              PAN)
-            </h3>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600" />
+              <h3 className="font-semibold text-amber-800">
+                {missingPan.length} employee{missingPan.length === 1 ? "" : "s"} TDS'd at flat 20%
+                (no PAN)
+              </h3>
+            </div>
+            {/* Only show here when there's no skipped banner above (which
+                already carries the same combined-export button), so HR
+                doesn't see two identical buttons. */}
+            {skipped.length === 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportRunIssuesCSV(skipped, missingPan, run)}
+              >
+                <Download className="h-4 w-4" /> Export issues
+              </Button>
+            )}
           </div>
           <p className="mb-3 text-sm text-amber-700">
             Section 206AA — when PAN is missing on both the payroll profile and the EmpCloud

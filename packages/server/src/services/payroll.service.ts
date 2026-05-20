@@ -70,6 +70,275 @@ function isFuturePeriod(year: number, month: number): boolean {
   return requested > current;
 }
 
+// Normalise a date column (mysql2 returns Date for `date` cols, ISO string
+// elsewhere) to a YYYY-MM-DD string for plain string comparison.
+function toDateIso(v: string | Date | null | undefined): string | null {
+  if (v == null) return null;
+  if (typeof v === "string") return v.slice(0, 10);
+  const d = v instanceof Date ? v : new Date(v as any);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
+}
+
+/**
+ * Count the number of nights an employee worked under a night shift during
+ * [startDate, endDate].
+ *
+ * Why this isn't a simple `attendance_records.shift_id` join: in practice
+ * that column is almost always NULL — EmpCloud records which shift an
+ * employee is on via `shift_assignments` (a date-ranged user→shift map),
+ * not per attendance row. So we resolve each WORKED day's governing shift
+ * from shift_assignments and check `is_night_shift`.
+ *
+ * Precedence per worked day:
+ *   1. If the attendance row carries its own shift_id, that explicit
+ *      per-day shift wins (HR stamped it deliberately).
+ *   2. Otherwise the governing shift_assignment for that date — the one
+ *      with the latest effective_from whose [effective_from, effective_to]
+ *      window contains the date (effective_to NULL = open-ended). "Latest
+ *      effective_from wins" handles employees reassigned mid-period and
+ *      the messy overlapping/back-dated rows seen in real data.
+ *
+ * Only days actually worked count (present / checked_in = 1 night, the two
+ * half-day statuses = 0.5). on_leave / absent never count — no night was
+ * worked even if the employee is nominally on a night shift.
+ */
+async function resolveNightShiftDays(
+  empcloudDb: any,
+  userId: number,
+  orgId: number,
+  startDate: string,
+  endDate: string,
+): Promise<number> {
+  const workedDays = (await empcloudDb("attendance_records as ar")
+    .leftJoin("shifts as s", "s.id", "ar.shift_id")
+    .where("ar.user_id", userId)
+    .where("ar.organization_id", orgId)
+    .whereBetween("ar.date", [startDate, endDate])
+    .whereIn("ar.status", ["present", "checked_in", "half_day", "half_present_half_leave"])
+    .select(
+      "ar.date as date",
+      "ar.status as status",
+      "ar.shift_id as shift_id",
+      "s.is_night_shift as att_shift_is_night",
+    )) as Array<{
+    date: string | Date;
+    status: string;
+    shift_id: number | null;
+    att_shift_is_night: number | null;
+  }>;
+  if (!workedDays.length) return 0;
+
+  const assignments = (await empcloudDb("shift_assignments as sa")
+    .join("shifts as s", "s.id", "sa.shift_id")
+    .where("sa.user_id", userId)
+    .where("sa.organization_id", orgId)
+    .where("sa.effective_from", "<=", endDate)
+    .where((b: any) => b.whereNull("sa.effective_to").orWhere("sa.effective_to", ">=", startDate))
+    .select(
+      "sa.id as id",
+      "sa.effective_from as effective_from",
+      "sa.effective_to as effective_to",
+      "sa.created_at as created_at",
+      "s.is_night_shift as is_night_shift",
+    )) as Array<{
+    id: number;
+    effective_from: string | Date;
+    effective_to: string | Date | null;
+    created_at: string | Date | null;
+    is_night_shift: number;
+  }>;
+
+  // Pre-normalise assignment windows once. `order` is the recency key used
+  // to pick the governing assignment when several overlap a date: the most
+  // recently CREATED assignment wins (created_at, then id as a monotonic
+  // tiebreaker). We deliberately do NOT order by effective_from -- when HR
+  // re-assigns an employee's shift for a period that already had an
+  // assignment, the newer decision must supersede the older one even if
+  // the older one happens to have a later effective_from. (Real case: an
+  // employee on Night for Apr 26–May 10, later reassigned to General for
+  // all of April; the General reassignment is the operative one.)
+  const norm = assignments
+    .map((a) => ({
+      from: toDateIso(a.effective_from),
+      to: toDateIso(a.effective_to),
+      isNight: !!Number(a.is_night_shift),
+      order: (() => {
+        const t = a.created_at ? new Date(a.created_at as any).getTime() : 0;
+        return Number.isFinite(t) ? t : 0;
+      })(),
+      id: Number(a.id) || 0,
+    }))
+    .filter(
+      (a): a is { from: string; to: string | null; isNight: boolean; order: number; id: number } =>
+        !!a.from,
+    );
+
+  let nights = 0;
+  for (const d of workedDays) {
+    const dateIso = toDateIso(d.date);
+    if (!dateIso) continue;
+    const weight = d.status === "half_day" || d.status === "half_present_half_leave" ? 0.5 : 1;
+
+    let isNight: boolean;
+    if (d.shift_id != null) {
+      // Explicit per-day shift on the attendance row wins.
+      isNight = !!Number(d.att_shift_is_night);
+    } else {
+      // Governing assignment = the most recently created one covering the
+      // date (created_at desc, id desc as tiebreaker).
+      const covering = norm
+        .filter((a) => a.from <= dateIso && (a.to === null || a.to >= dateIso))
+        .sort((a, b) => (b.order !== a.order ? b.order - a.order : b.id - a.id));
+      isNight = covering.length ? covering[0].isNight : false;
+    }
+    if (isNight) nights += weight;
+  }
+  return nights;
+}
+
+/**
+ * Count "overtime days" an employee worked in [startDate, endDate] — days
+ * they were present on a week-off or a holiday. This mirrors the Attendance
+ * Grid, which auto-shows WOT/HOT for a full present day on a rest day, so
+ * the payslip and the grid agree without HR marking anything by hand.
+ *
+ * A day counts as 1 OT day when EITHER:
+ *   - its attendance status is the explicit `weekoff_overtime` /
+ *     `holiday_overtime` (HR set it directly), OR
+ *   - the employee was present / checked_in AND that date is a holiday
+ *     (company_events event_type='holiday', or legacy organization_holidays)
+ *     OR a week-off for their governing shift assignment.
+ *
+ * Holiday/week-off overlap is counted once. Week-off is resolved from the
+ * most-recently-created shift assignment covering the date (same rule the
+ * grid + night-shift resolver use).
+ */
+async function resolveOvertimeDays(
+  empcloudDb: any,
+  userId: number,
+  orgId: number,
+  startDate: string,
+  endDate: string,
+): Promise<number> {
+  const worked = (await empcloudDb("attendance_records")
+    .where("user_id", userId)
+    .where("organization_id", orgId)
+    .whereBetween("date", [startDate, endDate])
+    .whereIn("status", ["present", "checked_in", "weekoff_overtime", "holiday_overtime"])
+    .select("date as date", "status as status")) as Array<{ date: string | Date; status: string }>;
+  if (!worked.length) return 0;
+
+  // Holiday set for the window: company_events (event_type='holiday',
+  // multi-day expanded) + legacy organization_holidays. Matches the grid.
+  const holidaySet = new Set<string>();
+  const addRange = (startIso: string | null, endIso: string | null) => {
+    if (!startIso) return;
+    let cur = startIso < startDate ? startDate : startIso;
+    const last = (endIso ?? startIso) > endDate ? endDate : (endIso ?? startIso);
+    while (cur <= last) {
+      holidaySet.add(cur);
+      const d = new Date(cur + "T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() + 1);
+      cur = d.toISOString().split("T")[0];
+    }
+  };
+  try {
+    const events = (await empcloudDb("company_events")
+      .where({ organization_id: orgId, event_type: "holiday" })
+      .where("start_date", "<=", `${endDate} 23:59:59`)
+      .andWhere((b: any) =>
+        b.where("end_date", ">=", `${startDate} 00:00:00`).orWhereNull("end_date"),
+      )
+      .select("start_date as start_date", "end_date as end_date")) as Array<{
+      start_date: any;
+      end_date: any;
+    }>;
+    for (const e of events) addRange(toDateIso(e.start_date), toDateIso(e.end_date));
+  } catch {
+    /* table absent — ignore */
+  }
+  try {
+    const legacy = (await empcloudDb("organization_holidays")
+      .where("organization_id", orgId)
+      .whereBetween("holiday_date", [startDate, endDate])
+      .select("holiday_date as holiday_date")) as Array<{ holiday_date: any }>;
+    for (const h of legacy) {
+      const iso = toDateIso(h.holiday_date);
+      if (iso) holidaySet.add(iso);
+    }
+  } catch {
+    /* table absent — ignore */
+  }
+
+  // Shift assignments overlapping the window, for week-off determination.
+  const assignments = (await empcloudDb("shift_assignments as sa")
+    .join("shifts as s", "s.id", "sa.shift_id")
+    .where("sa.user_id", userId)
+    .where("sa.organization_id", orgId)
+    .where("sa.effective_from", "<=", endDate)
+    .where((b: any) => b.whereNull("sa.effective_to").orWhere("sa.effective_to", ">=", startDate))
+    .select(
+      "sa.id as id",
+      "sa.effective_from as effective_from",
+      "sa.effective_to as effective_to",
+      "sa.created_at as created_at",
+      "s.working_days as working_days",
+      "s.is_weekoff as is_weekoff",
+    )) as Array<{
+    id: number;
+    effective_from: string | Date;
+    effective_to: string | Date | null;
+    created_at: string | Date | null;
+    working_days: string | null;
+    is_weekoff: number;
+  }>;
+  const norm = assignments
+    .map((a) => ({
+      from: toDateIso(a.effective_from),
+      to: toDateIso(a.effective_to),
+      order: a.created_at ? new Date(a.created_at as any).getTime() || 0 : 0,
+      id: Number(a.id) || 0,
+      isWeekoffShift: !!Number(a.is_weekoff),
+      // working_days CSV uses getDay() numbering (0=Sun … 6=Sat), same as
+      // the EmpCloud grid. Empty list = no working-day restriction.
+      workingDays: String(a.working_days || "")
+        .split(",")
+        .map((s) => Number(s.trim()))
+        .filter((n) => Number.isFinite(n)),
+    }))
+    .filter((a): a is typeof a & { from: string } => !!a.from);
+
+  let otDays = 0;
+  for (const w of worked) {
+    const dateIso = toDateIso(w.date);
+    if (!dateIso) continue;
+    const status = (w.status || "").toLowerCase();
+    if (status === "weekoff_overtime" || status === "holiday_overtime") {
+      otDays += 1;
+      continue;
+    }
+    // present / checked_in → OT only if the day is a holiday or week-off.
+    if (holidaySet.has(dateIso)) {
+      otDays += 1;
+      continue;
+    }
+    const covering = norm
+      .filter((a) => a.from <= dateIso && (a.to === null || a.to >= dateIso))
+      .sort((a, b) => (b.order !== a.order ? b.order - a.order : b.id - a.id));
+    const gov = covering[0];
+    if (gov) {
+      const dow = new Date(dateIso + "T00:00:00Z").getUTCDay();
+      const isWeekoff =
+        gov.isWeekoffShift || (gov.workingDays.length > 0 && !gov.workingDays.includes(dow));
+      if (isWeekoff) otDays += 1;
+    }
+  }
+  return otDays;
+}
+
 export class PayrollService {
   private db = getDB();
 
@@ -442,8 +711,17 @@ export class PayrollService {
           // HPL on the grid lost both halves: the 0.5 present half wasn't
           // counted as present AND the 0.5 leave half (handled below) was
           // wrongly booked as LOP.
+          //
+          // BUG-OT-LOP — `weekoff_overtime` / `holiday_overtime` (a rest
+          // day the employee WORKED) must count as a present/paid day too.
+          // They were omitted here but still counted in `weekend_records`
+          // below, which cut the auto-paid-weekend credit by 1 -- so an
+          // employee who worked a weekend came out with a phantom LOP day
+          // and LESS pay. Counting them as present (1 day) nets correctly
+          // against the weekend_records reduction so the day is paid once,
+          // and the OT premium is added separately by the overtime component.
           empcloudDb.raw(
-            "SUM(CASE WHEN status IN ('present','checked_in') THEN 1 " +
+            "SUM(CASE WHEN status IN ('present','checked_in','weekoff_overtime','holiday_overtime') THEN 1 " +
               "WHEN status IN ('half_day','half_present_half_leave') THEN 0.5 " +
               "ELSE 0 END) as present_days",
           ),
@@ -603,7 +881,34 @@ export class PayrollService {
 
       // Calculate earnings (pro-rated for LOP)
       const proRatio = totalDays > 0 ? paidDays / totalDays : 0;
+      // Nights worked under a shift flagged `is_night_shift=1` -- used by
+      // `per_night` / `per_night_daily` components. Resolved from
+      // shift_assignments (the canonical "who is on which shift" source),
+      // NOT attendance_records.shift_id which is almost always NULL in
+      // practice. Only computed when the structure actually has a night
+      // component, to avoid two extra DB round-trips per employee on
+      // every other run.
+      const hasNightComponent = componentList.some(
+        (c: any) => c.calculationType === "per_night" || c.calculationType === "per_night_daily",
+      );
+      const nightShiftDays = hasNightComponent
+        ? await resolveNightShiftDays(empcloudDb, ecEmp.id, Number(orgId), startDate, endDate)
+        : 0;
+      // Overtime days — present on a week-off or holiday (auto-derived the
+      // same way the Attendance Grid shows WOT/HOT). Only computed when the
+      // structure has an overtime component, to skip the extra queries
+      // otherwise.
+      const hasOvertimeComponent = componentList.some(
+        (c: any) => c.calculationType === "per_ot" || c.calculationType === "per_ot_daily",
+      );
+      const overtimeDays = hasOvertimeComponent
+        ? await resolveOvertimeDays(empcloudDb, ecEmp.id, Number(orgId), startDate, endDate)
+        : 0;
       const earnings: any[] = [];
+      // Night-allowance + overtime components, deferred to a second pass
+      // (see below) so the `× Day Pay` mode can multiply the fully-summed
+      // base gross.
+      const nightComps: any[] = [];
       let grossEarnings = 0;
       let basicMonthly = 0;
 
@@ -648,6 +953,16 @@ export class PayrollService {
             deductions.push({ code: comp.code, name: comp.name || comp.code, amount });
             totalDed += amount;
           }
+        } else if (
+          comp.calculationType === "per_night" ||
+          comp.calculationType === "per_night_daily" ||
+          comp.calculationType === "per_ot" ||
+          comp.calculationType === "per_ot_daily"
+        ) {
+          // Night Allowance + Overtime are deferred to a second pass below:
+          // the `× Day Pay` night mode multiplies the WHOLE base gross,
+          // which isn't fully known until every other earning is summed.
+          nightComps.push(comp);
         } else {
           // Earning component
           const amount = Math.round(Number(comp.monthlyAmount || 0) * proRatio);
@@ -658,6 +973,72 @@ export class PayrollService {
           });
           grossEarnings += amount;
           if (comp.code === "BASIC") basicMonthly = amount;
+        }
+      }
+
+      // Second pass — Night Allowance, now that `grossEarnings` holds the
+      // full base (regular earnings, post-LOP-proration).
+      //
+      // per_night       : flat ₹ rate × nights worked under a night shift.
+      //                   amount = rate × nights.
+      // per_night_daily : "× Day Pay" — multiplies the WHOLE salary. A
+      //                   night-shift employee earns `multiplier ×` their
+      //                   normal pay, so the allowance tops the base up to
+      //                   that multiple: amount = baseGross × (multiplier − 1).
+      //                   Gated on having worked ≥1 night; the night count
+      //                   itself is a gate, not a proportional factor (a
+      //                   night worker's whole month is paid at the night
+      //                   rate). Not pro-rated again — baseGross already is.
+      const baseGrossForNight = grossEarnings;
+      // Total night allowance paid THIS month — fed into the annual TDS
+      // projection below so the variable night pay is actually taxed
+      // (otherwise monthly TDS, projected off the contracted salary only,
+      // ignores it and the employee faces a year-end shortfall).
+      let nightAllowanceThisMonth = 0;
+      // Contracted daily salary for the *_daily multiplier modes —
+      // un-prorated so a worked night/OT day pays the same regardless of
+      // LOP elsewhere in the month.
+      const contractedDailySalary = Number(salary.gross_salary || 0) / 12 / Math.max(1, totalDays);
+      for (const comp of nightComps) {
+        const rate = Number(comp.rate ?? comp.value ?? 0);
+        let amount = 0;
+        let meta: Record<string, number>;
+        if (comp.calculationType === "per_night_daily") {
+          // Math.max(0, …) guards a multiplier < 1 (e.g. 0.5), which would
+          // otherwise produce a NEGATIVE allowance and silently dock pay.
+          // The UI validator also enforces ≥ 1, this is the engine-side net.
+          amount = nightShiftDays > 0 ? Math.max(0, Math.round(baseGrossForNight * (rate - 1))) : 0;
+          meta = { multiplier: rate, nights: nightShiftDays, baseGross: baseGrossForNight };
+        } else if (comp.calculationType === "per_night") {
+          amount = Math.round(rate * nightShiftDays);
+          meta = { rate, nights: nightShiftDays };
+        } else if (comp.calculationType === "per_ot_daily") {
+          // Overtime, per OT day: multiplier × daily salary × OT days.
+          // Additive per day (NOT whole-salary like the night × Day Pay).
+          amount = Math.max(0, Math.round(contractedDailySalary * rate * overtimeDays));
+          meta = {
+            dailySalary: Math.round(contractedDailySalary),
+            multiplier: rate,
+            otDays: overtimeDays,
+          };
+        } else {
+          // per_ot — flat ₹ per OT day.
+          amount = Math.round(rate * overtimeDays);
+          meta = { rate, otDays: overtimeDays };
+        }
+        if (amount > 0) {
+          earnings.push({
+            code: comp.code,
+            name: comp.name || comp.code,
+            // Surfaced on the payslip so HR can verify the math without
+            // re-querying attendance.
+            amount,
+            meta,
+          });
+          grossEarnings += amount;
+          // Both night allowance and overtime are variable taxable pay —
+          // fold into the same bucket that feeds the annual TDS projection.
+          nightAllowanceThisMonth += amount;
         }
       }
 
@@ -783,7 +1164,16 @@ export class PayrollService {
           employeeId: String(ecEmp.id),
           month: run.month,
           year: run.year,
-          grossSalary: grossEarnings,
+          // Use the base gross (BEFORE night allowance) for ESI. The ESI
+          // ₹21K eligibility ceiling and contribution must track the
+          // employee's regular wage, not a variable night premium —
+          // otherwise a low-wage ESI employee could be flipped OUT of
+          // ESI in a month they happen to work nights, and their ESI
+          // base would swing month to month. `baseGrossForNight` is the
+          // gross before the night second-pass; for employees with no
+          // night component it equals the full grossEarnings, so this is
+          // non-regressive.
+          grossSalary: baseGrossForNight,
           orgOverrides: buildOrgStatutoryOverrides(orgSettings),
         });
         if (esi) {
@@ -808,14 +1198,18 @@ export class PayrollService {
           : profile.tax_info
         : {};
 
-      // Professional Tax. Two per-employee escape hatches:
-      //   - tax_info.deductPT === false: skip entirely (e.g. employee
-      //     in a no-PT state like Delhi/Haryana even though the org's
-      //     primary state has PT)
+      // Professional Tax. Gates, in precedence order:
+      //   - Migration 036: org-level `pt_disabled` kill-switch. When set,
+      //     PT is skipped for EVERY employee regardless of the per-employee
+      //     flag — the org operates in a no-PT state or opts out entirely.
+      //   - tax_info.deductPT === false: per-employee skip (e.g. one
+      //     employee in a no-PT state like Delhi/Haryana even though the
+      //     org's primary state has PT)
       //   - tax_info.state: override the org state for slab lookup so
       //     a Bangalore-HQ company with a Mumbai-resident employee
       //     applies Maharashtra slabs to that one person.
-      if (taxInfo?.deductPT !== false) {
+      const ptDisabledOrgWide = !!Number(orgSettings?.pt_disabled);
+      if (!ptDisabledOrgWide && taxInfo?.deductPT !== false) {
         const ptState =
           (typeof taxInfo?.state === "string" && taxInfo.state.trim()) ||
           orgSettings?.state ||
@@ -874,6 +1268,10 @@ export class PayrollService {
         limit: 100,
       });
       let taxAlreadyPaid = 0;
+      // Night allowance already paid in earlier months of THIS FY. Folded
+      // into the annual projection so the engine taxes the full year's
+      // night pay, not just the run-rate from the current month forward.
+      let nightAllowancePriorThisFy = 0;
       for (const ps of priorPayslips.data) {
         if (ps.payroll_run_id === runId) continue; // current run -- skip
         const psYear = Number(ps.year);
@@ -886,9 +1284,24 @@ export class PayrollService {
         if (psYear === run.year && psMonth === run.month) continue;
         const dedList =
           typeof ps.deductions === "string" ? JSON.parse(ps.deductions || "[]") : ps.deductions;
-        if (!Array.isArray(dedList)) continue;
-        for (const d of dedList) {
-          if (d?.code === "TDS") taxAlreadyPaid += Number(d.amount) || 0;
+        if (Array.isArray(dedList)) {
+          for (const d of dedList) {
+            if (d?.code === "TDS") taxAlreadyPaid += Number(d.amount) || 0;
+          }
+        }
+        // Night allowance lines are tagged with `meta.nights` — sum them
+        // for this FY's prior months. (Distinct from any other earning;
+        // nothing else sets meta.nights.)
+        const earnList =
+          typeof ps.earnings === "string" ? JSON.parse(ps.earnings || "[]") : ps.earnings;
+        if (Array.isArray(earnList)) {
+          for (const e of earnList) {
+            // Night allowance lines carry meta.nights; overtime lines carry
+            // meta.otDays. Both are variable taxable pay — sum either.
+            if (e?.meta && (e.meta.nights != null || e.meta.otDays != null)) {
+              nightAllowancePriorThisFy += Number(e.amount) || 0;
+            }
+          }
         }
       }
 
@@ -926,11 +1339,21 @@ export class PayrollService {
         const priorEmployerGross = Number(priorEmp.grossPaid || 0);
         const priorEmployerTds = Number(priorEmp.tdsDeducted || 0);
 
+        // Project the variable night allowance across the FY so it gets
+        // taxed: actuals already paid this FY + the current month's amount
+        // run-rated over the remaining months. If night work stops, next
+        // month's projection drops and the YTD `taxAlreadyPaid` lookup
+        // trues the over-withholding back down automatically — so a
+        // run-rate projection is safe even when nights are sporadic.
+        const projectedAnnualNightAllowance =
+          nightAllowancePriorThisFy + nightAllowanceThisMonth * monthsRemaining;
+
         const taxResult = computeIncomeTax({
           employeeId: String(ecEmp.id),
           financialYear: runFy,
           regime: taxInfo?.regime === "old" ? TaxRegime.OLD : TaxRegime.NEW,
-          annualGross: Number(salary.gross_salary) + priorEmployerGross,
+          annualGross:
+            Number(salary.gross_salary) + priorEmployerGross + projectedAnnualNightAllowance,
           // BUG-004 — These three feed the ANNUAL tax projection and must
           // use the contracted (un-prorated) salary-structure values, not
           // this month's pro-rated `basicMonthly`. Pro-rating these would

@@ -190,8 +190,33 @@ export interface SalaryComponent {
   name: string; // e.g., "Basic Salary", "HRA", "Special Allowance"
   code: string; // e.g., "BASIC", "HRA", "SA"
   type: ComponentType;
-  calculationType: "fixed" | "percentage" | "formula" | "balance";
-  value: number; // fixed amount or percentage (ignored when calculationType === "balance")
+  // Night allowance variants. Both compute on the number of nights the
+  // employee was on a shift flagged `is_night_shift=1` in the period and
+  // are NOT pro-rated by LOP (already day-counted).
+  //   - per_night       : flat ₹ rate per night. `value` = rupees/night.
+  //   - per_night_daily : multiplier of the contracted daily salary.
+  //                       `value` = multiplier (1 = same as day pay,
+  //                       2 = double, 1.5 = time-and-a-half).
+  //                       daily salary = monthly contracted gross /
+  //                       workingDaysInMonth.
+  //
+  // Overtime variants. Both compute on the number of OT days worked — days
+  // marked `weekoff_overtime` / `holiday_overtime` on the attendance grid
+  // (worked a week-off or holiday). Same per-day, not-pro-rated model.
+  //   - per_ot       : flat ₹ rate per OT day. `value` = rupees/day.
+  //   - per_ot_daily : multiplier of the contracted daily salary, per OT
+  //                    day. `value` = multiplier (1 = same as a normal day,
+  //                    2 = double, 1.5 = time-and-a-half).
+  calculationType:
+    | "fixed"
+    | "percentage"
+    | "formula"
+    | "balance"
+    | "per_night"
+    | "per_night_daily"
+    | "per_ot"
+    | "per_ot_daily";
+  value: number; // fixed amount, percentage, per-night/per-OT ₹, or daily multiplier (ignored when calculationType === "balance")
   percentageOf?: string; // component code to calculate percentage of (CTC | GROSS | <CODE>)
   formula?: string; // custom formula
   isTaxable: boolean;

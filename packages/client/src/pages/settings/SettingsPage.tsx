@@ -197,6 +197,11 @@ export function SettingsPage() {
     // working days in the payroll run; "weekdays" (default) keeps Mon–Fri.
     settingsPayload.includeWeekendsInWorkingDays = val("working_days_basis") === "all_days";
 
+    // Migration 036 — disable Professional Tax org-wide. Checkbox; when on,
+    // PT is skipped for every employee regardless of their per-employee flag.
+    const ptDisabledEl = document.getElementById("pt_disabled") as HTMLInputElement | null;
+    settingsPayload.ptDisabled = !!ptDisabledEl?.checked;
+
     setSaving(true);
     try {
       if (Object.keys(orgPayload).length > 0) {
@@ -681,6 +686,29 @@ function StatutoryOverridesCard({ settings }: { settings: any }) {
               </div>
             </label>
           </div>
+        </div>
+
+        {/* Professional Tax org-wide toggle (migration 036). */}
+        <div className="mt-6 border-t border-gray-100 pt-6">
+          <label className="flex items-start gap-3">
+            <input
+              id="pt_disabled"
+              type="checkbox"
+              defaultChecked={!!settings?.ptDisabled}
+              className="text-brand-600 focus:ring-brand-500 mt-0.5 h-4 w-4 rounded border-gray-300"
+            />
+            <div>
+              <p className="text-sm font-medium text-gray-900">
+                Disable Professional Tax for all employees
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                When on, no Professional Tax is deducted for ANY employee in this organisation,
+                regardless of per-employee settings. Use this for states with no PT (e.g. Delhi,
+                Haryana) or if your org doesn't withhold PT. Off (default) keeps PT computing per
+                the state slab.
+              </p>
+            </div>
+          </label>
         </div>
 
         {/* ESI ceiling + rounding policy — independent settings. */}

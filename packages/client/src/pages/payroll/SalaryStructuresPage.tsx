@@ -17,6 +17,7 @@ import {
   Pencil,
   Copy,
   GripVertical,
+  Info,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -24,7 +25,14 @@ interface ComponentRow {
   name: string;
   code: string;
   type: "earning" | "deduction" | "reimbursement";
-  calculationType: "percentage" | "fixed" | "balance";
+  calculationType:
+    | "percentage"
+    | "fixed"
+    | "balance"
+    | "per_night"
+    | "per_night_daily"
+    | "per_ot"
+    | "per_ot_daily";
   value: number;
   percentageOf: string;
 }
@@ -56,17 +64,34 @@ const DEFAULT_COMPONENTS: ComponentRow[] = [
   },
 ];
 
-const PRESET_COMPONENTS = [
-  { name: "Basic Salary", code: "BASIC", type: "earning" as const },
-  { name: "House Rent Allowance", code: "HRA", type: "earning" as const },
-  { name: "Special Allowance", code: "SA", type: "earning" as const },
-  { name: "Conveyance Allowance", code: "CA", type: "earning" as const },
-  { name: "Medical Allowance", code: "MA", type: "earning" as const },
-  { name: "Leave Travel Allowance", code: "LTA", type: "earning" as const },
-  { name: "Performance Bonus", code: "BONUS", type: "earning" as const },
-  { name: "Canteen Deduction", code: "CANTEEN", type: "deduction" as const },
-  { name: "Welfare Fund", code: "WELFARE", type: "deduction" as const },
-  { name: "Advance Recovery", code: "ADV_REC", type: "deduction" as const },
+// Preset metadata — `calculationType` is optional and applied when the
+// user picks the preset, so per-night additions auto-flag with the right
+// calc type (otherwise admins would have to manually flip the dropdown
+// every time and likely forget, paying it as a fixed monthly instead).
+const PRESET_COMPONENTS: Array<{
+  name: string;
+  code: string;
+  type: "earning" | "deduction" | "reimbursement";
+  calculationType?: ComponentRow["calculationType"];
+}> = [
+  { name: "Basic Salary", code: "BASIC", type: "earning" },
+  { name: "House Rent Allowance", code: "HRA", type: "earning" },
+  { name: "Special Allowance", code: "SA", type: "earning" },
+  { name: "Conveyance Allowance", code: "CA", type: "earning" },
+  { name: "Medical Allowance", code: "MA", type: "earning" },
+  { name: "Leave Travel Allowance", code: "LTA", type: "earning" },
+  { name: "Performance Bonus", code: "BONUS", type: "earning" },
+  // Single Night Allowance preset. Defaults to flat ₹/night; the
+  // calc-type dropdown on the row itself lets admin switch to × Day
+  // Pay (multiplier of daily salary) without adding a second row.
+  { name: "Night Allowance", code: "NIGHT_ALLOW", type: "earning", calculationType: "per_night" },
+  // Overtime preset — pays per OT day (a week-off / holiday worked, which
+  // the Attendance Grid auto-marks WOT/HOT). Defaults to × Day Pay; the
+  // row dropdown lets admin switch to a flat ₹/day instead.
+  { name: "Overtime", code: "OVERTIME", type: "earning", calculationType: "per_ot_daily" },
+  { name: "Canteen Deduction", code: "CANTEEN", type: "deduction" },
+  { name: "Welfare Fund", code: "WELFARE", type: "deduction" },
+  { name: "Advance Recovery", code: "ADV_REC", type: "deduction" },
 ];
 
 export function SalaryStructuresPage() {
@@ -76,6 +101,7 @@ export function SalaryStructuresPage() {
   const [components, setComponents] = useState<ComponentRow[]>(DEFAULT_COMPONENTS);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [showNightHelp, setShowNightHelp] = useState(false);
   const { data: res, isLoading } = useSalaryStructures();
   const qc = useQueryClient();
 
@@ -99,8 +125,18 @@ export function SalaryStructuresPage() {
         name: preset?.name || "",
         code: preset?.code || "",
         type: preset?.type || "earning",
-        calculationType: "fixed",
-        value: 0,
+        // Honour the preset's `calculationType` when set (e.g. Night
+        // Allowance defaults to "per_night" so the admin doesn't have to
+        // flip the dropdown after picking it).
+        calculationType: preset?.calculationType || "fixed",
+        // Sensible default for the × Day Pay multiplier presets (Night /
+        // Overtime) -- 2 = double pay, the canonical case. Admins can tweak
+        // it. Other presets stay at 0 so the admin enters the rate.
+        value:
+          preset?.calculationType === "per_night_daily" ||
+          preset?.calculationType === "per_ot_daily"
+            ? 2
+            : 0,
         percentageOf: "",
       },
     ]);
@@ -112,10 +148,41 @@ export function SalaryStructuresPage() {
 
   function updateComponent(i: number, field: string, value: any) {
     const updated = [...components];
+    const prev = updated[i].calculationType;
     (updated[i] as any)[field] = value;
-    // Balance only makes sense for earnings; if user switches type, demote to fixed.
-    if (field === "type" && value !== "earning" && updated[i].calculationType === "balance") {
+    // Balance / Night / Overtime variants only make sense for earnings;
+    // if user switches type to a non-earning, demote to fixed so the row
+    // stays valid.
+    if (
+      field === "type" &&
+      value !== "earning" &&
+      (updated[i].calculationType === "balance" ||
+        updated[i].calculationType === "per_night" ||
+        updated[i].calculationType === "per_night_daily" ||
+        updated[i].calculationType === "per_ot" ||
+        updated[i].calculationType === "per_ot_daily")
+    ) {
       updated[i].calculationType = "fixed";
+    }
+    // When flipping between the flat ↔ multiplier modes (Night or Overtime),
+    // reset `value` because its MEANING changes:
+    //   per_night / per_ot        : value = ₹ rate per night/OT day  (e.g. 250)
+    //   per_night_daily / per_ot_daily : value = multiplier of day pay (e.g. 2)
+    // Leaving 250 in place after a flip would silently turn "₹250/day" into
+    // "250× day pay" and pay out absurd amounts. Seed × Day Pay with 2
+    // (double); flat clears to 0 so admin types the rate.
+    if (field === "calculationType" && prev !== value) {
+      if (
+        (value === "per_night_daily" && prev === "per_night") ||
+        (value === "per_ot_daily" && prev === "per_ot")
+      ) {
+        updated[i].value = 2;
+      } else if (
+        (value === "per_night" && prev === "per_night_daily") ||
+        (value === "per_ot" && prev === "per_ot_daily")
+      ) {
+        updated[i].value = 0;
+      }
     }
     setComponents(updated);
   }
@@ -162,6 +229,60 @@ export function SalaryStructuresPage() {
     if (badBalance) {
       toast.error(`Balance calculation is only valid for earnings (${badBalance.code}).`);
       return;
+    }
+
+    // Value validation. Reject saves that would silently produce ₹0:
+    //  - percentage rows need a value in (0, 100]
+    //  - fixed earnings need a positive amount (deductions can be 0)
+    //  - per_night needs a positive ₹/night
+    //  - per_night_daily needs a positive multiplier (1 = same as day pay,
+    //    2 = double, etc. -- 0 would zero out the line)
+    //  - balance value is ignored (auto-filled)
+    for (const c of components) {
+      if (!c.name || !c.code) continue;
+      const val = Number(c.value);
+      if (c.calculationType === "percentage") {
+        if (!Number.isFinite(val) || val <= 0 || val > 100) {
+          toast.error(`${c.code}: percentage must be between 0 and 100.`);
+          return;
+        }
+        if (!c.percentageOf) {
+          toast.error(`${c.code}: choose a "% Of" base (e.g. CTC, BASIC).`);
+          return;
+        }
+      } else if (c.calculationType === "fixed" && c.type === "earning") {
+        if (!Number.isFinite(val) || val <= 0) {
+          toast.error(`${c.code}: fixed earning amount must be greater than 0.`);
+          return;
+        }
+      } else if (c.calculationType === "per_night") {
+        if (!Number.isFinite(val) || val <= 0) {
+          toast.error(`${c.code}: enter a ₹/night rate greater than 0.`);
+          return;
+        }
+      } else if (c.calculationType === "per_night_daily") {
+        // Must be ≥ 1: the allowance tops base up to (multiplier ×) pay,
+        // so a multiplier below 1 would mean paying LESS than normal for
+        // night work (a negative allowance), which never makes sense.
+        if (!Number.isFinite(val) || val < 1) {
+          toast.error(
+            `${c.code}: night multiplier must be at least 1 (1 = same as day pay, 2 = double).`,
+          );
+          return;
+        }
+      } else if (c.calculationType === "per_ot") {
+        if (!Number.isFinite(val) || val <= 0) {
+          toast.error(`${c.code}: enter a ₹/OT-day rate greater than 0.`);
+          return;
+        }
+      } else if (c.calculationType === "per_ot_daily") {
+        if (!Number.isFinite(val) || val < 1) {
+          toast.error(
+            `${c.code}: overtime multiplier must be at least 1 (1 = same as a normal day, 2 = double).`,
+          );
+          return;
+        }
+      }
     }
 
     const fd = new FormData(e.currentTarget);
@@ -327,7 +448,18 @@ export function SalaryStructuresPage() {
                   the modal content is narrow, and shrink-0 on the actions so
                   they don't collapse onto a single pixel. */}
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                <h4 className="text-sm font-semibold text-gray-700">Components</h4>
+                <div className="flex items-center gap-1.5">
+                  <h4 className="text-sm font-semibold text-gray-700">Components</h4>
+                  <button
+                    type="button"
+                    onClick={() => setShowNightHelp(true)}
+                    className="rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-blue-600"
+                    aria-label="Night Allowance calculation help"
+                    title="How Night Allowance is calculated"
+                  >
+                    <Info className="h-4 w-4" />
+                  </button>
+                </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {unusedPresets.length > 0 && (
                     <select
@@ -401,18 +533,55 @@ export function SalaryStructuresPage() {
                         value={c.calculationType}
                         onChange={(e) => updateComponent(i, "calculationType", e.target.value)}
                       >
-                        <option value="percentage">%</option>
-                        <option value="fixed">Fixed</option>
-                        {(c.type === "earning" || c.calculationType === "balance") && (
-                          <option value="balance">Balance</option>
+                        {/* Night / Overtime rows: only their two modes.
+                            Regular rows: only the three regular modes.
+                            Switching kinds requires deleting the row and
+                            re-adding via the right preset -- a row's nature
+                            shouldn't flip between "regular earning" and a
+                            night/overtime line via a dropdown click. */}
+                        {c.calculationType === "per_night" ||
+                        c.calculationType === "per_night_daily" ? (
+                          <>
+                            <option value="per_night">Per Night ₹</option>
+                            <option value="per_night_daily">× Day Pay</option>
+                          </>
+                        ) : c.calculationType === "per_ot" ||
+                          c.calculationType === "per_ot_daily" ? (
+                          <>
+                            <option value="per_ot">Per OT day ₹</option>
+                            <option value="per_ot_daily">× Day Pay</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="percentage">%</option>
+                            <option value="fixed">Fixed</option>
+                            {c.type === "earning" && <option value="balance">Balance</option>}
+                          </>
                         )}
                       </select>
                       <input
                         className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-1 disabled:bg-gray-50 disabled:text-gray-300"
                         type="number"
                         min={0}
+                        step={
+                          c.calculationType === "per_night_daily" ||
+                          c.calculationType === "per_ot_daily"
+                            ? 0.5
+                            : 1
+                        }
                         value={c.calculationType === "balance" ? "" : c.value === 0 ? "" : c.value}
-                        placeholder={c.calculationType === "balance" ? "auto" : "0"}
+                        placeholder={
+                          c.calculationType === "balance"
+                            ? "auto"
+                            : c.calculationType === "per_night"
+                              ? "₹/night"
+                              : c.calculationType === "per_ot"
+                                ? "₹/day"
+                                : c.calculationType === "per_night_daily" ||
+                                    c.calculationType === "per_ot_daily"
+                                  ? "e.g. 2"
+                                  : "0"
+                        }
                         // #316 — pre-select the contents on focus so typing
                         // overwrites the leading 0 instead of producing "01",
                         // "012", etc. Users were having to manually delete
@@ -441,15 +610,34 @@ export function SalaryStructuresPage() {
                             : undefined
                         }
                       />
-                      <input
-                        className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 font-mono text-sm focus:outline-none focus:ring-1 disabled:bg-gray-50 disabled:text-gray-300"
-                        placeholder={c.calculationType === "balance" ? "—" : "CTC"}
-                        value={c.calculationType === "balance" ? "" : c.percentageOf}
-                        onChange={(e) =>
-                          updateComponent(i, "percentageOf", e.target.value.toUpperCase())
-                        }
-                        disabled={c.calculationType !== "percentage"}
-                      />
+                      {c.calculationType === "per_night" ||
+                      c.calculationType === "per_night_daily" ||
+                      c.calculationType === "per_ot" ||
+                      c.calculationType === "per_ot_daily" ? (
+                        // For night / overtime rows the "% Of" column is
+                        // unused -- give it back to the admin as a clickable
+                        // Info button that opens the help modal, so the math
+                        // is one click away next to the row being edited.
+                        <button
+                          type="button"
+                          onClick={() => setShowNightHelp(true)}
+                          className="flex h-[34px] w-full items-center justify-center gap-1 rounded border border-blue-200 bg-blue-50 px-2 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                          title="How Night Allowance / Overtime is calculated"
+                        >
+                          <Info className="h-3.5 w-3.5" />
+                          Info
+                        </button>
+                      ) : (
+                        <input
+                          className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 font-mono text-sm focus:outline-none focus:ring-1 disabled:bg-gray-50 disabled:text-gray-300"
+                          placeholder={c.calculationType === "balance" ? "—" : "CTC"}
+                          value={c.calculationType === "balance" ? "" : c.percentageOf}
+                          onChange={(e) =>
+                            updateComponent(i, "percentageOf", e.target.value.toUpperCase())
+                          }
+                          disabled={c.calculationType !== "percentage"}
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => removeComponent(i)}
@@ -499,6 +687,119 @@ export function SalaryStructuresPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Night Allowance help — surfaces the rate × nights vs.
+          daily-pay × multiplier math so HR can pick the right mode
+          without re-reading the PR description. */}
+      <Modal
+        open={showNightHelp}
+        onClose={() => setShowNightHelp(false)}
+        title="Night Allowance & Overtime — calculation modes"
+        className="max-w-2xl"
+      >
+        <div className="space-y-4 px-1 py-2 text-sm text-gray-700">
+          <p>
+            Night Allowance is paid only for days the employee was on a shift flagged{" "}
+            <span className="font-mono text-xs">is_night_shift = 1</span> in attendance. LOP days
+            never contribute (they have no attendance row). Two modes:
+          </p>
+
+          <div className="rounded-md border border-gray-200">
+            <div className="grid grid-cols-[90px_1fr_110px] gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500">
+              <div>Mode + Value</div>
+              <div>Calculation</div>
+              <div className="text-right">Allowance added</div>
+            </div>
+            <div className="divide-y divide-gray-100 text-xs">
+              <div className="grid grid-cols-[90px_1fr_110px] gap-2 px-3 py-2">
+                <div>
+                  <span className="font-medium text-gray-800">Per Night</span> · value{" "}
+                  <span className="font-mono">250</span>
+                </div>
+                <div className="font-mono">
+                  flat ₹250 × 22 nights
+                  <div className="text-gray-500">added on top of base</div>
+                </div>
+                <div className="text-right font-mono font-semibold text-gray-900">₹5,500</div>
+              </div>
+              <div className="grid grid-cols-[90px_1fr_110px] gap-2 px-3 py-2">
+                <div>
+                  <span className="font-medium text-gray-800">× Day Pay</span> · value{" "}
+                  <span className="font-mono">2</span>{" "}
+                  <span className="text-gray-500">(double)</span>
+                </div>
+                <div className="font-mono">
+                  base 166,666 × (2 − 1)
+                  <div className="text-gray-500">→ total gross = base × 2 = 333,332</div>
+                </div>
+                <div className="text-right font-mono font-semibold text-gray-900">₹166,666</div>
+              </div>
+              <div className="grid grid-cols-[90px_1fr_110px] gap-2 px-3 py-2">
+                <div>
+                  <span className="font-medium text-gray-800">× Day Pay</span> · value{" "}
+                  <span className="font-mono">1.5</span>
+                </div>
+                <div className="font-mono">
+                  base 166,666 × (1.5 − 1)
+                  <div className="text-gray-500">→ total gross = base × 1.5 = 250,000</div>
+                </div>
+                <div className="text-right font-mono font-semibold text-gray-900">₹83,333</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-md bg-blue-50 p-3 text-xs leading-relaxed text-blue-800">
+            <div className="mb-1 font-semibold">How each mode works:</div>
+            <ul className="ml-4 list-disc space-y-0.5">
+              <li>
+                <span className="font-medium">Per Night ₹</span> — a flat rupee amount per night
+                worked, added on top of the normal salary.
+              </li>
+              <li>
+                <span className="font-medium">× Day Pay</span> — a night-shift employee's WHOLE
+                salary is paid at the multiple. With value 2, total gross = base × 2; the allowance
+                line is the top-up (base × 1). Requires at least one night worked in the month.
+              </li>
+            </ul>
+            <div className="mt-1 text-blue-700">
+              Example base monthly gross used above: ₹166,666.
+            </div>
+          </div>
+
+          <div className="rounded-md bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-800">
+            <div className="mb-1 font-semibold">Overtime (week-off / holiday worked):</div>
+            <ul className="ml-4 list-disc space-y-0.5">
+              <li>
+                Counts <span className="font-medium">OT days</span> = days the employee was present
+                on a week-off or holiday. The Attendance Grid auto-marks these{" "}
+                <span className="font-mono">WOT</span> / <span className="font-mono">HOT</span> — no
+                manual entry.
+              </li>
+              <li>
+                <span className="font-medium">Per OT day ₹</span> — flat rupees per OT day.
+              </li>
+              <li>
+                <span className="font-medium">× Day Pay</span> — multiplier × daily salary, per OT
+                day (additive, e.g. 2 = double the day's pay for each OT day). Unlike night, this is
+                per-day, not whole-salary.
+              </li>
+            </ul>
+          </div>
+
+          <div className="rounded-md bg-amber-50 p-3 text-xs leading-relaxed text-amber-800">
+            <span className="font-semibold">Notes.</span> The allowance is taxable income, so EPF
+            (statutorily capped) and TDS do <em>not</em> simply double — net pay rises by less than
+            the gross. A night counts only for days actually worked under a shift flagged as a night
+            shift (half-days = 0.5).
+          </div>
+        </div>
+
+        <div className="flex justify-end border-t border-gray-200 px-1 pt-3">
+          <Button type="button" onClick={() => setShowNightHelp(false)}>
+            Got it
+          </Button>
+        </div>
       </Modal>
     </div>
   );
@@ -625,7 +926,15 @@ function StructureCard({
                         ? `${c.value}% of ${c.percentage_of}`
                         : c.calculation_type === "fixed" && Number(c.value) > 0
                           ? `Fixed ₹${Number(c.value).toLocaleString("en-IN")}`
-                          : "Balancing"}
+                          : c.calculation_type === "per_night"
+                            ? `₹${Number(c.value).toLocaleString("en-IN")} / night`
+                            : c.calculation_type === "per_night_daily"
+                              ? `${Number(c.value)}× whole salary (night shift)`
+                              : c.calculation_type === "per_ot"
+                                ? `₹${Number(c.value).toLocaleString("en-IN")} / OT day`
+                                : c.calculation_type === "per_ot_daily"
+                                  ? `${Number(c.value)}× day pay / OT day`
+                                  : "Balancing"}
                     </td>
                   </tr>
                 ))}

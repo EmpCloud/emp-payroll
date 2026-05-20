@@ -210,6 +210,10 @@ export class OrgService {
       // NOT NULL DEFAULT false; a missing row also defaults false (the
       // long-standing weekday-only behaviour).
       includeWeekendsInWorkingDays: !!Number(raw?.include_weekends_in_working_days),
+      // Migration 036 — org-wide kill-switch for Professional Tax. Column is
+      // NOT NULL DEFAULT false; a missing row also defaults false (PT
+      // computes normally per the per-employee gate + state slab).
+      ptDisabled: !!Number(raw?.pt_disabled),
     };
   }
 
@@ -268,6 +272,11 @@ export class OrgService {
     // Migration 035 — include weekends in payroll working days.
     if (data.includeWeekendsInWorkingDays !== undefined) {
       updates.include_weekends_in_working_days = !!data.includeWeekendsInWorkingDays;
+    }
+
+    // Migration 036 — disable Professional Tax org-wide.
+    if (data.ptDisabled !== undefined) {
+      updates.pt_disabled = !!data.ptDisabled;
     }
 
     if (Object.keys(updates).length > 0) {

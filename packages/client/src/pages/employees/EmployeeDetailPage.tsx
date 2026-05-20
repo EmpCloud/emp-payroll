@@ -1531,20 +1531,19 @@ function SalaryAssignForm({
     monthlyEmployerEPS + monthlyEmployerEPF + monthlyEDLI + monthlyPFAdmin;
   const employerPfInCtc = !!orgSettings?.employerPfInCtc;
 
-  // #360 — Effective From cannot be a past date. Track in state so we
-  // can validate on submit AND apply a `min` attribute to the date input.
+  // Effective From defaults to today but MAY be backdated — HR often
+  // records a revision after the fact (e.g. an increment effective from the
+  // 1st of a month that's already started, or a back-dated appraisal). The
+  // earlier hard "no past dates" guard (#360) blocked that legitimate case,
+  // so it's been removed. Server-side `assignToEmployee` deactivates the
+  // prior active row and inserts the new one at this effective_from (past
+  // or not); the FY-projection helper orders segments by effective_from,
+  // so a back-dated revision slots into the timeline correctly.
   const todayStr = new Date().toISOString().slice(0, 10);
   const [effectiveFrom, setEffectiveFrom] = useState<string>(todayStr);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // #360 — guard server-side too, in case a manual user agent bypasses
-    // the input min. Compare on local YYYY-MM-DD string -- safer than
-    // Date math here because we only care about the calendar day.
-    if (effectiveFrom < todayStr) {
-      toast.error("Effective From date cannot be in the past.");
-      return;
-    }
     // Don't pre-compute components — let the server resolve from the structure
     // so the math stays in one place (and `balance` is honored authoritatively).
     onSubmit({
@@ -1761,7 +1760,6 @@ function SalaryAssignForm({
         type="date"
         value={effectiveFrom}
         onChange={(e) => setEffectiveFrom(e.target.value)}
-        min={todayStr}
         required
       />
 
