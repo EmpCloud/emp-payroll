@@ -522,6 +522,37 @@ export class EmployeeService {
       }
     }
 
+    // Sync PAN / UAN to EmpCloud's `employee_profiles` so the HR profile page
+    // reflects what was entered on the payroll side. The two systems keep
+    // these identifiers in SEPARATE stores (payroll `tax_info.pan/uan` vs
+    // EmpCloud `employee_profiles.pan_number/uan_number`); without this a PAN
+    // added in payroll never surfaced in EmpCloud.
+    if (
+      data.taxInfo &&
+      (typeof data.taxInfo.pan === "string" || typeof data.taxInfo.uan === "string")
+    ) {
+      const sync: Record<string, unknown> = { updated_at: new Date() };
+      if (typeof data.taxInfo.pan === "string") {
+        sync.pan_number = data.taxInfo.pan.trim().toUpperCase() || null;
+      }
+      if (typeof data.taxInfo.uan === "string") {
+        sync.uan_number = data.taxInfo.uan.trim() || null;
+      }
+      const ecProfile = await db("employee_profiles")
+        .where({ user_id: empcloudUserId, organization_id: empcloudOrgId })
+        .first();
+      if (ecProfile) {
+        await db("employee_profiles").where({ id: ecProfile.id }).update(sync);
+      } else {
+        await db("employee_profiles").insert({
+          organization_id: empcloudOrgId,
+          user_id: empcloudUserId,
+          created_at: new Date(),
+          ...sync,
+        });
+      }
+    }
+
     const updatedUser = await findUserById(empcloudUserId);
     return mergeUserWithProfile(updatedUser!, this.payrollDb);
   }
