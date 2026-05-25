@@ -67,6 +67,9 @@ export class OrgService {
       payDay: payrollSettings?.pay_day ?? 7,
       financialYearStart: payrollSettings?.financial_year_start || 4,
       currency: payrollSettings?.currency || "INR",
+      // Company logo (migration 037) — relative upload path; the client
+      // builds a display URL and the payslip renderer inlines the file.
+      logoPath: payrollSettings?.logo_path || null,
     };
   }
 
@@ -214,7 +217,22 @@ export class OrgService {
       // NOT NULL DEFAULT false; a missing row also defaults false (PT
       // computes normally per the per-employee gate + state slab).
       ptDisabled: !!Number(raw?.pt_disabled),
+      // Migration 037 — company logo path for payslips.
+      logoPath: raw?.logo_path || null,
     };
+  }
+
+  /**
+   * Set (or replace) the org's payslip logo. `logoPath` is the relative
+   * upload path (e.g. `/uploads/<uuid>.png`); pass null to clear it.
+   * Auto-provisions the settings row if missing.
+   */
+  async setLogo(empcloudOrgId: number, logoPath: string | null) {
+    const settings = await this.ensureSettings(empcloudOrgId);
+    await this.payrollDb.update("organization_payroll_settings", settings.id, {
+      logo_path: logoPath,
+    });
+    return { logoPath };
   }
 
   /**
