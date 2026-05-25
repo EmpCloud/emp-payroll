@@ -361,7 +361,12 @@ export function LoansPage() {
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-          <DataTable columns={columns} data={loans} emptyMessage="No loans found" />
+          <DataTable
+            columns={columns}
+            data={loans}
+            paginated={false}
+            emptyMessage="No loans found"
+          />
           <Pagination
             page={page}
             totalPages={totalPages}

@@ -321,6 +321,31 @@ router.post(
   }),
 );
 
+// Bulk update existing employees (Bulk Update CSV importer). Read-merge-write
+// across EmpCloud user fields + payroll profile JSON. Fault-tolerant: bad rows
+// are reported in `data.results` and skipped without failing the batch.
+router.post(
+  "/bulk-update",
+  authorize("hr_admin", "hr_manager"),
+  wrap(async (req, res) => {
+    const { updates } = req.body as { updates?: any[] };
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "INVALID_INPUT", message: "updates must be a non-empty array" },
+      });
+    }
+    if (updates.length > 1000) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "TOO_MANY", message: "Maximum 1000 rows per bulk update" },
+      });
+    }
+    const data = await svc.bulkUpdate(req.user!.empcloudOrgId, updates);
+    res.json({ success: true, data });
+  }),
+);
+
 // --- Bank Update Requests (admin view) — MUST be before /:id ---
 import { BankUpdateRequestService } from "../../services/bank-update-request.service";
 import { getEmpCloudDB } from "../../db/empcloud";

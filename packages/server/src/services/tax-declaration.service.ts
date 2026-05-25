@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDB } from "../db/adapters";
-import { findUserById } from "../db/empcloud";
+import { findUserById, getEmpCloudDB } from "../db/empcloud";
 import { AppError } from "../api/middleware/error.middleware";
 import { logger } from "../utils/logger";
 import { computeIncomeTax } from "./tax/india-tax.service";
@@ -598,6 +598,92 @@ export class TaxDeclarationService {
     return this.db.findMany<any>("tax_declarations", {
       filters: { employee_id: employeeId, financial_year: fy },
     });
+  }
+
+  /**
+   * #398 — Org-wide pending declarations, grouped by employee, so admins can
+   * see at a glance who has submitted declarations awaiting approval instead
+   * of clicking through every employee one by one. Scoped to the org via its
+   * EmpCloud users (the payroll DB is multi-tenant, so we filter the shared
+   * tax_declarations table down to rows owned by this org's employees).
+   */
+  async getOrgPendingDeclarations(empcloudOrgId: number, financialYear?: string) {
+    const fy = financialYear || this.currentFY();
+    const ecDb = getEmpCloudDB();
+
+    // Active users in the org + their department names.
+    const users = await ecDb("users as u")
+      .leftJoin("organization_departments as d", "u.department_id", "d.id")
+      .where({ "u.organization_id": empcloudOrgId, "u.status": 1 })
+      .select(
+        "u.id",
+        "u.first_name",
+        "u.last_name",
+        "u.email",
+        "u.emp_code",
+        "d.name as department",
+      );
+    const userById = new Map<number, any>();
+    for (const u of users) userById.set(Number(u.id), u);
+
+    // Payroll profiles for the org — maps the legacy employee_id (UUID) that
+    // older declaration rows carry back to the numeric EmpCloud user id.
+    const profiles = await this.db.findMany<any>("employee_payroll_profiles", {
+      filters: { empcloud_org_id: empcloudOrgId },
+      limit: 100000,
+    });
+    const userIdByProfileId = new Map<string, number>();
+    for (const p of profiles.data) {
+      if (p.id != null && p.empcloud_user_id != null) {
+        userIdByProfileId.set(String(p.id), Number(p.empcloud_user_id));
+      }
+    }
+
+    // All pending declarations for the FY (shared table — filtered to the org
+    // by user membership below).
+    const pending = await this.db.findMany<any>("tax_declarations", {
+      filters: { financial_year: fy, approval_status: "pending" },
+      limit: 100000,
+    });
+
+    const grouped = new Map<
+      number,
+      {
+        empcloudUserId: number;
+        name: string;
+        email: string;
+        empCode: string | null;
+        department: string | null;
+        pendingCount: number;
+        totalDeclared: number;
+      }
+    >();
+    for (const d of pending.data) {
+      let uid = d.empcloud_user_id != null ? Number(d.empcloud_user_id) : null;
+      if (uid == null && d.employee_id) uid = userIdByProfileId.get(String(d.employee_id)) ?? null;
+      if (uid == null || !userById.has(uid)) continue; // not in this org
+      const u = userById.get(uid);
+      if (!grouped.has(uid)) {
+        grouped.set(uid, {
+          empcloudUserId: uid,
+          name: `${u.first_name || ""} ${u.last_name || ""}`.trim() || `Employee #${uid}`,
+          email: u.email,
+          empCode: u.emp_code || null,
+          department: u.department || null,
+          pendingCount: 0,
+          totalDeclared: 0,
+        });
+      }
+      const g = grouped.get(uid)!;
+      g.pendingCount += 1;
+      g.totalDeclared += Number(d.declared_amount || 0);
+    }
+
+    const employees = [...grouped.values()].sort(
+      (a, b) => b.pendingCount - a.pendingCount || a.name.localeCompare(b.name),
+    );
+    const totalPending = employees.reduce((s, e) => s + e.pendingCount, 0);
+    return { fy, totalPending, totalEmployees: employees.length, employees };
   }
 
   async submitDeclarations(employeeId: string, fy: string, declarations: any[]) {

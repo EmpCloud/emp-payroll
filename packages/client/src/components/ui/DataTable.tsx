@@ -19,6 +19,13 @@ interface DataTableProps<T> {
   serverTotal?: number;
   serverPage?: number;
   onPageChange?: (page: number) => void;
+  /**
+   * Set to false when the parent renders its own pagination (e.g. a separate
+   * <Pagination> for a server-paginated list). Suppresses DataTable's built-in
+   * client-side pager so the page doesn't show two pagination bars, and renders
+   * every row it was handed instead of slicing them. Defaults to true.
+   */
+  paginated?: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,6 +38,7 @@ export function DataTable<T extends Record<string, any>>({
   serverTotal,
   serverPage,
   onPageChange,
+  paginated = true,
 }: DataTableProps<T>) {
   const [localPage, setLocalPage] = useState(1);
 
@@ -44,11 +52,14 @@ export function DataTable<T extends Record<string, any>>({
   const currentPage = isServerPaginated ? serverPage || 1 : localPage;
   const totalItems = isServerPaginated ? serverTotal : data.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const showPagination = totalItems > pageSize;
+  const showPagination = paginated && totalItems > pageSize;
 
-  const displayData = isServerPaginated
-    ? data
-    : data.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  // When the parent owns pagination (paginated=false) or the server already
+  // paginated, render every row as-is. Only slice for the built-in client pager.
+  const displayData =
+    !paginated || isServerPaginated
+      ? data
+      : data.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   function goTo(page: number) {
     const p = Math.max(1, Math.min(page, totalPages));

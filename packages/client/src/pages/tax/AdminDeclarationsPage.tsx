@@ -56,6 +56,16 @@ export function AdminDeclarationsPage() {
   const [locationId, setLocationId] = useState("");
   const [page, setPage] = useState(1);
   const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
+  // Display info for the selected employee, set on selection. Needed because
+  // the employee may be picked from the org-wide pending card (#398) while
+  // sitting on a different page of the paginated picker list, so `selectedEmp`
+  // (looked up in the current page) can be undefined.
+  const [selectedInfo, setSelectedInfo] = useState<{ name: string; email?: string } | null>(null);
+
+  function selectEmployee(id: string, info: { name: string; email?: string }) {
+    setSelectedEmpId(id);
+    setSelectedInfo(info);
+  }
 
   useEffect(() => {
     const id = setTimeout(() => setSearch(searchInput.trim()), 300);
@@ -90,6 +100,17 @@ export function AdminDeclarationsPage() {
 
   const selectedEmp = employees.find((e) => String(e.empcloud_user_id ?? e.id) === selectedEmpId);
 
+  // #398 — Org-wide pending declarations grouped by employee, so the admin can
+  // see everyone with submissions awaiting approval up front.
+  const { data: pendingRes, isLoading: pendingLoading } = useQuery({
+    queryKey: ["pending-declarations", fy],
+    queryFn: () => apiGet<any>("/tax/pending-declarations", { fy }),
+  });
+  const pendingEmployees: any[] = Array.isArray(pendingRes?.data?.employees)
+    ? pendingRes.data.employees
+    : [];
+  const totalPendingDecls = Number(pendingRes?.data?.totalPending ?? 0);
+
   const { data: declRes, isLoading: declLoading } = useQuery({
     queryKey: ["admin-declarations", selectedEmpId, fy],
     queryFn: () => apiGet<any>(`/tax/declarations/${selectedEmpId}`, { fy }),
@@ -109,6 +130,7 @@ export function AdminDeclarationsPage() {
     mutationFn: () => apiPost<any>(`/tax/declarations/${selectedEmpId}/approve`, {}),
     onSuccess: (res: any) => {
       qc.invalidateQueries({ queryKey: ["admin-declarations", selectedEmpId, fy] });
+      qc.invalidateQueries({ queryKey: ["pending-declarations", fy] });
       const n = Number(res?.data?.approved ?? 0);
       if (n === 0) {
         toast("No pending declarations to approve.", { icon: "ℹ️" });
@@ -128,6 +150,7 @@ export function AdminDeclarationsPage() {
       apiPost<any>(`/tax/declarations/${selectedEmpId}/${declId}/approve`, {}),
     onSuccess: (res: any) => {
       qc.invalidateQueries({ queryKey: ["admin-declarations", selectedEmpId, fy] });
+      qc.invalidateQueries({ queryKey: ["pending-declarations", fy] });
       if (res?.data?.alreadyApproved) {
         toast("Already approved.", { icon: "ℹ️" });
       } else {
@@ -147,6 +170,63 @@ export function AdminDeclarationsPage() {
         title="Tax Declarations"
         description={`Review investment declarations submitted by employees for ${fy}.`}
       />
+
+      {/* #398 — Pending across all employees. Lets the admin spot who has
+          submissions awaiting approval without clicking each employee, and
+          jump straight to a particular one to review + approve. */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle>Pending Approvals</CardTitle>
+            {totalPendingDecls > 0 && (
+              <Badge variant="pending">
+                {totalPendingDecls} pending · {pendingEmployees.length} employee
+                {pendingEmployees.length === 1 ? "" : "s"}
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {pendingLoading ? (
+            <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-400">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading pending declarations…
+            </div>
+          ) : pendingEmployees.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-sm text-gray-400">
+              <FileCheck className="h-8 w-8" />
+              <p>No declarations awaiting approval for {fy}. You're all caught up.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {pendingEmployees.map((emp) => {
+                const id = String(emp.empcloudUserId);
+                const isSel = id === selectedEmpId;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => selectEmployee(id, { name: emp.name, email: emp.email })}
+                    className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                      isSel
+                        ? "border-brand-300 bg-brand-50"
+                        : "hover:border-brand-200 border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-900">{emp.name}</p>
+                      <p className="truncate text-xs text-gray-400">
+                        {emp.empCode ? `${emp.empCode} · ` : ""}
+                        {formatCurrency(Number(emp.totalDeclared || 0))} declared
+                      </p>
+                    </div>
+                    <Badge variant="pending">{emp.pendingCount}</Badge>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[360px_1fr]">
         {/* Employee picker */}
@@ -222,7 +302,12 @@ export function AdminDeclarationsPage() {
                     <button
                       key={id}
                       type="button"
-                      onClick={() => setSelectedEmpId(id)}
+                      onClick={() =>
+                        selectEmployee(id, {
+                          name: `${e.first_name} ${e.last_name}`.trim(),
+                          email: e.email,
+                        })
+                      }
                       className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors ${
                         isSel ? "bg-brand-50 text-brand-700" : "text-gray-700 hover:bg-gray-50"
                       }`}
@@ -281,11 +366,13 @@ export function AdminDeclarationsPage() {
                 <CardTitle>
                   {selectedEmp
                     ? `${selectedEmp.first_name} ${selectedEmp.last_name}`
-                    : "Pick an employee"}
+                    : selectedInfo
+                      ? selectedInfo.name
+                      : "Pick an employee"}
                 </CardTitle>
-                {selectedEmp && (
+                {(selectedEmp || selectedInfo) && (
                   <p className="mt-1 text-xs text-gray-500">
-                    {selectedEmp.email} · {fy}
+                    {(selectedEmp?.email || selectedInfo?.email) ?? ""} · {fy}
                   </p>
                 )}
               </div>

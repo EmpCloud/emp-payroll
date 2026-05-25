@@ -50,6 +50,7 @@ router.post(
       req.body.month,
       req.body.year,
       req.body.records,
+      { overwrite: !!req.body.overwrite },
     );
     res.json({ success: true, data });
   }),

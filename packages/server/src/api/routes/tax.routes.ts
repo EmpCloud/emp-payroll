@@ -76,6 +76,21 @@ router.put(
   }),
 );
 
+// #398 — Org-wide pending declarations grouped by employee. Defined as a
+// distinct path (not /declarations/...) so it never collides with the
+// /declarations/:empId param route.
+router.get(
+  "/pending-declarations",
+  authorize("hr_admin", "hr_manager", "org_admin"),
+  wrap(async (req, res) => {
+    const data = await svc.getOrgPendingDeclarations(
+      req.user!.empcloudOrgId,
+      req.query.fy as string,
+    );
+    res.json({ success: true, data });
+  }),
+);
+
 router.get(
   "/declarations/:empId",
   wrap(async (req, res) => {

@@ -709,6 +709,199 @@ export class EmployeeService {
     return { updated, departmentId };
   }
 
+  /**
+   * Bulk update existing employees across both stores (EmpCloud user fields +
+   * payroll profile JSON). Driven by the Bulk Update CSV importer.
+   *
+   * Each row is matched to an employee by `key.empCode` (preferred) or, when
+   * no code is given, `key.email`. Identity / contact / statutory data is then
+   * applied with READ-MERGE-WRITE semantics: only the keys present in the row
+   * are touched, so a partial CSV never clobbers fields it didn't include.
+   *
+   * The batch is fault-tolerant — a bad row (unmatched, invalid PAN/IFSC, …)
+   * is recorded in `results` and skipped without aborting the rest.
+   */
+  async bulkUpdate(
+    empcloudOrgId: number,
+    updates: Array<{
+      key: { empCode?: string; email?: string };
+      user?: Record<string, any>;
+      taxInfo?: Record<string, any>;
+      bankDetails?: Record<string, any>;
+      pfDetails?: Record<string, any>;
+      esiDetails?: Record<string, any>;
+    }>,
+  ) {
+    const db = getEmpCloudDB();
+    const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+    const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+    const GENDERS = new Set(["male", "female", "other"]);
+
+    const parseJsonish = (v: unknown): Record<string, any> => {
+      if (v == null) return {};
+      if (typeof v === "string") {
+        try {
+          return JSON.parse(v || "{}") || {};
+        } catch {
+          return {};
+        }
+      }
+      return typeof v === "object" ? (v as Record<string, any>) : {};
+    };
+
+    const results: Array<{ key: string; status: "updated" | "error"; error?: string }> = [];
+    let updated = 0;
+    let failed = 0;
+
+    for (const row of updates) {
+      const keyLabel = row.key?.empCode || row.key?.email || "(no key)";
+      try {
+        // --- Resolve the employee (code first, then email) ---
+        let ecUser: any = null;
+        if (row.key?.empCode) {
+          ecUser = await db("users")
+            .where({ organization_id: empcloudOrgId, emp_code: row.key.empCode, status: 1 })
+            .first();
+        }
+        if (!ecUser && row.key?.email) {
+          ecUser = await db("users")
+            .where({ organization_id: empcloudOrgId, email: row.key.email, status: 1 })
+            .first();
+        }
+        if (!ecUser) {
+          failed++;
+          const by = row.key?.empCode ? "Employee Code" : "Email";
+          results.push({
+            key: keyLabel,
+            status: "error",
+            error: `No active employee found for ${by} "${keyLabel}"`,
+          });
+          continue;
+        }
+
+        // --- Validate the statutory fields up front; skip the whole row on a
+        // hard format error so we never persist garbage the payroll/bank-file
+        // generators would later choke on. ---
+        const pan = row.taxInfo?.pan ? String(row.taxInfo.pan).trim().toUpperCase() : undefined;
+        if (pan && !PAN_RE.test(pan)) {
+          failed++;
+          results.push({
+            key: keyLabel,
+            status: "error",
+            error: `Invalid PAN "${pan}" — expected format ABCDE1234F`,
+          });
+          continue;
+        }
+        const ifsc = row.bankDetails?.ifscCode
+          ? String(row.bankDetails.ifscCode).trim().toUpperCase()
+          : undefined;
+        if (ifsc && !IFSC_RE.test(ifsc)) {
+          failed++;
+          results.push({
+            key: keyLabel,
+            status: "error",
+            error: `Invalid IFSC "${ifsc}" — expected 11 characters like HDFC0001234`,
+          });
+          continue;
+        }
+        const gender = row.user?.gender ? String(row.user.gender).trim().toLowerCase() : undefined;
+        if (gender && !GENDERS.has(gender)) {
+          failed++;
+          results.push({
+            key: keyLabel,
+            status: "error",
+            error: `Invalid gender "${gender}" — use male, female, or other`,
+          });
+          continue;
+        }
+
+        // --- EmpCloud user fields ---
+        const u = row.user || {};
+        const ecUpdates: Record<string, any> = {};
+        if (u.firstName) ecUpdates.first_name = String(u.firstName).trim();
+        if (u.lastName) ecUpdates.last_name = String(u.lastName).trim();
+        if (u.email) ecUpdates.email = String(u.email).trim();
+        if (u.phone !== undefined) ecUpdates.contact_number = String(u.phone).trim();
+        if (u.designation) ecUpdates.designation = String(u.designation).trim();
+        if (u.dateOfJoining) ecUpdates.date_of_joining = String(u.dateOfJoining).trim();
+        if (u.dateOfBirth) ecUpdates.date_of_birth = String(u.dateOfBirth).trim();
+        if (gender) ecUpdates.gender = gender;
+        // Department is supplied by NAME; resolve to the org's department id.
+        if (typeof u.department === "string" && u.department.trim()) {
+          const dept = await db("organization_departments")
+            .where({ organization_id: empcloudOrgId })
+            .where("name", u.department.trim())
+            .first();
+          if (dept) ecUpdates.department_id = dept.id;
+        }
+        if (Object.keys(ecUpdates).length > 0) {
+          ecUpdates.updated_at = new Date();
+          await db("users").where({ id: ecUser.id }).update(ecUpdates);
+        }
+
+        // --- Payroll profile JSON (read-merge-write) ---
+        const profile = await this.ensurePayrollProfile(ecUser.id, empcloudOrgId);
+        const profileUpdates: Record<string, any> = {};
+
+        if (row.bankDetails && Object.keys(row.bankDetails).length) {
+          const merged = { ...parseJsonish(profile.bank_details), ...row.bankDetails };
+          if (ifsc) merged.ifscCode = ifsc;
+          profileUpdates.bank_details = JSON.stringify(merged);
+        }
+        if (row.taxInfo && Object.keys(row.taxInfo).length) {
+          const merged = { ...parseJsonish(profile.tax_info), ...row.taxInfo };
+          if (pan) merged.pan = pan;
+          profileUpdates.tax_info = JSON.stringify(merged);
+        }
+        if (row.pfDetails && Object.keys(row.pfDetails).length) {
+          profileUpdates.pf_details = JSON.stringify({
+            ...parseJsonish(profile.pf_details),
+            ...row.pfDetails,
+          });
+        }
+        if (row.esiDetails && Object.keys(row.esiDetails).length) {
+          profileUpdates.esi_details = JSON.stringify({
+            ...parseJsonish(profile.esi_details),
+            ...row.esiDetails,
+          });
+        }
+        if (Object.keys(profileUpdates).length > 0) {
+          await this.payrollDb.update("employee_payroll_profiles", profile.id, profileUpdates);
+        }
+
+        // --- Mirror PAN / UAN into EmpCloud's employee_profiles so the HR
+        // profile screen stays in sync (same behaviour as update()). ---
+        const uan = row.pfDetails?.uan;
+        if (pan || (typeof uan === "string" && uan.trim())) {
+          const sync: Record<string, unknown> = { updated_at: new Date() };
+          if (pan) sync.pan_number = pan;
+          if (typeof uan === "string" && uan.trim()) sync.uan_number = uan.trim();
+          const ecProfile = await db("employee_profiles")
+            .where({ user_id: ecUser.id, organization_id: empcloudOrgId })
+            .first();
+          if (ecProfile) {
+            await db("employee_profiles").where({ id: ecProfile.id }).update(sync);
+          } else {
+            await db("employee_profiles").insert({
+              organization_id: empcloudOrgId,
+              user_id: ecUser.id,
+              created_at: new Date(),
+              ...sync,
+            });
+          }
+        }
+
+        updated++;
+        results.push({ key: keyLabel, status: "updated" });
+      } catch (err: any) {
+        failed++;
+        results.push({ key: keyLabel, status: "error", error: err?.message || "Update failed" });
+      }
+    }
+
+    return { total: updates.length, updated, failed, results };
+  }
+
   // -----------------------------------------------------------------------
   // Internal helpers
   // -----------------------------------------------------------------------
