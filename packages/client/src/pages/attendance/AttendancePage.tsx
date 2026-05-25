@@ -397,6 +397,9 @@ function MarkAllForm({
   const [totalDaysStr, setTotalDaysStr] = useState(
     String(defaultWorkdays(defaultMonth, defaultYear)),
   );
+  // #404 — Opt-in overwrite (see MarkSingleForm). Off by default so a bulk
+  // "Mark All Present" never clobbers days employees already recorded.
+  const [overwrite, setOverwrite] = useState(false);
 
   // Recompute the workdays default whenever month/year changes -- HR
   // explicitly chose a different period, the previous default is stale.
@@ -438,7 +441,12 @@ function MarkAllForm({
           // every user (e.g. EmpCloud DB is read-only or schema-out-of-sync),
           // the toast was previously a clean "Marked successful" while the
           // dashboard still showed zeros -- looked exactly like a no-op.
-          const res = await apiPost<any>("/attendance/import", { month, year, records });
+          const res = await apiPost<any>("/attendance/import", {
+            month,
+            year,
+            overwrite,
+            records,
+          });
           const data = res?.data || {};
           const failures = data.empcloudProjectionFailures || [];
           const inserted = Number(data.empcloudInserted || 0);
@@ -449,9 +457,15 @@ function MarkAllForm({
               { duration: 8000 },
             );
           } else if (inserted === 0 && preserved > 0) {
-            toast.error(
-              `No new attendance added — every workday in ${MONTHS[month]} ${year} already has a record on EmpCloud (${preserved} rows preserved). Edit individual days on the EmpCloud HRMS or the Attendance Grid to change them.`,
-              { duration: 9000 },
+            // Informational, not an error — every workday already had a record
+            // and overwrite was off, so they were preserved (#404).
+            toast(
+              `Every workday in ${MONTHS[month]} ${year} already has a record on EmpCloud (${preserved} preserved), so nothing changed. Tick "Overwrite existing records" below to replace them.`,
+              { icon: "ℹ️", duration: 9000 },
+            );
+          } else if (overwrite) {
+            toast.success(
+              `Marked ${employees.length} employees present for ${MONTHS[month]} ${year} (existing days overwritten).`,
             );
           } else {
             toast.success(
@@ -523,6 +537,21 @@ function MarkAllForm({
         This will mark all {employees.length} active employees as present for {totalDaysStr || 0}{" "}
         days in {MONTHS[month]} {year}. You can edit individual records afterwards.
       </p>
+      <label className="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+        <input
+          type="checkbox"
+          checked={overwrite}
+          onChange={(e) => setOverwrite(e.target.checked)}
+          className="text-brand-600 focus:ring-brand-500 mt-0.5 h-4 w-4 rounded border-gray-300"
+        />
+        <span className="text-sm text-gray-700">
+          Overwrite existing records for this month
+          <span className="mt-0.5 block text-xs text-gray-500">
+            Off by default so employees' own check-ins are kept. Tick this to replace
+            already-recorded days with "present".
+          </span>
+        </span>
+      </label>
       <div className="flex justify-end gap-3">
         <Button variant="outline" type="button" onClick={onClose}>
           Cancel
@@ -566,6 +595,11 @@ function MarkSingleForm({
   const [presentDaysStr, setPresentDaysStr] = useState(
     String(defaultWorkdays(defaultMonth, defaultYear)),
   );
+  // #404 — Opt-in overwrite. By default the import preserves attendance days
+  // already on EmpCloud (so it never silently clobbers an employee's own
+  // check-ins). When HR deliberately wants to replace an existing month's
+  // record, they tick this and the server overwrites the present/absent split.
+  const [overwrite, setOverwrite] = useState(false);
 
   function setMonthYear(m: number, y: number) {
     setMonth(m);
@@ -606,6 +640,7 @@ function MarkSingleForm({
           const res = await apiPost<any>("/attendance/import", {
             month,
             year,
+            overwrite,
             records: [
               {
                 employeeId,
@@ -629,9 +664,16 @@ function MarkSingleForm({
               { duration: 8000 },
             );
           } else if (inserted === 0 && preserved > 0) {
-            toast.error(
-              `No new attendance added — ${MONTHS[month]} ${year} already has ${preserved} attendance records on EmpCloud for this employee, and the existing-rows-win policy preserved them. Edit them on the EmpCloud HRMS or the Attendance Grid to change them.`,
-              { duration: 9000 },
+            // Not an error — the month already has records and overwrite was
+            // off, so we preserved them. Guide the user to the overwrite option
+            // instead of showing a red failure (#404).
+            toast(
+              `${MONTHS[month]} ${year} already has ${preserved} attendance record(s) for this employee, so nothing was changed. Tick "Overwrite existing records" below and save again to replace them.`,
+              { icon: "ℹ️", duration: 9000 },
+            );
+          } else if (overwrite) {
+            toast.success(
+              `Attendance for ${MONTHS[month]} ${year} updated (${inserted} day(s) set).`,
             );
           } else {
             toast.success(
@@ -767,6 +809,21 @@ function MarkSingleForm({
           onFocus={(e) => e.currentTarget.select()}
         />
       </div>
+      <label className="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+        <input
+          type="checkbox"
+          checked={overwrite}
+          onChange={(e) => setOverwrite(e.target.checked)}
+          className="text-brand-600 focus:ring-brand-500 mt-0.5 h-4 w-4 rounded border-gray-300"
+        />
+        <span className="text-sm text-gray-700">
+          Overwrite existing records for this month
+          <span className="mt-0.5 block text-xs text-gray-500">
+            By default, days already recorded on EmpCloud (e.g. the employee's own check-ins) are
+            preserved. Tick this to replace them with the values above.
+          </span>
+        </span>
+      </label>
       <div className="flex justify-end gap-3">
         <Button variant="outline" type="button" onClick={onClose}>
           Cancel

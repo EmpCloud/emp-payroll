@@ -293,6 +293,7 @@ export function TaxOverviewPage() {
               <DataTable
                 columns={columns}
                 data={displayed}
+                paginated={false}
                 onRowClick={(row: any) => row.id && navigate(`/employees/${row.id}`)}
               />
               <Pagination

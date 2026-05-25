@@ -394,7 +394,14 @@ export class AttendanceService {
     }
   }
 
-  async importRecords(orgId: string, month: number, year: number, records: any[]) {
+  async importRecords(
+    orgId: string,
+    month: number,
+    year: number,
+    records: any[],
+    options?: { overwrite?: boolean },
+  ) {
+    const overwrite = !!options?.overwrite;
     // Bi-directional attendance sync. When HR uses Mark All Present /
     // Mark Attendance / CSV import on the payroll Attendance page, we
     // (a) update the local payroll-side `attendance_summaries` cache so
@@ -525,14 +532,21 @@ export class AttendanceService {
         const existingDates = new Set<string>(
           existingRows.map((r: any) => dateToIso(r.date, userTz)),
         );
-        const availableDates = allWorkdays.filter((d) => !existingDates.has(d));
+        // In overwrite mode HR is explicitly setting this employee's month, so
+        // distribute present/absent across the full workday set and update any
+        // rows that already exist. Otherwise keep the existing-rows-win policy:
+        // only fill workdays that aren't already marked.
+        const workdayPool = overwrite
+          ? allWorkdays
+          : allWorkdays.filter((d) => !existingDates.has(d));
 
-        const presentDates = availableDates.slice(0, presentTarget);
+        const presentCount = Math.min(presentTarget, workdayPool.length);
+        const presentDates = workdayPool.slice(0, presentCount);
         const absentTarget = Math.min(
           Number(record.absentDays) || 0,
-          availableDates.length - presentDates.length,
+          workdayPool.length - presentCount,
         );
-        const absentDates = availableDates.slice(presentTarget, presentTarget + absentTarget);
+        const absentDates = workdayPool.slice(presentCount, presentCount + absentTarget);
 
         const inserts: any[] = [];
         const now = new Date();
@@ -557,18 +571,24 @@ export class AttendanceService {
           });
         }
         if (inserts.length > 0) {
-          // Use ON DUPLICATE KEY UPDATE so a race condition (employee
-          // checks in via EmpCloud while HR clicks Mark All Present)
-          // doesn't tank the whole batch on the UNIQUE (user_id, date)
-          // constraint. EmpCloud's mark wins -- we only update the
-          // row's status if it was somehow missing, otherwise leave it.
-          await empcloudDb("attendance_records")
+          const query = empcloudDb("attendance_records")
             .insert(inserts)
-            .onConflict(["user_id", "date"])
-            .ignore();
+            .onConflict(["user_id", "date"]);
+          if (overwrite) {
+            // HR explicitly chose to overwrite — update the status of any
+            // day that already had a row so the dashboard reflects the new
+            // present/absent split.
+            await query.merge(["status", "updated_at"]);
+          } else {
+            // Default: ON DUPLICATE KEY IGNORE so a race condition (employee
+            // checks in via EmpCloud while HR clicks Mark All Present) doesn't
+            // tank the batch on the UNIQUE (user_id, date) constraint.
+            // EmpCloud's mark wins — existing rows are left as-is.
+            await query.ignore();
+          }
           empcloudInserted += inserts.length;
         }
-        empcloudPreserved += existingDates.size;
+        if (!overwrite) empcloudPreserved += existingDates.size;
       } catch (err) {
         // Don't fail the whole import if EmpCloud write fails (table
         // schema mismatch on older EmpCloud DBs, transient connection

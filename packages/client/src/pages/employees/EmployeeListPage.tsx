@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import { DataTable } from "@/components/ui/DataTable";
-import { CSVImportModal } from "@/components/ui/CSVImportModal";
+import { BulkUpdateModal } from "@/components/ui/BulkUpdateModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Pagination } from "@/components/ui/Pagination";
 import { useEmployees, useDepartments, useLocations } from "@/api/hooks";
@@ -22,7 +22,7 @@ export function EmployeeListPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
-  const [showImport, setShowImport] = useState(false);
+  const [showBulkUpdate, setShowBulkUpdate] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [departmentId, setDepartmentId] = useState("");
@@ -222,9 +222,6 @@ export function EmployeeListPage() {
           description={description}
           actions={
             <>
-              <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
-                <Upload className="h-4 w-4" /> Import
-              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -245,8 +242,21 @@ export function EmployeeListPage() {
               >
                 <Download className="h-4 w-4" /> Export
               </Button>
-              <Button size="sm" variant="outline" onClick={() => navigate("/employees/import")}>
-                <Upload className="h-4 w-4" /> Import CSV
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate("/employees/import")}
+                title="Import new employees from a CSV file"
+              >
+                <Upload className="h-4 w-4" /> Import
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowBulkUpdate(true)}
+                title="Bulk update existing employees from a CSV file"
+              >
+                <Upload className="h-4 w-4" /> Bulk Update
               </Button>
               <Button
                 size="sm"
@@ -345,6 +355,7 @@ export function EmployeeListPage() {
             <DataTable
               columns={columns}
               data={employees}
+              paginated={false}
               onRowClick={(row) => navigate(`/employees/${row.id}`)}
             />
             <Pagination
@@ -358,10 +369,13 @@ export function EmployeeListPage() {
           </div>
         )}
 
-        <CSVImportModal
-          open={showImport}
-          onClose={() => setShowImport(false)}
-          onSuccess={() => qc.invalidateQueries({ queryKey: ["employees"] })}
+        <BulkUpdateModal
+          open={showBulkUpdate}
+          onClose={() => setShowBulkUpdate(false)}
+          onSuccess={() => {
+            qc.invalidateQueries({ queryKey: ["employees"] });
+            qc.invalidateQueries({ queryKey: ["employee"] });
+          }}
         />
 
         <BulkSalaryUpdateModal

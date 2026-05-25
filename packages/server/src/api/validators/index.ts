@@ -410,6 +410,10 @@ export const importAttendanceSchema = z.object({
   body: z.object({
     month: z.number().min(1).max(12),
     year: z.number().min(2020).max(2100),
+    // When true, the EmpCloud per-day projection overwrites existing rows for
+    // the month instead of preserving them. Used by the single "Mark
+    // Attendance" flow where HR is deliberately setting an employee's record.
+    overwrite: z.boolean().optional(),
     records: z.array(
       z.object({
         employeeId: z.union([z.string(), z.number()]).transform(String),

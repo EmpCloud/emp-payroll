@@ -746,7 +746,8 @@ export function TaxCalculatorPage() {
                             </span>
                             <input
                               type="number"
-                              value={d.amount}
+                              value={d.amount === 0 ? "" : d.amount}
+                              placeholder="0"
                               onChange={(e) =>
                                 updateDeclaration(idx, { amount: Number(e.target.value) || 0 })
                               }
@@ -905,7 +906,10 @@ function NumberField({
         </span>
         <input
           type="number"
-          value={value}
+          // Show empty (not a stuck leading "0") when the value is 0 so typing
+          // replaces it cleanly instead of producing "0<digits>" (#401).
+          value={value === 0 ? "" : value}
+          placeholder="0"
           onChange={(e) => onChange(Number(e.target.value) || 0)}
           className={`${INPUT_CLS} pl-7 text-right tabular-nums`}
         />
