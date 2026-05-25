@@ -112,6 +112,12 @@ v1.use("/reimbursements", reimbursementRoutes);
 // the EmpCloud DB during attendance resolution; we no longer expose
 // apply / approve / balance-adjust endpoints from the payroll service.
 v1.use("/loans", loanRoutes);
+// Serve uploaded files (org logo, etc.) under the API base so they're reachable
+// through the same nginx `/api/` proxy as every other request on prod (the
+// frontend domain only proxies /api/* to the backend, not a bare /uploads).
+// GET static is mounted BEFORE the authenticated upload routes; non-GET and
+// unknown paths fall through to the POST/GET/DELETE handlers below.
+v1.use("/uploads", express.static(process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads")));
 v1.use("/uploads", uploadRoutes);
 v1.use("/adjustments", adjustmentRoutes);
 v1.use("/webhooks", webhookRoutes);
