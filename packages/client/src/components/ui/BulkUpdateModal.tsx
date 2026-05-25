@@ -1,8 +1,8 @@
 import { useState, useRef } from "react";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
-import { Upload, FileText, CheckCircle2, AlertCircle, Download } from "lucide-react";
-import { apiPost } from "@/api/client";
+import { Upload, FileText, CheckCircle2, AlertCircle, Download, Loader2 } from "lucide-react";
+import { apiGet, apiPost } from "@/api/client";
 import toast from "react-hot-toast";
 
 interface BulkUpdateModalProps {
@@ -46,12 +46,46 @@ export function BulkUpdateModal({ open, onClose, onSuccess }: BulkUpdateModalPro
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Record<string, string>[]>([]);
   const [importing, setImporting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [result, setResult] = useState<{
     updated: number;
     failed: number;
     errors: string[];
   } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Split a single CSV line into fields, honouring double-quoted values so a
+  // comma inside a quoted cell (e.g. "Sales, EMEA") doesn't split the row.
+  // `""` inside a quoted field is an escaped quote.
+  function splitCsvLine(line: string): string[] {
+    const out: string[] = [];
+    let cur = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (line[i + 1] === '"') {
+            cur += '"';
+            i++;
+          } else {
+            inQuotes = false;
+          }
+        } else {
+          cur += ch;
+        }
+      } else if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ",") {
+        out.push(cur);
+        cur = "";
+      } else {
+        cur += ch;
+      }
+    }
+    out.push(cur);
+    return out.map((v) => v.trim());
+  }
 
   function parseCSV(text: string): Record<string, string>[] {
     const lines = text
@@ -60,9 +94,9 @@ export function BulkUpdateModal({ open, onClose, onSuccess }: BulkUpdateModalPro
       .map((l) => l.replace(/\r$/, ""))
       .filter(Boolean);
     if (lines.length < 2) return [];
-    const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+    const headers = splitCsvLine(lines[0]);
     return lines.slice(1).map((line) => {
-      const values = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
+      const values = splitCsvLine(line);
       const row: Record<string, string> = {};
       headers.forEach((h, i) => {
         if (row[h] && !values[i]) return;
@@ -70,6 +104,12 @@ export function BulkUpdateModal({ open, onClose, onSuccess }: BulkUpdateModalPro
       });
       return row;
     });
+  }
+
+  // Quote a cell for CSV output when it contains a comma, quote, or newline.
+  function csvCell(v: unknown): string {
+    const s = v == null ? "" : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   }
 
   // Case- / separator-insensitive header lookup (matches the Bulk Salary CSV
@@ -101,41 +141,79 @@ export function BulkUpdateModal({ open, onClose, onSuccess }: BulkUpdateModalPro
     reader.readAsText(f);
   }
 
-  function downloadTemplate() {
-    const sample = [
-      "EMP001",
-      "John",
-      "Doe",
-      "john@company.com",
-      "9876543210",
-      "Engineering",
-      "Software Engineer",
-      "2026-04-01",
-      "1990-01-15",
-      "male",
-      "ABCDE1234F",
-      "HDFC Bank",
-      "1234567890",
-      "HDFC0001234",
-      "new",
-      "Yes",
-      "Yes",
-      "Yes",
-      "100123456789",
-      "PF/001/123",
-      "12",
-      "No",
-      "Yes",
-      "1234567890",
-      "City Dispensary",
-    ];
-    const csv = [TEMPLATE_HEADERS.join(","), sample.join(",")].join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "employee_bulk_update_template.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+  // Render a stored boolean as a Yes/No cell; blank when the value was never
+  // set, so a round-trip re-upload leaves it untouched.
+  function boolCell(v: unknown): string {
+    return v === true ? "Yes" : v === false ? "No" : "";
+  }
+  function dateCell(v: unknown): string {
+    if (!v) return "";
+    const s = String(v);
+    return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : s;
+  }
+
+  // Map one merged employee record to a template row (same column order as
+  // TEMPLATE_HEADERS). Tolerates both camelCase and snake_case shapes.
+  function employeeToRow(e: any): string[] {
+    const tax = e.taxInfo || e.tax_info || {};
+    const bank = e.bankDetails || e.bank_details || {};
+    const pf = e.pfDetails || e.pf_details || {};
+    const esi = e.esiDetails || e.esi_details || {};
+    return [
+      e.emp_code || e.empCode || e.employee_code || "",
+      e.first_name || e.firstName || "",
+      e.last_name || e.lastName || "",
+      e.email || "",
+      e.phone || e.contact_number || e.contactNumber || "",
+      e.department || "",
+      e.designation || "",
+      dateCell(e.date_of_joining || e.dateOfJoining),
+      dateCell(e.date_of_birth || e.dateOfBirth),
+      e.gender || "",
+      tax.pan || "",
+      bank.bankName || "",
+      bank.accountNumber || "",
+      bank.ifscCode || "",
+      tax.regime || "",
+      boolCell(tax.deductTDS),
+      boolCell(tax.deductPT),
+      boolCell(pf.providentFund),
+      pf.uan || tax.uan || "",
+      pf.pfNumber || "",
+      pf.contributionRate ?? "",
+      boolCell(pf.isOptedOut),
+      boolCell(esi.isEligible),
+      esi.esiNumber || "",
+      esi.dispensary || "",
+    ].map(csvCell);
+  }
+
+  // Download the CSV pre-filled with the org's existing employees so the admin
+  // edits real rows and re-uploads. Falls back to a header-only file when the
+  // org has no employees yet.
+  async function downloadTemplate() {
+    setDownloading(true);
+    try {
+      const res = await apiGet<any>("/employees", { limit: 10000, page: 1 });
+      const employees: any[] = res?.data?.data ?? (Array.isArray(res?.data) ? res.data : []);
+      const rows = employees.map((e) => employeeToRow(e).join(","));
+      const csv = [TEMPLATE_HEADERS.join(","), ...rows].join("\n");
+      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "employee_bulk_update.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(
+        employees.length
+          ? `Downloaded ${employees.length} employee${employees.length === 1 ? "" : "s"}`
+          : "No employees yet — downloaded an empty template",
+      );
+    } catch {
+      toast.error("Could not load employees for the template");
+    } finally {
+      setDownloading(false);
+    }
   }
 
   // Turn one CSV row into the structured payload the server merges. Only
@@ -376,13 +454,19 @@ export function BulkUpdateModal({ open, onClose, onSuccess }: BulkUpdateModalPro
 
             <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
               <div className="pr-3">
-                <p className="text-xs font-medium text-gray-600">Need the column layout?</p>
+                <p className="text-xs font-medium text-gray-600">Start from your current data</p>
                 <p className="mt-1 text-xs text-gray-500">
-                  Download the template — it has every supported column with one sample row.
+                  Download every existing employee pre-filled into the supported columns, edit the
+                  rows you need, and upload it back.
                 </p>
               </div>
-              <Button variant="outline" size="sm" onClick={downloadTemplate}>
-                <Download className="h-4 w-4" /> Template
+              <Button variant="outline" size="sm" onClick={downloadTemplate} disabled={downloading}>
+                {downloading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                Download employees
               </Button>
             </div>
 
