@@ -62,12 +62,11 @@ export function SettingsPage() {
 
   const org = orgRes?.data;
   const settings = settingsRes?.data;
-  // Logo files are served by the API at <origin>/uploads/... (app-level static,
-  // not under /api/v1). Derive that origin from the API base so the preview
-  // works in prod (absolute VITE_API_URL) and dev (relative same-origin).
+  // Uploaded files are served under the API base (e.g. /api/v1/uploads/...), so
+  // the logo preview rides the same nginx /api/ proxy as every other request.
+  // `logoPath` already starts with "/uploads/...".
   const apiBase = (import.meta.env.VITE_API_URL as string) || "/api/v1";
-  const fileOrigin = apiBase.startsWith("http") ? apiBase.replace(/\/api\/v1\/?$/, "") : "";
-  const logoSrc = settings?.logoPath ? `${fileOrigin}${settings.logoPath}` : "";
+  const logoSrc = settings?.logoPath ? `${apiBase}${settings.logoPath}` : "";
   // Server returns camelCase `registeredAddress`; legacy shape used snake_case
   // `registered_address`. Accept either so we don't ship a half-broken UI if
   // the API moves underneath us.
