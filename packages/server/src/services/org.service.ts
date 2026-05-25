@@ -221,13 +221,13 @@ export class OrgService {
    * Update payroll-specific settings.
    */
   async updateSettings(empcloudOrgId: number, data: any) {
-    const payrollSettings = await this.payrollDb.findOne<any>("organization_payroll_settings", {
-      empcloud_org_id: empcloudOrgId,
-    });
-
-    if (!payrollSettings) {
-      throw new AppError(404, "NOT_FOUND", "Payroll settings not found for this organization");
-    }
+    // Auto-provision the settings row when it's missing instead of 404'ing.
+    // Orgs created before the SSO auto-provision (auth.service
+    // ensureOrgPayrollSettings) existed — or any org whose first interaction
+    // with payroll is the Settings page — have no organization_payroll_settings
+    // row yet, and saving settings should just work rather than fail with
+    // "Payroll settings not found for this organization".
+    const payrollSettings = await this.ensureSettings(empcloudOrgId);
 
     const updates: any = {};
     if (data.payFrequency) updates.pay_frequency = data.payFrequency;
@@ -284,5 +284,45 @@ export class OrgService {
     }
 
     return this.getSettings(empcloudOrgId);
+  }
+
+  /**
+   * Return the org's payroll settings row, creating a default one (keyed by
+   * empcloud_org_id, seeded from the EmpCloud org) when none exists. Mirrors
+   * auth.service.ensureOrgPayrollSettings so the Settings page works for orgs
+   * provisioned before that auto-create existed.
+   */
+  private async ensureSettings(empcloudOrgId: number): Promise<any> {
+    const existing = await this.payrollDb.findOne<any>("organization_payroll_settings", {
+      empcloud_org_id: empcloudOrgId,
+    });
+    if (existing) return existing;
+
+    const ecOrg = await findOrgById(empcloudOrgId);
+    if (!ecOrg) throw new AppError(404, "NOT_FOUND", "Organization not found");
+
+    try {
+      return await this.payrollDb.create<any>("organization_payroll_settings", {
+        id: uuidv4(),
+        empcloud_org_id: empcloudOrgId,
+        name: ecOrg.name,
+        legal_name: ecOrg.legal_name || ecOrg.name,
+        country: ecOrg.country || "IN",
+        state: ecOrg.state || null,
+        currency: "INR",
+        pay_frequency: "monthly",
+        financial_year_start: 4,
+        is_active: true,
+      });
+    } catch (err: any) {
+      // Race: another request created the row first (empcloud_org_id is unique).
+      if (err?.code === "ER_DUP_ENTRY" || err?.errno === 1062) {
+        const row = await this.payrollDb.findOne<any>("organization_payroll_settings", {
+          empcloud_org_id: empcloudOrgId,
+        });
+        if (row) return row;
+      }
+      throw err;
+    }
   }
 }
