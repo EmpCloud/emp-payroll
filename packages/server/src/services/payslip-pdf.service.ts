@@ -1,6 +1,28 @@
+import fs from "fs";
+import path from "path";
 import { getDB } from "../db/adapters";
 import { AppError } from "../api/middleware/error.middleware";
 import { findUserById, findOrgById, getUserDepartmentName } from "../db/empcloud";
+
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads");
+
+// Inline an uploaded logo as a base64 data URI so it renders in the payslip
+// even when the HTML is saved standalone / printed to PDF (no live /uploads
+// fetch). Returns "" on any problem so a missing/broken logo just falls back
+// to the text company name.
+function logoDataUri(logoPath?: string | null): string {
+  if (!logoPath || typeof logoPath !== "string") return "";
+  try {
+    const file = path.join(UPLOAD_DIR, path.basename(logoPath));
+    if (!fs.existsSync(file)) return "";
+    const ext = path.extname(file).toLowerCase().replace(".", "");
+    const mime =
+      ext === "svg" ? "image/svg+xml" : ext === "jpg" ? "image/jpeg" : `image/${ext || "png"}`;
+    return `data:${mime};base64,${fs.readFileSync(file).toString("base64")}`;
+  } catch {
+    return "";
+  }
+}
 
 export class PayslipPDFService {
   private db = getDB();
@@ -66,6 +88,7 @@ export class PayslipPDFService {
           legal_name: orgSettings?.legal_name || ecOrg?.legal_name || "",
           pan: orgSettings?.pan || "",
           tan: orgSettings?.tan || "",
+          logo_path: orgSettings?.logo_path || null,
         };
       } else {
         // Employee record missing from EmpCloud (e.g. after DB re-seed).
@@ -213,6 +236,7 @@ export class PayslipPDFService {
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; color: #1a1a1a; padding: 40px; max-width: 800px; margin: 0 auto; }
   .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 20px; }
+  .company-logo { max-height: 56px; max-width: 220px; margin-bottom: 8px; display: block; object-fit: contain; }
   .company-name { font-size: 22px; font-weight: 700; color: #4f46e5; }
   .company-detail { font-size: 11px; color: #666; margin-top: 4px; }
   .payslip-title { font-size: 18px; font-weight: 600; text-align: right; }
@@ -267,6 +291,12 @@ export class PayslipPDFService {
 
   <div class="header">
     <div>
+      ${(() => {
+        const logo = logoDataUri(org?.logo_path);
+        return logo
+          ? `<img class="company-logo" src="${logo}" alt="${org?.name || "Company"} logo" />`
+          : "";
+      })()}
       <div class="company-name">${org?.name || "Company"}</div>
       <div class="company-detail">${org?.legal_name || ""}</div>
       ${

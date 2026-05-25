@@ -4,18 +4,51 @@ import { Input } from "@/components/ui/Input";
 import { SelectField } from "@/components/ui/SelectField";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { useOrganization, useOrgSettings } from "@/api/hooks";
-import { apiPut } from "@/api/client";
+import { apiPut, api } from "@/api/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { getUser } from "@/api/auth";
-import { Building2, CreditCard, Shield, Bell, Loader2 } from "lucide-react";
+import { Building2, CreditCard, Shield, Bell, Loader2, Upload, Trash2 } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 
 export function SettingsPage() {
   const [saving, setSaving] = useState(false);
+  const [logoBusy, setLogoBusy] = useState(false);
   const qc = useQueryClient();
   const user = getUser();
   const orgId = user?.orgId ? String(user.orgId) : "";
+
+  // Company logo upload/remove (reflected on every payslip). Uploaded
+  // immediately on select rather than via the main Save button so the
+  // multipart request stays separate from the JSON settings payload.
+  async function uploadLogo(file: File) {
+    setLogoBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      await api.post("/uploads/org/logo", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      await qc.invalidateQueries({ queryKey: ["org-settings", orgId] });
+      toast.success("Logo updated — it will appear on payslips");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error?.message || "Logo upload failed");
+    } finally {
+      setLogoBusy(false);
+    }
+  }
+  async function removeLogo() {
+    setLogoBusy(true);
+    try {
+      await api.delete("/uploads/org/logo");
+      await qc.invalidateQueries({ queryKey: ["org-settings", orgId] });
+      toast.success("Logo removed");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error?.message || "Failed to remove logo");
+    } finally {
+      setLogoBusy(false);
+    }
+  }
   const { data: orgRes, isLoading } = useOrganization(orgId);
   const { data: settingsRes } = useOrgSettings(orgId);
 
@@ -29,6 +62,12 @@ export function SettingsPage() {
 
   const org = orgRes?.data;
   const settings = settingsRes?.data;
+  // Logo files are served by the API at <origin>/uploads/... (app-level static,
+  // not under /api/v1). Derive that origin from the API base so the preview
+  // works in prod (absolute VITE_API_URL) and dev (relative same-origin).
+  const apiBase = (import.meta.env.VITE_API_URL as string) || "/api/v1";
+  const fileOrigin = apiBase.startsWith("http") ? apiBase.replace(/\/api\/v1\/?$/, "") : "";
+  const logoSrc = settings?.logoPath ? `${fileOrigin}${settings.logoPath}` : "";
   // Server returns camelCase `registeredAddress`; legacy shape used snake_case
   // `registered_address`. Accept either so we don't ship a half-broken UI if
   // the API moves underneath us.
@@ -293,6 +332,59 @@ export function SettingsPage() {
                 { value: "WB", label: "West Bengal" },
               ]}
             />
+          </div>
+
+          {/* Company logo — reflected on every payslip for this org */}
+          <div className="mt-6 border-t border-gray-100 pt-5">
+            <p className="mb-1 text-sm font-medium text-gray-700">Company Logo</p>
+            <p className="mb-3 text-xs text-gray-500">
+              Shown at the top of every payslip for this organization. PNG, JPG, or SVG up to 4MB.
+            </p>
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex h-16 w-40 items-center justify-center overflow-hidden rounded-lg border border-dashed border-gray-300 bg-gray-50">
+                {logoSrc ? (
+                  <img
+                    src={logoSrc}
+                    alt="Company logo"
+                    className="max-h-14 max-w-[150px] object-contain"
+                  />
+                ) : (
+                  <span className="text-xs text-gray-400">No logo</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  {logoBusy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  {logoSrc ? "Replace logo" : "Upload logo"}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif"
+                    className="hidden"
+                    disabled={logoBusy}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) uploadLogo(f);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+                {logoSrc && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    disabled={logoBusy}
+                    onClick={removeLogo}
+                  >
+                    <Trash2 className="h-4 w-4" /> Remove
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

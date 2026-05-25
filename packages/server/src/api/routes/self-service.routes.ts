@@ -66,10 +66,11 @@ router.get(
     const pdfSvc = new PayslipPDFService();
     const html = await pdfSvc.generateHTML(param(req, "id"));
     res.setHeader("Content-Type", "text/html");
-    // #135 — allow inline onclick="window.print()" on the Print / Save as PDF button
+    // #135 — allow inline onclick="window.print()" on the Print / Save as PDF
+    // button; img-src data: lets the embedded base64 org logo render.
     res.setHeader(
       "Content-Security-Policy",
-      "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'",
+      "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:",
     );
     res.send(html);
   }),
