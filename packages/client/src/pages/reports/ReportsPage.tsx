@@ -12,11 +12,33 @@ import { useQuery } from "@tanstack/react-query";
 import { Download, FileText, Shield, Building2, IndianRupee, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
-const MONTHS = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTHS = [
+  "",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 export function ReportsPage() {
   const { data: runsRes, isLoading } = usePayrollRuns();
-  const runs = (runsRes?.data?.data || []).filter((r: any) => r.status === "paid" || r.status === "approved");
+  // Statutory returns (PF ECR / ESI / PT / TDS) are derivable from a run's
+  // payslips the moment it's COMPUTED — they don't require the run to be
+  // approved/paid first. Previously the dropdown only listed paid/approved
+  // runs, so an org that had computed (but not yet approved) payroll saw an
+  // empty selector and assumed Reports was broken. Include computed runs too;
+  // only draft runs (no payslips yet) are excluded.
+  const runs = (runsRes?.data?.data || []).filter((r: any) =>
+    ["computed", "approved", "paid"].includes(String(r.status || "").toLowerCase()),
+  );
   const [selectedRun, setSelectedRun] = useState("");
 
   const runId = selectedRun || runs[0]?.id || "";
@@ -31,12 +53,18 @@ export function ReportsPage() {
   const tdsData = tdsRes?.data || [];
 
   async function downloadReport(type: string) {
-    if (!runId) { toast.error("Select a payroll run first"); return; }
+    if (!runId) {
+      toast.error("Select a payroll run first");
+      return;
+    }
     try {
       const { data } = await api.get(`/payroll/${runId}/reports/${type}`, { responseType: "blob" });
       const ext = type === "pf" ? "txt" : "csv";
       const url = URL.createObjectURL(new Blob([data]));
-      const a = document.createElement("a"); a.href = url; a.download = `${type}-report.${ext}`; a.click();
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${type}-report.${ext}`;
+      a.click();
       URL.revokeObjectURL(url);
       toast.success(`${type.toUpperCase()} report downloaded`);
     } catch {
@@ -45,7 +73,11 @@ export function ReportsPage() {
   }
 
   if (isLoading) {
-    return <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-brand-600" /></div>;
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="text-brand-600 h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -81,8 +113,11 @@ export function ReportsPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <FileText className="mx-auto h-12 w-12 text-gray-300" />
-            <p className="mt-4 text-gray-500">No completed payroll runs yet</p>
-            <p className="mt-1 text-sm text-gray-400">Run and approve a payroll to generate statutory reports</p>
+            <p className="mt-4 text-gray-500">No computed payroll runs yet</p>
+            <p className="mt-1 text-sm text-gray-400">
+              Create and <span className="font-medium">Compute</span> a payroll run (Payroll → Runs)
+              to generate statutory reports — approval isn't required.
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -122,23 +157,42 @@ export function ReportsPage() {
           {/* TDS Summary Table */}
           <Card>
             <CardHeader>
-              <CardTitle>TDS Summary — {selectedRunData ? `${MONTHS[selectedRunData.month]} ${selectedRunData.year}` : ""}</CardTitle>
+              <CardTitle>
+                TDS Summary —{" "}
+                {selectedRunData ? `${MONTHS[selectedRunData.month]} ${selectedRunData.year}` : ""}
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <DataTable
                 columns={[
-                  { key: "name", header: "Employee", render: (r: any) => (
-                    <div>
-                      <p className="font-medium text-gray-900">{r.name}</p>
-                      <p className="text-xs text-gray-500">{r.employeeCode} &middot; PAN: {r.pan}</p>
-                    </div>
-                  )},
-                  { key: "grossSalary", header: "Gross Salary", render: (r: any) => formatCurrency(r.grossSalary) },
-                  { key: "tdsDeducted", header: "TDS Deducted", render: (r: any) => (
-                    <span className={r.tdsDeducted > 0 ? "font-medium text-red-600" : "text-gray-400"}>
-                      {r.tdsDeducted > 0 ? formatCurrency(r.tdsDeducted) : "Nil"}
-                    </span>
-                  )},
+                  {
+                    key: "name",
+                    header: "Employee",
+                    render: (r: any) => (
+                      <div>
+                        <p className="font-medium text-gray-900">{r.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {r.employeeCode} &middot; PAN: {r.pan}
+                        </p>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: "grossSalary",
+                    header: "Gross Salary",
+                    render: (r: any) => formatCurrency(r.grossSalary),
+                  },
+                  {
+                    key: "tdsDeducted",
+                    header: "TDS Deducted",
+                    render: (r: any) => (
+                      <span
+                        className={r.tdsDeducted > 0 ? "font-medium text-red-600" : "text-gray-400"}
+                      >
+                        {r.tdsDeducted > 0 ? formatCurrency(r.tdsDeducted) : "Nil"}
+                      </span>
+                    ),
+                  },
                 ]}
                 data={tdsData}
                 emptyMessage="No TDS data for this run"
@@ -151,14 +205,24 @@ export function ReportsPage() {
   );
 }
 
-function ReportCard({ icon: Icon, title, description, format, onDownload }: {
-  icon: any; title: string; description: string; format: string; onDownload: () => void;
+function ReportCard({
+  icon: Icon,
+  title,
+  description,
+  format,
+  onDownload,
+}: {
+  icon: any;
+  title: string;
+  description: string;
+  format: string;
+  onDownload: () => void;
 }) {
   return (
     <Card className="flex flex-col">
       <CardContent className="flex flex-1 flex-col py-5">
-        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50">
-          <Icon className="h-5 w-5 text-brand-600" />
+        <div className="bg-brand-50 mb-3 flex h-10 w-10 items-center justify-center rounded-lg">
+          <Icon className="text-brand-600 h-5 w-5" />
         </div>
         <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
         <p className="mt-1 flex-1 text-xs text-gray-500">{description}</p>
