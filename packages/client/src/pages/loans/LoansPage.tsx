@@ -49,8 +49,10 @@ export function LoansPage() {
     : [];
   const locations: { id: string; name: string }[] = Array.isArray(locRes?.data) ? locRes.data : [];
 
-  // Employee picker for the New Loan modal — paginated server-side already.
-  const { data: empRes } = useEmployees({ limit: 100 });
+  // Employee picker for the New Loan modal — load all seated employees, not
+  // just the first 100, so every employee is selectable when creating a
+  // loan/advance (orgs commonly have several hundred).
+  const { data: empRes } = useEmployees({ limit: 10000, page: 1 });
 
   const queryParams: Record<string, any> = { page, limit: PAGE_SIZE };
   if (filter) queryParams.status = filter;
