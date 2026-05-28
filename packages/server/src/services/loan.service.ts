@@ -224,6 +224,83 @@ export class LoanService {
     return this.db.update("loans", loanId, { status: "cancelled" });
   }
 
+  /**
+   * Edit a loan/advance. Recomputes EMI (and outstanding, preserving the
+   * amount already repaid) whenever principal / tenure / rate change. Only
+   * the supplied fields are touched; org ownership is enforced.
+   */
+  async update(loanId: string, orgId: string, input: any) {
+    const loan = await this.db.findById<any>("loans", loanId);
+    if (!loan || String(loan.org_id) !== String(orgId)) {
+      throw new AppError(404, "NOT_FOUND", "Loan not found");
+    }
+    if (loan.status === "cancelled") {
+      throw new AppError(400, "INVALID_STATUS", "Cannot edit a cancelled loan");
+    }
+
+    const principal =
+      input.principalAmount != null ? Number(input.principalAmount) : Number(loan.principal_amount);
+    const tenure =
+      input.tenureMonths != null ? Number(input.tenureMonths) : Number(loan.tenure_months);
+    const rate =
+      input.interestRate != null ? Number(input.interestRate) : Number(loan.interest_rate);
+    if (!Number.isFinite(principal) || principal < 0) {
+      throw new AppError(400, "VALIDATION_ERROR", "Amount must be zero or greater");
+    }
+    if (!Number.isFinite(tenure) || tenure < 1) {
+      throw new AppError(400, "VALIDATION_ERROR", "Tenure must be at least 1 month");
+    }
+    if (!Number.isFinite(rate) || rate < 0) {
+      throw new AppError(400, "VALIDATION_ERROR", "Interest rate must be zero or greater");
+    }
+
+    // Same EMI formula as create().
+    const emi =
+      rate > 0
+        ? Math.round((principal * (1 + ((rate / 100) * tenure) / 12)) / tenure)
+        : Math.round(principal / tenure);
+    // Preserve what's already been repaid so an amount edit doesn't wipe
+    // prior payments: paidSoFar = oldPrincipal − oldOutstanding.
+    const paidSoFar = Math.max(0, Number(loan.principal_amount) - Number(loan.outstanding_amount));
+    const newOutstanding = Math.max(0, principal - paidSoFar);
+
+    const updates: any = {
+      type: typeof input.type === "string" && input.type.trim() ? input.type.trim() : loan.type,
+      description:
+        typeof input.description === "string" && input.description.trim()
+          ? input.description.trim()
+          : loan.description,
+      principal_amount: principal,
+      tenure_months: tenure,
+      interest_rate: rate,
+      emi_amount: emi,
+      outstanding_amount: newOutstanding,
+    };
+    if (typeof input.startDate === "string" && input.startDate.trim()) {
+      updates.start_date = input.startDate;
+    }
+    if (input.notes !== undefined) updates.notes = input.notes || null;
+    // Reflect completion if the edit fully covers the outstanding.
+    if (newOutstanding <= 0 && loan.status === "active") {
+      updates.status = "completed";
+      updates.end_date = new Date().toISOString().slice(0, 10);
+    }
+
+    return this.db.update("loans", loanId, updates);
+  }
+
+  /**
+   * Permanently delete a loan/advance record (org-scoped).
+   */
+  async delete(loanId: string, orgId: string) {
+    const loan = await this.db.findById<any>("loans", loanId);
+    if (!loan || String(loan.org_id) !== String(orgId)) {
+      throw new AppError(404, "NOT_FOUND", "Loan not found");
+    }
+    await this.db.delete("loans", loanId);
+    return { deleted: true };
+  }
+
   async getActiveEMIs(employeeId: string): Promise<number> {
     const result = await this.db.findMany<any>("loans", {
       filters: { employee_id: employeeId, status: "active" },

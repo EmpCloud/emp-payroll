@@ -10,10 +10,10 @@ import { DataTable } from "@/components/ui/DataTable";
 import { StatCard } from "@/components/ui/StatCard";
 import { Pagination } from "@/components/ui/Pagination";
 import { formatCurrency } from "@/lib/utils";
-import { apiGet, apiPost } from "@/api/client";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/api/client";
 import { useEmployees, useDepartments, useLocations } from "@/api/hooks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Banknote, Clock, CheckCircle2, Loader2, Search } from "lucide-react";
+import { Plus, Banknote, Clock, CheckCircle2, Loader2, Search, Pencil, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 const PAGE_SIZE = 20;
@@ -21,6 +21,8 @@ const PAGE_SIZE = 20;
 export function LoansPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [editLoan, setEditLoan] = useState<any | null>(null);
+  const [editing, setEditing] = useState(false);
   // Filter state lives in the URL so the top stat cards can deep-link into a
   // filtered list via `?status=...` (#71).
   const [searchParams, setSearchParams] = useSearchParams();
@@ -166,6 +168,69 @@ export function LoansPage() {
     }
   }
 
+  async function handleEdit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!editLoan) return;
+    const fd = new FormData(e.currentTarget);
+    const amount = Number(fd.get("amount"));
+    const tenure = Number(fd.get("tenure"));
+    const interest = Number(fd.get("interest") || 0);
+    if (!Number.isFinite(amount) || amount < 0) {
+      toast.error("Amount must be zero or greater");
+      return;
+    }
+    if (!Number.isFinite(tenure) || tenure < 1) {
+      toast.error("Tenure must be at least 1 month");
+      return;
+    }
+    if (!Number.isFinite(interest) || interest < 0) {
+      toast.error("Interest rate must be zero or greater");
+      return;
+    }
+    setEditing(true);
+    try {
+      await apiPut(`/loans/${editLoan.id}`, {
+        type: fd.get("type"),
+        description: fd.get("description"),
+        principalAmount: amount,
+        tenureMonths: tenure,
+        interestRate: interest,
+        startDate: fd.get("startDate"),
+        notes: fd.get("notes"),
+      });
+      toast.success("Loan updated");
+      setEditLoan(null);
+      qc.invalidateQueries({ queryKey: ["loans"] });
+      qc.invalidateQueries({ queryKey: ["loans-summary-active"] });
+      qc.invalidateQueries({ queryKey: ["loans-summary-completed"] });
+    } catch (err: any) {
+      toast.error(err.response?.data?.error?.message || "Failed to update loan");
+    } finally {
+      setEditing(false);
+    }
+  }
+
+  async function handleDelete(loan: any) {
+    const label = String(loan.type || "loan").replace(/_/g, " ");
+    if (
+      !window.confirm(
+        `Delete this ${label} for ${loan.employee_name}? This permanently removes the record and cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await apiDelete(`/loans/${loan.id}`);
+      toast.success("Loan deleted");
+      qc.invalidateQueries({ queryKey: ["loans"] });
+      qc.invalidateQueries({ queryKey: ["loans-summary"] });
+      qc.invalidateQueries({ queryKey: ["loans-summary-active"] });
+      qc.invalidateQueries({ queryKey: ["loans-summary-completed"] });
+    } catch (err: any) {
+      toast.error(err.response?.data?.error?.message || "Failed to delete loan");
+    }
+  }
+
   const employees = Array.isArray(empRes?.data?.data) ? empRes.data.data : [];
   const hasEmployees = employees.length > 0;
 
@@ -238,17 +303,35 @@ export function LoansPage() {
     {
       key: "actions",
       header: "",
-      render: (r: any) =>
-        r.status === "active" ? (
+      render: (r: any) => (
+        <div className="flex items-center justify-end gap-1">
+          {r.status === "active" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => recordPayment(r.id)}
+              className="text-green-600"
+              title="Record EMI payment"
+            >
+              <CheckCircle2 className="h-4 w-4" /> Pay
+            </Button>
+          )}
+          {r.status !== "cancelled" && (
+            <Button variant="ghost" size="sm" onClick={() => setEditLoan(r)} title="Edit loan">
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => recordPayment(r.id)}
-            className="text-green-600"
+            onClick={() => handleDelete(r)}
+            className="text-red-500 hover:text-red-600"
+            title="Delete loan"
           >
-            <CheckCircle2 className="h-4 w-4" /> Pay EMI
+            <Trash2 className="h-4 w-4" />
           </Button>
-        ) : null,
+        </div>
+      ),
     },
   ];
 
@@ -483,6 +566,103 @@ export function LoansPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={!!editLoan}
+        onClose={() => setEditLoan(null)}
+        title="Edit Loan / Advance"
+        className="max-w-lg"
+      >
+        {editLoan && (
+          <form onSubmit={handleEdit} className="space-y-4" key={editLoan.id}>
+            <div className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700">
+              {editLoan.employee_name}
+              {editLoan.employee_code && (
+                <span className="ml-2 text-gray-400">{editLoan.employee_code}</span>
+              )}
+            </div>
+            <SelectField
+              id="editType"
+              name="type"
+              label="Type"
+              defaultValue={editLoan.type}
+              options={[
+                { value: "salary_advance", label: "Salary Advance" },
+                { value: "loan", label: "Loan" },
+                { value: "emergency", label: "Emergency Advance" },
+              ]}
+            />
+            <Input
+              id="editDescription"
+              name="description"
+              label="Description"
+              defaultValue={editLoan.description || ""}
+              required
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                id="editAmount"
+                name="amount"
+                label="Amount (₹)"
+                type="number"
+                min="0"
+                step="1"
+                defaultValue={editLoan.principal_amount}
+                required
+              />
+              <Input
+                id="editTenure"
+                name="tenure"
+                label="Tenure (months)"
+                type="number"
+                min="1"
+                step="1"
+                defaultValue={editLoan.tenure_months}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                id="editInterest"
+                name="interest"
+                label="Interest Rate (%)"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={editLoan.interest_rate ?? 0}
+              />
+              <Input
+                id="editStartDate"
+                name="startDate"
+                label="Start Date"
+                type="date"
+                defaultValue={String(editLoan.start_date || "").slice(0, 10)}
+                required
+              />
+            </div>
+            <Input
+              id="editNotes"
+              name="notes"
+              label="Notes (optional)"
+              defaultValue={editLoan.notes || ""}
+            />
+            {Number(editLoan.installments_paid) > 0 && (
+              <p className="text-xs text-amber-600">
+                {editLoan.installments_paid} EMI(s) already paid — outstanding will be recalculated
+                from the new amount, keeping the amount already repaid.
+              </p>
+            )}
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" type="button" onClick={() => setEditLoan(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={editing}>
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );

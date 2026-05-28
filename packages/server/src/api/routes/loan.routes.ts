@@ -79,4 +79,24 @@ router.post(
   }),
 );
 
+// Edit a loan/advance.
+router.put(
+  "/:id",
+  authorize("hr_admin", "hr_manager"),
+  wrap(async (req, res) => {
+    const data = await svc.update(param(req, "id"), String(req.user!.empcloudOrgId), req.body);
+    res.json({ success: true, data });
+  }),
+);
+
+// Permanently delete a loan/advance record.
+router.delete(
+  "/:id",
+  authorize("hr_admin"),
+  wrap(async (req, res) => {
+    const data = await svc.delete(param(req, "id"), String(req.user!.empcloudOrgId));
+    res.json({ success: true, data });
+  }),
+);
+
 export { router as loanRoutes };
