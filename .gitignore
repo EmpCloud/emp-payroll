@@ -19,6 +19,10 @@ coverage/
 
 # Claude Code local settings
 .claude/settings.local.json
+# Claude Code agent worktrees (full repo checkouts — never commit)
+.claude/worktrees/
+# Local backup snapshots
+packages/server/backups/
 
 # Windows
 Thumbs.db

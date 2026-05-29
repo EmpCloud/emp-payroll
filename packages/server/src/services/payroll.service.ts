@@ -339,6 +339,160 @@ async function resolveOvertimeDays(
   return otDays;
 }
 
+/**
+ * Per-employee LOP (loss-of-pay) days in [startDate, endDate] under the
+ * FULL-CALENDAR-MONTH basis. Every day of the month is paid by default; this
+ * returns ONLY the genuine unpaid absences that should reduce pay:
+ *
+ *   - Weekends / shift week-offs           → paid rest, never LOP.
+ *   - Holidays                             → paid, never LOP.
+ *   - present / checked_in / WOT / HOT     → paid.
+ *   - half_day                             → 0.5 LOP (the unworked half).
+ *   - half_present_half_leave              → paid, unless the covering leave is unpaid (0.5).
+ *   - on_leave / approved leave            → paid if the leave type is paid, else LOP.
+ *   - absent OR no record on a working day → LOP (unless a PAID leave covers it).
+ *   - days today-or-later                  → NOT charged — an in-progress month
+ *                                            runs whole; future days are assumed worked.
+ *
+ * "Working day" is resolved from the employee's shift (`working_days`, getDay()
+ * numbering 0=Sun…6=Sat) exactly like the Attendance Grid / resolveOvertimeDays;
+ * days with no covering assignment fall back to Mon–Fri. The governing
+ * assignment is the most-recently-created one covering the date, so the grid,
+ * the overtime resolver and this never disagree about which days are rest days.
+ */
+async function resolveCalendarLop(
+  empcloudDb: any,
+  userId: number,
+  orgId: number,
+  startDate: string,
+  endDate: string,
+  holidaySet: Set<string>,
+  todayIso: string,
+): Promise<number> {
+  // Per-day attendance status.
+  const attRows = (await empcloudDb("attendance_records")
+    .where("user_id", userId)
+    .where("organization_id", orgId)
+    .whereBetween("date", [startDate, endDate])
+    .select("date as date", "status as status")) as Array<{ date: any; status: string }>;
+  const statusByDate: Record<string, string> = {};
+  for (const r of attRows) {
+    const iso = toDateIso(r.date);
+    if (iso) statusByDate[iso] = String(r.status || "").toLowerCase();
+  }
+
+  // Per-day leave coverage (paid/unpaid), expanded from approved applications.
+  // A PAID leave wins over an unpaid one when ranges overlap a date.
+  const leaveByDate: Record<string, { paid: boolean }> = {};
+  const leaveApps = (await empcloudDb("leave_applications as la")
+    .join("leave_types as lt", "la.leave_type_id", "lt.id")
+    .where("la.user_id", userId)
+    .where("la.organization_id", orgId)
+    .where("la.status", "approved")
+    .where("la.start_date", "<=", endDate)
+    .where("la.end_date", ">=", startDate)
+    .select(
+      "la.start_date as start_date",
+      "la.end_date as end_date",
+      "lt.is_paid as is_paid",
+    )) as Array<{ start_date: any; end_date: any; is_paid: number }>;
+  for (const l of leaveApps) {
+    const s = toDateIso(l.start_date);
+    if (!s) continue;
+    const e = toDateIso(l.end_date) ?? s;
+    const paid = !!Number(l.is_paid);
+    let cur = s < startDate ? startDate : s;
+    const last = e > endDate ? endDate : e;
+    while (cur <= last) {
+      if (leaveByDate[cur] === undefined || paid) leaveByDate[cur] = { paid };
+      const d = new Date(cur + "T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() + 1);
+      cur = d.toISOString().split("T")[0];
+    }
+  }
+
+  // Shift assignments → week-off determination (same rule as grid / overtime).
+  const assignments = (await empcloudDb("shift_assignments as sa")
+    .join("shifts as s", "s.id", "sa.shift_id")
+    .where("sa.user_id", userId)
+    .where("sa.organization_id", orgId)
+    .where("sa.effective_from", "<=", endDate)
+    .where((b: any) => b.whereNull("sa.effective_to").orWhere("sa.effective_to", ">=", startDate))
+    .select(
+      "sa.id as id",
+      "sa.effective_from as effective_from",
+      "sa.effective_to as effective_to",
+      "sa.created_at as created_at",
+      "s.working_days as working_days",
+      "s.is_weekoff as is_weekoff",
+    )) as Array<{
+    id: number;
+    effective_from: string | Date;
+    effective_to: string | Date | null;
+    created_at: string | Date | null;
+    working_days: string | null;
+    is_weekoff: number;
+  }>;
+  const norm = assignments
+    .map((a) => ({
+      from: toDateIso(a.effective_from),
+      to: toDateIso(a.effective_to),
+      order: a.created_at ? new Date(a.created_at as any).getTime() || 0 : 0,
+      id: Number(a.id) || 0,
+      isWeekoffShift: !!Number(a.is_weekoff),
+      workingDays: String(a.working_days || "")
+        .split(",")
+        .map((s) => Number(s.trim()))
+        .filter((n) => Number.isFinite(n)),
+    }))
+    .filter((a): a is typeof a & { from: string } => !!a.from);
+
+  let lop = 0;
+  let cur = startDate;
+  while (cur <= endDate) {
+    // Future / today: dates only increase, so once we reach today we're done —
+    // the rest of the month is assumed worked and never charged.
+    if (cur >= todayIso) break;
+    // Holiday → paid, not a working day.
+    if (!holidaySet.has(cur)) {
+      const dow = new Date(cur + "T00:00:00Z").getUTCDay();
+      const covering = norm
+        .filter((a) => a.from <= cur && (a.to === null || a.to >= cur))
+        .sort((a, b) => (b.order !== a.order ? b.order - a.order : b.id - a.id));
+      const gov = covering[0];
+      const isRest = gov
+        ? gov.isWeekoffShift || (gov.workingDays.length > 0 && !gov.workingDays.includes(dow))
+        : dow === 0 || dow === 6;
+      if (!isRest) {
+        // An elapsed working day — charge LOP unless it was paid.
+        const status = statusByDate[cur];
+        const lv = leaveByDate[cur];
+        if (
+          status === "present" ||
+          status === "checked_in" ||
+          status === "weekoff_overtime" ||
+          status === "holiday_overtime"
+        ) {
+          /* fully worked → paid */
+        } else if (status === "half_day") {
+          lop += 0.5; // worked half; the other half is unpaid
+        } else if (status === "half_present_half_leave") {
+          if (lv && !lv.paid) lop += 0.5; // the leave half is unpaid
+        } else if (status === "on_leave") {
+          if (lv && !lv.paid) lop += 1; // explicit unpaid leave; otherwise paid
+        } else {
+          // 'absent' or no record at all on a past working day.
+          if (!(lv && lv.paid)) lop += 1; // a paid leave would cover it; else LOP
+        }
+      }
+    }
+    const d = new Date(cur + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() + 1);
+    cur = d.toISOString().split("T")[0];
+  }
+  return lop;
+}
+
 export class PayrollService {
   private db = getDB();
 
@@ -472,31 +626,14 @@ export class PayrollService {
     // Get active employees from EmpCloud
     const ecEmployees = await findUsersByOrgId(Number(orgId), { limit: 1000 });
 
-    // Org-wide working-days-in-month, computed ONCE for the whole run so
-    // every employee shares the same denominator. Previously each employee
-    // recomputed their own value AND an imported attendance_summaries row
-    // could override it with a different number, so two employees in the
-    // same month could end up with totalDays = 21 vs 22 -- a mismatch HR
-    // surfaced as BUG-024. Holidays from `organization_holidays` are
-    // subtracted from the weekday count to cover BUG-025 (Good Friday
-    // wasn't reducing the working-days base).
-    //
-    // Migration 035 — orgs that operate on weekends can opt in to count
-    // Sat/Sun as working days. When they do, those weekend days are PAID
-    // rest days: they go into the working-days base AND are credited to
-    // every employee's paidDays below, so they never fall into LOP just
-    // because no attendance is clocked on a weekend. Default (false) keeps
-    // the long-standing weekday-only base and ignores weekends entirely.
-    const includeWeekends = !!Number(orgSettings?.include_weekends_in_working_days);
+    // Payroll basis: FULL CALENDAR MONTH. The denominator is every day of the
+    // month (`daysInMonth`); weekends, shift week-offs, holidays and PAID leave
+    // are all paid, and only genuine unpaid working-day absences reduce pay
+    // (computed per-employee by resolveCalendarLop). This replaces the old
+    // org-wide working-days base + the `include_weekends` auto-credit, which
+    // could mask real absences behind weekend/holiday padding (BUG-024/025 and
+    // Migration-035 weekend handling are subsumed by the calendar basis).
     const daysInMonth = new Date(run.year, run.month, 0).getDate();
-    // Classify every day of the month once: Mon–Fri vs Sat/Sun.
-    let strictWeekdayCount = 0;
-    let weekendDayCount = 0;
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dow = new Date(run.year, run.month - 1, d).getDay();
-      if (dow === 0 || dow === 6) weekendDayCount++;
-      else strictWeekdayCount++;
-    }
     const empcloudDb = getEmpCloudDB();
     const monthStart = `${run.year}-${String(run.month).padStart(2, "0")}-01`;
     // TZ-safe month end. `new Date(...).toISOString()` shifts "April 30"
@@ -505,41 +642,57 @@ export class PayrollService {
     // present on the 30th came out one day short. `getDate()` is a local
     // getter, so build the string from it instead.
     const monthEnd = `${run.year}-${String(run.month).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
+    // "Today" for the calendar-day basis. An in-progress month runs WHOLE —
+    // days that have not yet elapsed are assumed worked and are never charged
+    // as LOP. For a fully-past month every day is < todayIso, so the whole
+    // month is evaluated. (payroll basis: full calendar month)
+    const todayIso = dayjs().format("YYYY-MM-DD");
+    // Holiday set for the working-days base: `company_events`
+    // (event_type='holiday', multi-day ranges expanded) UNION the legacy
+    // `organization_holidays` table. Previously only the legacy table was
+    // read here, but live tenants configure holidays on the EmpCloud
+    // Holidays page, which writes to `company_events` — so a public holiday
+    // never reduced the payroll working-days base and EVERY employee took an
+    // LOP day for it. This now matches the Attendance Grid and the overtime
+    // path, both of which already union the two sources. (BUG-026 / holiday F1)
+    //
+    // Dedup on a YYYY-MM-DD string (local getters, never toISOString — that
+    // shifts the day on UTC+ servers) so the same date counted in both
+    // sources is only subtracted once.
+    const holidaySeen = new Set<string>();
+    const addHolidayRange = (startIso: string | null, endIso: string | null) => {
+      if (!startIso) return;
+      let cur = startIso < monthStart ? monthStart : startIso;
+      const last = (endIso ?? startIso) > monthEnd ? monthEnd : (endIso ?? startIso);
+      while (cur <= last) {
+        holidaySeen.add(cur);
+        const dt = new Date(cur + "T00:00:00Z");
+        dt.setUTCDate(dt.getUTCDate() + 1);
+        cur = dt.toISOString().split("T")[0];
+      }
+    };
+    try {
+      const events = (await empcloudDb("company_events")
+        .where({ organization_id: Number(orgId), event_type: "holiday" })
+        .where("start_date", "<=", `${monthEnd} 23:59:59`)
+        .andWhere((b: any) =>
+          b.where("end_date", ">=", `${monthStart} 00:00:00`).orWhereNull("end_date"),
+        )
+        .select("start_date", "end_date")) as Array<{ start_date: any; end_date: any }>;
+      for (const e of events) addHolidayRange(toDateIso(e.start_date), toDateIso(e.end_date));
+    } catch {
+      /* company_events table absent (older schema) — ignore */
+    }
     const orgHolidaysRows = await empcloudDb("organization_holidays")
       .where("organization_id", Number(orgId))
       .whereBetween("holiday_date", [monthStart, monthEnd])
       .select("holiday_date");
-    // Split holidays by where they land. Weekday holidays always reduce
-    // the base; weekend holidays only matter when the org counts weekends.
-    // Dedup on a YYYY-MM-DD string built from local getters (not
-    // toISOString — same TZ trap) to handle Date/string returns from mysql2.
-    const holidaySeen = new Set<string>();
-    let weekdayHolidayCount = 0;
-    let weekendHolidayCount = 0;
     for (const h of orgHolidaysRows) {
-      const hd = h.holiday_date;
-      const dStr =
-        typeof hd === "string"
-          ? hd.slice(0, 10)
-          : `${hd.getFullYear()}-${String(hd.getMonth() + 1).padStart(2, "0")}-${String(hd.getDate()).padStart(2, "0")}`;
-      if (holidaySeen.has(dStr)) continue;
-      holidaySeen.add(dStr);
-      const [y, m, d] = dStr.split("-").map(Number);
-      const dow = new Date(y, m - 1, d).getDay();
-      if (dow === 0 || dow === 6) weekendHolidayCount++;
-      else weekdayHolidayCount++;
+      const iso = toDateIso(h.holiday_date);
+      if (iso) holidaySeen.add(iso);
     }
-    // Working-days base (the per-employee denominator):
-    //  - default        : Mon–Fri minus weekday holidays.
-    //  - includeWeekends : every calendar day minus every holiday.
-    const workingDaysInMonth = includeWeekends
-      ? Math.max(1, daysInMonth - weekdayHolidayCount - weekendHolidayCount)
-      : Math.max(1, strictWeekdayCount - weekdayHolidayCount);
-    // Weekend rest days auto-credited as paid when the org opts in.
-    // Weekend holidays are already out of the base, so don't double-count.
-    const autoPaidWeekendDays = includeWeekends
-      ? Math.max(0, weekendDayCount - weekendHolidayCount)
-      : 0;
+    // `holidaySeen` is the org's holiday date-set for the month; it's passed
+    // per-employee to resolveCalendarLop so holidays are paid, never LOP.
 
     let totalGross = 0;
     let totalDeductions = 0;
@@ -657,8 +810,8 @@ export class PayrollService {
         continue;
       }
 
-      // (workingDaysInMonth + holiday count are hoisted above this loop --
-      //  see the orgHolidays / workingDaysInMonth declarations.)
+      // (daysInMonth + the holiday date-set `holidaySeen` are hoisted above
+      //  this loop and shared by every employee.)
 
       // Resolve attendance for the period.
       //
@@ -698,56 +851,28 @@ export class PayrollService {
       // the payroll side. The fix flips the preference so EmpCloud
       // is the canonical source and the local summary is a fallback
       // for periods where EmpCloud has no rows yet.
-      //
-      // The org-wide `workingDaysInMonth` (already hoisted above) is
-      // the canonical totalDays for every employee in the run.
       const [attRecord] = (await empcloudDb("attendance_records")
         .where("user_id", ecEmp.id)
         .where("organization_id", Number(orgId))
         .whereBetween("date", [startDate, endDate])
         .select(
-          // BUG-Leave-LOP — `half_present_half_leave` (HPL) added to the
-          // present-days bucket as 0.5 too, otherwise an employee marked
-          // HPL on the grid lost both halves: the 0.5 present half wasn't
-          // counted as present AND the 0.5 leave half (handled below) was
-          // wrongly booked as LOP.
-          //
-          // BUG-OT-LOP — `weekoff_overtime` / `holiday_overtime` (a rest
-          // day the employee WORKED) must count as a present/paid day too.
-          // They were omitted here but still counted in `weekend_records`
-          // below, which cut the auto-paid-weekend credit by 1 -- so an
-          // employee who worked a weekend came out with a phantom LOP day
-          // and LESS pay. Counting them as present (1 day) nets correctly
-          // against the weekend_records reduction so the day is paid once,
-          // and the OT premium is added separately by the overtime component.
+          // present-equivalent days (half_day / HPL count 0.5). Used ONLY by
+          // the NO_ATTENDANCE guard below to decide whether the employee has
+          // ANY attendance this month — the actual pay / LOP is computed
+          // per-day by resolveCalendarLop, not from these sums.
           empcloudDb.raw(
             "SUM(CASE WHEN status IN ('present','checked_in','weekoff_overtime','holiday_overtime') THEN 1 " +
               "WHEN status IN ('half_day','half_present_half_leave') THEN 0.5 " +
               "ELSE 0 END) as present_days",
           ),
-          empcloudDb.raw("SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_days"),
-          // `leave_days` = days marked as 'on_leave' on the attendance row.
-          // HPL contributes 0.5 here too. The engine treats these as PAID by
-          // default unless an explicit UNPAID leave_application exists for
-          // the same range (handled in the merge below) -- HR who marks L
-          // directly on the grid never picks an "unpaid" type, so treating
-          // these as paid matches HR's intent.
+          // `leave_days` = 'on_leave' rows (+0.5 for HPL); feeds the paid-leave
+          // signal the NO_ATTENDANCE guard also consults.
           empcloudDb.raw(
             "SUM(CASE WHEN status = 'on_leave' THEN 1 " +
               "WHEN status = 'half_present_half_leave' THEN 0.5 " +
               "ELSE 0 END) as leave_days",
           ),
           empcloudDb.raw("COUNT(*) as total_records"),
-          // BUG-Weekend-LOP — count weekend rows (Sat/Sun) that already
-          // have ANY attendance status. Used below to avoid double-
-          // counting weekends when the org has include_weekends_in_
-          // working_days=1: presentDays already includes every weekend
-          // that was clocked, so the auto-paid-weekend credit must only
-          // fill the genuine un-clocked-weekend gap. DAYOFWEEK is MySQL:
-          // 1=Sun, 7=Sat.
-          empcloudDb.raw(
-            "SUM(CASE WHEN DAYOFWEEK(date) IN (1, 7) THEN 1 ELSE 0 END) as weekend_records",
-          ),
         )) as any[];
 
       const leaveResult = (await empcloudDb("leave_applications as la")
@@ -810,6 +935,11 @@ export class PayrollService {
       let unpaidLeaveDays = leaveAppUnpaid;
       const empcloudHasAttendance = Number(attRecord?.total_records || 0) > 0;
 
+      // LOP when we fall back to the imported summary (no live EmpCloud
+      // attendance): the summary's own absent + unpaid-leave counts are the
+      // only unpaid days; present / paid-leave are paid. Stays 0 when there's
+      // no summary, so the NO_ATTENDANCE guard below skips the row.
+      let summaryLop = 0;
       if (!empcloudHasAttendance) {
         const importedSummary = await this.db.findOne<any>("attendance_summaries", {
           empcloud_user_id: ecEmp.id,
@@ -826,6 +956,10 @@ export class PayrollService {
             Number(importedSummary.half_days || 0) * 0.5;
           paidLeaveDays = Number(importedSummary.paid_leave || 0);
           unpaidLeaveDays = Number(importedSummary.unpaid_leave || 0);
+          summaryLop =
+            Number(importedSummary.absent_days || 0) +
+            Number(importedSummary.unpaid_leave || 0) +
+            Number(importedSummary.half_days || 0) * 0.5;
         }
         // else: presentDays stays 0 (initialised above). The guard at the
         // empty-structure / zero-earnings check below pushes the row to
@@ -833,33 +967,28 @@ export class PayrollService {
         // detail banner. No payslip is generated.
       }
 
-      const totalDays = workingDaysInMonth;
-      // Cap presentDays at totalDays so an over-imported row (e.g. 30
-      // present days against 22 working days) doesn't push proRatio
-      // above 1 and inflate gross beyond CTC.
-      if (presentDays > totalDays) presentDays = totalDays;
-      // Migration 035 — when the org counts weekends as working days, the
-      // Sat/Sun rest days are PAID. Fold autoPaidWeekendDays into paidDays
-      // (NOT presentDays — mutating presentDays would mask the genuine
-      // zero-attendance case the NO_ATTENDANCE guard below depends on).
-      // Without this the weekend gap (totalDays − presentDays) is wrongly
-      // booked as LOP for an employee who was never actually absent.
-      //
-      // BUG-Weekend-LOP — only auto-credit weekends that DON'T already
-      // have an attendance row. If HR clocks Sat/Sun (presentDays
-      // already includes them), adding the full autoPaidWeekendDays on
-      // top over-counts. The min(..., totalDays) cap then hides the
-      // over-count and erases legitimate weekday LOP -- e.g. an employee
-      // present every weekend but absent on 2 weekdays came out with
-      // lop_days=0 because (weekdaysPresent + weekendsClocked + autoPaid
-      // = workingDays).
-      const weekendRecordsAlreadyCounted = Number(attRecord?.weekend_records || 0);
-      const effectiveAutoPaidWeekend = Math.max(
-        0,
-        autoPaidWeekendDays - weekendRecordsAlreadyCounted,
-      );
-      const paidDays = Math.min(presentDays + paidLeaveDays + effectiveAutoPaidWeekend, totalDays);
-      const lopDays = Math.max(0, totalDays - paidDays);
+      // === Payroll basis: full calendar month ===
+      // The denominator is EVERY day of the month. Weekends, shift week-offs,
+      // holidays and PAID leave are all paid; only genuine UNPAID working-day
+      // absences (LOP) reduce pay. "Working day" is resolved per-employee from
+      // the shift (same source as the Attendance Grid), holidays excluded, and
+      // future days of an in-progress month are never charged. This replaces
+      // the old working-days denominator + include_weekends auto-credit, which
+      // could mask real absences behind weekend padding (a present record on a
+      // holiday + auto-paid weekends hid one of an employee's two absences).
+      const totalDays = daysInMonth;
+      const lopDays = empcloudHasAttendance
+        ? await resolveCalendarLop(
+            empcloudDb,
+            ecEmp.id,
+            Number(orgId),
+            monthStart,
+            monthEnd,
+            holidaySeen,
+            todayIso,
+          )
+        : summaryLop;
+      const paidDays = Math.max(0, totalDays - lopDays);
 
       // Parse salary components
       const components =
