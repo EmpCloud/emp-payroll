@@ -623,8 +623,18 @@ export class PayrollService {
       empcloud_org_id: Number(orgId),
     });
 
-    // Get active employees from EmpCloud
-    const ecEmployees = await findUsersByOrgId(Number(orgId), { limit: 1000 });
+    // Get employees who worked at any point during this pay period from
+    // EmpCloud. Passing `periodStart` widens the fetch to include people
+    // emp-exit has flipped to inactive but whose last working day is on or
+    // after the period start — the existing `doe < monthStart` guard below
+    // then correctly skips anyone whose exit was genuinely before the period.
+    // Without this, an employee marked-exited with a future last-day was
+    // dropped from the run entirely (no final-month payslip).
+    const monthStartIso = `${run.year}-${String(run.month).padStart(2, "0")}-01`;
+    const ecEmployees = await findUsersByOrgId(Number(orgId), {
+      limit: 1000,
+      periodStart: monthStartIso,
+    });
 
     // Payroll basis: FULL CALENDAR MONTH. The denominator is every day of the
     // month (`daysInMonth`); weekends, shift week-offs, holidays and PAID leave
