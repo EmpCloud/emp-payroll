@@ -212,14 +212,33 @@ export async function findEmployeeProfileByUserId(
 }
 
 /**
- * Find all users in an organization (active only).
+ * Find users in an organization. By default returns active users (status=1)
+ * only — backwards compatible with every existing caller.
+ *
+ * When `periodStart` is supplied (YYYY-MM-DD), the query also includes users
+ * who are no longer active (status<>1) but whose `date_of_exit` is on or after
+ * that date. This is the "exit overlaps the pay period" case: emp-exit flips
+ * users to inactive the moment HR records the exit, even if the actual last
+ * day is weeks away — so payroll's user-fetch must look at WHEN they worked,
+ * not just whether the row is currently active. The existing per-row
+ * `doe < monthStart` skip in computePayroll then correctly filters out the
+ * employees whose exit was genuinely before the period.
  */
 export async function findUsersByOrgId(
   orgId: number,
-  options?: { limit?: number; offset?: number },
+  options?: { limit?: number; offset?: number; periodStart?: string },
 ): Promise<EmpCloudUser[]> {
   const db = getEmpCloudDB();
-  let query = db("users").where({ organization_id: orgId, status: 1 });
+  let query = db("users").where("organization_id", orgId);
+  if (options?.periodStart) {
+    query = query.where(function (this: any) {
+      this.where("status", 1).orWhere(function (this: any) {
+        this.whereNotNull("date_of_exit").andWhere("date_of_exit", ">=", options.periodStart);
+      });
+    });
+  } else {
+    query = query.where("status", 1);
+  }
   if (options?.limit) query = query.limit(options.limit);
   if (options?.offset) query = query.offset(options.offset);
   return query;
@@ -267,21 +286,49 @@ function applySeatedUserFilters(query: any, filters?: SeatedUserFilters) {
 }
 
 /**
+ * Apply the "active OR exit-overlaps-period" filter common to seated queries.
+ * Defaults to active-only when `periodStart` is omitted — preserves the legacy
+ * behaviour. See findUsersByOrgId for the rationale.
+ */
+function applySeatedActivityFilter(query: any, periodStart?: string) {
+  if (periodStart) {
+    return query.where(function (this: any) {
+      this.where("u.status", 1).orWhere(function (this: any) {
+        this.whereNotNull("u.date_of_exit").andWhere("u.date_of_exit", ">=", periodStart);
+      });
+    });
+  }
+  return query.where("u.status", 1);
+}
+
+/**
  * Find users who have a seat for a specific module (via org_module_seats).
  * Returns only employees assigned to this module.
+ *
+ * `periodStart` (YYYY-MM-DD) widens the result to include recently-exited
+ * employees whose last working day is on/after that date — used by payroll
+ * compute, attendance import, and the admin list so HR can still complete the
+ * final-month payroll for someone the emp-exit module has already flipped to
+ * inactive.
  */
 export async function findSeatedUsersForModule(
   orgId: number,
   moduleSlug: string,
-  options?: { limit?: number; offset?: number; filters?: SeatedUserFilters },
+  options?: {
+    limit?: number;
+    offset?: number;
+    filters?: SeatedUserFilters;
+    periodStart?: string;
+  },
 ): Promise<EmpCloudUser[]> {
   const db = getEmpCloudDB();
   let query = db("users as u")
     .join("org_module_seats as s", "u.id", "s.user_id")
     .join("modules as m", "s.module_id", "m.id")
-    .where({ "u.organization_id": orgId, "u.status": 1, "m.slug": moduleSlug })
+    .where({ "u.organization_id": orgId, "m.slug": moduleSlug })
     .select("u.*")
     .orderBy("u.first_name", "asc");
+  query = applySeatedActivityFilter(query, options?.periodStart);
   query = applySeatedUserFilters(query, options?.filters);
   if (options?.limit) query = query.limit(options.limit);
   if (options?.offset) query = query.offset(options.offset);
@@ -289,18 +336,22 @@ export async function findSeatedUsersForModule(
 }
 
 /**
- * Count seated users for a specific module.
+ * Count seated users for a specific module. Mirrors findSeatedUsersForModule:
+ * pass `periodStart` to widen the result the same way (active + recently
+ * exited) so the paginated total matches the visible list.
  */
 export async function countSeatedUsersForModule(
   orgId: number,
   moduleSlug: string,
   filters?: SeatedUserFilters,
+  options?: { periodStart?: string },
 ): Promise<number> {
   const db = getEmpCloudDB();
   let query = db("users as u")
     .join("org_module_seats as s", "u.id", "s.user_id")
     .join("modules as m", "s.module_id", "m.id")
-    .where({ "u.organization_id": orgId, "u.status": 1, "m.slug": moduleSlug });
+    .where({ "u.organization_id": orgId, "m.slug": moduleSlug });
+  query = applySeatedActivityFilter(query, options?.periodStart);
   query = applySeatedUserFilters(query, filters);
   const [{ count }] = await query.count("* as count");
   return Number(count);

@@ -197,12 +197,22 @@ export class EmployeeService {
       departmentId: f.department_id != null ? Number(f.department_id) || undefined : undefined,
     };
 
+    // Include recently-exited employees (DOE within the last 90 days) so HR
+    // can still see + complete the final payroll for someone emp-exit has
+    // already marked inactive. The list rows carry `is_active` so the UI can
+    // badge them as exited; the period-aware filter is purely additive.
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
     const users = await findSeatedUsersForModule(empcloudOrgId, "emp-payroll", {
       limit,
       offset,
       filters: seatedFilters,
+      periodStart: ninetyDaysAgo,
     });
-    const total = await countSeatedUsersForModule(empcloudOrgId, "emp-payroll", seatedFilters);
+    const total = await countSeatedUsersForModule(empcloudOrgId, "emp-payroll", seatedFilters, {
+      periodStart: ninetyDaysAgo,
+    });
 
     const data = await Promise.all(users.map((u) => mergeUserWithProfile(u, this.payrollDb)));
 

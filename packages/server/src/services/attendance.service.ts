@@ -116,7 +116,14 @@ export class AttendanceService {
       })
       .leftJoin("organization_departments as dept", "u.department_id", "dept.id")
       .where("ar.organization_id", orgIdNum)
-      .where("u.status", 1)
+      // Include employees who worked at any point during this period — even if
+      // emp-exit has since flipped them inactive — so the closing-month
+      // attendance + final payroll for an exited employee still resolves.
+      .where(function (this: any) {
+        this.where("u.status", 1).orWhere(function (this: any) {
+          this.whereNotNull("u.date_of_exit").andWhere("u.date_of_exit", ">=", startDate);
+        });
+      })
       .whereNot("u.role", "super_admin")
       .whereBetween("ar.date", [startDate, endDate])
       .select(
@@ -142,7 +149,12 @@ export class AttendanceService {
       // local `attendance_summaries` table may have rows from "Mark All
       // Present" writes; surface those before falling back to all-zero.
       const users = await empcloudDb("users")
-        .where({ organization_id: orgIdNum, status: 1 })
+        .where("organization_id", orgIdNum)
+        .where(function (this: any) {
+          this.where("status", 1).orWhere(function (this: any) {
+            this.whereNotNull("date_of_exit").andWhere("date_of_exit", ">=", startDate);
+          });
+        })
         .whereNot("role", "super_admin")
         .select("id as empcloud_user_id", "first_name", "last_name", "emp_code");
 
@@ -228,7 +240,12 @@ export class AttendanceService {
     // shows 3 (the ones who already have records). Merge a full-user row
     // set into the output so both lists match.
     const allUsers = await empcloudDb("users")
-      .where({ organization_id: orgIdNum, status: 1 })
+      .where("organization_id", orgIdNum)
+      .where(function (this: any) {
+        this.where("status", 1).orWhere(function (this: any) {
+          this.whereNotNull("date_of_exit").andWhere("date_of_exit", ">=", startDate);
+        });
+      })
       .whereNot("role", "super_admin")
       .select("id as empcloud_user_id", "first_name", "last_name", "emp_code");
 
