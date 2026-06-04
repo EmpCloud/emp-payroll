@@ -304,6 +304,142 @@ export class OrgService {
     return this.getSettings(empcloudOrgId);
   }
 
+  // -----------------------------------------------------------------------
+  // RAZORPAYX integration (Phase 1A — config + Test Connection)
+  // -----------------------------------------------------------------------
+
+  /**
+   * Return the org's Razorpay config in a UI-safe shape. Secrets never leave
+   * the server — only "do you have one?" booleans + a masked key id come
+   * back. The client uses this to render the Razorpay card with a write-only
+   * Secret / Webhook Secret field.
+   */
+  async getRazorpayConfig(empcloudOrgId: number) {
+    const { maskKeyId } = await import("../utils/secrets");
+    const row = await this.payrollDb.findOne<any>("organization_payroll_settings", {
+      empcloud_org_id: empcloudOrgId,
+    });
+    return {
+      enabled: !!Number(row?.razorpay_enabled),
+      keyId: row?.razorpay_key_id || "",
+      keyIdMasked: maskKeyId(row?.razorpay_key_id),
+      accountNumber: row?.razorpay_account_number || "",
+      defaultMode: row?.razorpay_default_mode || "IMPS",
+      hasKeySecret: !!row?.razorpay_key_secret_enc,
+      hasWebhookSecret: !!row?.razorpay_webhook_secret_enc,
+      verifiedAt: row?.razorpay_verified_at || null,
+    };
+  }
+
+  /**
+   * Write Razorpay config. Secrets supplied as `null` / `undefined` are
+   * preserved (so the admin can update Key ID without re-entering the secret
+   * each time). A non-empty secret string overwrites; an explicit empty
+   * string `""` clears the stored value.
+   *
+   * Auto-provisions the settings row when missing (same pattern as setLogo).
+   */
+  async setRazorpayConfig(
+    empcloudOrgId: number,
+    data: {
+      enabled?: boolean;
+      keyId?: string | null;
+      keySecret?: string | null;
+      accountNumber?: string | null;
+      webhookSecret?: string | null;
+      defaultMode?: string | null;
+    },
+  ) {
+    const { encryptSecret, isSecretsKeyConfigured } = await import("../utils/secrets");
+    // If the operator is touching any encrypted field, the master key must be
+    // present. Refuse the write up-front with a clear message rather than
+    // failing at the encrypt step.
+    const needsKey = data.keySecret || data.webhookSecret;
+    if (needsKey && !isSecretsKeyConfigured()) {
+      throw new AppError(
+        500,
+        "SECRETS_KEY_MISSING",
+        "PAYROLL_SECRETS_KEY is not set on the server. Generate one with `openssl rand -hex 32` and add it to the payroll .env before saving Razorpay credentials.",
+      );
+    }
+    const settings = await this.ensureSettings(empcloudOrgId);
+    const updates: Record<string, any> = {};
+    if (data.enabled !== undefined) updates.razorpay_enabled = !!data.enabled;
+    if (data.keyId !== undefined) updates.razorpay_key_id = (data.keyId || "").trim() || null;
+    if (data.accountNumber !== undefined)
+      updates.razorpay_account_number = (data.accountNumber || "").trim() || null;
+    if (data.defaultMode !== undefined)
+      updates.razorpay_default_mode = (data.defaultMode || "").trim() || null;
+    if (typeof data.keySecret === "string") {
+      updates.razorpay_key_secret_enc = data.keySecret ? encryptSecret(data.keySecret) : null;
+      // Rotating the secret invalidates any prior "verified" stamp.
+      updates.razorpay_verified_at = null;
+    }
+    if (typeof data.webhookSecret === "string") {
+      updates.razorpay_webhook_secret_enc = data.webhookSecret
+        ? encryptSecret(data.webhookSecret)
+        : null;
+    }
+    if (Object.keys(updates).length > 0) {
+      await this.payrollDb.update("organization_payroll_settings", settings.id, updates);
+    }
+    return this.getRazorpayConfig(empcloudOrgId);
+  }
+
+  /**
+   * Probe the connection with the currently-saved credentials. Returns the
+   * Razorpay mode (test/live) so the UI can warn on a mode mismatch. Stamps
+   * `razorpay_verified_at` on success.
+   */
+  async testRazorpayConnection(empcloudOrgId: number) {
+    const { decryptSecret, isSecretsKeyConfigured } = await import("../utils/secrets");
+    if (!isSecretsKeyConfigured()) {
+      throw new AppError(
+        500,
+        "SECRETS_KEY_MISSING",
+        "PAYROLL_SECRETS_KEY is not set on the server.",
+      );
+    }
+    const row = await this.payrollDb.findOne<any>("organization_payroll_settings", {
+      empcloud_org_id: empcloudOrgId,
+    });
+    if (!row?.razorpay_key_id || !row?.razorpay_key_secret_enc || !row?.razorpay_account_number) {
+      throw new AppError(
+        400,
+        "RAZORPAY_INCOMPLETE",
+        "Save Key ID, Key Secret and Source Account Number before testing the connection.",
+      );
+    }
+    let keySecret: string;
+    try {
+      keySecret = decryptSecret(row.razorpay_key_secret_enc);
+    } catch {
+      throw new AppError(
+        500,
+        "SECRET_DECRYPT_FAILED",
+        "Could not decrypt the stored Key Secret — the server's PAYROLL_SECRETS_KEY may have changed since the secret was saved. Re-enter the Key Secret and try again.",
+      );
+    }
+    const { RazorpayClient } = await import("./razorpay.service");
+    const client = new RazorpayClient({
+      keyId: row.razorpay_key_id,
+      keySecret,
+      accountNumber: row.razorpay_account_number,
+    });
+    try {
+      const result = await client.testConnection();
+      await this.payrollDb.update("organization_payroll_settings", row.id, {
+        razorpay_verified_at: new Date(),
+      });
+      return { ok: true, mode: result.mode, verifiedAt: new Date().toISOString() };
+    } catch (err: any) {
+      const status = Number(err?.status) || 502;
+      const code = err?.code || "RAZORPAY_ERROR";
+      const message = err?.description || err?.message || "Razorpay connection test failed.";
+      throw new AppError(status >= 400 && status < 600 ? status : 502, code, message);
+    }
+  }
+
   /**
    * Return the org's payroll settings row, creating a default one (keyed by
    * empcloud_org_id, seeded from the EmpCloud org) when none exists. Mirrors

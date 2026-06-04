@@ -71,6 +71,36 @@ router.put(
   }),
 );
 
+// --- Razorpay configuration (Phase 1A) -----------------------------------
+// Per-org RazorpayX connection settings. Secrets are never echoed back; the
+// UI receives only "do you have one?" booleans + a masked key id.
+router.get(
+  "/:id/razorpay",
+  authorize("org_admin"),
+  wrap(async (req, res) => {
+    const data = await svc.getRazorpayConfig(numParam(req, "id"));
+    res.json({ success: true, data });
+  }),
+);
+
+router.put(
+  "/:id/razorpay",
+  authorize("org_admin"),
+  wrap(async (req, res) => {
+    const data = await svc.setRazorpayConfig(numParam(req, "id"), req.body);
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  "/:id/razorpay/test",
+  authorize("org_admin"),
+  wrap(async (req, res) => {
+    const data = await svc.testRazorpayConnection(numParam(req, "id"));
+    res.json({ success: true, data });
+  }),
+);
+
 // Payroll lock period
 router.get(
   "/:id/payroll-lock",
@@ -87,12 +117,10 @@ router.post(
   wrap(async (req, res) => {
     const lockDate = req.body.lockDate; // YYYY-MM-DD
     if (!lockDate) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: { code: "MISSING_DATE", message: "lockDate is required (YYYY-MM-DD)" },
-        });
+      return res.status(400).json({
+        success: false,
+        error: { code: "MISSING_DATE", message: "lockDate is required (YYYY-MM-DD)" },
+      });
     }
     await svc.update(numParam(req, "id"), { payrollLockDate: lockDate });
     res.json({ success: true, data: { message: `Payroll locked up to ${lockDate}`, lockDate } });
