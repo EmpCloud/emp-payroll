@@ -6,6 +6,8 @@ import { StatCard } from "@/components/ui/StatCard";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { DataTable } from "@/components/ui/DataTable";
 import { formatCurrency, formatMonth } from "@/lib/utils";
+import { RazorpayDisbursePanel } from "./RazorpayDisbursePanel";
+import { getUser } from "@/api/auth";
 import {
   usePayrollRun,
   useRunPayslips,
@@ -593,6 +595,13 @@ export function PayrollRunDetailPage() {
           icon={Building2}
         />
       </div>
+
+      {/* Razorpay disbursement (visible only after Approve + if org has it enabled) */}
+      <RazorpayDisbursePanel
+        runId={String(id)}
+        runStatus={String(run.status || "")}
+        orgId={String(getUser()?.orgId ?? "")}
+      />
 
       {/* Cost Breakdown */}
       {Number(run.total_gross) > 0 &&

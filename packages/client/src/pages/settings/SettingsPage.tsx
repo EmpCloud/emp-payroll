@@ -5,6 +5,7 @@ import { SelectField } from "@/components/ui/SelectField";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { useOrganization, useOrgSettings } from "@/api/hooks";
 import { apiPut, api } from "@/api/client";
+import { RazorpayCard } from "./RazorpayCard";
 import { useQueryClient } from "@tanstack/react-query";
 import { getUser } from "@/api/auth";
 import { Building2, CreditCard, Shield, Bell, Loader2, Upload, Trash2 } from "lucide-react";
@@ -484,6 +485,9 @@ export function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* RazorpayX payouts integration (Phase 1A — connect & test only) */}
+      <RazorpayCard orgId={orgId} />
 
       <Card>
         <CardHeader>

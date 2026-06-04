@@ -13,7 +13,9 @@ import { wrap, param } from "../helpers";
 import { AppError } from "../middleware/error.middleware";
 
 const router = Router();
+import { PayoutService } from "../../services/payout.service";
 const svc = new PayrollService();
+const payoutSvc = new PayoutService();
 const auditSvc = new AuditService();
 
 // BUG-030 — Payroll lifecycle actions (create / compute / approve / pay /
@@ -115,6 +117,45 @@ router.post(
       String(req.user!.empcloudUserId),
     );
     await logRunAction(req, "payroll_run.approved", param(req, "id"));
+    res.json({ success: true, data });
+  }),
+);
+
+// --- Razorpay disbursement (Phase 1B) ----------------------------------------
+// Available after a run is approved. Does NOT transition the run to "paid" —
+// admin still has to click Mark Paid manually after reviewing payouts on the
+// RazorpayX dashboard. The webhook (Phase 2) keeps each payout row's status
+// in sync; this endpoint just kicks off the batch.
+router.post(
+  "/:id/disburse",
+  authorize("hr_admin", "org_admin"),
+  wrap(async (req, res) => {
+    const data = await payoutSvc.disburseRun(req.user!.empcloudOrgId, param(req, "id"));
+    await logRunAction(req, "payroll_run.razorpay_disburse", param(req, "id"), {
+      queued: data.queued,
+      errors: data.errors,
+      skipped: data.skipped,
+    });
+    res.json({ success: true, data });
+  }),
+);
+
+router.get(
+  "/:id/payouts",
+  wrap(async (req, res) => {
+    const data = await payoutSvc.getRunPayouts(req.user!.empcloudOrgId, param(req, "id"));
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  "/:id/payouts/:payoutId/retry",
+  authorize("hr_admin", "org_admin"),
+  wrap(async (req, res) => {
+    const data = await payoutSvc.retryPayout(req.user!.empcloudOrgId, param(req, "payoutId"));
+    await logRunAction(req, "payroll_run.razorpay_retry", param(req, "id"), {
+      payoutId: param(req, "payoutId"),
+    });
     res.json({ success: true, data });
   }),
 );

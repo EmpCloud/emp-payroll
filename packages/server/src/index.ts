@@ -82,7 +82,17 @@ app.use(
   }),
 );
 app.use(compression());
-app.use(express.json({ limit: "10mb" }));
+// Capture raw body so signature-verified webhooks (Razorpay, etc.) can compute
+// HMAC over the exact bytes Razorpay signed. Doesn't change any other route's
+// behaviour — req.body is still the parsed JSON.
+app.use(
+  express.json({
+    limit: "10mb",
+    verify: (req, _res, buf) => {
+      (req as any).rawBody = buf;
+    },
+  }),
+);
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("combined", { stream: { write: (msg) => logger.info(msg.trim()) } }));
 
