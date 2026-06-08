@@ -1599,6 +1599,53 @@ export class PayrollService {
         if (activeLoans.data.length > 0) break; // Found loans, don't query again
       }
 
+      // Approved reimbursements -- bundle every approved-but-unpaid claim
+      // into this run's payslip as a single REIMB earning line per claim.
+      // Mirrors the loan pattern: snapshot the previous status / pay-period
+      // fields on the line so deleteRun() can revert exactly, then flip
+      // the reimbursement row to status='paid' with this run's month+year
+      // so the next run won't pick the same claim up again. Reimbursements
+      // are post-tax (legit expense returns, not income) so they're added
+      // to gross AFTER TDS has been computed -- the deduction has the
+      // correct withholding for the salary portion only, and reimbursement
+      // flows straight through to net.
+      const reimbursementFilters = [
+        { employee_id: String(ecEmp.id), status: "approved" },
+        ...(profile ? [{ employee_id: profile.id, status: "approved" }] : []),
+      ];
+      const seenReimbIds = new Set<string>();
+      for (const rf of reimbursementFilters) {
+        const claims = await this.db.findMany<any>("reimbursements", { filters: rf });
+        for (const claim of claims.data) {
+          if (seenReimbIds.has(String(claim.id))) continue;
+          seenReimbIds.add(String(claim.id));
+          const amount = Math.round(Number(claim.amount));
+          if (amount <= 0) continue;
+          const previousStatus = claim.status;
+          const previousPaidMonth = claim.paid_in_month;
+          const previousPaidYear = claim.paid_in_year;
+          earnings.push({
+            code: "REIMB",
+            name: `Reimbursement — ${claim.category || "Claim"}`,
+            amount,
+            meta: {
+              reimbursement_id: claim.id,
+              expense_date: claim.expense_date,
+              description: claim.description,
+              previous_status: previousStatus,
+              previous_paid_in_month: previousPaidMonth,
+              previous_paid_in_year: previousPaidYear,
+            },
+          } as any);
+          grossEarnings += amount;
+          await this.db.update("reimbursements", String(claim.id), {
+            status: "paid",
+            paid_in_month: Number(run.month),
+            paid_in_year: Number(run.year),
+          });
+        }
+      }
+
       // "% of Net Pay" night allowance — computed LAST because it needs the
       // base net (gross − all deductions). Paid once when the employee worked
       // ≥1 night (not scaled by nights). Added to gross so it lands in net.
@@ -1991,24 +2038,54 @@ export class PayrollService {
     });
     let loansReverted = 0;
     let untrackedLoanLines = 0;
+    // Same pattern for REIMB earning lines -- each carries
+    // meta.{reimbursement_id, previous_status, previous_paid_in_month,
+    // previous_paid_in_year}. Restoring the snapshot flips the claim
+    // back to 'approved' so the next payroll run can pick it up again.
+    // Without this, deleting a run would leave reimbursements
+    // permanently marked paid even though no payslip exists -- the
+    // employee never sees the money on a payslip, but the claim is
+    // closed in the system.
+    let reimbursementsReverted = 0;
+    let untrackedReimbLines = 0;
     for (const p of payslipsRes.data) {
       const rawDeductions =
         typeof p.deductions === "string" ? JSON.parse(p.deductions) : p.deductions || [];
-      if (!Array.isArray(rawDeductions)) continue;
-      for (const d of rawDeductions) {
-        if (!d || d.code !== "LOAN") continue;
-        const meta = d.meta || {};
-        if (!meta.loan_id) {
-          untrackedLoanLines++;
-          continue;
+      if (Array.isArray(rawDeductions)) {
+        for (const d of rawDeductions) {
+          if (!d || d.code !== "LOAN") continue;
+          const meta = d.meta || {};
+          if (!meta.loan_id) {
+            untrackedLoanLines++;
+            continue;
+          }
+          const updateData: Record<string, any> = {
+            outstanding_amount: Number(meta.previous_outstanding ?? 0),
+            installments_paid: Number(meta.previous_installments_paid ?? 0),
+          };
+          if (meta.previous_status) updateData.status = meta.previous_status;
+          await this.db.update("loans", String(meta.loan_id), updateData);
+          loansReverted++;
         }
-        const updateData: Record<string, any> = {
-          outstanding_amount: Number(meta.previous_outstanding ?? 0),
-          installments_paid: Number(meta.previous_installments_paid ?? 0),
-        };
-        if (meta.previous_status) updateData.status = meta.previous_status;
-        await this.db.update("loans", String(meta.loan_id), updateData);
-        loansReverted++;
+      }
+
+      const rawEarnings =
+        typeof p.earnings === "string" ? JSON.parse(p.earnings) : p.earnings || [];
+      if (Array.isArray(rawEarnings)) {
+        for (const e of rawEarnings) {
+          if (!e || e.code !== "REIMB") continue;
+          const meta = e.meta || {};
+          if (!meta.reimbursement_id) {
+            untrackedReimbLines++;
+            continue;
+          }
+          await this.db.update("reimbursements", String(meta.reimbursement_id), {
+            status: meta.previous_status ?? "approved",
+            paid_in_month: meta.previous_paid_in_month ?? null,
+            paid_in_year: meta.previous_paid_in_year ?? null,
+          });
+          reimbursementsReverted++;
+        }
       }
     }
 
@@ -2023,6 +2100,8 @@ export class PayrollService {
       payslips_deleted: payslipCount,
       loans_reverted: loansReverted,
       untracked_loan_lines: untrackedLoanLines,
+      reimbursements_reverted: reimbursementsReverted,
+      untracked_reimbursement_lines: untrackedReimbLines,
     };
   }
 

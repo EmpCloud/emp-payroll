@@ -27,6 +27,34 @@ router.get(
   }),
 );
 
+// Admin: file a reimbursement on behalf of an employee. The body is the
+// same as self-service submit() with one extra field -- employeeId, the
+// EmpCloud user id of the employee the claim belongs to. submit()
+// already accepts a numeric EmpCloud id and resolves it through
+// resolveEmployeeRow(), so no new service method is needed.
+router.post(
+  "/admin",
+  authorize("hr_admin", "hr_manager"),
+  wrap(async (req, res) => {
+    const { employeeId, category, description, amount, expenseDate } = req.body ?? {};
+    if (!employeeId) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: { code: "VALIDATION_ERROR", message: "employeeId is required" },
+        });
+    }
+    const data = await svc.submit(String(employeeId), {
+      category,
+      description,
+      amount: typeof amount === "number" ? amount : Number(amount),
+      expenseDate,
+    });
+    res.json({ success: true, data });
+  }),
+);
+
 // Admin: approve
 router.post(
   "/:id/approve",
@@ -60,6 +88,39 @@ router.post(
   authorize("hr_admin", "hr_manager"),
   wrap(async (req, res) => {
     const data = await svc.markPaid(param(req, "id"), req.body?.month, req.body?.year);
+    res.json({ success: true, data });
+  }),
+);
+
+// Admin: edit a claim. Allowed for pending / approved only -- paid
+// claims are locked because they're tied to a payslip's REIMB line.
+router.patch(
+  "/:id",
+  authorize("hr_admin", "hr_manager"),
+  wrap(async (req, res) => {
+    const { category, description, amount, expenseDate } = req.body ?? {};
+    const data = await svc.update(param(req, "id"), {
+      category,
+      description,
+      amount:
+        amount !== undefined && amount !== null
+          ? typeof amount === "number"
+            ? amount
+            : Number(amount)
+          : undefined,
+      expenseDate,
+    });
+    res.json({ success: true, data });
+  }),
+);
+
+// Admin: delete a claim outright. Refuses paid claims -- the run must
+// be deleted first to revert the claim back to approved.
+router.delete(
+  "/:id",
+  authorize("hr_admin", "hr_manager"),
+  wrap(async (req, res) => {
+    const data = await svc.remove(param(req, "id"));
     res.json({ success: true, data });
   }),
 );
