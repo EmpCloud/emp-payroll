@@ -340,4 +340,88 @@ export class ReimbursementService {
       paid_in_year: year,
     });
   }
+
+  /**
+   * Edit a claim's editable fields. Only allowed while the claim is
+   * still pending OR approved — once it's PAID it is attached to a
+   * payslip (the REIMB earning line) and any edit would silently
+   * desync the payslip amount from the claim row. Rejected claims are
+   * also frozen because they have no business changing after that
+   * decision.
+   *
+   * Accepts partial updates: only fields present in `data` are touched.
+   */
+  async update(
+    id: string,
+    data: Partial<{
+      category: string;
+      description: string;
+      amount: number;
+      expenseDate: string;
+    }>,
+  ) {
+    const claim = await this.db.findById<any>("reimbursements", id);
+    if (!claim) throw new AppError(404, "NOT_FOUND", "Claim not found");
+    if (claim.status !== "pending" && claim.status !== "approved") {
+      throw new AppError(
+        400,
+        "INVALID_STATUS",
+        `Cannot edit a ${claim.status} claim. Only pending or approved claims can be edited.`,
+      );
+    }
+
+    const updates: Record<string, any> = {};
+    if (data.category !== undefined) {
+      if (!String(data.category).trim()) {
+        throw new AppError(400, "VALIDATION_ERROR", "Category is required");
+      }
+      updates.category = String(data.category).trim();
+    }
+    if (data.description !== undefined) {
+      if (!String(data.description).trim()) {
+        throw new AppError(400, "VALIDATION_ERROR", "Description is required");
+      }
+      updates.description = String(data.description).trim();
+    }
+    if (data.amount !== undefined) {
+      const amt = typeof data.amount === "number" ? data.amount : Number(data.amount);
+      const amountCheck = z.number().finite().nonnegative().safeParse(amt);
+      if (!amountCheck.success) {
+        throw new AppError(400, "VALIDATION_ERROR", "Amount must be zero or a positive number");
+      }
+      updates.amount = amountCheck.data;
+    }
+    if (data.expenseDate !== undefined) {
+      if (!String(data.expenseDate).trim()) {
+        throw new AppError(400, "VALIDATION_ERROR", "Expense date is required");
+      }
+      updates.expense_date = data.expenseDate;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return claim;
+    }
+    return this.db.update("reimbursements", id, updates);
+  }
+
+  /**
+   * Delete a claim outright. Paid claims are allowed too -- HR sometimes
+   * needs to clean up a row that shouldn't have been there even after it
+   * went through payroll. The PAYSLIP itself is not touched: the REIMB
+   * earning line stays as the historical record of what was paid, and the
+   * payslip's gross/net don't change. Deleting only removes the claim row
+   * from the reimbursements registry, so future audits of "this payslip's
+   * REIMB line linked to claim X" will resolve to a missing row.
+   *
+   * If the goal is to undo the payment (refund / reverse), delete the
+   * payroll run instead -- deleteRun will revert the claim back to
+   * 'approved' (via the snapshot meta) and then this delete becomes a
+   * clean removal with no payslip side effects.
+   */
+  async remove(id: string) {
+    const claim = await this.db.findById<any>("reimbursements", id);
+    if (!claim) throw new AppError(404, "NOT_FOUND", "Claim not found");
+    await this.db.delete("reimbursements", id);
+    return { id, deleted: true, was_paid: claim.status === "paid" };
+  }
 }

@@ -6,10 +6,22 @@ import { DataTable } from "@/components/ui/DataTable";
 import { StatCard } from "@/components/ui/StatCard";
 import { Pagination } from "@/components/ui/Pagination";
 import { formatCurrency } from "@/lib/utils";
-import { apiGet, apiPost } from "@/api/client";
+import { apiGet, apiPost, apiPatch, apiDelete } from "@/api/client";
 import { useDepartments, useLocations } from "@/api/hooks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Receipt, CheckCircle2, XCircle, Clock, CreditCard, Search } from "lucide-react";
+import {
+  Loader2,
+  Receipt,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  CreditCard,
+  Search,
+  Plus,
+  UserRound,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 import { Modal } from "@/components/ui/Modal";
@@ -122,6 +134,187 @@ export function ReimbursementsPage() {
   const [payYear, setPayYear] = useState<number>(today.getFullYear());
   const [paying, setPaying] = useState(false);
 
+  // Admin "File for Employee" flow — HR fills a claim on behalf of someone
+  // (e.g. a paper bill an employee dropped on their desk). Posts to the new
+  // POST /reimbursements/admin endpoint, which routes through the same
+  // submit() the self-service flow uses, so all the existing validation,
+  // employee-resolution, and audit behaviour stays consistent.
+  const [addOpen, setAddOpen] = useState(false);
+  const [addEmp, setAddEmp] = useState<null | {
+    id: number;
+    first_name: string;
+    last_name: string;
+    emp_code?: string;
+    email?: string;
+    designation?: string;
+  }>(null);
+  const [empSearchQ, setEmpSearchQ] = useState("");
+  const [empSearchResults, setEmpSearchResults] = useState<any[]>([]);
+  const [empSearchLoading, setEmpSearchLoading] = useState(false);
+  const todayIso = today.toISOString().slice(0, 10);
+  const [addForm, setAddForm] = useState({
+    category: "",
+    description: "",
+    amount: "",
+    expenseDate: todayIso,
+  });
+  const [submittingAdd, setSubmittingAdd] = useState(false);
+
+  // Debounced employee search. Mirrors the global header search behaviour
+  // (GET /employees/search?q=...) so admins see exactly the same shape /
+  // ordering they're used to elsewhere in the app.
+  useEffect(() => {
+    if (!addOpen) return;
+    const q = empSearchQ.trim();
+    if (q.length < 2) {
+      setEmpSearchResults([]);
+      return;
+    }
+    let cancelled = false;
+    setEmpSearchLoading(true);
+    const id = setTimeout(async () => {
+      try {
+        const res = await apiGet<any>("/employees/search", { q, limit: 6 });
+        if (!cancelled) setEmpSearchResults(Array.isArray(res?.data) ? res.data : []);
+      } catch {
+        if (!cancelled) setEmpSearchResults([]);
+      } finally {
+        if (!cancelled) setEmpSearchLoading(false);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [empSearchQ, addOpen]);
+
+  function openAddModal() {
+    setAddEmp(null);
+    setEmpSearchQ("");
+    setEmpSearchResults([]);
+    setAddForm({ category: "", description: "", amount: "", expenseDate: todayIso });
+    setAddOpen(true);
+  }
+
+  // Edit-claim flow. Same form fields as the File modal but without the
+  // employee picker -- the row's employee is fixed. Server refuses if the
+  // claim is paid (locked because it's already on a payslip's REIMB line).
+  const [editClaim, setEditClaim] = useState<null | {
+    id: string;
+    employee_name?: string;
+    category: string;
+    description: string;
+    amount: string;
+    expenseDate: string;
+  }>(null);
+  const [editing, setEditing] = useState(false);
+
+  function openEditModal(r: any) {
+    setEditClaim({
+      id: r.id,
+      employee_name: r.employee_name,
+      category: r.category || "",
+      description: r.description || "",
+      amount: String(r.amount ?? ""),
+      expenseDate: (r.expense_date || "").slice(0, 10),
+    });
+  }
+
+  async function confirmEdit() {
+    if (!editClaim) return;
+    const amt = Number(editClaim.amount);
+    if (!editClaim.category.trim()) return toast.error("Category is required");
+    if (!editClaim.description.trim()) return toast.error("Description is required");
+    if (!Number.isFinite(amt) || amt < 0) return toast.error("Enter a valid amount");
+    if (!editClaim.expenseDate) return toast.error("Expense date is required");
+
+    setEditing(true);
+    try {
+      await apiPatch(`/reimbursements/${editClaim.id}`, {
+        category: editClaim.category.trim(),
+        description: editClaim.description.trim(),
+        amount: amt,
+        expenseDate: editClaim.expenseDate,
+      });
+      toast.success("Claim updated");
+      setEditClaim(null);
+      qc.invalidateQueries({ queryKey: ["reimbursements"] });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error?.message || err?.message || "Failed to update claim");
+    } finally {
+      setEditing(false);
+    }
+  }
+
+  // Confirm-delete is a Radix <Modal> so it matches the rest of the page
+  // (the native window.confirm flickered the browser chrome and didn't
+  // theme dark-mode correctly). State holds the row being confirmed --
+  // null = no dialog open. The confirm button calls performDelete which
+  // does the actual API call.
+  const [deleteTarget, setDeleteTarget] = useState<null | {
+    id: string;
+    status: string;
+    employee_name?: string;
+    amount?: number;
+    category?: string;
+  }>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  function handleDelete(r: any) {
+    setDeleteTarget({
+      id: r.id,
+      status: r.status,
+      employee_name: r.employee_name,
+      amount: Number(r.amount) || 0,
+      category: r.category,
+    });
+  }
+
+  async function performDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await apiDelete(`/reimbursements/${deleteTarget.id}`);
+      toast.success("Claim deleted");
+      setDeleteTarget(null);
+      qc.invalidateQueries({ queryKey: ["reimbursements"] });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error?.message || err?.message || "Failed to delete claim");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function submitAddOnBehalf() {
+    if (!addEmp) {
+      toast.error("Pick an employee first");
+      return;
+    }
+    const amt = Number(addForm.amount);
+    if (!addForm.category.trim()) return toast.error("Category is required");
+    if (!addForm.description.trim()) return toast.error("Description is required");
+    if (!Number.isFinite(amt) || amt < 0) return toast.error("Enter a valid amount");
+    if (!addForm.expenseDate) return toast.error("Expense date is required");
+
+    setSubmittingAdd(true);
+    try {
+      await apiPost("/reimbursements/admin", {
+        employeeId: addEmp.id,
+        category: addForm.category.trim(),
+        description: addForm.description.trim(),
+        amount: amt,
+        expenseDate: addForm.expenseDate,
+      });
+      toast.success("Claim filed for employee");
+      setAddOpen(false);
+      qc.invalidateQueries({ queryKey: ["reimbursements"] });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error?.message || err?.message || "Failed to file claim");
+    } finally {
+      setSubmittingAdd(false);
+    }
+  }
+
   function openPayModal(row: any) {
     setPayClaim({ id: row.id, employeeName: row.employee_name, amount: Number(row.amount) || 0 });
     setPayMonth(today.getMonth() + 1);
@@ -184,46 +377,73 @@ export function ReimbursementsPage() {
       key: "actions",
       header: "",
       render: (r: any) => {
-        if (r.status === "pending") {
-          return (
-            <div className="flex gap-1">
+        // Action set by status:
+        //   pending  : Approve | Reject | Edit | Delete
+        //   approved : "Awaiting payroll" badge + Edit | Delete (HR
+        //              override before payroll picks it up)
+        //   paid     : Delete only -- editing the amount on an already-
+        //              paid claim is risky (employee received a specific
+        //              figure on the payslip; the right way to change it
+        //              is to delete the payroll run, which reverts the
+        //              claim to approved, edit, and regenerate). Delete
+        //              is allowed for cleanup -- the loud confirm in
+        //              handleDelete spells out the trade-off.
+        //   rejected : Delete only -- keep visible until HR cleans up.
+        const canEdit = r.status === "pending" || r.status === "approved";
+        const canDelete = true;
+        return (
+          <div className="flex items-center gap-1">
+            {r.status === "pending" && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAction(r.id, "approve")}
+                  className="text-green-600 hover:text-green-700"
+                  title="Approve"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAction(r.id, "reject")}
+                  className="text-red-600 hover:text-red-700"
+                  title="Reject"
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+            {r.status === "approved" && (
+              <span className="text-xs text-gray-500" title="Will be paid in the next payroll run">
+                Awaiting payroll
+              </span>
+            )}
+            {canEdit && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleAction(r.id, "approve")}
-                className="text-green-600 hover:text-green-700"
-                title="Approve"
+                onClick={() => openEditModal(r)}
+                className="text-gray-500 hover:text-gray-700"
+                title="Edit"
               >
-                <CheckCircle2 className="h-4 w-4" />
+                <Pencil className="h-4 w-4" />
               </Button>
+            )}
+            {canDelete && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleAction(r.id, "reject")}
-                className="text-red-600 hover:text-red-700"
-                title="Reject"
+                onClick={() => handleDelete(r)}
+                className="text-red-500 hover:text-red-700"
+                title="Delete"
               >
-                <XCircle className="h-4 w-4" />
+                <Trash2 className="h-4 w-4" />
               </Button>
-            </div>
-          );
-        }
-        if (r.status === "approved") {
-          // #399 — After approval, HR needs a way to record that the
-          // disbursement actually happened. Opens a modal capturing the
-          // payroll month/year the payment landed in.
-          return (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => openPayModal(r)}
-              className="text-brand-600 hover:text-brand-700"
-            >
-              <CreditCard className="h-3.5 w-3.5" /> Mark as Paid
-            </Button>
-          );
-        }
-        return null;
+            )}
+          </div>
+        );
       },
     },
   ];
@@ -263,6 +483,11 @@ export function ReimbursementsPage() {
       <PageHeader
         title="Reimbursements"
         description={`${total} of ${totalClaims} claim${totalClaims === 1 ? "" : "s"}`}
+        actions={
+          <Button onClick={openAddModal}>
+            <Plus className="h-4 w-4" /> File for Employee
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
@@ -415,6 +640,267 @@ export function ReimbursementsPage() {
           />
         </div>
       )}
+
+      {/* "File for Employee" modal — HR creates a reimbursement claim on
+          behalf of an employee (e.g. someone hands HR a paper bill). Two
+          panels: pick employee (with debounced search) then fill the
+          claim. The form clears the picked employee when the user wants
+          to change selection. */}
+      <Modal
+        open={addOpen}
+        onClose={() => (submittingAdd ? null : setAddOpen(false))}
+        title="File reimbursement for employee"
+        description="Submit a claim on behalf of an employee. They will see it as pending in their reimbursement list."
+      >
+        <div className="space-y-4">
+          {!addEmp ? (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                Search employee
+              </label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  autoFocus
+                  value={empSearchQ}
+                  onChange={(e) => setEmpSearchQ(e.target.value)}
+                  placeholder="Name, employee code, or email (min 2 chars)"
+                  className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-1"
+                />
+              </div>
+              {/* Fixed-height results panel so the modal doesn't visibly
+                  grow/shrink as the search box flips through
+                  "type more" -> spinner -> N results -> empty. Single-line
+                  rows keep the list compact (~6 visible) without each
+                  result eating the form below. */}
+              <div className="mt-2 h-44 overflow-y-auto rounded-lg border border-gray-200">
+                {empSearchLoading ? (
+                  <div className="flex h-full items-center justify-center text-sm text-gray-400">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Searching...
+                  </div>
+                ) : empSearchResults.length === 0 ? (
+                  <div className="flex h-full items-center justify-center px-3 text-center text-xs text-gray-400">
+                    {empSearchQ.trim().length < 2
+                      ? "Type at least 2 characters to search."
+                      : "No matching employees."}
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-gray-100">
+                    {empSearchResults.map((emp: any) => (
+                      <li key={emp.id}>
+                        <button
+                          type="button"
+                          onClick={() => setAddEmp(emp)}
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-gray-50"
+                        >
+                          <UserRound className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
+                          <span className="min-w-0 flex-1 truncate font-medium text-gray-900">
+                            {emp.first_name} {emp.last_name}
+                          </span>
+                          <span className="flex-shrink-0 text-[11px] text-gray-400">
+                            {emp.emp_code || emp.designation || ""}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-500">
+                  <UserRound className="h-4 w-4" />
+                </span>
+                <div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {addEmp.first_name} {addEmp.last_name}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {addEmp.emp_code ? `${addEmp.emp_code} · ` : ""}
+                    {addEmp.designation || addEmp.email || ""}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAddEmp(null)}
+                className="text-xs font-medium text-gray-500 hover:text-gray-700"
+              >
+                Change
+              </button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-gray-600">Category</span>
+              <input
+                type="text"
+                value={addForm.category}
+                onChange={(e) => setAddForm({ ...addForm, category: e.target.value })}
+                placeholder="Travel, Food, Internet..."
+                className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-gray-600">Amount</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={addForm.amount}
+                onChange={(e) => setAddForm({ ...addForm, amount: e.target.value })}
+                placeholder="0.00"
+                className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1"
+              />
+            </label>
+          </div>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-gray-600">Expense date</span>
+            <input
+              type="date"
+              value={addForm.expenseDate}
+              max={todayIso}
+              onChange={(e) => setAddForm({ ...addForm, expenseDate: e.target.value })}
+              className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-gray-600">Description</span>
+            <textarea
+              rows={3}
+              value={addForm.description}
+              onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
+              placeholder="What was the expense for?"
+              className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1"
+            />
+          </label>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setAddOpen(false)} disabled={submittingAdd}>
+              Cancel
+            </Button>
+            <Button onClick={submitAddOnBehalf} loading={submittingAdd} disabled={!addEmp}>
+              <Plus className="h-4 w-4" /> File claim
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Themed delete-confirm modal. Replaces window.confirm so the
+          dialog respects dark mode and matches the rest of the page.
+          Paid rows get a louder banner because the row may be linked to
+          a payslip's REIMB line -- copy spells out that the payslip
+          stays untouched. */}
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => (deleting ? null : setDeleteTarget(null))}
+        title="Delete reimbursement?"
+        description={
+          deleteTarget?.employee_name
+            ? `For ${deleteTarget.employee_name}${deleteTarget.category ? " · " + deleteTarget.category : ""}${deleteTarget.amount ? " · " + formatCurrency(deleteTarget.amount) : ""}`
+            : undefined
+        }
+      >
+        {deleteTarget && (
+          <div className="space-y-4">
+            {deleteTarget.status === "paid" ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+                <p className="font-medium">This claim is already paid.</p>
+                <p className="mt-1 text-xs leading-relaxed">
+                  Deleting only removes the row from the reimbursements list. It does{" "}
+                  <strong>not</strong> refund the employee or remove the line from the payslip. If
+                  you need to reverse the payment, delete the payroll run instead -- that reverts
+                  the claim back to <em>approved</em> automatically.
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                This will permanently remove the claim. This cannot be undone.
+              </p>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+                Cancel
+              </Button>
+              <Button
+                onClick={performDelete}
+                loading={deleting}
+                className="bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500"
+              >
+                <Trash2 className="h-4 w-4" /> Delete
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Edit-claim modal. Same fields as the File modal minus the
+          employee picker. Server enforces the status guard (paid claims
+          rejected); this modal just opens for pending/approved rows. */}
+      <Modal
+        open={!!editClaim}
+        onClose={() => (editing ? null : setEditClaim(null))}
+        title="Edit reimbursement"
+        description={editClaim?.employee_name ? `For ${editClaim.employee_name}` : undefined}
+      >
+        {editClaim && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-gray-600">Category</span>
+                <input
+                  type="text"
+                  value={editClaim.category}
+                  onChange={(e) => setEditClaim({ ...editClaim, category: e.target.value })}
+                  className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-gray-600">Amount</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editClaim.amount}
+                  onChange={(e) => setEditClaim({ ...editClaim, amount: e.target.value })}
+                  className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1"
+                />
+              </label>
+            </div>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-gray-600">Expense date</span>
+              <input
+                type="date"
+                value={editClaim.expenseDate}
+                max={todayIso}
+                onChange={(e) => setEditClaim({ ...editClaim, expenseDate: e.target.value })}
+                className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-gray-600">Description</span>
+              <textarea
+                rows={3}
+                value={editClaim.description}
+                onChange={(e) => setEditClaim({ ...editClaim, description: e.target.value })}
+                className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1"
+              />
+            </label>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setEditClaim(null)} disabled={editing}>
+                Cancel
+              </Button>
+              <Button onClick={confirmEdit} loading={editing}>
+                Save changes
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* #399 — Mark-as-Paid modal. Captures the payroll month/year the
           disbursement landed in so reports can attribute it correctly. */}
