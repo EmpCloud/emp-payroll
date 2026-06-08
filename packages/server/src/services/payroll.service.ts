@@ -1566,17 +1566,33 @@ export class PayrollService {
         for (const loan of activeLoans.data) {
           const emi = Math.round(Number(loan.emi_amount));
           if (emi > 0) {
+            // Snapshot the loan state BEFORE applying this EMI so
+            // deleteRun() can revert exactly even if a later run /
+            // manual edit / loan top-up has happened since. Without
+            // these snapshots, a revert would have to guess the delta
+            // and would mis-correct any loan whose schedule has been
+            // touched after this payslip was generated.
+            const previousOutstanding = Number(loan.outstanding_amount);
+            const previousInstallmentsPaid = Number(loan.installments_paid) || 0;
+            const previousStatus = loan.status;
+            const newOutstanding = Math.max(0, previousOutstanding - emi);
+            const newStatus = newOutstanding <= 0 ? "completed" : previousStatus;
             deductions.push({
               code: "LOAN",
               name: `Loan EMI — ${loan.type || "Loan"}`,
               amount: emi,
-            });
+              meta: {
+                loan_id: loan.id,
+                previous_outstanding: previousOutstanding,
+                previous_installments_paid: previousInstallmentsPaid,
+                previous_status: previousStatus,
+              },
+            } as any);
             totalDed += emi;
-            // Update loan tracking
             await this.db.update("loans", loan.id, {
-              installments_paid: (Number(loan.installments_paid) || 0) + 1,
-              outstanding_amount: Math.max(0, Number(loan.outstanding_amount) - emi),
-              ...(Number(loan.outstanding_amount) - emi <= 0 ? { status: "completed" } : {}),
+              installments_paid: previousInstallmentsPaid + 1,
+              outstanding_amount: newOutstanding,
+              ...(newStatus !== previousStatus ? { status: newStatus } : {}),
             });
           }
         }
@@ -1948,6 +1964,54 @@ export class PayrollService {
     // belt-and-braces guard against any future change to the adapter
     // delete() signature, which currently doesn't accept an org filter.
     const run = await this.getRun(runId, orgId);
+
+    // Revert any loan EMI deductions stamped on this run's payslips
+    // BEFORE deleting the payslips themselves — otherwise the loan ledger
+    // would silently keep the EMI as "paid" while the underlying payslip
+    // is gone, and the next payroll would deduct the same EMI again on
+    // top of an outstanding balance that's already too low.
+    //
+    // Each LOAN deduction line carries meta.{loan_id,
+    // previous_outstanding, previous_installments_paid, previous_status}
+    // -- a snapshot from the moment the deduction was computed -- so we
+    // restore the loan to that exact state regardless of whether later
+    // runs / manual edits have touched it since. Using snapshots (not
+    // amount-based deltas) makes this safe to re-run: if deleteRun is
+    // invoked twice, the second pass writes the same previous_* values
+    // and the loan ends up at the same state.
+    //
+    // Older payslips that pre-date the meta-stamping (LOAN lines with no
+    // meta.loan_id) are skipped: when an employee has multiple loans we
+    // can't reliably attribute the EMI back to a specific row, so HR has
+    // to reconcile those by hand. The count is returned so the audit log
+    // can flag it.
+    const payslipsRes = await this.db.findMany<any>("payslips", {
+      filters: { payroll_run_id: runId },
+      limit: 100000,
+    });
+    let loansReverted = 0;
+    let untrackedLoanLines = 0;
+    for (const p of payslipsRes.data) {
+      const rawDeductions =
+        typeof p.deductions === "string" ? JSON.parse(p.deductions) : p.deductions || [];
+      if (!Array.isArray(rawDeductions)) continue;
+      for (const d of rawDeductions) {
+        if (!d || d.code !== "LOAN") continue;
+        const meta = d.meta || {};
+        if (!meta.loan_id) {
+          untrackedLoanLines++;
+          continue;
+        }
+        const updateData: Record<string, any> = {
+          outstanding_amount: Number(meta.previous_outstanding ?? 0),
+          installments_paid: Number(meta.previous_installments_paid ?? 0),
+        };
+        if (meta.previous_status) updateData.status = meta.previous_status;
+        await this.db.update("loans", String(meta.loan_id), updateData);
+        loansReverted++;
+      }
+    }
+
     const payslipCount = await this.db.deleteMany("payslips", { payroll_run_id: runId });
     await this.db.deleteMany("payroll_runs", { id: runId, empcloud_org_id: Number(orgId) });
     return {
@@ -1957,6 +2021,8 @@ export class PayrollService {
       year: run.year,
       status: run.status,
       payslips_deleted: payslipCount,
+      loans_reverted: loansReverted,
+      untracked_loan_lines: untrackedLoanLines,
     };
   }
 
