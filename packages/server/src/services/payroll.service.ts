@@ -183,17 +183,35 @@ async function resolveNightShiftDays(
     if (!dateIso) continue;
     const weight = d.status === "half_day" || d.status === "half_present_half_leave" ? 0.5 : 1;
 
+    // Governing assignment = the most recently created shift_assignment
+    // covering the date (created_at desc, id desc as tiebreaker). This
+    // matches the Attendance Grid's resolution rule — the Grid renders
+    // each date based on the latest assignment, never trusting the per-
+    // day `shift_id` stamped on the attendance row.
+    //
+    // Why: the check-in app stamps the attendance row with whatever shift
+    // happens to be active at punch time. If HR later assigns a different
+    // shift retroactively (e.g. promotes an employee to Night shift for
+    // May 25-31 after they already punched under General), the row's
+    // stamped shift_id is stale. Letting the row win caused the payslip
+    // to disagree with the Grid (engine said "General → 0 nights", Grid
+    // said "Night → 5 nights"). The assignment is HR's latest authoritative
+    // decision, so it wins. When no assignment covers the date we still
+    // fall back to the attendance row's shift_id as a last resort.
+    const covering = norm
+      .filter((a) => a.from <= dateIso && (a.to === null || a.to >= dateIso))
+      .sort((a, b) => (b.order !== a.order ? b.order - a.order : b.id - a.id));
     let isNight: boolean;
-    if (d.shift_id != null) {
-      // Explicit per-day shift on the attendance row wins.
+    if (covering.length) {
+      isNight = covering[0].isNight;
+    } else if (d.shift_id != null) {
+      // No assignment covers the date — fall back to whatever the
+      // attendance row carries. Rare path; only triggers on legacy data
+      // where attendance rows were stamped without any shift assignment
+      // having existed at the time.
       isNight = !!Number(d.att_shift_is_night);
     } else {
-      // Governing assignment = the most recently created one covering the
-      // date (created_at desc, id desc as tiebreaker).
-      const covering = norm
-        .filter((a) => a.from <= dateIso && (a.to === null || a.to >= dateIso))
-        .sort((a, b) => (b.order !== a.order ? b.order - a.order : b.id - a.id));
-      isNight = covering.length ? covering[0].isNight : false;
+      isNight = false;
     }
     if (isNight) nights += weight;
   }
