@@ -105,7 +105,13 @@ export function LoansPage() {
     (s: number, l: any) => s + Number(l.outstanding_amount),
     0,
   );
-  const totalEMI = activeLoans.reduce((s: number, l: any) => s + Number(l.emi_amount), 0);
+  // Mirror the payroll engine: custom override wins, capped at outstanding
+  // so the last-month settlement is reflected in the dashboard total too.
+  const totalEMI = activeLoans.reduce((s: number, l: any) => {
+    const base = Number(l.custom_emi_amount ?? l.emi_amount);
+    const cap = Math.max(0, Number(l.outstanding_amount));
+    return s + Math.min(base, cap);
+  }, 0);
   const completedCount = Number(completedRes?.data?.total ?? 0);
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
@@ -131,6 +137,24 @@ export function LoansPage() {
       return;
     }
 
+    // Optional per-month override. Empty → undefined (engine uses
+    // tenure-derived EMI). A positive number capped at the loan amount is
+    // sent through; the last month auto-settles whatever's left.
+    const customEmiRaw = (fd.get("customEmi") || "").toString().trim();
+    let customEmiAmount: number | undefined = undefined;
+    if (customEmiRaw) {
+      const v = Number(customEmiRaw);
+      if (!Number.isFinite(v) || v <= 0) {
+        toast.error("Custom monthly EMI must be greater than zero");
+        return;
+      }
+      if (v > amount) {
+        toast.error("Custom monthly EMI cannot exceed the loan amount");
+        return;
+      }
+      customEmiAmount = Math.round(v);
+    }
+
     setCreating(true);
     try {
       await apiPost("/loans", {
@@ -142,6 +166,7 @@ export function LoansPage() {
         interestRate: interest,
         startDate: fd.get("startDate"),
         notes: fd.get("notes"),
+        ...(customEmiAmount !== undefined ? { customEmiAmount } : {}),
       });
       toast.success("Loan created");
       setShowCreate(false);
@@ -187,6 +212,27 @@ export function LoansPage() {
       toast.error("Interest rate must be zero or greater");
       return;
     }
+    // Custom EMI editor:
+    //  - blank string → null  (clears any existing override; falls back to
+    //                          tenure-based EMI)
+    //  - positive number → set / replace
+    const customEmiRawEdit = (fd.get("customEmi") || "").toString().trim();
+    let customEmiAmount: number | null | undefined = undefined;
+    if (customEmiRawEdit === "") {
+      customEmiAmount = null;
+    } else {
+      const v = Number(customEmiRawEdit);
+      if (!Number.isFinite(v) || v <= 0) {
+        toast.error("Custom monthly EMI must be greater than zero");
+        return;
+      }
+      if (v > amount) {
+        toast.error("Custom monthly EMI cannot exceed the loan amount");
+        return;
+      }
+      customEmiAmount = Math.round(v);
+    }
+
     setEditing(true);
     try {
       await apiPut(`/loans/${editLoan.id}`, {
@@ -197,6 +243,7 @@ export function LoansPage() {
         interestRate: interest,
         startDate: fd.get("startDate"),
         notes: fd.get("notes"),
+        customEmiAmount,
       });
       toast.success("Loan updated");
       setEditLoan(null);
@@ -269,7 +316,20 @@ export function LoansPage() {
         </span>
       ),
     },
-    { key: "emi_amount", header: "EMI", render: (r: any) => formatCurrency(r.emi_amount) },
+    {
+      key: "emi_amount",
+      header: "EMI",
+      render: (r: any) => (
+        <div>
+          <div className="font-medium">{formatCurrency(r.custom_emi_amount ?? r.emi_amount)}</div>
+          {r.custom_emi_amount != null && (
+            <div className="text-[10px] uppercase tracking-wide text-amber-600">
+              Custom (default {formatCurrency(r.emi_amount)})
+            </div>
+          )}
+        </div>
+      ),
+    },
     {
       key: "progress",
       header: "Progress",
@@ -552,6 +612,19 @@ export function LoansPage() {
             />
           </div>
           <Input
+            id="customEmi"
+            name="customEmi"
+            label="Custom Monthly EMI (₹) — optional"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="Leave blank to use tenure-based EMI"
+          />
+          <div className="-mt-2 text-xs text-gray-500">
+            Override the monthly deduction. The last instalment auto-settles whatever's left (e.g.
+            ₹28,734 loan with ₹10,000 custom EMI → ₹10,000 + ₹10,000 + ₹8,734).
+          </div>
+          <Input
             id="notes"
             name="notes"
             label="Notes (optional)"
@@ -640,6 +713,20 @@ export function LoansPage() {
                 defaultValue={String(editLoan.start_date || "").slice(0, 10)}
                 required
               />
+            </div>
+            <Input
+              id="editCustomEmi"
+              name="customEmi"
+              label="Custom Monthly EMI (₹) — optional"
+              type="number"
+              min="1"
+              step="1"
+              defaultValue={editLoan.custom_emi_amount ?? ""}
+              placeholder="Leave blank to use tenure-based EMI"
+            />
+            <div className="-mt-2 text-xs text-gray-500">
+              Override the monthly deduction. Last instalment auto-settles whatever's left. Clear
+              the field to fall back to the tenure-based EMI.
             </div>
             <Input
               id="editNotes"

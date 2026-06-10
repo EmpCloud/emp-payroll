@@ -1634,7 +1634,21 @@ export class PayrollService {
       for (const lf of loanFilters) {
         const activeLoans = await this.db.findMany<any>("loans", { filters: lf });
         for (const loan of activeLoans.data) {
-          const emi = Math.round(Number(loan.emi_amount));
+          // Pick the per-month EMI:
+          //  - if loan.custom_emi_amount is set, that's HR's override
+          //    (e.g. ₹10,000 instead of the tenure-derived ₹9,578);
+          //  - otherwise fall back to loan.emi_amount stored at create
+          //    (tenure-based).
+          // Then cap at the current outstanding so the FINAL month settles
+          // whatever's left (e.g. ₹28,734 − ₹10k − ₹10k = ₹8,734 on the
+          // third month). Without the cap the engine would over-deduct on
+          // the final month and look right on the loan ledger but wrong
+          // on the payslip.
+          const baseEmi = Math.round(
+            Number(loan.custom_emi_amount != null ? loan.custom_emi_amount : loan.emi_amount),
+          );
+          const outstanding = Math.max(0, Math.round(Number(loan.outstanding_amount)));
+          const emi = Math.min(baseEmi, outstanding);
           if (emi > 0) {
             // Snapshot the loan state BEFORE applying this EMI so
             // deleteRun() can revert exactly even if a later run /

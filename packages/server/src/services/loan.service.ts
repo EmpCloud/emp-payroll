@@ -21,6 +21,10 @@ export const createLoanInputSchema = z.object({
   interestRate: z.number().nonnegative("Interest rate must be zero or greater").optional(),
   startDate: z.string().min(1, "Start date is required"),
   notes: z.string().optional(),
+  // Optional per-month override. When set, payroll deducts this amount
+  // every month (capped at the outstanding so the final month auto-settles
+  // whatever's left). Leave unset to use the default tenure-based EMI.
+  customEmiAmount: z.number().positive("Custom monthly EMI must be greater than zero").optional(),
 });
 
 export type CreateLoanInput = z.infer<typeof createLoanInputSchema>;
@@ -166,6 +170,21 @@ export class LoanService {
               data.tenureMonths,
           )
         : Math.round(data.principalAmount / data.tenureMonths);
+    // Custom monthly EMI must be > 0 and ≤ the principal — anything outside
+    // that range is a data-entry error (you can't deduct more than the loan
+    // itself, and a zero/negative override would never close the loan).
+    const customEmi =
+      data.customEmiAmount != null && data.customEmiAmount > 0
+        ? Math.round(data.customEmiAmount)
+        : null;
+    if (customEmi != null && customEmi > data.principalAmount) {
+      throw new AppError(
+        400,
+        "VALIDATION_ERROR",
+        "Custom monthly EMI cannot exceed the loan amount",
+        { customEmiAmount: ["Must be ≤ the loan amount"] },
+      );
+    }
 
     // #303 — when the supplied employeeId is purely numeric it's an EmpCloud
     // user id (the new dropdown sets `value={user.id}`), so also stamp
@@ -186,6 +205,7 @@ export class LoanService {
       outstanding_amount: data.principalAmount,
       tenure_months: data.tenureMonths,
       emi_amount: emi,
+      custom_emi_amount: customEmi,
       interest_rate: rate,
       status: "active",
       start_date: data.startDate,
@@ -276,6 +296,33 @@ export class LoanService {
       emi_amount: emi,
       outstanding_amount: newOutstanding,
     };
+    // customEmiAmount is editable independently — `undefined` leaves it
+    // untouched; explicit `null` clears the override (falls back to
+    // tenure-based EMI); a positive number sets / replaces it.
+    if (input.customEmiAmount !== undefined) {
+      if (input.customEmiAmount === null) {
+        updates.custom_emi_amount = null;
+      } else {
+        const v = Number(input.customEmiAmount);
+        if (!Number.isFinite(v) || v <= 0) {
+          throw new AppError(
+            400,
+            "VALIDATION_ERROR",
+            "Custom monthly EMI must be greater than zero",
+            { customEmiAmount: ["Must be > 0"] },
+          );
+        }
+        if (v > principal) {
+          throw new AppError(
+            400,
+            "VALIDATION_ERROR",
+            "Custom monthly EMI cannot exceed the loan amount",
+            { customEmiAmount: ["Must be ≤ the loan amount"] },
+          );
+        }
+        updates.custom_emi_amount = Math.round(v);
+      }
+    }
     if (typeof input.startDate === "string" && input.startDate.trim()) {
       updates.start_date = input.startDate;
     }
@@ -305,6 +352,12 @@ export class LoanService {
     const result = await this.db.findMany<any>("loans", {
       filters: { employee_id: employeeId, status: "active" },
     });
-    return result.data.reduce((sum: number, l: any) => sum + Number(l.emi_amount), 0);
+    // Mirror the payroll engine: custom override wins, capped at the
+    // outstanding so the last instalment is the natural settlement.
+    return result.data.reduce((sum: number, l: any) => {
+      const base = Number(l.custom_emi_amount ?? l.emi_amount);
+      const cap = Math.max(0, Number(l.outstanding_amount));
+      return sum + Math.min(base, cap);
+    }, 0);
   }
 }
