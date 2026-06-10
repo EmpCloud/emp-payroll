@@ -232,8 +232,14 @@ async function resolveOvertimeDays(
     .select("date as date", "status as status")) as Array<{ date: string | Date; status: string }>;
   if (!worked.length) return 0;
 
-  // Holiday set for the window: company_events (event_type='holiday',
-  // multi-day expanded) + legacy organization_holidays. Matches the grid.
+  // Holiday set for the window — ONLY mandatory holidays trigger auto-OT.
+  // Optional / restricted holidays (Bakrid, Onam, Holi in many orgs) are
+  // days the office stays open: an employee who chooses to come gets
+  // regular pay, not OT. Symmetric with resolveCalendarLop, which also
+  // treats optional holidays as normal working days when the employee has
+  // an attendance status (the same `is_mandatory = 1` filter is used
+  // there). HR can still grant OT on an optional holiday by explicitly
+  // setting the status to `holiday_overtime` — that's honoured above.
   const holidaySet = new Set<string>();
   const addRange = (startIso: string | null, endIso: string | null) => {
     if (!startIso) return;
@@ -248,7 +254,7 @@ async function resolveOvertimeDays(
   };
   try {
     const events = (await empcloudDb("company_events")
-      .where({ organization_id: orgId, event_type: "holiday" })
+      .where({ organization_id: orgId, event_type: "holiday", is_mandatory: 1 })
       .where("start_date", "<=", `${endDate} 23:59:59`)
       .andWhere((b: any) =>
         b.where("end_date", ">=", `${startDate} 00:00:00`).orWhereNull("end_date"),
@@ -1103,10 +1109,64 @@ export class PayrollService {
         lopDays += trimmed;
       }
 
-      // Parse salary components
-      const components =
-        typeof salary.components === "string" ? JSON.parse(salary.components) : salary.components;
-      const componentList = Array.isArray(components) ? components : [];
+      // Template-driven component list — read the latest `salary_components`
+      // rows for this employee's structure_id and compute amounts off the
+      // employee's CTC. The pre-existing JSON snapshot in
+      // `employee_salaries.components` is kept only as a fallback when no
+      // template rows exist (legacy salaries that pre-date the structure
+      // table, or one-off structures).
+      //
+      // Why: when HR edits a structure on /payroll/structures (adds an OT
+      // component, changes a percentage, etc.), the change should apply to
+      // every employee on that structure on the next payroll run — without
+      // having to re-assign the structure to each employee. The frozen
+      // snapshot couldn't do that; this can.
+      let componentList: any[] = [];
+      if (salary.structure_id) {
+        const tplRows = await this.db.findMany<any>("salary_components", {
+          filters: { structure_id: salary.structure_id, is_active: 1 },
+          sort: { field: "sort_order", order: "asc" },
+          limit: 100,
+        });
+        const gross = Number(salary.gross_salary || 0);
+        componentList = (tplRows?.data || []).map((t: any) => {
+          const calcType = String(t.calculation_type || "").trim();
+          const base: any = {
+            code: t.code,
+            name: t.name,
+            type: t.type,
+            calculationType: calcType,
+            percentageOf: t.percentage_of || undefined,
+            isProratable: t.is_proratable == null ? true : !!Number(t.is_proratable),
+            isTaxable: t.is_taxable == null ? true : !!Number(t.is_taxable),
+            isStatutory: !!Number(t.is_statutory),
+          };
+          if (calcType === "percentage") {
+            // PercentageOf=GROSS is the common case; if the template names a
+            // different basis (e.g. BASIC) we still keep the field so any
+            // downstream consumer that cares can use it, but the amount we
+            // pre-compute uses GROSS (matches the historical snapshot math).
+            const annual = Math.round((gross * Number(t.value || 0)) / 100);
+            return { ...base, annualAmount: annual, monthlyAmount: Math.round(annual / 12) };
+          }
+          if (calcType === "fixed") {
+            const monthly = Math.round(Number(t.value || 0));
+            return { ...base, annualAmount: monthly * 12, monthlyAmount: monthly };
+          }
+          // Variable / rate-based (per_ot, per_ot_daily, per_night,
+          // per_night_daily, per_night_pct, formula, balance, etc.).
+          // monthlyAmount stays 0; the engine multiplies the rate by the
+          // actual count further down.
+          return { ...base, annualAmount: 0, monthlyAmount: 0, rate: Number(t.value || 0) };
+        });
+      }
+      if (componentList.length === 0) {
+        // Fallback: legacy salaries without a structure_id, or structures
+        // whose template rows were deleted — use whatever was snapshotted.
+        const snap =
+          typeof salary.components === "string" ? JSON.parse(salary.components) : salary.components;
+        componentList = Array.isArray(snap) ? snap : [];
+      }
 
       // BUG-004 — Capture the un-prorated (contracted) Basic and HRA so the
       // annual TDS projection can use the FULL year-equivalent values rather
