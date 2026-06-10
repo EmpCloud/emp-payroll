@@ -15,6 +15,7 @@ import {
   getEmpCloudDB,
   findEmployeeProfileByUserId,
 } from "../db/empcloud";
+import { findEffectiveExitsForUsers, isEmpExitEnabled } from "../db/empexit";
 import { v4 as uuidv4 } from "uuid";
 import { config } from "../config";
 import * as cloudHRMS from "./cloud-hrms.service";
@@ -453,7 +454,10 @@ async function resolveCalendarLop(
     // Future / today: dates only increase, so once we reach today we're done —
     // the rest of the month is assumed worked and never charged.
     if (cur >= todayIso) break;
-    // Holiday → paid, not a working day.
+    // Holiday → paid, not a working day. Only MANDATORY holidays land in
+    // `holidaySet` (filtered upstream by company_events.is_mandatory=1);
+    // optional holidays fall through and are treated as normal working
+    // days so the attendance-grid status decides whether they're paid.
     if (!holidaySet.has(cur)) {
       const dow = new Date(cur + "T00:00:00Z").getUTCDay();
       const covering = norm
@@ -463,10 +467,18 @@ async function resolveCalendarLop(
       const isRest = gov
         ? gov.isWeekoffShift || (gov.workingDays.length > 0 && !gov.workingDays.includes(dow))
         : dow === 0 || dow === 6;
-      if (!isRest) {
-        // An elapsed working day — charge LOP unless it was paid.
-        const status = statusByDate[cur];
-        const lv = leaveByDate[cur];
+      const status = statusByDate[cur];
+      const lv = leaveByDate[cur];
+      // Whether this day should contribute to LOP at all:
+      //   - elapsed working day  → always evaluated
+      //   - weekoff / rest day   → ONLY if HR explicitly marked it 'absent'
+      //                            on the Attendance Grid. That's the
+      //                            sandwich-leave override (Sat/Sun
+      //                            between two LOP weekdays); HR sets the
+      //                            cell to A on purpose and payroll must
+      //                            honour it. Default rest days remain
+      //                            paid as before.
+      if (!isRest || status === "absent") {
         if (
           status === "present" ||
           status === "checked_in" ||
@@ -481,7 +493,8 @@ async function resolveCalendarLop(
         } else if (status === "on_leave") {
           if (lv && !lv.paid) lop += 1; // explicit unpaid leave; otherwise paid
         } else {
-          // 'absent' or no record at all on a past working day.
+          // 'absent' (including HR-overridden weekoff) or no record at
+          // all on a past working day.
           if (!(lv && lv.paid)) lop += 1; // a paid leave would cover it; else LOP
         }
       }
@@ -682,8 +695,18 @@ export class PayrollService {
       }
     };
     try {
+      // BUG-OptionalHoliday — only mandatory holidays auto-pay. Optional
+      // holidays (Bakrid, Onam, Holi in many orgs, "restricted holiday"
+      // in govt parlance) are days HR offers the employee the option to
+      // take off — if the employee comes in and works (full / half), the
+      // day must count as a normal working day, not a free pay day.
+      // Before this guard the engine skipped LOP for every holiday
+      // regardless of is_mandatory, so a half_day on an optional holiday
+      // got 0 LOP instead of the correct 0.5. The Attendance Grid
+      // (EmpCloud) already keeps this distinction via
+      // company_events.is_mandatory; we mirror it here.
       const events = (await empcloudDb("company_events")
-        .where({ organization_id: Number(orgId), event_type: "holiday" })
+        .where({ organization_id: Number(orgId), event_type: "holiday", is_mandatory: 1 })
         .where("start_date", "<=", `${monthEnd} 23:59:59`)
         .andWhere((b: any) =>
           b.where("end_date", ">=", `${monthStart} 00:00:00`).orWhereNull("end_date"),
@@ -735,6 +758,17 @@ export class PayrollService {
     // even though over-withheld.
     const missingPan: Array<{ empcloudUserId: number; name: string; code: string }> = [];
 
+    // ─── Exit-date truth pull (one query, the whole org) ─────────────────
+    // empcloud.users.date_of_exit is populated by a webhook from emp-exit
+    // that historically fell back to today() when the payload was missing
+    // the date. The authoritative source is the emp-exit module's own
+    // `exit_requests.last_working_date`. Override here so the join/exit
+    // skip checks below and the mid-month pro-ration clip downstream see
+    // the right value. Falls back to empcloud's date_of_exit when the
+    // integration is disabled / unreachable.
+    const userIds = ecEmployees.map((e: any) => Number(e.id)).filter((n: number) => n > 0);
+    const exitByUserId = await findEffectiveExitsForUsers(userIds);
+
     for (const ecEmp of ecEmployees) {
       // Reset per-employee employer contributions each iteration
       let employeeEmployerContributions = 0;
@@ -774,7 +808,14 @@ export class PayrollService {
         return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
       };
       const doj = isoDate(ecAny.date_of_joining);
-      const doe = isoDate(ecAny.date_of_exit);
+      // Prefer emp-exit's last_working_date over empcloud.users.date_of_exit.
+      // When emp-exit has an authoritative record for this user we use that;
+      // otherwise we fall back to the EmpCloud column (legacy path / when the
+      // emp-exit integration is disabled or the user has no exit record at
+      // all — both should be treated as "still employed").
+      const ecDoe = isoDate(ecAny.date_of_exit);
+      const exitRec = exitByUserId.get(Number(ecEmp.id));
+      const doe = exitRec?.lastWorkingDate ?? ecDoe;
       if (doj && doj > monthEnd) {
         skipped.push({
           empcloudUserId: ecEmp.id,
@@ -794,6 +835,25 @@ export class PayrollService {
           reason: `Exited ${doe} — before the pay period (${monthStart} → ${monthEnd})`,
         });
         continue;
+      }
+
+      // Mid-month exit clip. When the employee's last working day falls
+      // INSIDE the pay period (e.g. exits on 20 May for a May run), the
+      // engine must cap paid_days at (doe - monthStart + 1). Without this
+      // we treat them like a full-month employee and over-pay — the bug
+      // that caused Santhosh's May payslip to be ₹8.1L instead of ~₹5.2L.
+      // The actual clip happens further down once `paidDays` is computed
+      // from the attendance source. We just capture the cap here.
+      let exitPaidUpperBound: number | null = null;
+      if (doe && doe >= monthStart && doe <= monthEnd) {
+        const msPerDay = 86400000;
+        // Half-open day count works because both strings are YYYY-MM-DD
+        // at UTC 00:00; floor handles any DST drift defensively.
+        const dayCount =
+          Math.floor(
+            (Date.parse(doe + "T00:00:00Z") - Date.parse(monthStart + "T00:00:00Z")) / msPerDay,
+          ) + 1;
+        exitPaidUpperBound = Math.max(0, dayCount);
       }
 
       // Get payroll profile for this employee
@@ -987,7 +1047,7 @@ export class PayrollService {
       // could mask real absences behind weekend padding (a present record on a
       // holiday + auto-paid weekends hid one of an employee's two absences).
       const totalDays = daysInMonth;
-      const lopDays = empcloudHasAttendance
+      let lopDays = empcloudHasAttendance
         ? await resolveCalendarLop(
             empcloudDb,
             ecEmp.id,
@@ -998,7 +1058,17 @@ export class PayrollService {
             todayIso,
           )
         : summaryLop;
-      const paidDays = Math.max(0, totalDays - lopDays);
+      let paidDays = Math.max(0, totalDays - lopDays);
+      // Apply the mid-month exit upper bound. Anything beyond
+      // (last_working_date - monthStart + 1) is unpaid LOP. We bump up
+      // `lopDays` symmetrically so downstream calculations (Form 16, LWF,
+      // PT-by-paid-days, etc.) see a consistent (paid + LOP = totalDays)
+      // invariant.
+      if (exitPaidUpperBound !== null && paidDays > exitPaidUpperBound) {
+        const trimmed = paidDays - exitPaidUpperBound;
+        paidDays = exitPaidUpperBound;
+        lopDays += trimmed;
+      }
 
       // Parse salary components
       const components =
@@ -1941,111 +2011,32 @@ export class PayrollService {
    * spells out the consequences). For `draft` runs it is a no-op except
    * to reset stale totals.
    */
-  async rerunRun(runId: string, orgId: string) {
-    const run = await this.getRun(runId, orgId);
-    // BUG-005 — Capture how many payslips were wiped + whether the run
-    // had been previously emailed so the response can warn HR. Once
-    // rerun completes, any payslip PDFs that were previously
-    // downloaded or emailed are stale: the URLs 404 (payslip rows
-    // deleted) and the next compute will produce different numbers.
-    // We can't recall an email, but we can: (a) tell the caller how
-    // many payslips just became stale, (b) record that fact in the
-    // run's notes so it shows up on the run-detail page forever.
-    let priorPayslipCount = 0;
-    let priorStatus = run.status;
-    if (run.status !== "draft") {
-      const priorRes = await this.db.findMany<any>("payslips", {
-        filters: { payroll_run_id: runId },
-        limit: 1,
-      });
-      priorPayslipCount = Number(priorRes?.total) || 0;
-      // Wipe computed payslips so a fresh compute starts from zero. We
-      // intentionally permit this for `paid` runs because the alternative
-      // (cancel + create new run) loses the original period reference and
-      // breaks salary continuity for any downstream report keyed off this
-      // run's id.
-      await this.db.deleteMany("payslips", { payroll_run_id: runId });
-    }
-    let updatedNotes: string | null = run.notes || null;
-    if (priorPayslipCount > 0) {
-      const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
-      const warning = `[rerun ${stamp} UTC — wiped ${priorPayslipCount} payslip(s) from prior ${priorStatus} state; previously generated/emailed PDFs are now stale]`;
-      updatedNotes = updatedNotes ? `${updatedNotes}\n${warning}` : warning;
-    }
-    const updated = await this.db.update("payroll_runs", runId, {
-      status: "draft",
-      total_gross: 0,
-      total_deductions: 0,
-      total_net: 0,
-      total_employer_contributions: 0,
-      employee_count: 0,
-      ...(updatedNotes !== run.notes ? { notes: updatedNotes } : {}),
-    });
-    return {
-      ...updated,
-      // Surface to the caller so the UI can render a warning toast.
-      _rerun_warning: priorPayslipCount
-        ? {
-            wiped_payslips: priorPayslipCount,
-            prior_status: priorStatus,
-            message: `${priorPayslipCount} previously generated payslip(s) were deleted. Any PDFs already emailed to employees are now out of date — re-send after the next compute.`,
-          }
-        : null,
-    } as any;
-  }
-
   /**
-   * Hard-delete a payroll run and all its payslips. Destructive, so the
-   * route is gated by hr_admin AND the UI requires an explicit
-   * type-to-confirm modal. There is no undo: payslips are wiped, the run
-   * row is wiped, and any historical payslip URLs / report links for the
-   * run will 404 afterwards.
+   * Walk every payslip in a run, restore the loans + reimbursements that
+   * were stamped on them, and return the counts. Pulled out of deleteRun
+   * so rerunRun can use the same logic — without it, re-running would
+   * wipe payslips but leave loan balances / reimbursement statuses
+   * untouched, so the next compute would deduct the same EMI on top of
+   * an already-reduced outstanding (double-debit) and skip the
+   * reimbursement entirely (already-paid).
    *
-   * Returns the deleted run row's identifying fields so the caller can
-   * confirm what was removed (used by the audit log on the API layer).
+   * Idempotent: each LOAN deduction line stores a snapshot of the
+   * pre-payslip state in meta.{previous_outstanding,
+   * previous_installments_paid, previous_status}; replaying the same
+   * snapshot twice writes the same values. Same for REIMB earnings.
    */
-  async deleteRun(runId: string, orgId: string) {
-    // getRun already enforces org-scoping (404 if the run doesn't belong
-    // to this org), so by the time we delete we know the row is the
-    // caller's. Use deleteMany with both id and org constraint as a
-    // belt-and-braces guard against any future change to the adapter
-    // delete() signature, which currently doesn't accept an org filter.
-    const run = await this.getRun(runId, orgId);
-
-    // Revert any loan EMI deductions stamped on this run's payslips
-    // BEFORE deleting the payslips themselves — otherwise the loan ledger
-    // would silently keep the EMI as "paid" while the underlying payslip
-    // is gone, and the next payroll would deduct the same EMI again on
-    // top of an outstanding balance that's already too low.
-    //
-    // Each LOAN deduction line carries meta.{loan_id,
-    // previous_outstanding, previous_installments_paid, previous_status}
-    // -- a snapshot from the moment the deduction was computed -- so we
-    // restore the loan to that exact state regardless of whether later
-    // runs / manual edits have touched it since. Using snapshots (not
-    // amount-based deltas) makes this safe to re-run: if deleteRun is
-    // invoked twice, the second pass writes the same previous_* values
-    // and the loan ends up at the same state.
-    //
-    // Older payslips that pre-date the meta-stamping (LOAN lines with no
-    // meta.loan_id) are skipped: when an employee has multiple loans we
-    // can't reliably attribute the EMI back to a specific row, so HR has
-    // to reconcile those by hand. The count is returned so the audit log
-    // can flag it.
+  private async revertLoansAndReimbursementsForRun(runId: string): Promise<{
+    loansReverted: number;
+    untrackedLoanLines: number;
+    reimbursementsReverted: number;
+    untrackedReimbLines: number;
+  }> {
     const payslipsRes = await this.db.findMany<any>("payslips", {
       filters: { payroll_run_id: runId },
       limit: 100000,
     });
     let loansReverted = 0;
     let untrackedLoanLines = 0;
-    // Same pattern for REIMB earning lines -- each carries
-    // meta.{reimbursement_id, previous_status, previous_paid_in_month,
-    // previous_paid_in_year}. Restoring the snapshot flips the claim
-    // back to 'approved' so the next payroll run can pick it up again.
-    // Without this, deleting a run would leave reimbursements
-    // permanently marked paid even though no payslip exists -- the
-    // employee never sees the money on a payslip, but the claim is
-    // closed in the system.
     let reimbursementsReverted = 0;
     let untrackedReimbLines = 0;
     for (const p of payslipsRes.data) {
@@ -2088,6 +2079,112 @@ export class PayrollService {
         }
       }
     }
+    return { loansReverted, untrackedLoanLines, reimbursementsReverted, untrackedReimbLines };
+  }
+
+  async rerunRun(runId: string, orgId: string) {
+    const run = await this.getRun(runId, orgId);
+    // BUG-005 — Capture how many payslips were wiped + whether the run
+    // had been previously emailed so the response can warn HR. Once
+    // rerun completes, any payslip PDFs that were previously
+    // downloaded or emailed are stale: the URLs 404 (payslip rows
+    // deleted) and the next compute will produce different numbers.
+    // We can't recall an email, but we can: (a) tell the caller how
+    // many payslips just became stale, (b) record that fact in the
+    // run's notes so it shows up on the run-detail page forever.
+    let priorPayslipCount = 0;
+    let priorStatus = run.status;
+    // Loan/reimbursement revert counts so the route can surface them in
+    // the response (same shape deleteRun returns). Zero by default for
+    // draft runs (nothing was stamped to roll back).
+    let loansReverted = 0;
+    let untrackedLoanLines = 0;
+    let reimbursementsReverted = 0;
+    let untrackedReimbLines = 0;
+    if (run.status !== "draft") {
+      const priorRes = await this.db.findMany<any>("payslips", {
+        filters: { payroll_run_id: runId },
+        limit: 1,
+      });
+      priorPayslipCount = Number(priorRes?.total) || 0;
+      // BUG-Rerun-Loans — Roll loans + reimbursements BACK to their
+      // pre-payslip state BEFORE deleting the payslips. Without this,
+      // re-computing the run would deduct each loan EMI again on top of
+      // an outstanding balance that already reflected the first
+      // computation (double-debit), and reimbursements would stay in
+      // 'paid' so the engine wouldn't re-attach them to the new
+      // payslip. Same helper deleteRun uses — idempotent so safe to
+      // call repeatedly.
+      const reverted = await this.revertLoansAndReimbursementsForRun(runId);
+      loansReverted = reverted.loansReverted;
+      untrackedLoanLines = reverted.untrackedLoanLines;
+      reimbursementsReverted = reverted.reimbursementsReverted;
+      untrackedReimbLines = reverted.untrackedReimbLines;
+      // Wipe computed payslips so a fresh compute starts from zero. We
+      // intentionally permit this for `paid` runs because the alternative
+      // (cancel + create new run) loses the original period reference and
+      // breaks salary continuity for any downstream report keyed off this
+      // run's id.
+      await this.db.deleteMany("payslips", { payroll_run_id: runId });
+    }
+    let updatedNotes: string | null = run.notes || null;
+    if (priorPayslipCount > 0) {
+      const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+      const warning = `[rerun ${stamp} UTC — wiped ${priorPayslipCount} payslip(s) from prior ${priorStatus} state; reverted ${loansReverted} loan(s), ${reimbursementsReverted} reimbursement(s); previously generated/emailed PDFs are now stale]`;
+      updatedNotes = updatedNotes ? `${updatedNotes}\n${warning}` : warning;
+    }
+    const updated = await this.db.update("payroll_runs", runId, {
+      status: "draft",
+      total_gross: 0,
+      total_deductions: 0,
+      total_net: 0,
+      total_employer_contributions: 0,
+      employee_count: 0,
+      ...(updatedNotes !== run.notes ? { notes: updatedNotes } : {}),
+    });
+    return {
+      ...updated,
+      // Surface to the caller so the UI can render a warning toast.
+      _rerun_warning: priorPayslipCount
+        ? {
+            wiped_payslips: priorPayslipCount,
+            prior_status: priorStatus,
+            loans_reverted: loansReverted,
+            untracked_loan_lines: untrackedLoanLines,
+            reimbursements_reverted: reimbursementsReverted,
+            untracked_reimbursement_lines: untrackedReimbLines,
+            message: `${priorPayslipCount} previously generated payslip(s) were deleted, ${loansReverted} loan(s) and ${reimbursementsReverted} reimbursement(s) rolled back. Any PDFs already emailed to employees are now out of date — re-send after the next compute.`,
+          }
+        : null,
+    } as any;
+  }
+
+  /**
+   * Hard-delete a payroll run and all its payslips. Destructive, so the
+   * route is gated by hr_admin AND the UI requires an explicit
+   * type-to-confirm modal. There is no undo: payslips are wiped, the run
+   * row is wiped, and any historical payslip URLs / report links for the
+   * run will 404 afterwards.
+   *
+   * Returns the deleted run row's identifying fields so the caller can
+   * confirm what was removed (used by the audit log on the API layer).
+   */
+  async deleteRun(runId: string, orgId: string) {
+    // getRun already enforces org-scoping (404 if the run doesn't belong
+    // to this org), so by the time we delete we know the row is the
+    // caller's. Use deleteMany with both id and org constraint as a
+    // belt-and-braces guard against any future change to the adapter
+    // delete() signature, which currently doesn't accept an org filter.
+    const run = await this.getRun(runId, orgId);
+
+    // Revert loans + reimbursements stamped on this run's payslips BEFORE
+    // deleting the payslips. Same helper rerunRun uses — see its docs
+    // for the snapshot / idempotency rationale. Older payslips whose
+    // LOAN / REIMB lines don't carry meta (pre-stamping era) are
+    // reported as untracked so the audit log can flag them for manual
+    // reconciliation.
+    const { loansReverted, untrackedLoanLines, reimbursementsReverted, untrackedReimbLines } =
+      await this.revertLoansAndReimbursementsForRun(runId);
 
     const payslipCount = await this.db.deleteMany("payslips", { payroll_run_id: runId });
     await this.db.deleteMany("payroll_runs", { id: runId, empcloud_org_id: Number(orgId) });
