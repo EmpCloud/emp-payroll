@@ -369,6 +369,7 @@ async function resolveCalendarLop(
   endDate: string,
   holidaySet: Set<string>,
   todayIso: string,
+  optionalHolidaySet: Set<string> = new Set<string>(),
 ): Promise<number> {
   // Per-day attendance status.
   const attRows = (await empcloudDb("attendance_records")
@@ -454,10 +455,28 @@ async function resolveCalendarLop(
     // Future / today: dates only increase, so once we reach today we're done —
     // the rest of the month is assumed worked and never charged.
     if (cur >= todayIso) break;
-    // Holiday → paid, not a working day. Only MANDATORY holidays land in
-    // `holidaySet` (filtered upstream by company_events.is_mandatory=1);
-    // optional holidays fall through and are treated as normal working
-    // days so the attendance-grid status decides whether they're paid.
+    // Holiday → paid, not a working day. Two flavours:
+    //   1. MANDATORY (holidaySet)  → office closed, always paid, skip entirely.
+    //   2. OPTIONAL (optionalHolidaySet) → office stays open; treatment depends
+    //      on whether the employee has an attendance row for the date:
+    //        • no attendance status at all → employee was eligible to take it
+    //          off, treat as paid holiday (same as mandatory). Auto-treated
+    //          as a paid optional leave.
+    //        • any explicit status (P / H / HPL / Absent / OnLeave) → fall
+    //          through to normal LOP logic so e.g. a half_day on Bakrid still
+    //          costs the right 0.5 LOP, and an employee who came to work
+    //          gets full pay.
+    //    Without this nuance Shaik (no record on Bakrid) was wrongly docked
+    //    1 LOP and Aman (half_day on Bakrid) was wrongly given 0 LOP. Now both
+    //    cases produce the correct result.
+    const statusForDate = statusByDate[cur];
+    if (optionalHolidaySet.has(cur) && !statusForDate) {
+      // Optional + no record → paid, no LOP.
+      const d = new Date(cur + "T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() + 1);
+      cur = d.toISOString().split("T")[0];
+      continue;
+    }
     if (!holidaySet.has(cur)) {
       const dow = new Date(cur + "T00:00:00Z").getUTCDay();
       const covering = norm
@@ -682,40 +701,55 @@ export class PayrollService {
     // Dedup on a YYYY-MM-DD string (local getters, never toISOString — that
     // shifts the day on UTC+ servers) so the same date counted in both
     // sources is only subtracted once.
+    // Two separate holiday sets:
+    //   holidaySeen           — MANDATORY holidays + legacy organization_holidays
+    //                           rows. Always paid; engine skips LOP on these
+    //                           dates regardless of attendance.
+    //   optionalHolidaySeen   — OPTIONAL / restricted holidays (Bakrid, Onam,
+    //                           Holi in many orgs). Treatment depends on
+    //                           whether the employee has an attendance row:
+    //                             • No record at all → treat as paid holiday
+    //                               (employee was eligible to take it off).
+    //                             • Has any status (P/H/HPL/Absent/OnLeave) →
+    //                               apply that status normally (so a half_day
+    //                               on Bakrid correctly costs 0.5 LOP, and an
+    //                               employee who came in gets full pay).
+    // The Attendance Grid already keeps this distinction via
+    // company_events.is_mandatory; the engine now mirrors it the same way.
     const holidaySeen = new Set<string>();
-    const addHolidayRange = (startIso: string | null, endIso: string | null) => {
+    const optionalHolidaySeen = new Set<string>();
+    const addHolidayRange = (set: Set<string>, startIso: string | null, endIso: string | null) => {
       if (!startIso) return;
       let cur = startIso < monthStart ? monthStart : startIso;
       const last = (endIso ?? startIso) > monthEnd ? monthEnd : (endIso ?? startIso);
       while (cur <= last) {
-        holidaySeen.add(cur);
+        set.add(cur);
         const dt = new Date(cur + "T00:00:00Z");
         dt.setUTCDate(dt.getUTCDate() + 1);
         cur = dt.toISOString().split("T")[0];
       }
     };
     try {
-      // BUG-OptionalHoliday — only mandatory holidays auto-pay. Optional
-      // holidays (Bakrid, Onam, Holi in many orgs, "restricted holiday"
-      // in govt parlance) are days HR offers the employee the option to
-      // take off — if the employee comes in and works (full / half), the
-      // day must count as a normal working day, not a free pay day.
-      // Before this guard the engine skipped LOP for every holiday
-      // regardless of is_mandatory, so a half_day on an optional holiday
-      // got 0 LOP instead of the correct 0.5. The Attendance Grid
-      // (EmpCloud) already keeps this distinction via
-      // company_events.is_mandatory; we mirror it here.
       const events = (await empcloudDb("company_events")
-        .where({ organization_id: Number(orgId), event_type: "holiday", is_mandatory: 1 })
+        .where({ organization_id: Number(orgId), event_type: "holiday" })
         .where("start_date", "<=", `${monthEnd} 23:59:59`)
         .andWhere((b: any) =>
           b.where("end_date", ">=", `${monthStart} 00:00:00`).orWhereNull("end_date"),
         )
-        .select("start_date", "end_date")) as Array<{ start_date: any; end_date: any }>;
-      for (const e of events) addHolidayRange(toDateIso(e.start_date), toDateIso(e.end_date));
+        .select("start_date", "end_date", "is_mandatory")) as Array<{
+        start_date: any;
+        end_date: any;
+        is_mandatory: number;
+      }>;
+      for (const e of events) {
+        const set = Number(e.is_mandatory) === 1 ? holidaySeen : optionalHolidaySeen;
+        addHolidayRange(set, toDateIso(e.start_date), toDateIso(e.end_date));
+      }
     } catch {
       /* company_events table absent (older schema) — ignore */
     }
+    // Legacy organization_holidays has no is_mandatory column; treat its rows
+    // as mandatory to preserve pre-existing behaviour for older tenants.
     const orgHolidaysRows = await empcloudDb("organization_holidays")
       .where("organization_id", Number(orgId))
       .whereBetween("holiday_date", [monthStart, monthEnd])
@@ -724,8 +758,6 @@ export class PayrollService {
       const iso = toDateIso(h.holiday_date);
       if (iso) holidaySeen.add(iso);
     }
-    // `holidaySeen` is the org's holiday date-set for the month; it's passed
-    // per-employee to resolveCalendarLop so holidays are paid, never LOP.
 
     let totalGross = 0;
     let totalDeductions = 0;
@@ -1056,6 +1088,7 @@ export class PayrollService {
             monthEnd,
             holidaySeen,
             todayIso,
+            optionalHolidaySeen,
           )
         : summaryLop;
       let paidDays = Math.max(0, totalDays - lopDays);
