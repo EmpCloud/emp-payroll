@@ -10,6 +10,7 @@ import compression from "compression";
 import { config } from "./config";
 import { initDB, closeDB } from "./db/adapters";
 import { initEmpCloudDB, migrateEmpCloudDB, closeEmpCloudDB } from "./db/empcloud";
+import { initEmpExitDB, closeEmpExitDB } from "./db/empexit";
 import { logger } from "./utils/logger";
 
 // Route imports
@@ -175,6 +176,11 @@ async function start() {
     await initEmpCloudDB();
     await migrateEmpCloudDB();
 
+    // Initialize emp-exit DB (source of truth for last_working_date).
+    // Soft init — if the DB is unreachable the function logs a warning and
+    // payroll falls back to empcloud.users.date_of_exit. No throw.
+    await initEmpExitDB();
+
     // Initialize payroll module database
     const db = await initDB();
     logger.info(`Payroll database connected (provider: ${config.db.provider})`);
@@ -201,6 +207,7 @@ const shutdown = async () => {
   logger.info("Shutting down...");
   await closeDB();
   await closeEmpCloudDB();
+  await closeEmpExitDB();
   process.exit(0);
 };
 

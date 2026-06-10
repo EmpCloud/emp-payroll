@@ -27,6 +27,28 @@ export const config = {
     name: process.env.EMPCLOUD_DB_NAME || "empcloud",
   },
 
+  // emp-exit database (source of truth for exit dates). Payroll reads
+  // last_working_date from here instead of trusting empcloud.users.date_of_exit,
+  // because the latter is populated by a webhook that has historically
+  // fallen back to "today" when the payload was missing the date — which
+  // produced wrong dates on EmpCloud + over-paid final-month payslips.
+  //
+  // Env naming follows the EMPCLOUD_EXIT_DB_* convention used on the
+  // production backend server (.env at repo root). Host/credentials fall
+  // back to the generic DB_* values for local dev where the exit DB lives
+  // on the same MySQL instance as payroll.
+  empexitDb: {
+    host: process.env.EMPCLOUD_EXIT_DB_HOST || process.env.DB_HOST || "localhost",
+    port: parseInt(process.env.EMPCLOUD_EXIT_DB_PORT || process.env.DB_PORT || "3306"),
+    user: process.env.EMPCLOUD_EXIT_DB_USER || process.env.DB_USER || "root",
+    password: process.env.EMPCLOUD_EXIT_DB_PASSWORD || process.env.DB_PASSWORD || "",
+    name: process.env.EMPCLOUD_EXIT_DB_NAME || "empexit-db",
+    // Set EMPCLOUD_EXIT_DB_ENABLED=false to disable the integration;
+    // payroll then falls back to empcloud.users.date_of_exit (legacy
+    // behavior). Defaults to enabled.
+    enabled: process.env.EMPCLOUD_EXIT_DB_ENABLED !== "false",
+  },
+
   // MongoDB (when DB_PROVIDER=mongodb)
   mongo: {
     uri: process.env.MONGO_URI || "mongodb://localhost:27017/emp_payroll",
