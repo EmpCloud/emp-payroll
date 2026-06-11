@@ -126,7 +126,12 @@ async function mergeUserWithProfile(ecUser: EmpCloudUser, payrollDb: any): Promi
     email: ecUser.email,
     emp_code: ecUser.emp_code,
     empCode: ecUser.emp_code,
-    employee_code: profile?.employee_code || ecUser.emp_code,
+    // BUG-16: HRMS emp_code is the single source of truth for an employee's
+    // code (per the architecture rules). The payroll profile used to carry its
+    // own employee_code which could drift — e.g. Aarav Mehta showed "123" in
+    // payroll vs "EMP0435" in HRMS. Always prefer the HRMS value; only fall
+    // back to the (legacy) payroll-side code when HRMS genuinely has none.
+    employee_code: ecUser.emp_code || profile?.employee_code || null,
     contactNumber: ecUser.contact_number,
     contact_number: ecUser.contact_number,
     phone: ecUser.contact_number,
@@ -764,18 +769,36 @@ export class EmployeeService {
     let failed = 0;
 
     for (const row of updates) {
-      const keyLabel = row.key?.empCode || row.key?.email || "(no key)";
+      // Build a richer display label that combines the name (when the CSV
+      // row supplied one) with the lookup key, so the failure messages on
+      // the modal show "Gajendra Dewangan / GLB/BAN/2026/2/2055" instead of
+      // a bare emp_code that HR has to cross-reference manually. The CSV
+      // row's First/Last Name cells are the only name we have when the
+      // lookup itself fails, so we read them upfront.
+      const u0 = row.user || {};
+      const csvName = [u0.firstName, u0.lastName].filter(Boolean).join(" ").trim();
+      const lookupKey = row.key?.empCode || row.key?.email || "(no key)";
+      const keyLabel = csvName ? `${csvName} / ${lookupKey}` : lookupKey;
       try {
         // --- Resolve the employee (code first, then email) ---
+        // BUG-Bulk-StatusFilter — the lookup used to require status=1
+        // ("active"). The Download Employees export, however, dumps every
+        // employee regardless of status, so a round-trip (download → tiny
+        // edit → re-upload) failed every inactive row with "No active
+        // employee found". Drop the status filter — if the row exists at
+        // all in this org we accept the update (HR legitimately wants to
+        // edit exited / pending employees: final bank details for FnF,
+        // updated phone numbers etc.). Hard-deleted users still fail as
+        // before since they don't exist at all.
         let ecUser: any = null;
         if (row.key?.empCode) {
           ecUser = await db("users")
-            .where({ organization_id: empcloudOrgId, emp_code: row.key.empCode, status: 1 })
+            .where({ organization_id: empcloudOrgId, emp_code: row.key.empCode })
             .first();
         }
         if (!ecUser && row.key?.email) {
           ecUser = await db("users")
-            .where({ organization_id: empcloudOrgId, email: row.key.email, status: 1 })
+            .where({ organization_id: empcloudOrgId, email: row.key.email })
             .first();
         }
         if (!ecUser) {
@@ -784,7 +807,7 @@ export class EmployeeService {
           results.push({
             key: keyLabel,
             status: "error",
-            error: `No active employee found for ${by} "${keyLabel}"`,
+            error: `No employee found for ${by} "${lookupKey}"`,
           });
           continue;
         }
@@ -843,6 +866,23 @@ export class EmployeeService {
             .where("name", u.department.trim())
             .first();
           if (dept) ecUpdates.department_id = dept.id;
+        }
+        // Same pattern for Location — exported as the human-readable name in
+        // the CSV (Globussoft - Bhilai / Bangalore), resolved to
+        // organization_locations.id on import. Unknown location names are
+        // silently dropped (matches the Department behavior) instead of
+        // failing the whole row — HR commonly mistypes the name and we'd
+        // rather let the rest of the row succeed than abort.
+        if (typeof u.location === "string" && u.location.trim()) {
+          try {
+            const loc = await db("organization_locations")
+              .where({ organization_id: empcloudOrgId })
+              .where("name", u.location.trim())
+              .first();
+            if (loc) ecUpdates.location_id = loc.id;
+          } catch {
+            /* organization_locations table absent on older empcloud schemas — ignore */
+          }
         }
         if (Object.keys(ecUpdates).length > 0) {
           ecUpdates.updated_at = new Date();

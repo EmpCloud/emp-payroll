@@ -219,6 +219,113 @@ function exportPayrollCSV(payslips: any[], run: any) {
   URL.revokeObjectURL(url);
 }
 
+// Export Report — a separate, richer CSV next to the existing Export CSV.
+// 22 columns, same shape the reusable Python tool in
+// D:\EmpCloud\CustomScript\payroll_export.py emits. Ordered so HR reads it
+// as "who is this -> what they earn -> attendance impact -> variable adds ->
+// totals -> deductions -> net".
+function exportPayrollReport(payslips: any[], run: any) {
+  const headers = [
+    "Org",
+    "Employee Code",
+    "Name",
+    "Location",
+    "Department",
+    "Monthly Gross",
+    "Daily Gross",
+    "Basic Salary",
+    "House Rent Allowance",
+    "Special Allowance",
+    "Conveyance Allowance",
+    "No of LOP",
+    "LOP Amount Deducted",
+    "No of Night Days",
+    "Night Allowance",
+    "No of Overtime",
+    "Overtime Allowance",
+    "Total Earnings",
+    "Deductions Employee PF",
+    "Deductions ESIC",
+    "Deductions PT TAX",
+    "Final Net Pay",
+  ];
+
+  // Look up an item in earnings / deductions by its component code. Returns 0
+  // when the line isn't present (e.g. ESI absent for ineligible employees).
+  const findAmt = (items: any, code: string): number => {
+    const arr = typeof items === "string" ? JSON.parse(items) : items || [];
+    if (!Array.isArray(arr)) return 0;
+    const row = arr.find((c: any) => String(c?.code || "").toUpperCase() === code);
+    return Number(row?.amount) || 0;
+  };
+  // Variable components carry their count in meta.{nights, otDays}.
+  const findMeta = (items: any, code: string, key: string): number => {
+    const arr = typeof items === "string" ? JSON.parse(items) : items || [];
+    if (!Array.isArray(arr)) return 0;
+    const row = arr.find((c: any) => String(c?.code || "").toUpperCase() === code);
+    return Number(row?.meta?.[key]) || 0;
+  };
+
+  const fmtCount = (n: number): string => {
+    if (!n) return "0";
+    return n % 1 === 0 ? String(n) : n.toFixed(1);
+  };
+  const fmtMoney = (n: number): string => String(Math.round(Number(n) || 0));
+
+  const csvCell = (v: unknown): string => {
+    const s = v == null ? "" : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  const rows = payslips.map((p: any) => {
+    const earnings = p.earnings;
+    const deductions = p.deductions;
+    const monthlyGross = Number(p.monthly_gross) || 0;
+    const totalDays = Number(p.total_days) || 31;
+    const dailyGross = totalDays > 0 ? monthlyGross / totalDays : 0;
+    const lopDays = Number(p.lop_days) || 0;
+    const lopAmount = totalDays > 0 ? (monthlyGross * lopDays) / totalDays : 0;
+
+    const name = `${p.first_name || ""} ${p.last_name || ""}`.trim();
+    return [
+      p.organization_name || run?.organization_name || run?.org_name || "",
+      p.employee_code || "",
+      name,
+      p.location || "",
+      p.department || "",
+      fmtMoney(monthlyGross),
+      fmtMoney(dailyGross),
+      fmtMoney(findAmt(earnings, "BASIC")),
+      fmtMoney(findAmt(earnings, "HRA")),
+      fmtMoney(findAmt(earnings, "SA")),
+      fmtMoney(findAmt(earnings, "CA")),
+      fmtCount(lopDays),
+      fmtMoney(lopAmount),
+      fmtCount(findMeta(earnings, "NIGHT_ALLOW", "nights")),
+      fmtMoney(findAmt(earnings, "NIGHT_ALLOW")),
+      fmtCount(findMeta(earnings, "OVERTIME", "otDays")),
+      fmtMoney(findAmt(earnings, "OVERTIME")),
+      fmtMoney(p.gross_earnings),
+      fmtMoney(findAmt(deductions, "EPF")),
+      fmtMoney(findAmt(deductions, "ESI")),
+      fmtMoney(findAmt(deductions, "PT")),
+      fmtMoney(p.net_pay),
+    ];
+  });
+
+  // UTF-8 with BOM so Excel opens the file with the right encoding (Indian
+  // names + ₹ glyphs render correctly without manual "Import" dance).
+  const csv =
+    "﻿" + [headers.map(csvCell).join(","), ...rows.map((r) => r.map(csvCell).join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `payroll-report-${run.year}-${String(run.month).padStart(2, "0")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // CSV cell escaper — reasons contain commas/colons, so every field is
 // quoted and internal quotes are doubled per RFC 4180.
 function csvField(v: unknown): string {
@@ -692,11 +799,13 @@ export function PayrollRunDetailPage() {
           const highDeduction = payslips.filter(
             (p: any) => Number(p.total_deductions) > Number(p.gross_earnings) * 0.5,
           );
+          const employeeName = (p: any) => {
+            const full = `${p.first_name || ""} ${p.last_name || ""}`.trim();
+            return full || p.employee_code || "Employee";
+          };
           const alerts = [
-            ...zeroNet.map((p: any) => `${p.first_name || "Employee"} has zero/negative net pay`),
-            ...highDeduction.map(
-              (p: any) => `${p.first_name || "Employee"} has deductions > 50% of gross`,
-            ),
+            ...zeroNet.map((p: any) => `${employeeName(p)} has zero/negative net pay`),
+            ...highDeduction.map((p: any) => `${employeeName(p)} has deductions > 50% of gross`),
           ];
           return alerts.length > 0 ? (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
@@ -818,9 +927,18 @@ export function PayrollRunDetailPage() {
             )}
           </CardTitle>
           {payslips.length > 0 && (
-            <Button variant="outline" size="sm" onClick={() => exportPayrollCSV(payslips, run)}>
-              <Download className="h-4 w-4" /> Export CSV
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => exportPayrollCSV(payslips, run)}>
+                <Download className="h-4 w-4" /> Export CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportPayrollReport(payslips, run)}
+              >
+                <Download className="h-4 w-4" /> Export Report
+              </Button>
+            </div>
           )}
         </CardHeader>
         {payslips.length > 0 && (
