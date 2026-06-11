@@ -526,9 +526,18 @@ async function resolveCalendarLop(
           status === "present" ||
           status === "checked_in" ||
           status === "weekoff_overtime" ||
-          status === "holiday_overtime"
+          status === "holiday_overtime" ||
+          // An explicit 'holiday' or 'weekoff' status row is a paid rest day,
+          // never LOP. This matters on OPTIONAL holidays: those dates are NOT
+          // in holidaySet (only mandatory holidays are), so a date carrying an
+          // explicit holiday/weekoff status falls through to here. Without
+          // these two cases the status landed in the final else and wrongly
+          // charged 1 LOP — every employee with a 'holiday' row on an optional
+          // holiday (e.g. Bakrid May 28) showed "LOP: 1 day".
+          status === "holiday" ||
+          status === "weekoff"
         ) {
-          /* fully worked → paid */
+          /* fully worked OR an explicit paid rest/holiday → paid */
         } else if (status === "half_day") {
           lop += 0.5; // worked half; the other half is unpaid
         } else if (status === "half_present_half_leave") {
@@ -1852,13 +1861,27 @@ export class PayrollService {
         const baseNetForPct = Math.max(0, grossEarnings - totalDed);
         for (const comp of netPctComps) {
           const pct = Number(comp.rate ?? comp.value ?? 0);
-          const amount = Math.max(0, Math.round(baseNetForPct * (pct / 100)));
+          // BUG-26: the per_night_pct allowance must be PRO-RATED by how many
+          // nights were actually worked — otherwise a 10-night employee and a
+          // 19-night employee both get the full `baseNet × pct%` (identical
+          // amounts), which is clearly wrong for a "per night" component.
+          // (Real case: Uday Verma split-month 10 nights vs Uma Singh 19
+          // nights both got Rs 4,820.) Scale by nights / total_days so the
+          // allowance reflects the proportion of the month spent on nights.
+          //   amount = baseNet × pct% × (nights / total_days)
+          const nightFraction = totalDays > 0 ? nightShiftDays / totalDays : 0;
+          const amount = Math.max(0, Math.round(baseNetForPct * (pct / 100) * nightFraction));
           if (amount > 0) {
             earnings.push({
               code: comp.code,
               name: comp.name || comp.code,
               amount,
-              meta: { netPct: pct, baseNet: baseNetForPct, nights: nightShiftDays },
+              meta: {
+                netPct: pct,
+                baseNet: baseNetForPct,
+                nights: nightShiftDays,
+                totalDays,
+              },
             });
             grossEarnings += amount;
           }
@@ -2359,7 +2382,17 @@ export class PayrollService {
         empInfo =
           (await ecDb("users")
             .where({ id: empcloudUserId })
-            .select("first_name", "last_name", "emp_code", "designation", "department_id")
+            .select(
+              "first_name",
+              "last_name",
+              "emp_code",
+              "designation",
+              "department_id",
+              // location_id is needed so the Export Report on the Run Detail
+              // page can show each employee's location without an extra
+              // round-trip per row.
+              "location_id",
+            )
             .first()) || {};
       }
 
@@ -2371,6 +2404,37 @@ export class PayrollService {
         deptName = dept?.name || null;
       }
 
+      // Location name (best-effort — older empcloud schemas may not have the
+      // organization_locations table; degrade silently to null so the rest of
+      // the response still renders).
+      let locationName: string | null = null;
+      if (empInfo.location_id) {
+        try {
+          const loc = await ecDb("organization_locations")
+            .where({ id: empInfo.location_id })
+            .first();
+          locationName = loc?.name || null;
+        } catch {
+          locationName = null;
+        }
+      }
+
+      // Monthly gross = active salary structure's annual gross / 12. The Export
+      // Report uses this to derive Daily Gross + LOP-amount-deducted, both of
+      // which HR needs at-a-glance from the run detail page.
+      let monthlyGross: number | null = null;
+      try {
+        const activeSalary = await this.db.findOne<any>("employee_salaries", {
+          empcloud_user_id: empcloudUserId,
+          is_active: true,
+        });
+        if (activeSalary?.gross_salary) {
+          monthlyGross = Number(activeSalary.gross_salary) / 12;
+        }
+      } catch {
+        monthlyGross = null;
+      }
+
       data.push({
         ...p,
         first_name: empInfo.first_name || null,
@@ -2378,6 +2442,8 @@ export class PayrollService {
         employee_code: empInfo.emp_code || null,
         designation: empInfo.designation || null,
         department: deptName,
+        location: locationName,
+        monthly_gross: monthlyGross,
         earnings: typeof p.earnings === "string" ? JSON.parse(p.earnings) : p.earnings,
         deductions: typeof p.deductions === "string" ? JSON.parse(p.deductions) : p.deductions,
         employer_contributions:

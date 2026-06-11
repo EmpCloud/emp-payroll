@@ -780,7 +780,12 @@ export function TaxCalculatorPage() {
               )}
 
               <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 pt-4">
-                <Button onClick={runSimulation} loading={simulate.isPending} disabled={!selectedId}>
+                <Button
+                  type="button"
+                  onClick={runSimulation}
+                  loading={simulate.isPending}
+                  disabled={!selectedId}
+                >
                   <Calculator className="h-4 w-4" /> Calculate
                 </Button>
                 {simError && <span className="text-sm text-red-600">{simError}</span>}
@@ -819,7 +824,7 @@ export function TaxCalculatorPage() {
                 </div>
               ) : (
                 <>
-                  {result.panMissing206AA && (
+                  {result.panMissing206AA && !inputs.pan && (
                     <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
                       <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
                       <span>

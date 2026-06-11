@@ -89,9 +89,14 @@ export function DashboardPage() {
   const lastRun = sortedRuns[0] || paidRuns[0];
 
   // Department headcount
+  // BUG-32 — employees with no department previously bucketed under the
+  // literal key "null"/"undefined", which rendered a "null" slice on the
+  // Headcount-by-Department chart. Fall back to a human-readable
+  // "Unassigned" bucket instead.
   const deptMap: Record<string, number> = {};
   for (const emp of employees) {
-    deptMap[emp.department] = (deptMap[emp.department] || 0) + 1;
+    const dept = emp.department && String(emp.department).trim() ? emp.department : "Unassigned";
+    deptMap[dept] = (deptMap[dept] || 0) + 1;
   }
   const departmentHeadcount = Object.entries(deptMap).map(([department, count]) => ({
     department,

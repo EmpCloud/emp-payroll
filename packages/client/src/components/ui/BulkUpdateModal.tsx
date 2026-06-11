@@ -21,6 +21,7 @@ const TEMPLATE_HEADERS = [
   "Email",
   "Phone",
   "Department",
+  "Location",
   "Designation",
   "Date of Joining",
   "Date of Birth",
@@ -166,6 +167,10 @@ export function BulkUpdateModal({ open, onClose, onSuccess }: BulkUpdateModalPro
       e.email || "",
       e.phone || e.contact_number || e.contactNumber || "",
       e.department || "",
+      // Location is exported by name (matches Department behavior) so the
+      // CSV is human-editable; backend resolves NAME → location_id on
+      // update.
+      e.location || e.location_name || "",
       e.designation || "",
       dateCell(e.date_of_joining || e.dateOfJoining),
       dateCell(e.date_of_birth || e.dateOfBirth),
@@ -261,6 +266,7 @@ export function BulkUpdateModal({ open, onClose, onSuccess }: BulkUpdateModalPro
     const lastName = pick(row, "Last Name");
     const phone = pick(row, "Phone", "Contact Number", "Mobile");
     const department = pick(row, "Department");
+    const location = pick(row, "Location");
     const designation = pick(row, "Designation");
     const doj = pick(row, "Date of Joining", "Joining Date", "DOJ");
     const dob = pick(row, "Date of Birth", "DOB");
@@ -269,6 +275,10 @@ export function BulkUpdateModal({ open, onClose, onSuccess }: BulkUpdateModalPro
     if (lastName) user.lastName = lastName;
     if (phone) user.phone = phone;
     if (department) user.department = department;
+    // Location is sent by NAME; server resolves it to organization_locations.id
+    // (same pattern as Department). Unknown names are silently dropped server-
+    // side rather than failing the row.
+    if (location) user.location = location;
     if (designation) user.designation = designation;
     if (doj) {
       if (isValidDate(doj)) user.dateOfJoining = doj;
