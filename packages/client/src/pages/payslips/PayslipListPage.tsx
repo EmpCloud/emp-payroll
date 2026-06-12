@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -10,7 +10,7 @@ import { formatCurrency, formatMonth } from "@/lib/utils";
 import { apiGet } from "@/api/client";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
-import { Download, Eye, FileText, Loader2 } from "lucide-react";
+import { Download, Eye, FileText, Loader2, Search } from "lucide-react";
 import toast from "react-hot-toast";
 
 const now = new Date();
@@ -31,6 +31,9 @@ export function PayslipListPage() {
   const [selected, setSelected] = useState<any | null>(null);
   const [month, setMonth] = useState("");
   const [year, setYear] = useState(String(now.getFullYear()));
+  const [search, setSearch] = useState("");
+  const [dept, setDept] = useState("");
+  const [location, setLocation] = useState("");
 
   const { data: res, isLoading } = useQuery({
     queryKey: ["payslips", month, year],
@@ -43,6 +46,42 @@ export function PayslipListPage() {
   });
 
   const payslips = res?.data?.data || [];
+
+  // Department / location dropdown options derived from the loaded payslips.
+  const departments = useMemo(
+    () => [
+      { value: "", label: "All Departments" },
+      ...Array.from(new Set(payslips.map((p: any) => p.department).filter(Boolean)))
+        .sort()
+        .map((d: any) => ({ value: d, label: d })),
+    ],
+    [payslips],
+  );
+  const locations = useMemo(
+    () => [
+      { value: "", label: "All Locations" },
+      ...Array.from(new Set(payslips.map((p: any) => p.location).filter(Boolean)))
+        .sort()
+        .map((l: any) => ({ value: l, label: l })),
+    ],
+    [payslips],
+  );
+
+  // Client-side search + department + location filtering on the loaded set.
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return payslips.filter((p: any) => {
+      if (dept && p.department !== dept) return false;
+      if (location && p.location !== location) return false;
+      if (q) {
+        const hay = `${p.first_name || ""} ${p.last_name || ""} ${p.employee_name || ""} ${
+          p.employee_code || ""
+        }`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [payslips, search, dept, location]);
 
   function openPDF(payslipId: string) {
     const url = `${import.meta.env.VITE_API_URL || "/api/v1"}/payslips/${payslipId}/pdf`;
@@ -156,7 +195,13 @@ export function PayslipListPage() {
     <div className="space-y-6">
       <PageHeader
         title="Payslips"
-        description={isLoading ? "Loading..." : `${payslips.length} payslips`}
+        description={
+          isLoading
+            ? "Loading..."
+            : filtered.length === payslips.length
+              ? `${payslips.length} payslips`
+              : `${filtered.length} of ${payslips.length} payslips`
+        }
         actions={
           <Button
             variant="outline"
@@ -182,7 +227,35 @@ export function PayslipListPage() {
       />
 
       {/* Filters */}
-      <div className="flex gap-3">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="relative min-w-[220px] flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            type="search"
+            placeholder="Search by name or code..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="focus:border-brand-500 focus:ring-brand-500 block w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm shadow-sm focus:outline-none focus:ring-1"
+          />
+        </div>
+        <div className="w-44">
+          <SelectField
+            id="dept-filter"
+            label=""
+            value={dept}
+            onChange={(e) => setDept(e.target.value)}
+            options={departments}
+          />
+        </div>
+        <div className="w-44">
+          <SelectField
+            id="location-filter"
+            label=""
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            options={locations}
+          />
+        </div>
         <div className="w-40">
           <SelectField
             id="month-filter"
@@ -210,9 +283,9 @@ export function PayslipListPage() {
       ) : (
         <DataTable
           columns={columns}
-          data={payslips}
+          data={filtered}
           onRowClick={(row) => setSelected(row)}
-          emptyMessage="No payslips found for the selected period"
+          emptyMessage="No payslips found for the selected filters"
         />
       )}
 

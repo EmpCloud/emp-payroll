@@ -228,11 +228,12 @@ describe("SalaryService", () => {
         ],
       });
 
-      // Should deactivate old salary
+      // Should deactivate old salary AND close out its effective window at the
+      // day before the new salary's effective_from (2026-04-01 -> 2026-03-31).
       expect(mockDb.updateMany).toHaveBeenCalledWith(
         "employee_salaries",
         { empcloud_user_id: 100, is_active: true },
-        { is_active: false },
+        { is_active: false, effective_to: "2026-03-31" },
       );
 
       // Should create new salary with computed gross

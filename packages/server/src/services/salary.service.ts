@@ -281,14 +281,27 @@ export class SalaryService {
       components = await this.resolveComponentsForCTC(data.structureId, Number(data.ctc));
     }
 
-    // Deactivate current salary
+    // Deactivate current salary. Also close out its effective window by
+    // stamping `effective_to` = the day before the new salary's
+    // `effective_from`, so the salary timeline is properly bounded (previously
+    // only `is_active` was flipped and `effective_to` stayed NULL, leaving the
+    // history undated). `is_active` remains the operative flag for the payroll
+    // engine's current-salary lookup; `effective_to` makes the history/audit
+    // and any date-windowed query correct.
+    let prevEffectiveTo: string | null = null;
+    const effFrom = data.effectiveFrom ? new Date(data.effectiveFrom) : null;
+    if (effFrom && !isNaN(effFrom.getTime())) {
+      const dayBefore = new Date(effFrom);
+      dayBefore.setUTCDate(dayBefore.getUTCDate() - 1);
+      prevEffectiveTo = dayBefore.toISOString().slice(0, 10);
+    }
     await this.db.updateMany(
       "employee_salaries",
       {
         empcloud_user_id: Number(data.employeeId),
         is_active: true,
       },
-      { is_active: false },
+      prevEffectiveTo ? { is_active: false, effective_to: prevEffectiveTo } : { is_active: false },
     );
 
     // Gross = sum of EARNINGS only. See propagateStructureToAssignments
@@ -316,6 +329,26 @@ export class SalaryService {
       is_active: true,
     });
     return { ...(created as any), warnings };
+  }
+
+  // Delete a single salary-history record (a past revision). The CURRENT
+  // (active) salary cannot be deleted — an employee must always have an active
+  // salary; revise it instead. Used to clean up junk/test revisions from the
+  // Salary History view.
+  async deleteSalaryRecord(empId: string, salaryId: string) {
+    const salary = await this.db.findById<any>("employee_salaries", salaryId);
+    if (!salary || Number(salary.empcloud_user_id) !== Number(empId)) {
+      throw new AppError(404, "NOT_FOUND", "Salary record not found for this employee.");
+    }
+    if (salary.is_active) {
+      throw new AppError(
+        400,
+        "CANNOT_DELETE_ACTIVE",
+        "Cannot delete the current (active) salary. Revise it instead.",
+      );
+    }
+    await this.db.delete("employee_salaries", salaryId);
+    return { message: "Salary revision deleted" };
   }
 
   async getEmployeeSalary(employeeId: string) {

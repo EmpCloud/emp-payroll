@@ -64,6 +64,24 @@ export function EmployeeDetailPage() {
     queryFn: () => apiGet<any>(`/salary-structures/employee/${id}/history`),
     enabled: !!id,
   });
+  // Delete-salary-revision confirmation state. Holds the id of the past
+  // revision pending deletion (null = no dialog open).
+  const [deleteSalaryId, setDeleteSalaryId] = useState<string | null>(null);
+  const [deletingSalary, setDeletingSalary] = useState(false);
+  async function confirmDeleteSalary() {
+    if (!deleteSalaryId) return;
+    setDeletingSalary(true);
+    try {
+      await apiDelete(`/salary-structures/employee/${id}/salary/${deleteSalaryId}`);
+      await qc.invalidateQueries({ queryKey: ["salary-history", id] });
+      toast.success("Salary revision deleted");
+      setDeleteSalaryId(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error?.message || "Failed to delete salary revision");
+    } finally {
+      setDeletingSalary(false);
+    }
+  }
   const { data: loansRes } = useQuery({
     queryKey: ["employee-loans", id],
     queryFn: () => apiGet<any>(`/loans/employee/${id}`),
@@ -412,6 +430,7 @@ export function EmployeeDetailPage() {
                   <th className="px-6 py-3 text-right font-medium text-gray-500">CTC</th>
                   <th className="px-6 py-3 text-right font-medium text-gray-500">Gross</th>
                   <th className="px-6 py-3 text-left font-medium text-gray-500">Status</th>
+                  <th className="px-6 py-3 text-right font-medium text-gray-500"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -428,6 +447,19 @@ export function EmployeeDetailPage() {
                         {h.is_active ? "Current" : "Previous"}
                       </Badge>
                     </td>
+                    <td className="px-6 py-3 text-right">
+                      {/* The current/active salary can't be deleted — revise it
+                          instead. Past revisions get a delete to clean up junk. */}
+                      {!h.is_active && (
+                        <button
+                          onClick={() => setDeleteSalaryId(h.id)}
+                          className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                          title="Delete this salary revision"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -435,6 +467,30 @@ export function EmployeeDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Delete-salary-revision confirmation */}
+      <Modal
+        open={!!deleteSalaryId}
+        onClose={() => {
+          if (!deletingSalary) setDeleteSalaryId(null);
+        }}
+        title="Delete salary revision?"
+        description="This permanently removes this past salary record from the history. Already-computed payslips are not affected. This cannot be undone."
+        className="max-w-md"
+      >
+        <div className="flex justify-end gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setDeleteSalaryId(null)}
+            disabled={deletingSalary}
+          >
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={confirmDeleteSalary} loading={deletingSalary}>
+            Delete
+          </Button>
+        </div>
+      </Modal>
 
       {/* Active Loans */}
       {(loansRes?.data?.data || []).length > 0 && (

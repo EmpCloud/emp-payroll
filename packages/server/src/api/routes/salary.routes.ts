@@ -145,6 +145,17 @@ router.get(
   }),
 );
 
+// Delete a single past salary-history record (a previous revision). The
+// current/active salary cannot be deleted. Lets HR clean up junk revisions.
+router.delete(
+  "/employee/:empId/salary/:salaryId",
+  authorize(...STRUCTURE_EDIT_ROLES),
+  wrap(async (req, res) => {
+    const data = await svc.deleteSalaryRecord(param(req, "empId"), param(req, "salaryId"));
+    res.json({ success: true, data });
+  }),
+);
+
 router.post(
   "/employee/:empId/arrears",
   authorize("hr_admin", "hr_manager"),
