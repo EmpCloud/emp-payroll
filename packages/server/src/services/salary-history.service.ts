@@ -4,8 +4,12 @@ export class SalaryHistoryService {
   private db = getDB();
 
   async getHistory(employeeId: string) {
+    // Salary rows store the real employee key in `empcloud_user_id`; the legacy
+    // `employee_id` column is a fixed zero-UUID placeholder on every row, so
+    // filtering by it returned nothing (history always empty) — or, if passed
+    // the zero-UUID, every employee's salaries. Filter by `empcloud_user_id`.
     const result = await this.db.findMany<any>("employee_salaries", {
-      filters: { employee_id: employeeId },
+      filters: { empcloud_user_id: Number(employeeId) },
       sort: { field: "effective_from", order: "desc" },
       limit: 50,
     });

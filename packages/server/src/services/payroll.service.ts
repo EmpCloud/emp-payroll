@@ -1612,6 +1612,12 @@ export class PayrollService {
       // into the annual projection so the engine taxes the full year's
       // night pay, not just the run-rate from the current month forward.
       let nightAllowancePriorThisFy = 0;
+      // BUG-PayRevision — total gross actually paid in earlier months of THIS
+      // FY. Feeds a blended annual income projection so a mid-year salary
+      // revision (or a mid-year joiner) is taxed on (actual prior earnings +
+      // current contracted rate × remaining months) rather than the current
+      // rate × 12.
+      let totalGrossPriorThisFy = 0;
       for (const ps of priorPayslips.data) {
         if (ps.payroll_run_id === runId) continue; // current run -- skip
         const psYear = Number(ps.year);
@@ -1622,6 +1628,7 @@ export class PayrollService {
         // Don't include the very same period (defensive — should be
         // wiped already by deleteMany at the top of compute).
         if (psYear === run.year && psMonth === run.month) continue;
+        totalGrossPriorThisFy += Number(ps.gross_earnings) || 0;
         const dedList =
           typeof ps.deductions === "string" ? JSON.parse(ps.deductions || "[]") : ps.deductions;
         if (Array.isArray(dedList)) {
@@ -1691,13 +1698,28 @@ export class PayrollService {
         // run-rate projection is safe even when nights are sporadic.
         const projectedAnnualNightAllowance =
           nightAllowancePriorThisFy + nightAllowanceThisMonth * monthsRemaining;
+        // Base gross actually paid in PRIOR months of this FY, excluding the
+        // variable night/OT lines (those are projected separately just above,
+        // so including them here would double-count).
+        const baseGrossPriorThisFy = Math.max(0, totalGrossPriorThisFy - nightAllowancePriorThisFy);
 
         const taxResult = computeIncomeTax({
           employeeId: String(ecEmp.id),
           financialYear: runFy,
           regime: taxInfo?.regime === "old" ? TaxRegime.OLD : TaxRegime.NEW,
+          // BUG-PayRevision — Blend the annual income projection across the FY
+          // instead of assuming the CURRENT (possibly just-revised) salary
+          // applied for all 12 months. Annual base income = actual base gross
+          // already paid this FY + current contracted monthly base × months
+          // remaining (incl. this month). When the salary never changes this
+          // equals the old `gross_salary` (= monthly × 12); on a mid-year raise
+          // or cut — or for a mid-year joiner — it correctly reflects the real
+          // expected annual income instead of over/under-projecting.
           annualGross:
-            Number(salary.gross_salary) + priorEmployerGross + projectedAnnualNightAllowance,
+            baseGrossPriorThisFy +
+            (Number(salary.gross_salary) / 12) * monthsRemaining +
+            priorEmployerGross +
+            projectedAnnualNightAllowance,
           // BUG-004 — These three feed the ANNUAL tax projection and must
           // use the contracted (un-prorated) salary-structure values, not
           // this month's pro-rated `basicMonthly`. Pro-rating these would

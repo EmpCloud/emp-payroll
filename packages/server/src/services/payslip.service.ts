@@ -87,6 +87,7 @@ export class PayslipService {
     const users = await ecDb("users")
       .whereIn("users.id", userIds)
       .leftJoin("organization_departments as dept", "users.department_id", "dept.id")
+      .leftJoin("organization_locations as loc", "users.location_id", "loc.id")
       .select(
         "users.id",
         "users.first_name",
@@ -95,6 +96,7 @@ export class PayslipService {
         "users.email",
         "users.designation",
         "dept.name as department",
+        "loc.name as location",
       );
 
     const userMap = new Map(users.map((u: any) => [u.id, u]));
@@ -109,6 +111,7 @@ export class PayslipService {
         employee_code: user?.emp_code || null,
         email: user?.email || null,
         department: user?.department || null,
+        location: user?.location || null,
         designation: user?.designation || null,
         earnings: typeof p.earnings === "string" ? JSON.parse(p.earnings) : p.earnings,
         deductions: typeof p.deductions === "string" ? JSON.parse(p.deductions) : p.deductions,

@@ -64,22 +64,26 @@ export function getInitials(name: string): string {
 }
 
 export function statusColor(status: string): string {
+  // Each entry carries explicit dark-mode classes so the badge text stays
+  // readable in dark mode. The light-only `text-*-800` colors were near-black
+  // and effectively invisible on dark backgrounds (e.g. the "Previous"
+  // salary-history badge).
   const map: Record<string, string> = {
-    active: "bg-green-100 text-green-800",
-    inactive: "bg-gray-100 text-gray-800",
-    draft: "bg-yellow-100 text-yellow-800",
-    processing: "bg-blue-100 text-blue-800",
-    computed: "bg-purple-100 text-purple-800",
-    approved: "bg-green-100 text-green-800",
-    paid: "bg-green-100 text-green-800",
-    cancelled: "bg-red-100 text-red-800",
-    generated: "bg-blue-100 text-blue-800",
-    sent: "bg-indigo-100 text-indigo-800",
-    viewed: "bg-gray-100 text-gray-800",
-    disputed: "bg-red-100 text-red-800",
-    resolved: "bg-green-100 text-green-800",
-    pending: "bg-yellow-100 text-yellow-800",
-    rejected: "bg-red-100 text-red-800",
+    active: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+    inactive: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200",
+    draft: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
+    processing: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+    computed: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+    approved: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+    paid: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+    cancelled: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+    generated: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+    sent: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300",
+    viewed: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200",
+    disputed: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+    resolved: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+    pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
+    rejected: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
   };
-  return map[status] || "bg-gray-100 text-gray-800";
+  return map[status] || "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
 }
