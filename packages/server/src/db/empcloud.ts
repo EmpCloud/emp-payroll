@@ -6,6 +6,7 @@
 
 import knex from "knex";
 import type { Knex } from "knex";
+import crypto from "node:crypto";
 import { config } from "../config";
 import { logger } from "../utils/logger";
 
@@ -491,4 +492,125 @@ export async function createOrganization(data: {
     updated_at: new Date(),
   });
   return findOrgById(id) as Promise<EmpCloudOrganization>;
+}
+
+// ---------------------------------------------------------------------------
+// SHARED API KEYS (cross-module programmatic auth)
+//
+// API keys are minted in EmpCloud and stored (hashed) in the EmpCloud master
+// DB's `api_keys` table. Payroll reads that SAME table to validate a key — no
+// shared JWT secret, no callback to the EmpCloud server. A key carries no
+// permissions of its own: we resolve the OWNER user's *current* RBAC on every
+// request, so it mirrors that admin and honours live role changes / revocation.
+//
+// Mirrors EmpCloud's services/auth/api-key.service.ts +
+// services/permissions/permissions.service.ts (kept in sync by hand — payroll
+// has no dependency on @empcloud/shared).
+// ---------------------------------------------------------------------------
+
+// Opaque key format issued by EmpCloud: `empc_live_...`. The prefix is how auth
+// middleware tells an API key apart from a JWT.
+export const API_KEY_PREFIX = "empc_";
+
+export interface EmpCloudApiKey {
+  id: number;
+  organization_id: number;
+  user_id: number;
+  expires_at: Date | null;
+  revoked_at: Date | null;
+}
+
+/**
+ * Validate a raw API key against the shared EmpCloud `api_keys` table. Returns
+ * the row when the key is live (not revoked, not expired) or null otherwise.
+ * Best-effort bumps last_used_at. Degrades to null if the table doesn't exist
+ * yet (EmpCloud migration 078 not applied) so payroll never 500s on auth.
+ */
+export async function findValidApiKey(rawKey: string): Promise<EmpCloudApiKey | null> {
+  if (!rawKey.startsWith(API_KEY_PREFIX)) return null;
+  const db = getEmpCloudDB();
+  const keyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
+  try {
+    const row = await db("api_keys").where({ key_hash: keyHash }).whereNull("revoked_at").first();
+    if (!row) return null;
+    if (row.expires_at && new Date(row.expires_at).getTime() <= Date.now()) return null;
+    // Usage tracking — never block auth on it.
+    db("api_keys")
+      .where({ id: row.id })
+      .update({ last_used_at: new Date() })
+      .catch(() => {});
+    return {
+      id: row.id,
+      organization_id: row.organization_id,
+      user_id: row.user_id,
+      expires_at: row.expires_at ?? null,
+      revoked_at: row.revoked_at ?? null,
+    };
+  } catch {
+    // Table missing / transient DB error — treat as "no valid key".
+    return null;
+  }
+}
+
+function parsePermissionsColumn(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw as string[];
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+// EmpCloud roles.type: 0 = system role, 1 = custom role.
+const ROLE_TYPE_SYSTEM = 0;
+
+/**
+ * Resolve a user's effective EmpCloud permissions (deduped). Reads the same
+ * roles / user_roles tables EmpCloud's permissions.service uses:
+ *   1. The system-role row — org-scoped override preferred, else the global
+ *      (organization_id IS NULL) template.
+ *   2. Union with any custom roles assigned via user_roles.
+ *
+ * Returns [] if no rows are found; payroll's requirePermission() then falls
+ * back to its role-based gate (org_admin / hr_admin pass) for those cases.
+ */
+export async function resolveUserPermissions(
+  userId: number,
+  role: string,
+  orgId: number,
+): Promise<string[]> {
+  const db = getEmpCloudDB();
+  try {
+    let systemRoleRow = await db("roles")
+      .where({ organization_id: orgId, name: role, type: ROLE_TYPE_SYSTEM, is_active: true })
+      .first();
+    if (!systemRoleRow) {
+      systemRoleRow = await db("roles")
+        .whereNull("organization_id")
+        .andWhere({ name: role, type: ROLE_TYPE_SYSTEM, is_active: true })
+        .first();
+    }
+    const systemPermissions = systemRoleRow
+      ? parsePermissionsColumn(systemRoleRow.permissions)
+      : [];
+
+    const customRoleRows = await db("user_roles")
+      .join("roles", "roles.id", "user_roles.role_id")
+      .where("user_roles.user_id", userId)
+      .andWhere("roles.is_active", true)
+      .select("roles.permissions");
+    const customPermissions = customRoleRows.flatMap((r: any) =>
+      parsePermissionsColumn(r.permissions),
+    );
+
+    return [...new Set([...systemPermissions, ...customPermissions])];
+  } catch {
+    // roles/user_roles unavailable on an older EmpCloud schema — degrade to
+    // role-based gating in requirePermission().
+    return [];
+  }
 }
