@@ -47,13 +47,30 @@ import { holidayRoutes } from "./api/routes/holiday.routes";
 import { departmentRoutes } from "./api/routes/department.routes";
 import { locationRoutes } from "./api/routes/location.routes";
 import path from "path";
+import { recordMounts } from "./api/route-recorder";
 
 const app = express();
+
+// Record route mounts for OpenAPI auto-discovery (before any .use mounts).
+recordMounts(app);
+
+// Self-hosted Swagger UI assets — served same-origin from /api/v1/docs/ui so
+// the proxy/helmet CSP ('self') allows them (the old unpkg CDN is blocked).
+const swaggerUiAssetPath = (
+  require("swagger-ui-dist") as { getAbsoluteFSPath(): string }
+).getAbsoluteFSPath();
 
 // ---------------------------------------------------------------------------
 // Middleware
 // ---------------------------------------------------------------------------
-app.use(helmet());
+// Strict helmet everywhere except the Swagger UI page, which needs a relaxed
+// CSP (inline initializer + Swagger's inline styles / eval). swaggerUIHandler
+// sets its own permissive CSP for that route.
+const helmetStrict = helmet();
+const helmetNoCsp = helmet({ contentSecurityPolicy: false });
+app.use((req, res, next) =>
+  req.path.startsWith("/api/v1/docs") ? helmetNoCsp(req, res, next) : helmetStrict(req, res, next),
+);
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -106,6 +123,9 @@ app.use("/health", healthRoutes);
 // API Routes (v1)
 // ---------------------------------------------------------------------------
 const v1 = express.Router();
+// Record v1's sub-mounts (v1.use('/x', routes)) for OpenAPI auto-discovery,
+// prefixed with /api/v1 — must run before the v1.use(...) calls below.
+recordMounts(v1, "/api/v1");
 v1.use(apiLimiter);
 
 v1.use("/auth", authLimiter, authRoutes);
@@ -150,6 +170,8 @@ v1.use("/locations", locationRoutes);
 // Health page reaches the server through the same API base as every other
 // request. The top-level /health mount is preserved for infra probes.
 v1.use("/system/health", healthRoutes);
+// Self-hosted Swagger UI assets (swagger-ui-dist) served same-origin.
+v1.use("/docs/ui", express.static(swaggerUiAssetPath, { maxAge: "7d", immutable: true }));
 v1.get("/docs/openapi.json", apiDocsHandler);
 v1.get("/docs", swaggerUIHandler);
 
