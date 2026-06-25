@@ -264,21 +264,9 @@ export function LoginPage() {
             If you don't have an account, please reach out to your HR administrator to get access to
             the payroll system.
           </p>
-          <div className="space-y-2 rounded-lg bg-gray-50 p-4">
-            <p className="text-sm font-medium text-gray-700">HR Department</p>
-            <p className="text-sm text-gray-600">Email: hr@technova.in</p>
-            <p className="text-sm text-gray-600">Phone: +91 80 4567 8900</p>
-          </div>
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end">
             <Button variant="outline" onClick={() => setContactOpen(false)}>
               Close
-            </Button>
-            <Button
-              onClick={() => {
-                window.location.href = "mailto:hr@technova.in?subject=Payroll%20Account%20Request";
-              }}
-            >
-              Send Email
             </Button>
           </div>
         </div>
