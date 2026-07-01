@@ -5,6 +5,7 @@ import { findUserByEmpCode, findUserById } from "../db/empcloud";
 import {
   resolveSalaryComponents,
   checkResolvedComponents,
+  validateOverrides,
   SalaryResolverError,
   type ResolverComponent,
 } from "@emp-payroll/shared";
@@ -18,7 +19,11 @@ export class SalaryService {
    * Honors `balance` calc type — exactly one earning may absorb the remainder
    * of monthly gross after fixed/percentage rows are computed.
    */
-  private async resolveComponentsForCTC(structureId: string, ctcAnnual: number) {
+  private async resolveComponentsForCTC(
+    structureId: string,
+    ctcAnnual: number,
+    overrides?: Record<string, number> | null,
+  ) {
     const rows = await this.db.findMany<any>("salary_components", {
       filters: { structure_id: structureId, is_active: true },
       sort: { field: "sort_order", order: "asc" },
@@ -33,7 +38,15 @@ export class SalaryService {
       percentageOf: c.percentage_of || undefined,
     }));
     try {
-      return resolveSalaryComponents(definitions, ctcAnnual);
+      const hasOverrides = overrides && Object.keys(overrides).length > 0;
+      const base = resolveSalaryComponents(definitions, ctcAnnual);
+      if (hasOverrides) {
+        // Validate the pins against the base breakup + the structure's monthly
+        // gross, then re-resolve with redistribution applied.
+        validateOverrides(base, ctcAnnual / 12, overrides!);
+        return resolveSalaryComponents(definitions, ctcAnnual, { overrides: overrides! });
+      }
+      return base;
     } catch (err) {
       if (err instanceof SalaryResolverError) {
         throw new AppError(400, err.code, err.message);
@@ -270,6 +283,15 @@ export class SalaryService {
     // This is the path that supports `balance` calculation: the structure is
     // the source of truth, the resolver does the math from CTC.
     let components = data.components;
+    // Per-employee pins: { componentCode: monthlyAmount }, positive only.
+    const overrides: Record<string, number> = {};
+    if (data.overrides && typeof data.overrides === "object") {
+      for (const [code, val] of Object.entries(data.overrides)) {
+        const n = Number(val);
+        if (code && Number.isFinite(n) && n > 0) overrides[code] = Math.round(n);
+      }
+    }
+    const hasOverrides = Object.keys(overrides).length > 0;
     if (!components || components.length === 0) {
       if (!data.structureId) {
         throw new AppError(
@@ -278,7 +300,11 @@ export class SalaryService {
           "Either components[] or structureId is required.",
         );
       }
-      components = await this.resolveComponentsForCTC(data.structureId, Number(data.ctc));
+      components = await this.resolveComponentsForCTC(
+        data.structureId,
+        Number(data.ctc),
+        overrides,
+      );
     }
 
     // Deactivate current salary. Also close out its effective window by
@@ -325,6 +351,7 @@ export class SalaryService {
       gross_salary: grossSalary,
       net_salary: grossSalary, // Will be computed properly during payroll
       components: JSON.stringify(components),
+      overrides: hasOverrides ? JSON.stringify(overrides) : null,
       effective_from: data.effectiveFrom,
       is_active: true,
     });

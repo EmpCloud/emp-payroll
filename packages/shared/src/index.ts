@@ -10,6 +10,8 @@ export {
   resolveSalaryComponents,
   validateComponents,
   checkResolvedComponents,
+  applySalaryOverrides,
+  validateOverrides,
   SalaryResolverError,
 } from "./utils/salary-resolver";
 export type {

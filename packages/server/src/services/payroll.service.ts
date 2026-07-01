@@ -8,7 +8,7 @@ import {
   type OrgStatutoryOverrides,
 } from "./compliance/india-statutory.service";
 import { computeIncomeTax } from "./tax/india-tax.service";
-import { TaxRegime } from "@emp-payroll/shared";
+import { TaxRegime, applySalaryOverrides } from "@emp-payroll/shared";
 import {
   findUsersByOrgId,
   findOrgById,
@@ -1193,6 +1193,21 @@ export class PayrollService {
         const snap =
           typeof salary.components === "string" ? JSON.parse(salary.components) : salary.components;
         componentList = Array.isArray(snap) ? snap : [];
+      }
+
+      // Per-employee component pins. The template path recomputes from the
+      // structure %, so overrides must be re-applied here (the snapshot path
+      // already has them baked in, but re-applying is idempotent). Pinned
+      // components take their fixed monthly amount; the remaining monthly gross
+      // (gross_salary is stored annual → /12) redistributes across the % of
+      // gross earnings, keeping the contracted gross exact.
+      const empOverrides = salary.overrides
+        ? typeof salary.overrides === "string"
+          ? JSON.parse(salary.overrides)
+          : salary.overrides
+        : null;
+      if (empOverrides && Object.keys(empOverrides).length) {
+        applySalaryOverrides(componentList, Number(salary.gross_salary || 0) / 12, empOverrides);
       }
 
       // BUG-004 — Capture the un-prorated (contracted) Basic and HRA so the

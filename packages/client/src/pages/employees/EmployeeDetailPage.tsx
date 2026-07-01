@@ -631,6 +631,15 @@ export function EmployeeDetailPage() {
             return Array.isArray(p) ? p : Array.isArray(p?.data) ? p.data : [];
           })()}
           currentCTC={salary ? Number(salary.ctc) : undefined}
+          currentOverrides={(() => {
+            const o = (salary as any)?.overrides;
+            if (!o) return undefined;
+            try {
+              return typeof o === "string" ? JSON.parse(o) : o;
+            } catch {
+              return undefined;
+            }
+          })()}
           pfDetails={pfDetails}
           taxInfo={taxInfo}
           loading={salaryAssigning}
@@ -1399,6 +1408,7 @@ function SalaryAssignForm({
   employeeId,
   structures,
   currentCTC,
+  currentOverrides,
   pfDetails,
   taxInfo,
   loading,
@@ -1408,6 +1418,7 @@ function SalaryAssignForm({
   employeeId: string;
   structures: any[];
   currentCTC?: number;
+  currentOverrides?: Record<string, number>;
   pfDetails?: { isOptedOut?: boolean; contributionRate?: number | string };
   // Only `deductPT` is consumed here — the preview honours the per-employee
   // "Deduct Professional Tax?" toggle so it doesn't show a ₹200 PT line for
@@ -1419,6 +1430,10 @@ function SalaryAssignForm({
 }) {
   const [structureId, setStructureId] = useState(structures[0]?.id || "");
   const [ctc, setCTC] = useState(currentCTC || 0);
+  // Per-employee component pins: { componentCode: monthlyAmount }. Pinning a
+  // component fixes its ₹/month; the rest auto-adjust to keep gross exact.
+  // Pre-filled from the current salary so a revise doesn't silently drop pins.
+  const [overrides, setOverrides] = useState<Record<string, number>>(currentOverrides || {});
 
   // Pull the org's PF/ESI overrides so the EPF preview matches what the
   // payroll engine actually computes. The previous version hardcoded the
@@ -1466,7 +1481,7 @@ function SalaryAssignForm({
   // realistic component values and the error is just typing noise.
   if (ctc >= 12000 && definitions.length) {
     try {
-      resolved = resolveSalaryComponents(definitions, ctc);
+      resolved = resolveSalaryComponents(definitions, ctc, { overrides });
     } catch (err) {
       resolveError =
         err instanceof SalaryResolverError ? err.message : "Could not compute breakdown.";
@@ -1475,7 +1490,7 @@ function SalaryAssignForm({
     // Try resolving silently — show the breakdown if it works, but don't
     // surface a typing-time error.
     try {
-      resolved = resolveSalaryComponents(definitions, ctc);
+      resolved = resolveSalaryComponents(definitions, ctc, { overrides });
     } catch {
       /* swallow */
     }
@@ -1607,6 +1622,8 @@ function SalaryAssignForm({
       structureId,
       ctc,
       effectiveFrom,
+      // Per-employee pins (only send when set); the server re-resolves + validates.
+      ...(Object.keys(overrides).length ? { overrides } : {}),
     });
   }
 
@@ -1664,15 +1681,47 @@ function SalaryAssignForm({
             <p className="text-sm text-gray-400">Select a structure to see the breakdown.</p>
           ) : (
             <div className="space-y-2">
-              {/* Earnings */}
-              {earningRows.map((c) => (
-                <div key={c.code} className="flex justify-between text-sm">
-                  <span className="text-gray-500">{c.name}</span>
-                  <span className="font-medium text-gray-900">
-                    {formatCurrency(c.monthlyAmount)}
-                  </span>
-                </div>
-              ))}
+              {/* Earnings — each row can be pinned to a fixed ₹/month for this
+                  employee; the non-pinned "% of gross" earnings auto-adjust so
+                  gross stays exact. Blank pin = follow the structure %. */}
+              <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-400">
+                <span>Component</span>
+                <span className="flex items-center gap-2">
+                  <span className="w-24 text-right">Pin ₹/mo</span>
+                  <span className="w-24 text-right">Amount</span>
+                </span>
+              </div>
+              {earningRows.map((c) => {
+                const pinned = overrides[c.code] !== undefined;
+                return (
+                  <div key={c.code} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="flex-1 text-gray-500">{c.name}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="auto"
+                      title="Pin a fixed ₹/month for this employee; blank follows the structure %"
+                      value={pinned ? String(overrides[c.code]) : ""}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const n = Number(raw);
+                        setOverrides((o) => {
+                          const next = { ...o };
+                          if (raw === "" || !Number.isFinite(n) || n <= 0) delete next[c.code];
+                          else next[c.code] = Math.round(n);
+                          return next;
+                        });
+                      }}
+                      className={`focus:ring-brand-200 w-24 rounded border px-2 py-1 text-right text-xs focus:outline-none focus:ring-1 ${
+                        pinned ? "border-brand-400 bg-brand-50" : "border-gray-200 bg-white"
+                      }`}
+                    />
+                    <span className="w-24 text-right font-medium text-gray-900">
+                      {formatCurrency(c.monthlyAmount)}
+                    </span>
+                  </div>
+                );
+              })}
               <div className="flex justify-between border-t border-gray-200 pt-2 text-sm font-semibold">
                 <span>Monthly Gross</span>
                 <span>{formatCurrency(monthlyGross)}</span>

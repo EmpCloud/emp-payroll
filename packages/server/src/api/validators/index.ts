@@ -306,6 +306,10 @@ export const assignSalarySchema = z.object({
         }),
       )
       .optional(),
+    // Per-employee component pins: { componentCode: monthlyAmount }. Pinned
+    // components take the fixed amount; the rest of the % of gross earnings
+    // redistribute the remaining gross. Validated in the service.
+    overrides: z.record(z.string(), z.number().nonnegative()).optional(),
     effectiveFrom: z.string(),
   }),
 });
