@@ -42,16 +42,24 @@ export interface ResolvedComponent {
   type: "earning" | "deduction" | "reimbursement";
   monthlyAmount: number;
   annualAmount: number;
-  // Carried through so the payroll engine can recompute dynamic
-  // components (currently "per_night" — value × night_shift_days). For
-  // static components these are undefined.
+  // Carried through so the payroll engine (and the override redistribution
+  // below) can recompute components: calculationType + percentageOf identify
+  // which earnings are % of gross; rate carries the per-night/OT rate.
   calculationType?: ResolverCalcType;
+  percentageOf?: string;
   rate?: number;
 }
 
 export interface ResolveOptions {
   /** Round each monthly amount to the nearest integer. Default: true. */
   round?: boolean;
+  /**
+   * Per-employee pinned component amounts (code → fixed monthly ₹). Pinned
+   * components take the fixed amount; the remaining gross is redistributed
+   * among the non-pinned "% of gross" earnings by their relative ratio, so
+   * total gross stays exact. See applySalaryOverrides.
+   */
+  overrides?: Record<string, number>;
 }
 
 export class SalaryResolverError extends Error {
@@ -285,7 +293,7 @@ export function resolveSalaryComponents(
   // when iterating componentList (it branches on `type` per row anyway,
   // but earnings-first reads more naturally on the payslip).
   const orderedOutput = [...earnings, ...nonEarnings];
-  return orderedOutput.map((c) => {
+  const result = orderedOutput.map((c) => {
     const monthly = resolved.get(c.code) ?? 0;
     const monthlyAmount = round ? Math.round(monthly) : monthly;
     const out: ResolvedComponent = {
@@ -294,12 +302,13 @@ export function resolveSalaryComponents(
       type: c.type,
       monthlyAmount,
       annualAmount: monthlyAmount * 12,
+      // Carry the calc metadata on every row so override redistribution and
+      // the payroll engine can tell which earnings are "% of gross".
+      calculationType: c.calculationType,
+      percentageOf: c.percentageOf,
     };
-    // Preserve metadata for dynamic components so the payroll engine
-    // can recompute them per run. Static components leave these fields
-    // undefined to keep the serialized JSON lean. For the *_daily variants
-    // the `rate` field actually carries the multiplier (e.g. 2 for
-    // double-pay).
+    // For the *_daily variants the `rate` field carries the multiplier
+    // (e.g. 2 for double-pay); for per_night/per_ot it's the flat rate.
     if (
       c.calculationType === "per_night" ||
       c.calculationType === "per_night_daily" ||
@@ -307,9 +316,169 @@ export function resolveSalaryComponents(
       c.calculationType === "per_ot" ||
       c.calculationType === "per_ot_daily"
     ) {
-      out.calculationType = c.calculationType;
       out.rate = c.value || 0;
     }
     return out;
   });
+
+  // Per-employee overrides: pin the given components and redistribute the
+  // remaining gross across the non-pinned "% of gross" earnings.
+  if (opts.overrides && Object.keys(opts.overrides).length) {
+    applySalaryOverrides(result, monthlyCTC, opts.overrides);
+  }
+  return result;
+}
+
+const DYNAMIC_CALC = new Set([
+  "per_night",
+  "per_night_daily",
+  "per_night_pct",
+  "per_ot",
+  "per_ot_daily",
+]);
+
+/**
+ * Earnings that FLEX to keep gross exact when other components are pinned —
+ * any earning that isn't a hard `fixed` amount or a variable per-night/OT rate.
+ * This covers % of gross, % of another component, and `balance` alike, so
+ * redistribution works no matter how the structure defines HRA / Special
+ * Allowance (a component doesn't have to be "% of gross" to absorb the change).
+ */
+function isRedistributableEarning(c: { type: string; calculationType?: string }): boolean {
+  return (
+    c.type === "earning" &&
+    c.calculationType !== "fixed" &&
+    !DYNAMIC_CALC.has(c.calculationType || "")
+  );
+}
+
+/**
+ * Apply per-employee pinned amounts to resolved components (mutates in place).
+ *
+ * Pinned components take their fixed monthly amount; the remaining gross (gross
+ * minus every non-redistributable earning — pins + fixed earnings) is split
+ * across the non-pinned "% of gross" earnings by their ORIGINAL ratio, so total
+ * earnings still equal gross exactly. Deductions / reimbursements / dynamic
+ * (per-night/OT) earnings are untouched.
+ *
+ * e.g. gross 50,000, Basic 60% / HRA 24% / SA 11% / Conv 5%, override
+ * { BASIC: 40000 } → HRA 6,000, SA 2,750, Conv 1,250 (sum 50,000).
+ */
+export function applySalaryOverrides<
+  T extends {
+    code: string;
+    type: string;
+    calculationType?: string;
+    percentageOf?: string;
+    monthlyAmount: number;
+    annualAmount?: number;
+  },
+>(components: T[], grossMonthly: number, overrides: Record<string, number>): T[] {
+  const keys = Object.keys(overrides || {});
+  if (!keys.length) return components;
+
+  const original = new Map(components.map((c) => [c.code, c.monthlyAmount]));
+  const pinned = new Set(keys);
+
+  for (const c of components) {
+    if (pinned.has(c.code)) c.monthlyAmount = Math.max(0, Math.round(overrides[c.code] || 0));
+  }
+
+  const redistributable = components.filter(
+    (c) => !pinned.has(c.code) && isRedistributableEarning(c),
+  );
+  const consumed = components
+    .filter((c) => c.type === "earning" && !redistributable.includes(c))
+    .reduce((s, c) => s + c.monthlyAmount, 0);
+  const remaining = grossMonthly - consumed;
+  const totalWeight = redistributable.reduce((s, c) => s + (original.get(c.code) || 0), 0);
+
+  if (redistributable.length && totalWeight > 0 && remaining >= 0) {
+    let allocated = 0;
+    redistributable.forEach((c, i) => {
+      if (i === redistributable.length - 1) {
+        c.monthlyAmount = Math.round(remaining - allocated); // last row absorbs rounding
+      } else {
+        const amt = Math.round((remaining * (original.get(c.code) || 0)) / totalWeight);
+        c.monthlyAmount = amt;
+        allocated += amt;
+      }
+    });
+  }
+
+  for (const c of components) {
+    if (c.annualAmount !== undefined) c.annualAmount = c.monthlyAmount * 12;
+  }
+  return components;
+}
+
+/**
+ * Validate per-employee overrides against a structure's resolved components.
+ * Throws SalaryResolverError. Pinned codes must exist as earnings, amounts must
+ * be non-negative, pins + fixed earnings must not exceed gross, and if there's
+ * no "% of gross" earning left to absorb the balance they must equal gross.
+ */
+export function validateOverrides(
+  resolved: ResolvedComponent[],
+  grossMonthly: number,
+  overrides: Record<string, number>,
+): void {
+  const keys = Object.keys(overrides || {});
+  if (!keys.length) return;
+  const byCode = new Map(resolved.map((c) => [c.code, c]));
+
+  let pinnedSum = 0;
+  for (const code of keys) {
+    const c = byCode.get(code);
+    if (!c)
+      throw new SalaryResolverError(
+        "UNKNOWN_OVERRIDE",
+        `Override references unknown component "${code}".`,
+      );
+    if (c.type !== "earning")
+      throw new SalaryResolverError(
+        "OVERRIDE_NOT_EARNING",
+        `Only earnings can be pinned; "${code}" is a ${c.type}.`,
+      );
+    const amt = Number(overrides[code]);
+    if (!Number.isFinite(amt) || amt < 0)
+      throw new SalaryResolverError(
+        "OVERRIDE_NEGATIVE",
+        `Override for "${code}" must be a non-negative number.`,
+      );
+    pinnedSum += amt;
+  }
+
+  const dynamic = new Set([
+    "per_night",
+    "per_night_daily",
+    "per_night_pct",
+    "per_ot",
+    "per_ot_daily",
+  ]);
+  const fixedSum = resolved
+    .filter(
+      (c) =>
+        c.type === "earning" &&
+        !keys.includes(c.code) &&
+        !isRedistributableEarning(c) &&
+        !dynamic.has(c.calculationType || ""),
+    )
+    .reduce((s, c) => s + c.monthlyAmount, 0);
+  const hasRedistributable = resolved.some(
+    (c) => !keys.includes(c.code) && isRedistributableEarning(c),
+  );
+
+  if (pinnedSum + fixedSum > grossMonthly + 1) {
+    throw new SalaryResolverError(
+      "OVERRIDE_EXCEEDS_GROSS",
+      `Pinned amounts (₹${Math.round(pinnedSum)}) plus fixed earnings exceed monthly gross (₹${Math.round(grossMonthly)}).`,
+    );
+  }
+  if (!hasRedistributable && Math.abs(pinnedSum + fixedSum - grossMonthly) > 1) {
+    throw new SalaryResolverError(
+      "OVERRIDE_SUM_MISMATCH",
+      `No "% of gross" earning left to absorb the balance, so pinned + fixed earnings must equal gross (₹${Math.round(grossMonthly)}); got ₹${Math.round(pinnedSum + fixedSum)}.`,
+    );
+  }
 }
