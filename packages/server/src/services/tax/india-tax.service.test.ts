@@ -20,6 +20,10 @@ function makeTaxInput(overrides: Record<string, unknown> = {}) {
     employeePfAnnual: 21600,
     monthsWorked: 12,
     taxAlreadyPaid: 0,
+    // A valid-format PAN so the normal slab/exemption pipeline runs. Without a
+    // PAN the engine applies the Section 206AA no-PAN flat 20% short-circuit
+    // (see computeIncomeTax) — override with panNumber:"" / null to test that.
+    panNumber: "ABCDE1234F",
     ...overrides,
   };
 }
@@ -478,6 +482,31 @@ describe("computeIncomeTax", () => {
       expect(result.totalTax).toBe(
         result.taxOnIncome + result.surcharge + result.healthAndEducationCess,
       );
+    });
+  });
+
+  // ── Section 206AA (no PAN → flat 20%) ─────────────────────────────────
+  describe("Section 206AA (no PAN)", () => {
+    it("applies flat 20% on gross when PAN is missing", () => {
+      const result = computeIncomeTax(makeTaxInput({ panNumber: null, annualGross: 1000000 }));
+      expect(result.totalTax).toBe(200000); // 20% of 10L, dominates slab tax
+      expect(result.taxableIncome).toBe(1000000); // no deductions/exemptions applied
+      expect(result.exemptions).toEqual([]);
+      expect(result.surcharge).toBe(0);
+      expect(result.healthAndEducationCess).toBe(0);
+      expect((result as { panMissing206AA?: boolean }).panMissing206AA).toBe(true);
+    });
+
+    it("treats a blank/whitespace PAN the same as missing", () => {
+      const result = computeIncomeTax(makeTaxInput({ panNumber: "   ", annualGross: 500000 }));
+      expect(result.totalTax).toBe(100000); // 20% of 5L
+    });
+
+    it("spreads the flat 206AA tax across remaining months", () => {
+      const result = computeIncomeTax(
+        makeTaxInput({ panNumber: "", annualGross: 1200000, monthsWorked: 6 }),
+      );
+      expect(result.monthlyTds).toBe(40000); // 20% of 12L = 240000 / 6
     });
   });
 });

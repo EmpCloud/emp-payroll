@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { DataTable } from "@/components/ui/DataTable";
-import { formatCurrency, formatMonth } from "@/lib/utils";
+import { formatCurrency, formatMonth, formatDate, cn } from "@/lib/utils";
 import { RazorpayDisbursePanel } from "./RazorpayDisbursePanel";
 import { getUser } from "@/api/auth";
 import {
@@ -34,12 +34,44 @@ import {
   AlertTriangle,
   RotateCcw,
   Trash2,
+  ExternalLink,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { api, apiPost } from "@/api/client";
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Search, X } from "lucide-react";
+
+/** Coloured icon chip for card titles (matches the rest of the app). */
+function SectionIcon({ icon: Icon, className }: { icon: any; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "flex h-8 w-8 items-center justify-center rounded-lg",
+        className ?? "bg-brand-50 text-brand-600",
+      )}
+    >
+      <Icon className="h-[18px] w-[18px]" />
+    </span>
+  );
+}
+
+/** Styled tooltip for the cost-breakdown donut. */
+function CostTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  const p = payload[0];
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-lg">
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full" style={{ background: p.payload.fill }} />
+        <span className="text-gray-600">{p.name}</span>
+        <span className="ml-2 font-semibold tabular-nums text-gray-900">
+          {formatCurrency(p.value)}
+        </span>
+      </span>
+    </div>
+  );
+}
 
 const columns = [
   {
@@ -78,9 +110,10 @@ const columns = [
   {
     key: "gross",
     header: "Gross",
+    className: "text-right",
     render: (row: any) => (
       <div>
-        <p>{formatCurrency(row.gross_earnings)}</p>
+        <p className="tabular-nums">{formatCurrency(row.gross_earnings)}</p>
         {(() => {
           const earns =
             typeof row.earnings === "string" ? JSON.parse(row.earnings) : row.earnings || [];
@@ -100,13 +133,14 @@ const columns = [
   {
     key: "deductions",
     header: "Deductions",
+    className: "text-right",
     render: (row: any) => {
       const deds =
         typeof row.deductions === "string" ? JSON.parse(row.deductions) : row.deductions || [];
       const total = deds.reduce((s: number, d: any) => s + Number(d.amount), 0);
       return (
         <div>
-          <p>{formatCurrency(total)}</p>
+          <p className="tabular-nums text-rose-600">{formatCurrency(total)}</p>
           <div className="mt-0.5 text-xs text-gray-400">
             {deds.map((d: any) => (
               <span key={d.code} className="mr-1.5">
@@ -121,8 +155,11 @@ const columns = [
   {
     key: "net_pay",
     header: "Net Pay",
+    className: "text-right",
     render: (row: any) => (
-      <span className="font-semibold text-gray-900">{formatCurrency(row.net_pay)}</span>
+      <span className="font-semibold tabular-nums text-gray-900">
+        {formatCurrency(row.net_pay)}
+      </span>
     ),
   },
   {
@@ -133,6 +170,7 @@ const columns = [
     // (older payslips computed before that JSON was persisted).
     key: "employer_cost",
     header: "Employer Cost (extra)",
+    className: "text-right",
     render: (row: any) => {
       const list =
         typeof row.employer_contributions === "string"
@@ -143,7 +181,7 @@ const columns = [
         : Math.max(0, Number(row.total_employer_cost || 0) - Number(row.gross_earnings || 0));
       return (
         <div>
-          <p className="text-gray-700">{formatCurrency(total)}</p>
+          <p className="tabular-nums text-gray-700">{formatCurrency(total)}</p>
           {list.length > 0 && (
             <div className="mt-0.5 text-xs text-gray-400">
               {list.map((c: any) => (
@@ -165,6 +203,7 @@ const columns = [
   {
     key: "actions",
     header: "",
+    className: "text-right",
     render: (row: any) => (
       <button
         onClick={(e) => {
@@ -172,9 +211,9 @@ const columns = [
           const url = `${import.meta.env.VITE_API_URL || "/api/v1"}/payslips/${row.id}/pdf`;
           window.open(url + `?token=${localStorage.getItem("access_token")}`, "_blank");
         }}
-        className="text-brand-600 hover:text-brand-700 text-xs font-medium"
+        className="text-brand-600 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-gray-200 px-2 py-1 text-xs font-medium transition-colors"
       >
-        View Payslip
+        <ExternalLink className="h-3 w-3" /> Payslip
       </button>
     ),
   },
@@ -451,7 +490,18 @@ export function PayrollRunDetailPage() {
   }
 
   const run = runRes?.data;
-  if (!run) return <div className="p-8 text-gray-500">Payroll run not found</div>;
+  if (!run)
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+        <div className="rounded-full bg-gray-50 p-4">
+          <AlertTriangle className="h-7 w-7 text-gray-300" />
+        </div>
+        <p className="text-sm text-gray-500">Payroll run not found.</p>
+        <Button variant="outline" size="sm" onClick={() => navigate("/payroll/runs")}>
+          <ArrowLeft className="h-4 w-4" /> Back to Payroll Runs
+        </Button>
+      </div>
+    );
 
   async function handleCompute() {
     try {
@@ -496,6 +546,12 @@ export function PayrollRunDetailPage() {
     }
   }
 
+  // Totals are 0 until compute runs. Only show the "—/Click Compute" pending
+  // state for a draft run — a computed/approved/paid run with a legitimate ₹0
+  // (e.g. everyone below the PF/ESI/PT/TDS thresholds, or a whole-month LOP)
+  // shows the real figure instead of misleading HR into re-computing.
+  const pendingCompute = run.status === "draft";
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -507,19 +563,13 @@ export function PayrollRunDetailPage() {
               // short id slice that looks like a meaningless code.
               run.name || "Payroll Run"
         }
-        // #306 — surface the human-readable period (e.g. "January 2026")
-        // alongside the status; the auto-generated `code` is meaningless to
-        // HR users and the issue reporter wanted the period name shown.
+        // #306/#334 — period only (status now lives in the badge on the meta
+        // row below, so it isn't printed twice). Prefer `name` over an id-slice.
         description={
-          run.month && run.year
-            ? `${formatMonth(run.month, run.year)} · ${run.status?.toUpperCase() || ""}`
-            : // #334 — Same fallback chain as the title: prefer `name`, never
-              // fall through to the short id-slice (which reads like a
-              // database hash, not a payroll period).
-              `${run.name || "Payroll run"} · ${run.status?.toUpperCase() || ""}`
+          run.month && run.year ? formatMonth(run.month, run.year) : run.name || "Payroll run"
         }
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Button variant="ghost" onClick={() => navigate("/payroll/runs")}>
               <ArrowLeft className="h-4 w-4" /> Back
             </Button>
@@ -674,8 +724,9 @@ export function PayrollRunDetailPage() {
         }
       />
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
         <Badge variant={run.status}>{run.status}</Badge>
+        {run.pay_date && <span>Pay date: {formatDate(run.pay_date)}</span>}
       </div>
 
       {/* When the run is still in 'draft', the totals are 0 and rendered as
@@ -685,21 +736,24 @@ export function PayrollRunDetailPage() {
         <StatCard title="Employees" value={String(run.employee_count || 0)} icon={Users} />
         <StatCard
           title="Gross Pay"
-          value={Number(run.total_gross) ? formatCurrency(run.total_gross) : "—"}
-          subtitle={Number(run.total_gross) ? undefined : "Click Compute to calculate"}
+          value={pendingCompute ? "—" : formatCurrency(Number(run.total_gross) || 0)}
+          subtitle={pendingCompute ? "Click Compute to calculate" : undefined}
           icon={Wallet}
+          accentClassName="bg-emerald-50 text-emerald-600"
         />
         <StatCard
           title="Deductions"
-          value={Number(run.total_deductions) ? formatCurrency(run.total_deductions) : "—"}
-          subtitle={Number(run.total_deductions) ? undefined : "Click Compute to calculate"}
+          value={pendingCompute ? "—" : formatCurrency(Number(run.total_deductions) || 0)}
+          subtitle={pendingCompute ? "Click Compute to calculate" : undefined}
           icon={TrendingDown}
+          accentClassName="bg-amber-50 text-amber-600"
         />
         <StatCard
           title="Net Pay"
-          value={Number(run.total_net) ? formatCurrency(run.total_net) : "—"}
-          subtitle={Number(run.total_net) ? undefined : "Click Compute to calculate"}
-          icon={Building2}
+          value={pendingCompute ? "—" : formatCurrency(Number(run.total_net) || 0)}
+          subtitle={pendingCompute ? "Click Compute to calculate" : undefined}
+          icon={CreditCard}
+          accentClassName="bg-sky-50 text-sky-600"
         />
       </div>
 
@@ -731,59 +785,131 @@ export function PayrollRunDetailPage() {
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <Card>
                 <CardHeader>
-                  <CardTitle>Cost Breakdown</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <SectionIcon icon={Wallet} className="bg-emerald-50 text-emerald-600" />
+                    Cost Breakdown
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={data}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          label={({ name, percent }: any) =>
-                            `${name} ${(percent * 100).toFixed(0)}%`
-                          }
-                          labelLine={false}
+                  <div className="flex flex-col items-center gap-4 sm:flex-row">
+                    <div className="relative h-44 w-full sm:w-1/2">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={data}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={48}
+                            outerRadius={72}
+                            paddingAngle={2}
+                            stroke="none"
+                            isAnimationActive={false}
+                          >
+                            {data.map((entry, i) => (
+                              <Cell key={i} fill={entry.fill} />
+                            ))}
+                          </Pie>
+                          <Tooltip content={<CostTooltip />} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="px-2 text-center text-sm font-bold tabular-nums text-gray-900">
+                          {formatCurrency(data.reduce((s, d) => s + d.value, 0))}
+                        </span>
+                        <span className="text-[11px] text-gray-400">Total cost</span>
+                      </div>
+                    </div>
+                    <ul className="w-full space-y-2 sm:w-1/2">
+                      {data.map((d) => (
+                        <li
+                          key={d.name}
+                          className="flex items-center justify-between gap-2 text-sm"
                         >
-                          {data.map((entry, i) => (
-                            <Cell key={i} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(v: number) => formatCurrency(v)} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                          <span className="flex items-center gap-2 text-gray-600">
+                            <span
+                              className="h-2.5 w-2.5 rounded-sm"
+                              style={{ background: d.fill }}
+                            />
+                            {d.name}
+                          </span>
+                          <span className="font-semibold tabular-nums text-gray-900">
+                            {formatCurrency(d.value)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle>Department Breakdown</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <SectionIcon icon={Building2} className="bg-sky-50 text-sky-600" />
+                    Department Breakdown
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {(() => {
                     const deptMap: Record<string, number> = {};
                     for (const p of payslips) {
-                      const dept = (p as any).department || "Other";
+                      const dept =
+                        (p as any).department && String((p as any).department).trim()
+                          ? (p as any).department
+                          : "Unassigned";
                       deptMap[dept] = (deptMap[dept] || 0) + Number((p as any).net_pay || 0);
                     }
                     const deptData = Object.entries(deptMap)
                       .map(([dept, amount]) => ({ dept, amount }))
                       .sort((a, b) => b.amount - a.amount);
+                    if (deptData.length === 0) {
+                      return (
+                        <p className="py-6 text-center text-sm text-gray-400">
+                          No payslip data to break down yet.
+                        </p>
+                      );
+                    }
+                    // Guard the bar denominator: a negative top value (whole-
+                    // month LOP / recoveries) is truthy so `|| 1` wouldn't
+                    // catch it and would invert every bar.
+                    const max = Math.max(1, ...deptData.map((d) => d.amount));
+                    const COLORS = [
+                      "#6366F1",
+                      "#818CF8",
+                      "#A5B4FC",
+                      "#C7D2FE",
+                      "#E0E7FF",
+                      "#EEF2FF",
+                    ];
                     return (
-                      <div className="space-y-2">
-                        {deptData.map(({ dept, amount }) => (
-                          <div key={dept} className="flex items-center justify-between">
-                            <span className="text-sm text-gray-700">{dept}</span>
-                            <span className="text-sm font-semibold text-gray-900">
-                              {formatCurrency(amount)}
-                            </span>
-                          </div>
+                      <ul className="space-y-3">
+                        {deptData.map(({ dept, amount }, i) => (
+                          <li key={dept}>
+                            <div className="mb-1 flex items-center justify-between gap-2 text-sm">
+                              <span className="flex min-w-0 items-center gap-2 text-gray-700">
+                                <span
+                                  className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                                  style={{ background: COLORS[i % COLORS.length] }}
+                                />
+                                <span className="truncate">{dept}</span>
+                              </span>
+                              <span className="shrink-0 font-semibold tabular-nums text-gray-900">
+                                {formatCurrency(amount)}
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+                              <div
+                                className="h-full rounded-full"
+                                style={{
+                                  width: `${Math.max(0, Math.min(100, Math.round((amount / max) * 100)))}%`,
+                                  background: COLORS[i % COLORS.length],
+                                }}
+                              />
+                            </div>
+                          </li>
                         ))}
-                      </div>
+                      </ul>
                     );
                   })()}
                 </CardContent>
@@ -913,8 +1039,9 @@ export function PayrollRunDetailPage() {
       )}
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-y-2">
+          <CardTitle className="flex items-center gap-2">
+            <SectionIcon icon={Users} />
             Employee Payslips
             {(payslips.length > 0 || skipped.length > 0) && (
               <span className="ml-2 text-sm font-normal text-gray-500">
@@ -927,7 +1054,7 @@ export function PayrollRunDetailPage() {
             )}
           </CardTitle>
           {payslips.length > 0 && (
-            <div className="flex gap-2">
+            <div className="flex shrink-0 gap-2">
               <Button variant="outline" size="sm" onClick={() => exportPayrollCSV(payslips, run)}>
                 <Download className="h-4 w-4" /> Export CSV
               </Button>

@@ -18,6 +18,7 @@ import {
   Copy,
   GripVertical,
   Info,
+  Layers,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -102,6 +103,7 @@ export function SalaryStructuresPage() {
   const [components, setComponents] = useState<ComponentRow[]>(DEFAULT_COMPONENTS);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [showNightHelp, setShowNightHelp] = useState(false);
   const { data: res, isLoading } = useSalaryStructures();
   const qc = useQueryClient();
@@ -345,15 +347,15 @@ export function SalaryStructuresPage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this salary structure? Employees assigned to it will not be affected."))
-      return;
-    setDeleting(id);
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(deleteTarget.id);
     try {
-      await apiDelete(`/salary-structures/${id}`);
+      await apiDelete(`/salary-structures/${deleteTarget.id}`);
       toast.success("Salary structure deleted");
       qc.invalidateQueries({ queryKey: ["salary-structures"] });
       qc.invalidateQueries({ queryKey: ["structure-components"] });
+      setDeleteTarget(null);
     } catch (err: any) {
       toast.error(err.response?.data?.error?.message || "Failed to delete");
     } finally {
@@ -404,11 +406,15 @@ export function SalaryStructuresPage() {
       />
 
       {structures.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-gray-400">
-            No salary structures yet. Create one to get started.
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-20 text-center">
+          <div className="rounded-full bg-gray-50 p-3">
+            <Layers className="h-6 w-6 text-gray-300" />
+          </div>
+          <p className="text-sm text-gray-500">No salary structures yet.</p>
+          <Button size="sm" variant="outline" onClick={openCreate}>
+            <Plus className="h-4 w-4" /> Create your first structure
+          </Button>
+        </div>
       ) : (
         <div className="space-y-4">
           {structures.map((ss: any) => (
@@ -418,7 +424,7 @@ export function SalaryStructuresPage() {
               expanded={expanded === ss.id}
               onToggle={() => setExpanded(expanded === ss.id ? null : ss.id)}
               onEdit={openEdit}
-              onDelete={handleDelete}
+              onDelete={(s) => setDeleteTarget(s)}
               onDuplicate={handleDuplicate}
               isDeleting={deleting === ss.id}
             />
@@ -669,15 +675,17 @@ export function SalaryStructuresPage() {
 
               {/* Summary */}
               {components.length > 0 && (
-                <div className="mt-3 flex gap-4 text-xs text-gray-500">
-                  <span>{components.filter((c) => c.type === "earning").length} earnings</span>
+                <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
+                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">
+                    {components.filter((c) => c.type === "earning").length} earnings
+                  </span>
                   {components.filter((c) => c.type === "deduction").length > 0 && (
-                    <span>
+                    <span className="rounded-full bg-rose-50 px-2 py-0.5 font-medium text-rose-700">
                       {components.filter((c) => c.type === "deduction").length} deductions
                     </span>
                   )}
                   {components.filter((c) => c.type === "reimbursement").length > 0 && (
-                    <span>
+                    <span className="rounded-full bg-sky-50 px-2 py-0.5 font-medium text-sky-700">
                       {components.filter((c) => c.type === "reimbursement").length} reimbursements
                     </span>
                   )}
@@ -818,7 +826,45 @@ export function SalaryStructuresPage() {
           </Button>
         </div>
       </Modal>
+
+      {/* Delete confirm */}
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => deleting == null && setDeleteTarget(null)}
+        title="Delete salary structure?"
+        description={
+          deleteTarget
+            ? `“${deleteTarget.name}” will be removed. Employees already assigned to it keep their salary, and their computed payslips are unaffected.`
+            : undefined
+        }
+        className="max-w-md"
+      >
+        <div className="flex justify-end gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setDeleteTarget(null)}
+            disabled={deleting != null}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={confirmDelete}
+            loading={deleteTarget != null && deleting === deleteTarget.id}
+          >
+            <Trash2 className="h-4 w-4" /> Delete
+          </Button>
+        </div>
+      </Modal>
     </div>
+  );
+}
+
+function CountPill({ n, label, className }: { n: number; label: string; className: string }) {
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums ${className}`}>
+      {n} {label}
+    </span>
   );
 }
 
@@ -835,14 +881,16 @@ function StructureCard({
   expanded: boolean;
   onToggle: () => void;
   onEdit: (ss: any, comps: any[]) => void;
-  onDelete: (id: string) => void;
+  onDelete: (ss: any) => void;
   onDuplicate: (ss: any) => void;
   isDeleting: boolean;
 }) {
   const { data: compRes } = useQuery({
     queryKey: ["structure-components", ss.id],
     queryFn: () => apiGet<any>(`/salary-structures/${ss.id}/components`),
-    enabled: expanded,
+    // Load eagerly so each card can show its earning/deduction counts even
+    // when collapsed (and expanding is then instant from cache).
+    enabled: !!ss.id,
   });
 
   const components = compRes?.data?.data || [];
@@ -852,28 +900,65 @@ function StructureCard({
   const reimbursementCount = components.filter((c: any) => c.type === "reimbursement").length;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex cursor-pointer items-center gap-3" onClick={onToggle}>
-            <CardTitle>{ss.name}</CardTitle>
-            <Badge variant={ss.is_active ? "active" : "inactive"}>
-              {ss.is_active ? "Active" : "Inactive"}
-            </Badge>
-            {/* #162 — MySQL returns tinyint(1) as the number 0/1, so
-                `{ss.is_default && <Badge/>}` rendered a literal "0" next to
-                the Active badge when the structure wasn't the default. Coerce
-                to a real boolean so React skips the falsy branch cleanly. */}
-            {!!ss.is_default && <Badge variant="approved">Default</Badge>}
-            <span className="text-xs text-gray-400">
-              {earningCount > 0 && `${earningCount} earnings`}
-              {deductionCount > 0 && ` · ${deductionCount} deductions`}
-              {reimbursementCount > 0 && ` · ${reimbursementCount} reimbursements`}
+    <Card className="overflow-hidden transition-shadow hover:shadow-md">
+      <CardHeader className="cursor-pointer" onClick={onToggle}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="bg-brand-50 text-brand-600 mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+              <Layers className="h-[18px] w-[18px]" />
             </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle className="truncate">{ss.name}</CardTitle>
+                <Badge variant={ss.is_active ? "active" : "inactive"}>
+                  {ss.is_active ? "Active" : "Inactive"}
+                </Badge>
+                {/* #162 — coerce tinyint(1) to boolean so a literal "0" never renders. */}
+                {!!ss.is_default && <Badge variant="approved">Default</Badge>}
+              </div>
+              {ss.description && (
+                <p className="mt-0.5 truncate text-sm text-gray-500">{ss.description}</p>
+              )}
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {components.length === 0 ? (
+                  <span className="text-xs text-gray-400">No components</span>
+                ) : (
+                  <>
+                    {earningCount > 0 && (
+                      <CountPill
+                        n={earningCount}
+                        label={earningCount === 1 ? "earning" : "earnings"}
+                        className="bg-emerald-50 text-emerald-700"
+                      />
+                    )}
+                    {deductionCount > 0 && (
+                      <CountPill
+                        n={deductionCount}
+                        label={deductionCount === 1 ? "deduction" : "deductions"}
+                        className="bg-rose-50 text-rose-700"
+                      />
+                    )}
+                    {reimbursementCount > 0 && (
+                      <CountPill
+                        n={reimbursementCount}
+                        label="reimb."
+                        className="bg-sky-50 text-sky-700"
+                      />
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            {/* Duplicate works without needing the components preloaded — server copies line items */}
-            <Button variant="ghost" size="sm" onClick={() => onDuplicate(ss)} title="Duplicate">
+          <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            {/* Duplicate works without preloading components — server copies line items */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDuplicate(ss)}
+              title="Duplicate"
+              aria-label="Duplicate structure"
+            >
               <Copy className="h-3.5 w-3.5" />
             </Button>
             {expanded && (
@@ -883,6 +968,7 @@ function StructureCard({
                   size="sm"
                   onClick={() => onEdit(ss, components)}
                   title="Edit"
+                  aria-label="Edit structure"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
@@ -890,75 +976,82 @@ function StructureCard({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onDelete(ss.id)}
+                    onClick={() => onDelete(ss)}
                     loading={isDeleting}
                     className="text-red-400 hover:text-red-600"
                     title="Delete"
+                    aria-label="Delete structure"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 )}
               </>
             )}
-            <Button variant="ghost" size="sm" onClick={onToggle}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onToggle}
+              aria-label={expanded ? "Collapse" : "Expand"}
+            >
               {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
           </div>
         </div>
-        {ss.description && <p className="text-sm text-gray-500">{ss.description}</p>}
       </CardHeader>
 
       {expanded && (
         <CardContent>
           {components.length > 0 ? (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 text-left">
-                  <th className="pb-2 font-medium text-gray-500">Component</th>
-                  <th className="pb-2 font-medium text-gray-500">Code</th>
-                  <th className="pb-2 font-medium text-gray-500">Type</th>
-                  <th className="pb-2 font-medium text-gray-500">Calculation</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {components.map((c: any) => (
-                  <tr key={c.id}>
-                    <td className="py-2 text-gray-900">{c.name}</td>
-                    <td className="py-2 font-mono text-xs text-gray-500">{c.code}</td>
-                    <td className="py-2">
-                      <Badge
-                        variant={
-                          c.type === "earning"
-                            ? "approved"
-                            : c.type === "deduction"
-                              ? "pending"
-                              : "draft"
-                        }
-                      >
-                        {c.type}
-                      </Badge>
-                    </td>
-                    <td className="py-2 text-gray-600">
-                      {c.calculation_type === "percentage" && c.percentage_of
-                        ? `${c.value}% of ${c.percentage_of}`
-                        : c.calculation_type === "fixed" && Number(c.value) > 0
-                          ? `Fixed ₹${Number(c.value).toLocaleString("en-IN")}`
-                          : c.calculation_type === "per_night"
-                            ? `₹${Number(c.value).toLocaleString("en-IN")} / night`
-                            : c.calculation_type === "per_night_daily"
-                              ? `${Number(c.value)}× whole salary (night shift)`
-                              : c.calculation_type === "per_night_pct"
-                                ? `${Number(c.value)}% of net pay (night shift)`
-                                : c.calculation_type === "per_ot"
-                                  ? `₹${Number(c.value).toLocaleString("en-IN")} / OT day`
-                                  : c.calculation_type === "per_ot_daily"
-                                    ? `${Number(c.value)}× day pay / OT day`
-                                    : "Balancing"}
-                    </td>
+            <div className="overflow-hidden rounded-lg border border-gray-100">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-400">
+                    <th className="px-4 py-2.5 font-semibold">Component</th>
+                    <th className="px-4 py-2.5 font-semibold">Code</th>
+                    <th className="px-4 py-2.5 font-semibold">Type</th>
+                    <th className="px-4 py-2.5 font-semibold">Calculation</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {components.map((c: any) => (
+                    <tr key={c.id} className="transition-colors hover:bg-gray-50/70">
+                      <td className="px-4 py-2.5 font-medium text-gray-900">{c.name}</td>
+                      <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{c.code}</td>
+                      <td className="px-4 py-2.5">
+                        <Badge
+                          variant={
+                            c.type === "earning"
+                              ? "approved"
+                              : c.type === "deduction"
+                                ? "pending"
+                                : "draft"
+                          }
+                        >
+                          {c.type}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-2.5 tabular-nums text-gray-600">
+                        {c.calculation_type === "percentage" && c.percentage_of
+                          ? `${c.value}% of ${c.percentage_of}`
+                          : c.calculation_type === "fixed" && Number(c.value) > 0
+                            ? `Fixed ₹${Number(c.value).toLocaleString("en-IN")}`
+                            : c.calculation_type === "per_night"
+                              ? `₹${Number(c.value).toLocaleString("en-IN")} / night`
+                              : c.calculation_type === "per_night_daily"
+                                ? `${Number(c.value)}× whole salary (night shift)`
+                                : c.calculation_type === "per_night_pct"
+                                  ? `${Number(c.value)}% of net pay (night shift)`
+                                  : c.calculation_type === "per_ot"
+                                    ? `₹${Number(c.value).toLocaleString("en-IN")} / OT day`
+                                    : c.calculation_type === "per_ot_daily"
+                                      ? `${Number(c.value)}× day pay / OT day`
+                                      : "Balancing"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <p className="text-sm text-gray-400">No components defined</p>
           )}

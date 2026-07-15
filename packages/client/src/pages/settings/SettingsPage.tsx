@@ -8,13 +8,65 @@ import { apiPut, api } from "@/api/client";
 import { RazorpayCard } from "./RazorpayCard";
 import { useQueryClient } from "@tanstack/react-query";
 import { getUser } from "@/api/auth";
-import { Building2, CreditCard, Shield, Bell, Loader2, Upload, Trash2 } from "lucide-react";
+import { Building2, CreditCard, Shield, Bell, Loader2, Upload, Trash2, Wallet } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useState } from "react";
 import toast from "react-hot-toast";
+
+const TABS = [
+  { key: "organization", label: "Organization", icon: Building2 },
+  { key: "statutory", label: "Statutory", icon: Shield },
+  { key: "payroll", label: "Payroll", icon: CreditCard },
+  { key: "payouts", label: "Payouts", icon: Wallet },
+  { key: "notifications", label: "Notifications", icon: Bell },
+];
+
+/** Coloured icon chip for card titles (matches the rest of the app). */
+function SectionIcon({ icon: Icon, className }: { icon: any; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "flex h-8 w-8 items-center justify-center rounded-lg",
+        className ?? "bg-brand-50 text-brand-600",
+      )}
+    >
+      <Icon className="h-[18px] w-[18px]" />
+    </span>
+  );
+}
+
+/**
+ * Accessible toggle switch backed by a real checkbox. The `id` is preserved so
+ * the settings save can still read it via `document.getElementById(id).checked`
+ * — only the visual presentation changes from a tick box to a switch.
+ */
+function Toggle({
+  id,
+  defaultChecked,
+  title,
+  description,
+}: {
+  id: string;
+  defaultChecked?: boolean;
+  title: string;
+  description?: string;
+}) {
+  return (
+    <label htmlFor={id} className="flex cursor-pointer items-start gap-3">
+      <input id={id} type="checkbox" defaultChecked={defaultChecked} className="peer sr-only" />
+      <span className="peer-checked:bg-brand-600 peer-focus-visible:ring-brand-500 relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-gray-200 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow after:transition-transform after:content-[''] peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-offset-1" />
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-gray-900">{title}</p>
+        {description && <p className="mt-1 text-xs text-gray-500">{description}</p>}
+      </div>
+    </label>
+  );
+}
 
 export function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [logoBusy, setLogoBusy] = useState(false);
+  const [tab, setTab] = useState("organization");
   const qc = useQueryClient();
   const user = getUser();
   const orgId = user?.orgId ? String(user.orgId) : "";
@@ -263,270 +315,320 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Settings" description="Organization and payroll configuration" />
+      <PageHeader
+        title="Settings"
+        description="Organization and payroll configuration"
+        actions={
+          <Button loading={saving} onClick={handleSave}>
+            Save Settings
+          </Button>
+        }
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" /> Organization
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Input id="org_name" label="Company Name" defaultValue={org?.name || ""} />
-            <Input
-              id="org_legal"
-              label="Legal Name"
-              defaultValue={org?.legalName || org?.legal_name || ""}
-              disabled
-            />
-            <Input
-              id="org_pan"
-              label="PAN"
-              defaultValue={org?.pan || ""}
-              placeholder="ABCDE1234F"
-              maxLength={10}
-              style={{ textTransform: "uppercase" }}
-            />
-            <Input
-              id="org_tan"
-              label="TAN"
-              defaultValue={org?.tan || ""}
-              placeholder="ABCD12345E"
-              maxLength={10}
-              style={{ textTransform: "uppercase" }}
-            />
-            <Input id="org_gstin" label="GSTIN" defaultValue={org?.gstin || ""} />
-            <Input id="org_address" label="Registered Address" defaultValue={addressDisplay} />
-            <SelectField
-              id="org_state"
-              label="State (for PT)"
-              defaultValue={org?.state || "KA"}
-              options={[
-                { value: "AP", label: "Andhra Pradesh" },
-                { value: "AS", label: "Assam" },
-                { value: "BR", label: "Bihar" },
-                { value: "CG", label: "Chhattisgarh" },
-                { value: "DL", label: "Delhi (No PT)" },
-                { value: "GA", label: "Goa" },
-                { value: "GJ", label: "Gujarat" },
-                { value: "HR", label: "Haryana (No PT)" },
-                { value: "HP", label: "Himachal Pradesh (No PT)" },
-                { value: "JH", label: "Jharkhand" },
-                { value: "JK", label: "Jammu & Kashmir (No PT)" },
-                { value: "KA", label: "Karnataka" },
-                { value: "KL", label: "Kerala" },
-                { value: "MP", label: "Madhya Pradesh" },
-                { value: "MH", label: "Maharashtra" },
-                { value: "MN", label: "Manipur" },
-                { value: "ML", label: "Meghalaya" },
-                { value: "OD", label: "Odisha" },
-                { value: "PB", label: "Punjab" },
-                { value: "RJ", label: "Rajasthan" },
-                { value: "SK", label: "Sikkim" },
-                { value: "TN", label: "Tamil Nadu" },
-                { value: "TS", label: "Telangana" },
-                { value: "TR", label: "Tripura" },
-                { value: "UP", label: "Uttar Pradesh (No PT)" },
-                { value: "UK", label: "Uttarakhand (No PT)" },
-                { value: "WB", label: "West Bengal" },
-              ]}
-            />
-          </div>
-
-          {/* Company logo — reflected on every payslip for this org */}
-          <div className="mt-6 border-t border-gray-100 pt-5">
-            <p className="mb-1 text-sm font-medium text-gray-700">Company Logo</p>
-            <p className="mb-3 text-xs text-gray-500">
-              Shown at the top of every payslip for this organization. PNG, JPG, or SVG up to 4MB.
-            </p>
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex h-16 w-40 items-center justify-center overflow-hidden rounded-lg border border-dashed border-gray-300 bg-gray-50">
-                {logoSrc ? (
-                  <img
-                    src={logoSrc}
-                    alt="Company logo"
-                    className="max-h-14 max-w-[150px] object-contain"
-                  />
-                ) : (
-                  <span className="text-xs text-gray-400">No logo</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                  {logoBusy ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                  {logoSrc ? "Replace logo" : "Upload logo"}
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif"
-                    className="hidden"
-                    disabled={logoBusy}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) uploadLogo(f);
-                      e.currentTarget.value = "";
-                    }}
-                  />
-                </label>
-                {logoSrc && (
-                  <Button
-                    variant="outline"
-                    size="sm"
+      <div className="flex flex-col gap-6 lg:flex-row">
+        {/* Tab nav — vertical on desktop, a scrollable pill row on mobile */}
+        <nav aria-label="Settings sections" className="lg:w-56 lg:shrink-0">
+          <ul className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white px-6 py-4 lg:flex-col lg:overflow-visible">
+            {TABS.map((t) => {
+              const Icon = t.icon;
+              return (
+                <li key={t.key} className="shrink-0">
+                  <button
                     type="button"
-                    disabled={logoBusy}
-                    onClick={removeLogo}
+                    onClick={() => setTab(t.key)}
+                    aria-current={tab === t.key ? "page" : undefined}
+                    className={cn(
+                      "focus-visible:ring-brand-500 flex w-full items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2",
+                      tab === t.key
+                        ? "bg-brand-50 text-brand-700"
+                        : "text-gray-600 hover:bg-gray-50",
+                    )}
                   >
-                    <Trash2 className="h-4 w-4" /> Remove
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                    <Icon className="h-4 w-4" /> {t.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" /> Statutory Registration
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Input
-              id="pf_estab"
-              label="PF Establishment Code"
-              defaultValue={
-                org?.pfEstablishmentCode ||
-                org?.pf_establishment_code ||
-                settings?.pfEstablishmentCode ||
-                ""
-              }
-            />
-            <Input
-              id="esi_estab"
-              label="ESI Code"
-              defaultValue={
-                org?.esiEstablishmentCode ||
-                org?.esi_establishment_code ||
-                settings?.esiEstablishmentCode ||
-                ""
-              }
-            />
-          </div>
-        </CardContent>
-      </Card>
+        {/* Tab content — all sections stay mounted (hidden when inactive) so
+            handleSave's document.getElementById reads keep working. */}
+        <div className="min-w-0 flex-1 space-y-6">
+          <div className={cn("space-y-6", tab === "organization" ? "" : "hidden")}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <SectionIcon icon={Building2} /> Organization
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <Input id="org_name" label="Company Name" defaultValue={org?.name || ""} />
+                  <Input
+                    id="org_legal"
+                    label="Legal Name"
+                    defaultValue={org?.legalName || org?.legal_name || ""}
+                    disabled
+                  />
+                  <Input
+                    id="org_pan"
+                    label="PAN"
+                    defaultValue={org?.pan || ""}
+                    placeholder="ABCDE1234F"
+                    maxLength={10}
+                    style={{ textTransform: "uppercase" }}
+                  />
+                  <Input
+                    id="org_tan"
+                    label="TAN"
+                    defaultValue={org?.tan || ""}
+                    placeholder="ABCD12345E"
+                    maxLength={10}
+                    style={{ textTransform: "uppercase" }}
+                  />
+                  <Input id="org_gstin" label="GSTIN" defaultValue={org?.gstin || ""} />
+                  <Input
+                    id="org_address"
+                    label="Registered Address"
+                    defaultValue={addressDisplay}
+                  />
+                  <SelectField
+                    id="org_state"
+                    label="State (for PT)"
+                    defaultValue={org?.state || "KA"}
+                    options={[
+                      { value: "AP", label: "Andhra Pradesh" },
+                      { value: "AS", label: "Assam" },
+                      { value: "BR", label: "Bihar" },
+                      { value: "CG", label: "Chhattisgarh" },
+                      { value: "DL", label: "Delhi (No PT)" },
+                      { value: "GA", label: "Goa" },
+                      { value: "GJ", label: "Gujarat" },
+                      { value: "HR", label: "Haryana (No PT)" },
+                      { value: "HP", label: "Himachal Pradesh (No PT)" },
+                      { value: "JH", label: "Jharkhand" },
+                      { value: "JK", label: "Jammu & Kashmir (No PT)" },
+                      { value: "KA", label: "Karnataka" },
+                      { value: "KL", label: "Kerala" },
+                      { value: "MP", label: "Madhya Pradesh" },
+                      { value: "MH", label: "Maharashtra" },
+                      { value: "MN", label: "Manipur" },
+                      { value: "ML", label: "Meghalaya" },
+                      { value: "OD", label: "Odisha" },
+                      { value: "PB", label: "Punjab" },
+                      { value: "RJ", label: "Rajasthan" },
+                      { value: "SK", label: "Sikkim" },
+                      { value: "TN", label: "Tamil Nadu" },
+                      { value: "TS", label: "Telangana" },
+                      { value: "TR", label: "Tripura" },
+                      { value: "UP", label: "Uttar Pradesh (No PT)" },
+                      { value: "UK", label: "Uttarakhand (No PT)" },
+                      { value: "WB", label: "West Bengal" },
+                    ]}
+                  />
+                </div>
 
-      {/* key on settings-loaded so the card's defaultChecked / useState
+                {/* Company logo — reflected on every payslip for this org */}
+                <div className="mt-6 border-t border-gray-100 pt-5">
+                  <p className="mb-1 text-sm font-medium text-gray-700">Company Logo</p>
+                  <p className="mb-3 text-xs text-gray-500">
+                    Shown at the top of every payslip for this organization. PNG, JPG, or SVG up to
+                    4MB.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex h-16 w-40 items-center justify-center overflow-hidden rounded-lg border border-dashed border-gray-300 bg-gray-50">
+                      {logoSrc ? (
+                        <img
+                          src={logoSrc}
+                          alt="Company logo"
+                          className="max-h-14 max-w-[150px] object-contain"
+                        />
+                      ) : (
+                        <span className="text-xs text-gray-400">No logo</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        {logoBusy ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Upload className="h-4 w-4" />
+                        )}
+                        {logoSrc ? "Replace logo" : "Upload logo"}
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif"
+                          className="hidden"
+                          disabled={logoBusy}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) uploadLogo(f);
+                            e.currentTarget.value = "";
+                          }}
+                        />
+                      </label>
+                      {logoSrc && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          disabled={logoBusy}
+                          onClick={removeLogo}
+                        >
+                          <Trash2 className="h-4 w-4" /> Remove
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className={cn("space-y-6", tab === "statutory" ? "" : "hidden")}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <SectionIcon icon={Shield} className="bg-amber-50 text-amber-600" /> Statutory
+                  Registration
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <Input
+                    id="pf_estab"
+                    label="PF Establishment Code"
+                    defaultValue={
+                      org?.pfEstablishmentCode ||
+                      org?.pf_establishment_code ||
+                      settings?.pfEstablishmentCode ||
+                      ""
+                    }
+                  />
+                  <Input
+                    id="esi_estab"
+                    label="ESI Code"
+                    defaultValue={
+                      org?.esiEstablishmentCode ||
+                      org?.esi_establishment_code ||
+                      settings?.esiEstablishmentCode ||
+                      ""
+                    }
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* key on settings-loaded so the card's defaultChecked / useState
           initialisers re-run once the async settings actually arrive —
           otherwise a default-ON toggle can paint OFF on first mount. */}
-      <StatutoryOverridesCard key={settings ? "loaded" : "loading"} settings={settings} />
+            <StatutoryOverridesCard key={settings ? "loaded" : "loading"} settings={settings} />
+          </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" /> Payment
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <SelectField
-              id="pay_frequency"
-              label="Pay Frequency"
-              defaultValue={settings?.payFrequency || "monthly"}
-              options={[
-                { value: "monthly", label: "Monthly" },
-                { value: "bi_weekly", label: "Bi-weekly" },
-                { value: "weekly", label: "Weekly" },
-              ]}
-            />
-            <Input
-              id="pay_day"
-              label="Pay Day (day of month)"
-              type="number"
-              defaultValue={settings?.payDay?.toString() || "7"}
-            />
-            <SelectField
-              id="currency"
-              label="Currency"
-              defaultValue={org?.currency || "INR"}
-              options={[
-                { value: "INR", label: "INR — Indian Rupee" },
-                { value: "USD", label: "USD — US Dollar" },
-                { value: "EUR", label: "EUR — Euro" },
-                { value: "GBP", label: "GBP — British Pound" },
-                { value: "AED", label: "AED — UAE Dirham" },
-                { value: "SGD", label: "SGD — Singapore Dollar" },
-              ]}
-            />
-            {/* Migration 035 — controls the working-days denominator the
+          <div className={cn("space-y-6", tab === "payroll" ? "" : "hidden")}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <SectionIcon icon={CreditCard} className="bg-sky-50 text-sky-600" /> Payment
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <SelectField
+                    id="pay_frequency"
+                    label="Pay Frequency"
+                    defaultValue={settings?.payFrequency || "monthly"}
+                    options={[
+                      { value: "monthly", label: "Monthly" },
+                      { value: "bi_weekly", label: "Bi-weekly" },
+                      { value: "weekly", label: "Weekly" },
+                    ]}
+                  />
+                  <Input
+                    id="pay_day"
+                    label="Pay Day (day of month)"
+                    type="number"
+                    defaultValue={settings?.payDay?.toString() || "7"}
+                  />
+                  <SelectField
+                    id="currency"
+                    label="Currency"
+                    defaultValue={org?.currency || "INR"}
+                    options={[
+                      { value: "INR", label: "INR — Indian Rupee" },
+                      { value: "USD", label: "USD — US Dollar" },
+                      { value: "EUR", label: "EUR — Euro" },
+                      { value: "GBP", label: "GBP — British Pound" },
+                      { value: "AED", label: "AED — UAE Dirham" },
+                      { value: "SGD", label: "SGD — Singapore Dollar" },
+                    ]}
+                  />
+                  {/* Migration 035 — controls the working-days denominator the
                 payroll run pro-rates against. "All calendar days" suits
                 orgs that operate on weekends (retail, manufacturing). */}
-            <div>
-              <SelectField
-                id="working_days_basis"
-                label="Working Days Basis"
-                defaultValue={settings?.includeWeekendsInWorkingDays ? "all_days" : "weekdays"}
-                options={[
-                  { value: "weekdays", label: "Weekdays only (Mon–Fri)" },
-                  { value: "all_days", label: "Include weekends (all calendar days)" },
-                ]}
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Sets the Total Working Days each payroll run divides present / paid days by. With
-                "Include weekends", Sat/Sun count as paid rest days — they're never treated as Loss
-                of Pay. Holidays are subtracted either way.
-              </p>
-            </div>
+                  <div>
+                    <SelectField
+                      id="working_days_basis"
+                      label="Working Days Basis"
+                      defaultValue={
+                        settings?.includeWeekendsInWorkingDays ? "all_days" : "weekdays"
+                      }
+                      options={[
+                        { value: "weekdays", label: "Weekdays only (Mon–Fri)" },
+                        { value: "all_days", label: "Include weekends (all calendar days)" },
+                      ]}
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Sets the Total Working Days each payroll run divides present / paid days by.
+                      With "Include weekends", Sat/Sun count as paid rest days — they're never
+                      treated as Loss of Pay. Holidays are subtracted either way.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* RazorpayX payouts integration (Phase 1A — connect & test only) */}
-      <RazorpayCard orgId={orgId} />
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" /> Notifications
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {[
-              {
-                id: "notify_payslip",
-                label: "Email payslips to employees after payroll approval",
-                checked: true,
-              },
-              {
-                id: "notify_tax",
-                label: "Notify employees of tax regime selection deadline",
-                checked: true,
-              },
-              { id: "notify_pf", label: "Alert when PF/ESI filing is due", checked: false },
-            ].map((item) => (
-              <label key={item.id} className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  defaultChecked={item.checked}
-                  className="text-brand-600 focus:ring-brand-500 rounded border-gray-300"
-                />
-                <span className="text-sm text-gray-700">{item.label}</span>
-              </label>
-            ))}
+          <div className={cn("space-y-6", tab === "payouts" ? "" : "hidden")}>
+            {/* RazorpayX payouts integration (Phase 1A — connect & test only) */}
+            <RazorpayCard orgId={orgId} />
           </div>
-        </CardContent>
-      </Card>
 
-      <div className="flex justify-end">
-        <Button loading={saving} onClick={handleSave}>
-          Save Settings
-        </Button>
+          <div className={cn("space-y-6", tab === "notifications" ? "" : "hidden")}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <SectionIcon icon={Bell} className="bg-purple-50 text-purple-600" /> Notifications
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {[
+                    {
+                      id: "notify_payslip",
+                      label: "Email payslips to employees after payroll approval",
+                      checked: true,
+                    },
+                    {
+                      id: "notify_tax",
+                      label: "Notify employees of tax regime selection deadline",
+                      checked: true,
+                    },
+                    { id: "notify_pf", label: "Alert when PF/ESI filing is due", checked: false },
+                  ].map((item) => (
+                    <Toggle
+                      key={item.id}
+                      id={item.id}
+                      defaultChecked={item.checked}
+                      title={item.label}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -609,7 +711,7 @@ function StatutoryOverridesCard({ settings }: { settings: any }) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Shield className="h-5 w-5" /> Statutory Overrides
+          <SectionIcon icon={Shield} className="bg-amber-50 text-amber-600" /> Statutory Overrides
         </CardTitle>
         <p className="text-sm text-gray-500">
           Pick how PF should be calculated for your organization. Most companies use one of the two
@@ -718,25 +820,12 @@ function StatutoryOverridesCard({ settings }: { settings: any }) {
             from the PF rate / basis math. This affects how the offer-letter
             CTC is interpreted, not how PF is computed. */}
         <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
-          <label className="flex items-start gap-3">
-            <input
-              id="employer_pf_in_ctc"
-              type="checkbox"
-              defaultChecked={!!settings?.employerPfInCtc}
-              className="text-brand-600 focus:ring-brand-500 mt-0.5 h-4 w-4 rounded border-gray-300"
-            />
-            <div>
-              <p className="text-sm font-medium text-gray-900">
-                Employer PF / ESI is included in CTC
-              </p>
-              <p className="mt-1 text-xs text-gray-500">
-                Tick this if your offer letter's CTC ALREADY bundles the employer's PF, ESI, EDLI
-                and admin contributions. The Total Cost to Company on each payslip will then equal
-                the gross (no extra "+₹X employer cost on top"). Leave unticked if your offers say
-                "CTC + Employer Cost" separately.
-              </p>
-            </div>
-          </label>
+          <Toggle
+            id="employer_pf_in_ctc"
+            defaultChecked={!!settings?.employerPfInCtc}
+            title="Employer PF / ESI is included in CTC"
+            description={`Tick this if your offer letter's CTC ALREADY bundles the employer's PF, ESI, EDLI and admin contributions. The Total Cost to Company on each payslip will then equal the gross (no extra "+₹X employer cost on top"). Leave unticked if your offers say "CTC + Employer Cost" separately.`}
+          />
         </div>
 
         {/* Employer EDLI / PF Admin charge toggles (migration 034) — each
@@ -752,58 +841,29 @@ function StatutoryOverridesCard({ settings }: { settings: any }) {
             for organisations that don't pay them (e.g. exempted / trust-managed PF setups).
           </p>
           <div className="mt-3 space-y-3">
-            <label className="flex items-start gap-3">
-              <input
-                id="pf_edli_enabled"
-                type="checkbox"
-                defaultChecked={settings?.pfEdliEnabled !== false}
-                className="text-brand-600 focus:ring-brand-500 mt-0.5 h-4 w-4 rounded border-gray-300"
-              />
-              <div>
-                <p className="text-sm font-medium text-gray-900">Include EDLI charges (0.5%)</p>
-                <p className="mt-1 text-xs text-gray-500">
-                  Employees' Deposit Linked Insurance — 0.5% of PF wages, paid by the employer.
-                </p>
-              </div>
-            </label>
-            <label className="flex items-start gap-3">
-              <input
-                id="pf_admin_enabled"
-                type="checkbox"
-                defaultChecked={settings?.pfAdminEnabled !== false}
-                className="text-brand-600 focus:ring-brand-500 mt-0.5 h-4 w-4 rounded border-gray-300"
-              />
-              <div>
-                <p className="text-sm font-medium text-gray-900">Include PF Admin charges (0.5%)</p>
-                <p className="mt-1 text-xs text-gray-500">
-                  EPFO administrative charges — 0.5% of PF wages, paid by the employer.
-                </p>
-              </div>
-            </label>
+            <Toggle
+              id="pf_edli_enabled"
+              defaultChecked={settings?.pfEdliEnabled !== false}
+              title="Include EDLI charges (0.5%)"
+              description="Employees' Deposit Linked Insurance — 0.5% of PF wages, paid by the employer."
+            />
+            <Toggle
+              id="pf_admin_enabled"
+              defaultChecked={settings?.pfAdminEnabled !== false}
+              title="Include PF Admin charges (0.5%)"
+              description="EPFO administrative charges — 0.5% of PF wages, paid by the employer."
+            />
           </div>
         </div>
 
         {/* Professional Tax org-wide toggle (migration 036). */}
         <div className="mt-6 border-t border-gray-100 pt-6">
-          <label className="flex items-start gap-3">
-            <input
-              id="pt_disabled"
-              type="checkbox"
-              defaultChecked={!!settings?.ptDisabled}
-              className="text-brand-600 focus:ring-brand-500 mt-0.5 h-4 w-4 rounded border-gray-300"
-            />
-            <div>
-              <p className="text-sm font-medium text-gray-900">
-                Disable Professional Tax for all employees
-              </p>
-              <p className="mt-1 text-xs text-gray-500">
-                When on, no Professional Tax is deducted for ANY employee in this organisation,
-                regardless of per-employee settings. Use this for states with no PT (e.g. Delhi,
-                Haryana) or if your org doesn't withhold PT. Off (default) keeps PT computing per
-                the state slab.
-              </p>
-            </div>
-          </label>
+          <Toggle
+            id="pt_disabled"
+            defaultChecked={!!settings?.ptDisabled}
+            title="Disable Professional Tax for all employees"
+            description="When on, no Professional Tax is deducted for ANY employee in this organisation, regardless of per-employee settings. Use this for states with no PT (e.g. Delhi, Haryana) or if your org doesn't withhold PT. Off (default) keeps PT computing per the state slab."
+          />
         </div>
 
         {/* ESI ceiling + rounding policy — independent settings. */}

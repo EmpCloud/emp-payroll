@@ -361,12 +361,19 @@ export function ReimbursementsPage() {
     {
       key: "amount",
       header: "Amount",
-      render: (r: any) => <span className="font-medium">{formatCurrency(r.amount)}</span>,
+      className: "text-right",
+      render: (r: any) => (
+        <span className="font-medium tabular-nums">{formatCurrency(r.amount)}</span>
+      ),
     },
     {
       key: "expense_date",
       header: "Date",
-      render: (r: any) => new Date(r.expense_date).toLocaleDateString("en-IN"),
+      render: (r: any) => (
+        <span className="whitespace-nowrap tabular-nums">
+          {new Date(r.expense_date).toLocaleDateString("en-IN")}
+        </span>
+      ),
     },
     {
       key: "status",
@@ -510,6 +517,7 @@ export function ReimbursementsPage() {
             value={String(pendingCount)}
             subtitle={formatCurrency(totalPending)}
             icon={Clock}
+            accentClassName="bg-amber-50 text-amber-600"
           />
         </Link>
         <Link
@@ -523,6 +531,7 @@ export function ReimbursementsPage() {
             value={String(approvedCount)}
             subtitle={formatCurrency(totalApproved)}
             icon={CheckCircle2}
+            accentClassName="bg-emerald-50 text-emerald-600"
           />
         </Link>
         <Link
@@ -536,6 +545,7 @@ export function ReimbursementsPage() {
             value={String(rejectedCount)}
             subtitle={formatCurrency(totalRejected)}
             icon={XCircle}
+            accentClassName="bg-rose-50 text-rose-600"
           />
         </Link>
         <Link
@@ -544,7 +554,12 @@ export function ReimbursementsPage() {
           className="focus-visible:ring-brand-500 block rounded-xl transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2"
           aria-label="View paid reimbursement claims"
         >
-          <StatCard title="Paid" value={String(paidCount)} icon={CreditCard} />
+          <StatCard
+            title="Paid"
+            value={String(paidCount)}
+            icon={CreditCard}
+            accentClassName="bg-sky-50 text-sky-600"
+          />
         </Link>
       </div>
 

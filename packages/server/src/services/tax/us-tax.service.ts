@@ -4,7 +4,8 @@
 // ============================================================================
 
 import {
-  US_FED_BRACKETS as US_FEDERAL_BRACKETS, US_STANDARD_DEDUCTION,
+  US_FED_BRACKETS as US_FEDERAL_BRACKETS,
+  US_STANDARD_DEDUCTION,
   FICA_SS_EMPLOYEE_RATE as SOCIAL_SECURITY_RATE_EMPLOYEE,
   FICA_SS_EMPLOYER_RATE as SOCIAL_SECURITY_RATE_EMPLOYER,
   FICA_SS_WAGE_BASE as SOCIAL_SECURITY_WAGE_BASE,
@@ -13,8 +14,10 @@ import {
   FICA_MEDICARE_ADDITIONAL_RATE as MEDICARE_ADDITIONAL_RATE,
   FICA_MEDICARE_ADDITIONAL_THRESHOLD_SINGLE,
   FICA_MEDICARE_ADDITIONAL_THRESHOLD_MFJ,
-  FUTA_EFFECTIVE_RATE, FUTA_WAGE_BASE,
-  US_STATE_TAX as US_STATE_TAXES, US_PAY_PERIODS,
+  FUTA_EFFECTIVE_RATE,
+  FUTA_WAGE_BASE,
+  US_STATE_TAX as US_STATE_TAXES,
+  US_PAY_PERIODS,
   type USFilingStatus,
 } from "@emp-payroll/shared";
 
@@ -60,13 +63,17 @@ export interface USPayrollResult {
   totalEmployerTaxes: number;
 }
 
-function computeBracketTax(income: number, brackets: readonly { min: number; max: number; rate: number }[]): number {
+function computeBracketTax(
+  income: number,
+  brackets: readonly { min: number; max: number; rate: number }[],
+): number {
   let tax = 0;
   let remaining = income;
   for (const bracket of brackets) {
     if (remaining <= 0) break;
-    const width = bracket.max === Infinity ? remaining : Math.min(remaining, bracket.max - bracket.min + 1);
-    tax += width * bracket.rate / 100;
+    const width =
+      bracket.max === Infinity ? remaining : Math.min(remaining, bracket.max - bracket.min + 1);
+    tax += (width * bracket.rate) / 100;
     remaining -= width;
   }
   return Math.round(tax * 100) / 100;
@@ -89,17 +96,21 @@ function computeFederalWithholding(input: USPayrollInput): number {
 
 function computeFICA(input: USPayrollInput) {
   const { grossPay, w4, ytdGross } = input;
-  const ssWagesRemaining = Math.max(0, SOCIAL_SECURITY_WAGE_BASE - Math.min(ytdGross, SOCIAL_SECURITY_WAGE_BASE));
+  const ssWagesRemaining = Math.max(
+    0,
+    SOCIAL_SECURITY_WAGE_BASE - Math.min(ytdGross, SOCIAL_SECURITY_WAGE_BASE),
+  );
   const ssWages = Math.min(grossPay, ssWagesRemaining);
-  const socialSecurity = Math.round(ssWages * SOCIAL_SECURITY_RATE_EMPLOYEE / 100 * 100) / 100;
-  const employerSS = Math.round(ssWages * SOCIAL_SECURITY_RATE_EMPLOYER / 100 * 100) / 100;
-  const medicare = Math.round(grossPay * MEDICARE_RATE_EMPLOYEE / 100 * 100) / 100;
-  const employerMedicare = Math.round(grossPay * MEDICARE_RATE_EMPLOYER / 100 * 100) / 100;
+  const socialSecurity = Math.round(((ssWages * SOCIAL_SECURITY_RATE_EMPLOYEE) / 100) * 100) / 100;
+  const employerSS = Math.round(((ssWages * SOCIAL_SECURITY_RATE_EMPLOYER) / 100) * 100) / 100;
+  const medicare = Math.round(((grossPay * MEDICARE_RATE_EMPLOYEE) / 100) * 100) / 100;
+  const employerMedicare = Math.round(((grossPay * MEDICARE_RATE_EMPLOYER) / 100) * 100) / 100;
   const threshold = MEDICARE_ADDITIONAL_THRESHOLDS[w4.filingStatus];
   let additionalMedicare = 0;
   if (ytdGross + grossPay > threshold) {
-    const wagesAbove = Math.max(0, (ytdGross + grossPay) - threshold) - Math.max(0, ytdGross - threshold);
-    additionalMedicare = Math.round(wagesAbove * MEDICARE_ADDITIONAL_RATE / 100 * 100) / 100;
+    const wagesAbove =
+      Math.max(0, ytdGross + grossPay - threshold) - Math.max(0, ytdGross - threshold);
+    additionalMedicare = Math.round(((wagesAbove * MEDICARE_ADDITIONAL_RATE) / 100) * 100) / 100;
   }
   return { socialSecurity, medicare, additionalMedicare, employerSS, employerMedicare };
 }
@@ -110,16 +121,22 @@ function computeStateTax(input: USPayrollInput): number {
   const periods = US_PAY_PERIODS[input.payFrequency];
   const annualGross = (input.grossPay - input.pretaxDeductions) * periods;
   const taxable = Math.max(0, annualGross - (stateTax.standardDeduction || 0));
-  let rate: number;
-  if (stateTax.type === "flat" && stateTax.flatRate) { rate = stateTax.flatRate; }
-  else if (stateTax.brackets && stateTax.brackets.length > 0) { rate = stateTax.brackets[stateTax.brackets.length - 1].rate * 0.7; }
-  else { return 0; }
-  return Math.round(taxable * rate / 100 / periods * 100) / 100;
+  let annualTax: number;
+  if (stateTax.type === "flat" && stateTax.flatRate) {
+    annualTax = (taxable * stateTax.flatRate) / 100;
+  } else if (stateTax.brackets && stateTax.brackets.length > 0) {
+    // Real progressive brackets. Previously approximated as 70% of the top
+    // bracket rate applied flat, which materially over/under-taxed most incomes.
+    annualTax = computeBracketTax(taxable, stateTax.brackets);
+  } else {
+    return 0;
+  }
+  return Math.round((annualTax / periods) * 100) / 100;
 }
 
 function computeFUTA(grossPay: number, ytdGross: number): number {
   const remaining = Math.max(0, FUTA_WAGE_BASE - ytdGross);
-  return Math.round(Math.min(grossPay, remaining) * FUTA_EFFECTIVE_RATE / 100 * 100) / 100;
+  return Math.round(((Math.min(grossPay, remaining) * FUTA_EFFECTIVE_RATE) / 100) * 100) / 100;
 }
 
 export function computeUSPayroll(input: USPayrollInput): USPayrollResult {
@@ -127,7 +144,13 @@ export function computeUSPayroll(input: USPayrollInput): USPayrollResult {
   const fica = computeFICA(input);
   const stateTax = computeStateTax(input);
   const futa = computeFUTA(input.grossPay, input.ytdGross);
-  const totalEmployeeDeductions = federalTax + fica.socialSecurity + fica.medicare + fica.additionalMedicare + stateTax + input.pretaxDeductions;
+  const totalEmployeeDeductions =
+    federalTax +
+    fica.socialSecurity +
+    fica.medicare +
+    fica.additionalMedicare +
+    stateTax +
+    input.pretaxDeductions;
   return {
     employeeId: input.employeeId,
     grossPay: input.grossPay,

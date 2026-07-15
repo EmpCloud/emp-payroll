@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
+import { StatCard } from "@/components/ui/StatCard";
 import { Input } from "@/components/ui/Input";
 import { SelectField } from "@/components/ui/SelectField";
 import { Modal } from "@/components/ui/Modal";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import {
   useEmployee,
   useEmployeeSalary,
@@ -39,6 +39,8 @@ import {
   FileText,
   Upload,
   CheckCircle,
+  UserPlus,
+  TrendingUp,
 } from "lucide-react";
 import { api } from "@/api/client";
 import toast from "react-hot-toast";
@@ -47,6 +49,100 @@ import {
   SalaryResolverError,
   type ResolverComponent,
 } from "@emp-payroll/shared";
+
+// ---------------------------------------------------------------------------
+// Small presentational helpers shared across the page. Purely visual — they
+// keep the Salary/Bank/Statutory cards, empty states and section headers on a
+// single rhythm instead of each re-rolling the same ad-hoc markup.
+// ---------------------------------------------------------------------------
+
+/** Human-readable tenure (e.g. "2y 3m") from a joining date. */
+function tenureSince(from?: string): string {
+  if (!from) return "—";
+  const start = new Date(from);
+  if (Number.isNaN(start.getTime())) return "—";
+  const now = new Date();
+  let months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+  if (now.getDate() < start.getDate()) months -= 1;
+  if (months < 0) months = 0;
+  const y = Math.floor(months / 12);
+  const m = months % 12;
+  return y <= 0 ? `${m}m` : `${y}y ${m}m`;
+}
+
+/** Coloured icon chip for card titles (matches the Dashboard/Payslip look). */
+function SectionIcon({ icon: Icon, className }: { icon: any; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "flex h-8 w-8 items-center justify-center rounded-lg",
+        className ?? "bg-brand-50 text-brand-600",
+      )}
+    >
+      <Icon className="h-[18px] w-[18px]" />
+    </span>
+  );
+}
+
+/** Label/value row for the read-only detail cards, right-aligned + tabular. */
+function DetailRow({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: React.ReactNode;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2.5 text-sm">
+      <dt className="shrink-0 text-gray-500">{label}</dt>
+      <dd
+        className={cn(
+          "min-w-0 truncate text-right font-medium tabular-nums text-gray-900",
+          mono && "font-mono text-xs",
+        )}
+        title={typeof value === "string" ? value : undefined}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+/** Icon-bubble empty state used by the payslips/documents/notes sections. */
+function EmptyBlock({ icon: Icon, text }: { icon: any; text: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+      <div className="rounded-full bg-gray-50 p-3">
+        <Icon className="h-6 w-6 text-gray-300" />
+      </div>
+      <p className="text-sm text-gray-400">{text}</p>
+    </div>
+  );
+}
+
+/** Contact chip (email / phone / joined) for the profile header. */
+function ContactChip({ icon: Icon, text, href }: { icon: any; text: string; href?: string }) {
+  const base =
+    "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-600";
+  const inner = (
+    <>
+      <Icon className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+      <span className="max-w-[240px] truncate">{text}</span>
+    </>
+  );
+  return href ? (
+    <a
+      href={href}
+      className={cn(base, "hover:border-brand-200 hover:text-brand-700 transition-colors")}
+    >
+      {inner}
+    </a>
+  ) : (
+    <span className={base}>{inner}</span>
+  );
+}
 
 export function EmployeeDetailPage() {
   const { id } = useParams();
@@ -116,13 +212,55 @@ export function EmployeeDetailPage() {
   }
 
   const emp = empRes?.data;
-  if (!emp) return <div className="p-8 text-gray-500">Employee not found</div>;
+  if (!emp)
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+        <div className="rounded-full bg-gray-50 p-4">
+          <UserPlus className="h-7 w-7 text-gray-300" />
+        </div>
+        <p className="text-sm text-gray-500">Employee not found.</p>
+        <Button variant="outline" size="sm" onClick={() => navigate("/employees")}>
+          <ArrowLeft className="h-4 w-4" /> Back to Employees
+        </Button>
+      </div>
+    );
 
   const salary = salaryRes?.data;
   const payslips = payslipsRes?.data?.data || [];
   const bankDetails =
     typeof emp.bank_details === "string" ? JSON.parse(emp.bank_details) : emp.bank_details || {};
   const taxInfo = typeof emp.tax_info === "string" ? JSON.parse(emp.tax_info) : emp.tax_info || {};
+  // Newest payslip first — drives the header "Latest Net Pay" KPI and the
+  // ordering of the Recent Payslips list (the raw list isn't guaranteed to be
+  // sorted, so a stray older row could otherwise appear as "recent").
+  const sortedPayslips = [...payslips].sort(
+    (a: any, b: any) => Number(b.year) - Number(a.year) || Number(b.month) - Number(a.month),
+  );
+  const latestPayslip = sortedPayslips[0];
+  const latestPayslipMonth = latestPayslip
+    ? new Date(latestPayslip.year, latestPayslip.month - 1).toLocaleString("en-IN", {
+        month: "short",
+        year: "numeric",
+      })
+    : undefined;
+  // Profile-completion indicator — % of key onboarding fields populated, plus
+  // the list of what's still missing so HR knows exactly what to backfill.
+  const completionItems = [
+    { label: "Email", done: !!emp.email },
+    { label: "Phone", done: !!emp.phone },
+    { label: "Designation", done: !!emp.designation },
+    { label: "Department", done: !!emp.department },
+    { label: "Joining date", done: !!emp.date_of_joining },
+    { label: "Employee code", done: !!emp.employee_code },
+    { label: "Bank account", done: !!bankDetails.accountNumber },
+    { label: "IFSC", done: !!bankDetails.ifscCode },
+    { label: "PAN", done: !!(taxInfo.pan || taxInfo.panNumber || emp.pan) },
+    { label: "Salary", done: !!salaryRes?.data },
+  ];
+  const completionPct = Math.round(
+    (completionItems.filter((i) => i.done).length / completionItems.length) * 100,
+  );
+  const missingFields = completionItems.filter((i) => !i.done).map((i) => i.label);
   const pfDetails =
     typeof emp.pf_details === "string" ? JSON.parse(emp.pf_details) : emp.pf_details || {};
   const esiDetails =
@@ -180,65 +318,134 @@ export function EmployeeDetailPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={`${emp.first_name} ${emp.last_name}`.trim() || "Employee"}
-        description={
-          emp.designation && emp.department ? `${emp.designation} · ${emp.department}` : undefined
-        }
-        actions={
-          <Button variant="ghost" onClick={() => navigate("/employees")}>
-            <ArrowLeft className="h-4 w-4" /> Back to Employees
-          </Button>
-        }
-      />
+      <button
+        onClick={() => navigate("/employees")}
+        className="focus-visible:ring-brand-500 -mb-2 inline-flex items-center gap-1.5 rounded text-sm text-gray-500 transition-colors hover:text-gray-700 focus:outline-none focus-visible:ring-2"
+      >
+        <ArrowLeft className="h-4 w-4" /> Back to Employees
+      </button>
 
-      {/* Profile header */}
-      <Card>
+      {/* Profile header — the page's single identity block / h1 hero. */}
+      <Card className="overflow-hidden">
+        <div className="from-brand-600 h-1.5 bg-gradient-to-r to-indigo-400" />
         <CardContent className="py-6">
-          <div className="flex items-start gap-6">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
             <Avatar name={`${emp.first_name} ${emp.last_name}`} size="lg" />
-            <div className="flex-1">
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-bold text-gray-900">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-xl font-bold text-gray-900">
                   {emp.first_name} {emp.last_name}
-                </h2>
+                </h1>
                 <Badge variant={emp.is_active ? "active" : "inactive"}>
                   {emp.is_active ? "Active" : "Inactive"}
                 </Badge>
-              </div>
-              <p className="text-sm text-gray-500">
-                {emp.designation} &middot; {emp.department}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-600">
-                <span className="flex items-center gap-1">
-                  <Mail className="h-4 w-4" />
-                  {emp.email}
-                </span>
-                {emp.phone && (
-                  <span className="flex items-center gap-1">
-                    <Phone className="h-4 w-4" />
-                    {emp.phone}
+                {emp.employee_code && (
+                  <span className="rounded-md bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-500">
+                    {emp.employee_code}
                   </span>
                 )}
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  Joined {formatDate(emp.date_of_joining)}
-                </span>
+              </div>
+              <p className="mt-0.5 text-sm text-gray-500">
+                {[emp.designation, emp.department].filter(Boolean).join(" · ") || "—"}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {emp.email && (
+                  <ContactChip icon={Mail} text={emp.email} href={`mailto:${emp.email}`} />
+                )}
+                {emp.phone && (
+                  <ContactChip icon={Phone} text={emp.phone} href={`tel:${emp.phone}`} />
+                )}
+                {emp.date_of_joining && (
+                  <ContactChip icon={Calendar} text={`Joined ${formatDate(emp.date_of_joining)}`} />
+                )}
+              </div>
+              {/* Profile completion */}
+              <div className="mt-5 max-w-md">
+                <div className="mb-1.5 flex items-center justify-between text-xs">
+                  <span className="font-medium text-gray-500">Profile completion</span>
+                  <span className="font-semibold tabular-nums text-gray-700">{completionPct}%</span>
+                </div>
+                <div
+                  className="h-2 w-full overflow-hidden rounded-full bg-gray-100"
+                  role="progressbar"
+                  aria-valuenow={completionPct}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Profile completion"
+                >
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all",
+                      completionPct === 100
+                        ? "bg-green-500"
+                        : completionPct < 60
+                          ? "bg-amber-500"
+                          : "bg-brand-500",
+                    )}
+                    style={{ width: `${completionPct}%` }}
+                  />
+                </div>
+                {missingFields.length > 0 && (
+                  <p className="mt-1.5 text-[11px] text-gray-400">
+                    Missing: {missingFields.slice(0, 4).join(", ")}
+                    {missingFields.length > 4 ? `, +${missingFields.length - 4} more` : ""}
+                  </p>
+                )}
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditOpen(true)}
+              className="shrink-0"
+            >
               <Pencil className="h-4 w-4" /> Edit
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {/* Key figures — at-a-glance summary of the most-referenced numbers. */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Annual CTC"
+          value={salary ? formatCurrency(salary.ctc) : "—"}
+          subtitle={salary ? "Cost to company" : "Not assigned"}
+          icon={Wallet}
+          accentClassName="bg-emerald-50 text-emerald-600"
+        />
+        <StatCard
+          title="Annual Gross"
+          value={salary ? formatCurrency(salary.gross_salary) : "—"}
+          subtitle={salary ? "Before deductions" : "Not assigned"}
+          icon={Banknote}
+          accentClassName="bg-sky-50 text-sky-600"
+        />
+        <StatCard
+          title="Latest Net Pay"
+          value={latestPayslip ? formatCurrency(latestPayslip.net_pay) : "—"}
+          subtitle={latestPayslipMonth || "No payslips yet"}
+          icon={CreditCard}
+          accentClassName="bg-brand-50 text-brand-600"
+        />
+        <StatCard
+          title="Tenure"
+          value={tenureSince(emp.date_of_joining)}
+          subtitle={emp.date_of_joining ? `Since ${formatDate(emp.date_of_joining)}` : "—"}
+          icon={Calendar}
+          accentClassName="bg-amber-50 text-amber-600"
+        />
+      </div>
+
+      {/* Two-column grid, items-start so short cards don't stretch. The tall
+          Statutory card spans full width (below) so it never sits beside a
+          short card — that pairing was the source of the big white gap. */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" /> Salary Details
+                <SectionIcon icon={Building2} /> Salary Details
               </CardTitle>
               <Button variant="outline" size="sm" onClick={() => setSalaryOpen(true)}>
                 <Wallet className="h-4 w-4" /> {salary ? "Revise" : "Assign"}
@@ -246,12 +453,12 @@ export function EmployeeDetailPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <dl className="space-y-3">
+            <dl className="divide-y divide-gray-100">
               {[
-                ["Annual CTC", salary ? formatCurrency(salary.ctc) : "—"],
+                // Annual CTC / Gross are shown in the hero KPI row above; this
+                // card focuses on the monthly breakdown to avoid repeating them.
                 ["Monthly Basic", monthlyBasic ? formatCurrency(monthlyBasic) : "—"],
                 ["HRA", monthlyHRA ? formatCurrency(monthlyHRA) : "—"],
-                ["Gross (Annual)", salary ? formatCurrency(salary.gross_salary) : "—"],
                 // #365 — Show the cap-aware EPF figure HR sees on the
                 // payslip and the Assign Salary preview, instead of the
                 // raw 12%-of-basic value (which read as "broken" when an
@@ -264,12 +471,14 @@ export function EmployeeDetailPage() {
                       ? formatCurrency(monthlyEPFForCard)
                       : "—",
                 ],
-                ["Employee Code", emp.employee_code],
+                ["Employee Code", emp.employee_code || "—"],
               ].map(([label, value]) => (
-                <div key={label} className="flex justify-between text-sm">
-                  <dt className="text-gray-500">{label}</dt>
-                  <dd className="font-medium text-gray-900">{value}</dd>
-                </div>
+                <DetailRow
+                  key={label}
+                  label={label}
+                  value={value}
+                  mono={label === "Employee Code"}
+                />
               ))}
             </dl>
           </CardContent>
@@ -278,59 +487,100 @@ export function EmployeeDetailPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" /> Bank Details
+              <SectionIcon icon={CreditCard} className="bg-sky-50 text-sky-600" /> Bank Details
             </CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => setBankOpen(true)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setBankOpen(true)}
+              aria-label="Edit bank details"
+            >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
           </CardHeader>
           <CardContent>
-            <dl className="space-y-3">
+            <dl className="divide-y divide-gray-100">
               {[
                 ["Bank Name", bankDetails.bankName || "—"],
                 ["Account Number", bankDetails.accountNumber || "—"],
                 ["IFSC Code", bankDetails.ifscCode || "—"],
                 ["Account Type", bankDetails.accountType || "Savings"],
               ].map(([label, value]) => (
-                <div key={label} className="flex justify-between text-sm">
-                  <dt className="text-gray-500">{label}</dt>
-                  <dd className="font-medium text-gray-900">{value}</dd>
-                </div>
+                <DetailRow
+                  key={label}
+                  label={label}
+                  value={value}
+                  mono={label === "Account Number" || label === "IFSC Code"}
+                />
               ))}
             </dl>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" /> Statutory
+              <SectionIcon icon={Shield} className="bg-amber-50 text-amber-600" /> Statutory
             </CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => setStatutoryOpen(true)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setStatutoryOpen(true)}
+              aria-label="Edit statutory details"
+            >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
           </CardHeader>
-          <CardContent>
-            <dl className="space-y-3">
-              {[
-                ["Tax Regime", taxInfo.regime === "old" ? "Old Regime" : "New Regime"],
-                ["PAN", taxInfo.pan || "N/A"],
-                ["UAN", taxInfo.uan || "N/A"],
-                ["Deduct TDS", taxInfo.deductTDS === false ? "No" : "Yes"],
-                ["Deduct PT", taxInfo.deductPT === false ? "No" : "Yes"],
-                ["State (PT override)", taxInfo.state || "Use org default"],
-                ["PF Number", pfDetails.pfNumber || "N/A"],
-                ["PF Rate", `${pfDetails.contributionRate || 12}%`],
-                ["PF Opted Out", pfDetails.isOptedOut ? "Yes" : "No"],
-                ["ESI Eligible", esiDetails.isEligible === false ? "No" : "Yes"],
-                ["ESI Number", esiDetails.esiNumber || "N/A"],
-              ].map(([label, value]) => (
-                <div key={label} className="flex justify-between text-sm">
-                  <dt className="text-gray-500">{label}</dt>
-                  <dd className="font-medium capitalize text-gray-900">{value}</dd>
-                </div>
-              ))}
-            </dl>
+          <CardContent className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2 md:grid-cols-3">
+            {[
+              {
+                heading: "Tax",
+                rows: [
+                  ["Tax Regime", taxInfo.regime === "old" ? "Old Regime" : "New Regime"],
+                  ["PAN", taxInfo.pan || "—"],
+                  ["Deduct TDS", taxInfo.deductTDS === false ? "No" : "Yes"],
+                  ["Deduct PT", taxInfo.deductPT === false ? "No" : "Yes"],
+                  ["State (PT override)", taxInfo.state || "Use org default"],
+                ],
+              },
+              {
+                heading: "Provident Fund",
+                rows: [
+                  ["UAN", taxInfo.uan || "—"],
+                  ["PF Number", pfDetails.pfNumber || "—"],
+                  ["PF Rate", `${pfDetails.contributionRate || 12}%`],
+                  ["PF Opted Out", pfDetails.isOptedOut ? "Yes" : "No"],
+                ],
+              },
+              {
+                heading: "ESI",
+                rows: [
+                  ["ESI Eligible", esiDetails.isEligible === false ? "No" : "Yes"],
+                  ["ESI Number", esiDetails.esiNumber || "—"],
+                ],
+              },
+            ].map((group) => (
+              <div key={group.heading}>
+                <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                  {group.heading}
+                </h4>
+                <dl className="divide-y divide-gray-100">
+                  {group.rows.map(([label, value]) => (
+                    <DetailRow
+                      key={label}
+                      label={label}
+                      value={value}
+                      mono={
+                        label === "PAN" ||
+                        label === "UAN" ||
+                        label === "PF Number" ||
+                        label === "ESI Number"
+                      }
+                    />
+                  ))}
+                </dl>
+              </div>
+            ))}
           </CardContent>
         </Card>
 
@@ -354,26 +604,36 @@ export function EmployeeDetailPage() {
             return (
               <Card>
                 <CardHeader>
-                  <CardTitle>
-                    YTD Summary (FY {fyStart}-{fyStart + 1})
+                  <CardTitle className="flex items-center gap-2">
+                    <SectionIcon icon={TrendingUp} className="bg-emerald-50 text-emerald-600" />
+                    YTD Summary
+                    <span className="text-sm font-normal text-gray-400">
+                      FY {fyStart}–{fyStart + 1}
+                    </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
+                  <div className="grid grid-cols-3 divide-x divide-gray-100 text-center">
+                    <div className="px-2">
                       <p className="text-xs text-gray-500">Gross Earnings</p>
-                      <p className="text-lg font-bold text-gray-900">{formatCurrency(ytdGross)}</p>
+                      <p className="mt-1 text-lg font-bold tabular-nums text-gray-900">
+                        {formatCurrency(ytdGross)}
+                      </p>
                     </div>
-                    <div>
+                    <div className="px-2">
                       <p className="text-xs text-gray-500">Total Deductions</p>
-                      <p className="text-lg font-bold text-red-600">{formatCurrency(ytdDed)}</p>
+                      <p className="mt-1 text-lg font-bold tabular-nums text-rose-600">
+                        {formatCurrency(ytdDed)}
+                      </p>
                     </div>
-                    <div>
+                    <div className="px-2">
                       <p className="text-xs text-gray-500">Net Pay</p>
-                      <p className="text-brand-700 text-lg font-bold">{formatCurrency(ytdNet)}</p>
+                      <p className="text-brand-700 mt-1 text-lg font-bold tabular-nums">
+                        {formatCurrency(ytdNet)}
+                      </p>
                     </div>
                   </div>
-                  <p className="mt-2 text-center text-xs text-gray-400">
+                  <p className="mt-3 text-center text-xs text-gray-400">
                     {fyPayslips.length} payslips processed
                   </p>
                 </CardContent>
@@ -382,27 +642,41 @@ export function EmployeeDetailPage() {
           })()}
 
         <Card>
-          <CardHeader>
-            <CardTitle>Recent Payslips</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <SectionIcon icon={CreditCard} /> Recent Payslips
+            </CardTitle>
+            {sortedPayslips.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => navigate("/payslips")}>
+                View all
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
-            {payslips.length === 0 ? (
-              <p className="text-sm text-gray-400">No payslips found</p>
+            {sortedPayslips.length === 0 ? (
+              <EmptyBlock icon={CreditCard} text="No payslips yet" />
             ) : (
-              <div className="space-y-3">
-                {payslips.slice(0, 6).map((p: any) => (
+              <div className="space-y-2">
+                {sortedPayslips.slice(0, 6).map((p: any) => (
                   <div
                     key={p.id}
-                    className="flex items-center justify-between rounded-lg border border-gray-100 p-3"
+                    className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 p-3 transition-colors hover:border-gray-200 hover:bg-gray-50"
                   >
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {new Date(p.year, p.month - 1).toLocaleString("en-IN", {
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </p>
-                      <p className="text-xs text-gray-500">Net: {formatCurrency(p.net_pay)}</p>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-400">
+                        <Calendar className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-gray-900">
+                          {new Date(p.year, p.month - 1).toLocaleString("en-IN", {
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </p>
+                        <p className="text-xs tabular-nums text-gray-500">
+                          Net {formatCurrency(p.net_pay)}
+                        </p>
+                      </div>
                     </div>
                     <Badge variant={p.status}>{p.status}</Badge>
                   </div>
@@ -418,52 +692,77 @@ export function EmployeeDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <History className="h-5 w-5" /> Salary History
+              <SectionIcon icon={History} /> Salary History
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-gray-50">
-                  <th className="px-6 py-3 text-left font-medium text-gray-500">Effective From</th>
-                  <th className="px-6 py-3 text-left font-medium text-gray-500">Structure</th>
-                  <th className="px-6 py-3 text-right font-medium text-gray-500">CTC</th>
-                  <th className="px-6 py-3 text-right font-medium text-gray-500">Gross</th>
-                  <th className="px-6 py-3 text-left font-medium text-gray-500">Status</th>
-                  <th className="px-6 py-3 text-right font-medium text-gray-500"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {(historyRes?.data || []).map((h: any, i: number) => (
-                  <tr key={h.id} className={i === 0 ? "bg-brand-50/30" : ""}>
-                    <td className="px-6 py-3">
-                      {new Date(h.effective_from).toLocaleDateString("en-IN")}
-                    </td>
-                    <td className="px-6 py-3">{h.structure_name}</td>
-                    <td className="px-6 py-3 text-right font-medium">{formatCurrency(h.ctc)}</td>
-                    <td className="px-6 py-3 text-right">{formatCurrency(h.gross_salary)}</td>
-                    <td className="px-6 py-3">
-                      <Badge variant={h.is_active ? "active" : "inactive"}>
-                        {h.is_active ? "Current" : "Previous"}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-3 text-right">
-                      {/* The current/active salary can't be deleted — revise it
-                          instead. Past revisions get a delete to clean up junk. */}
-                      {!h.is_active && (
-                        <button
-                          onClick={() => setDeleteSalaryId(h.id)}
-                          className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                          title="Delete this salary revision"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      )}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-400">
+                    <th scope="col" className="px-6 py-3 font-semibold">
+                      Effective From
+                    </th>
+                    <th scope="col" className="px-6 py-3 font-semibold">
+                      Structure
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-right font-semibold">
+                      CTC
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-right font-semibold">
+                      Gross
+                    </th>
+                    <th scope="col" className="px-6 py-3 font-semibold">
+                      Status
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-right font-semibold">
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {(historyRes?.data || []).map((h: any, i: number) => (
+                    <tr
+                      key={h.id}
+                      className={cn(
+                        "transition-colors hover:bg-gray-50/70",
+                        i === 0 && "bg-brand-50/30",
+                      )}
+                    >
+                      <td className="whitespace-nowrap px-6 py-3 text-gray-700">
+                        {formatDate(h.effective_from)}
+                      </td>
+                      <td className="px-6 py-3 text-gray-700">{h.structure_name}</td>
+                      <td className="whitespace-nowrap px-6 py-3 text-right font-medium tabular-nums text-gray-900">
+                        {formatCurrency(h.ctc)}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-3 text-right tabular-nums text-gray-700">
+                        {formatCurrency(h.gross_salary)}
+                      </td>
+                      <td className="px-6 py-3">
+                        <Badge variant={h.is_active ? "active" : "inactive"}>
+                          {h.is_active ? "Current" : "Previous"}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-3 text-right">
+                        {/* The current/active salary can't be deleted — revise it
+                            instead. Past revisions get a delete to clean up junk. */}
+                        {!h.is_active && (
+                          <button
+                            onClick={() => setDeleteSalaryId(h.id)}
+                            className="focus-visible:ring-brand-500 rounded p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus-visible:ring-2"
+                            title="Delete this salary revision"
+                            aria-label="Delete this salary revision"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -497,33 +796,55 @@ export function EmployeeDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Banknote className="h-5 w-5" /> Loans & Advances
+              <SectionIcon icon={Banknote} className="bg-orange-50 text-orange-600" /> Loans &
+              Advances
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {(loansRes?.data?.data || []).map((loan: any) => (
-                <div
-                  key={loan.id}
-                  className="flex items-center justify-between rounded-lg border border-gray-100 p-3"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{loan.description}</p>
-                    <p className="text-xs text-gray-500">
-                      {loan.type.replace("_", " ")} &middot; EMI: {formatCurrency(loan.emi_amount)}
-                      /mo &middot; {loan.installments_paid}/{loan.tenure_months} paid
-                    </p>
+              {(loansRes?.data?.data || []).map((loan: any) => {
+                const paid = Number(loan.installments_paid) || 0;
+                const total = Number(loan.tenure_months) || 0;
+                const pct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
+                return (
+                  <div
+                    key={loan.id}
+                    className="rounded-lg border border-gray-100 p-4 transition-colors hover:border-gray-200"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-gray-900">
+                          {loan.description}
+                        </p>
+                        <p className="mt-0.5 text-xs capitalize text-gray-500">
+                          {String(loan.type).replace(/_/g, " ")} &middot; EMI{" "}
+                          <span className="tabular-nums">{formatCurrency(loan.emi_amount)}</span>/mo
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-sm font-semibold tabular-nums text-orange-600">
+                          {formatCurrency(loan.outstanding_amount)}
+                        </p>
+                        <p className="text-[11px] text-gray-400">outstanding</p>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <div className="mb-1 flex items-center justify-between text-[11px] text-gray-400">
+                        <span className="capitalize">{loan.status}</span>
+                        <span className="tabular-nums">
+                          {paid}/{total} installments
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+                        <div
+                          className="bg-brand-500 h-full rounded-full transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-orange-600">
-                      {formatCurrency(loan.outstanding_amount)}
-                    </p>
-                    <Badge variant={loan.status === "active" ? "active" : "approved"}>
-                      {loan.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -849,7 +1170,7 @@ export function EmployeeDetailPage() {
           }}
         >
           <div>
-            <h4 className="mb-2 text-sm font-semibold text-gray-700">Tax</h4>
+            <h3 className="mb-2 text-sm font-semibold text-gray-700">Tax</h3>
             <div className="grid grid-cols-2 gap-3">
               <Input
                 id="pan"
@@ -933,7 +1254,7 @@ export function EmployeeDetailPage() {
             </div>
           </div>
           <div>
-            <h4 className="mb-2 text-sm font-semibold text-gray-700">Provident Fund</h4>
+            <h3 className="mb-2 text-sm font-semibold text-gray-700">Provident Fund</h3>
             <div className="grid grid-cols-2 gap-3">
               <Input id="uan" name="uan" label="UAN" defaultValue={taxInfo.uan || ""} />
               <Input
@@ -962,7 +1283,7 @@ export function EmployeeDetailPage() {
             </div>
           </div>
           <div>
-            <h4 className="mb-2 text-sm font-semibold text-gray-700">ESI</h4>
+            <h3 className="mb-2 text-sm font-semibold text-gray-700">ESI</h3>
             <div className="grid grid-cols-2 gap-3">
               <SelectField
                 id="esiEligible"
@@ -1078,7 +1399,7 @@ function EmployeeDocuments({ employeeId }: { employeeId: string }) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" /> Documents
+            <SectionIcon icon={FileText} className="bg-sky-50 text-sky-600" /> Documents
           </CardTitle>
           <Button variant="outline" size="sm" onClick={() => setShowUpload(true)}>
             <Upload className="h-4 w-4" /> Upload
@@ -1091,7 +1412,7 @@ function EmployeeDocuments({ employeeId }: { employeeId: string }) {
             <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
           </div>
         ) : docs.length === 0 ? (
-          <p className="py-4 text-center text-sm text-gray-400">No documents uploaded</p>
+          <EmptyBlock icon={FileText} text="No documents uploaded yet" />
         ) : (
           <div className="space-y-2">
             {docs.map((doc: any) => (
@@ -1136,8 +1457,8 @@ function EmployeeDocuments({ employeeId }: { employeeId: string }) {
                     >
                       {doc.name}
                     </a>
-                    <p className="text-xs text-gray-400">
-                      {doc.type.replace("_", " ")} &middot; {formatDate(doc.created_at)}
+                    <p className="text-xs capitalize text-gray-400">
+                      {String(doc.type).replace(/_/g, " ")} &middot; {formatDate(doc.created_at)}
                     </p>
                   </div>
                 </div>
@@ -1152,13 +1473,15 @@ function EmployeeDocuments({ employeeId }: { employeeId: string }) {
                       size="sm"
                       onClick={() => handleVerify(doc.id)}
                       className="text-green-600"
+                      aria-label={`Verify ${doc.name}`}
                     >
                       <CheckCircle className="h-4 w-4" />
                     </Button>
                   )}
                   <button
                     onClick={() => handleDelete(doc.id)}
-                    className="text-gray-400 opacity-0 hover:text-red-500 group-hover:opacity-100"
+                    aria-label={`Delete ${doc.name}`}
+                    className="focus-visible:ring-brand-500 rounded p-1 text-gray-400 opacity-0 transition hover:text-red-500 focus:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 group-hover:opacity-100"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -1183,15 +1506,21 @@ function EmployeeDocuments({ employeeId }: { employeeId: string }) {
               placeholder="e.g. Aadhaar front"
             />
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">File</label>
+              <label htmlFor="docFile" className="mb-1 block text-sm font-medium text-gray-700">
+                File
+              </label>
               <input
+                id="docFile"
                 type="file"
                 name="file"
                 accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                 required
+                aria-describedby="docFileHint"
                 className="file:bg-brand-50 file:text-brand-700 w-full rounded-lg border border-gray-200 p-2 text-sm file:mr-3 file:rounded file:border-0 file:px-3 file:py-1 file:text-sm file:font-medium"
               />
-              <p className="mt-1 text-xs text-gray-400">PDF, JPG, PNG, DOC up to 10MB</p>
+              <p id="docFileHint" className="mt-1 text-xs text-gray-400">
+                PDF, JPG, PNG, DOC up to 10MB
+              </p>
             </div>
             <div className="flex justify-end gap-3">
               <Button variant="outline" type="button" onClick={() => setShowUpload(false)}>
@@ -1255,32 +1584,48 @@ function EmployeeTimeline({
 
   if (events.length <= 1) return null;
 
-  const typeColors = {
-    join: "bg-green-500",
-    salary: "bg-brand-500",
-    payslip: "bg-blue-500",
-    revision: "bg-amber-500",
+  const typeStyle: Record<string, { icon: any; chip: string }> = {
+    join: { icon: UserPlus, chip: "bg-emerald-50 text-emerald-600" },
+    salary: { icon: Wallet, chip: "bg-brand-50 text-brand-600" },
+    payslip: { icon: CreditCard, chip: "bg-sky-50 text-sky-600" },
+    revision: { icon: TrendingUp, chip: "bg-amber-50 text-amber-600" },
   };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" /> Timeline
+          <SectionIcon icon={Calendar} /> Timeline
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="relative ml-3 border-l-2 border-gray-200 pl-6">
-          {events.slice(0, 10).map((event, i) => (
-            <div key={i} className="relative mb-5 last:mb-0">
-              <div
-                className={`absolute -left-[31px] top-1 h-3 w-3 rounded-full ${typeColors[event.type]}`}
-              />
-              <p className="text-sm text-gray-900">{event.label}</p>
-              <p className="text-xs text-gray-400">{formatDate(event.date)}</p>
-            </div>
-          ))}
-        </div>
+        <ul className="relative">
+          {events.slice(0, 10).map((event, i, arr) => {
+            const style = typeStyle[event.type] || typeStyle.join;
+            const Icon = style.icon;
+            const isLast = i === arr.length - 1;
+            return (
+              <li key={i} className="relative flex gap-3 pb-5 last:pb-0">
+                {/* Rail connecting the event bubbles. */}
+                {!isLast && (
+                  <span className="absolute left-[15px] top-8 h-[calc(100%-1.5rem)] w-px bg-gray-100" />
+                )}
+                <span
+                  className={cn(
+                    "z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-4 ring-white",
+                    style.chip,
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                </span>
+                <div className="pt-1">
+                  <p className="text-sm text-gray-800">{event.label}</p>
+                  <p className="text-xs text-gray-400">{formatDate(event.date)}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       </CardContent>
     </Card>
   );
@@ -1335,7 +1680,7 @@ function EmployeeNotes({ employeeId }: { employeeId: string }) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <StickyNote className="h-5 w-5" /> Notes
+          <SectionIcon icon={StickyNote} className="bg-purple-50 text-purple-600" /> Notes
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -1343,7 +1688,8 @@ function EmployeeNotes({ employeeId }: { employeeId: string }) {
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+            aria-label="Note category"
+            className="focus:border-brand-500 focus:ring-brand-500 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1"
           >
             <option value="general">General</option>
             <option value="performance">Performance</option>
@@ -1353,11 +1699,18 @@ function EmployeeNotes({ employeeId }: { employeeId: string }) {
           <input
             type="text"
             placeholder="Add a note..."
+            aria-label="Add a note"
             value={content}
             onChange={(e) => setContent(e.target.value)}
             className="focus:border-brand-500 focus:ring-brand-500 flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-1"
           />
-          <Button type="submit" size="sm" loading={submitting} disabled={!content.trim()}>
+          <Button
+            type="submit"
+            size="sm"
+            loading={submitting}
+            disabled={!content.trim()}
+            aria-label="Add note"
+          >
             <Send className="h-4 w-4" />
           </Button>
         </form>
@@ -1367,7 +1720,7 @@ function EmployeeNotes({ employeeId }: { employeeId: string }) {
             <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
           </div>
         ) : notes.length === 0 ? (
-          <p className="py-4 text-center text-sm text-gray-400">No notes yet</p>
+          <EmptyBlock icon={StickyNote} text="No notes yet" />
         ) : (
           <div className="space-y-3">
             {notes.map((note: any) => (
@@ -1391,7 +1744,8 @@ function EmployeeNotes({ employeeId }: { employeeId: string }) {
                 </div>
                 <button
                   onClick={() => handleDelete(note.id)}
-                  className="text-gray-400 opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100"
+                  aria-label="Delete note"
+                  className="focus-visible:ring-brand-500 rounded p-1 text-gray-400 opacity-0 transition hover:text-red-500 focus:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 group-hover:opacity-100"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>

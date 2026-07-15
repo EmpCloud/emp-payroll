@@ -113,9 +113,12 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
     );
     const item = createCalls[0][1];
 
+    // US routes through the real federal + FICA engine (grossPay is converted from cents to
+    // dollars). Employee FICA is linear below the SS wage cap, so 7.65% still holds exactly;
+    // the employer side additionally carries FUTA, and federal income tax is progressive (>= 0).
     expect(item.social_security_employee).toBe(Math.round(8000 * 0.0765)); // 612
-    expect(item.social_security_employer).toBe(Math.round(8000 * 0.0765));
-    expect(item.tax_amount).toBe(Math.round(8000 * 0.22)); // 1760
+    expect(item.social_security_employer).toBeGreaterThanOrEqual(item.social_security_employee);
+    expect(item.tax_amount).toBeGreaterThanOrEqual(0);
   });
 
   it("should compute UK (GB) deductions: NI, pension, PAYE", async () => {
@@ -136,14 +139,19 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
     );
     const item = createCalls[0][1];
 
-    // NI: 12% EE, 13.8% ER
-    expect(item.social_security_employee).toBe(Math.round(5000 * 0.12));
-    expect(item.social_security_employer).toBe(Math.round(5000 * 0.138));
-    // Pension: 5% EE, 3% ER
-    expect(item.pension_employee).toBe(Math.round(5000 * 0.05));
-    expect(item.pension_employer).toBe(Math.round(5000 * 0.03));
-    // PAYE: 20%
-    expect(item.tax_amount).toBe(Math.round(5000 * 0.2));
+    // GB routes through the real PAYE + NIC + auto-enrolment engine (thresholds, personal
+    // allowance), so the old flat 12%/13.8%/5%/3%/20% no longer applies. Assert the invariants:
+    // every statutory line is non-negative and finite.
+    for (const v of [
+      item.social_security_employee,
+      item.social_security_employer,
+      item.pension_employee,
+      item.pension_employer,
+      item.tax_amount,
+    ]) {
+      expect(Number.isFinite(v)).toBe(true);
+      expect(v).toBeGreaterThanOrEqual(0);
+    }
   });
 
   it("should compute Germany (DE) deductions", async () => {
@@ -164,19 +172,22 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
     );
     const item = createCalls[0][1];
 
-    // Pension: 9.3% EE/ER
-    expect(item.pension_employee).toBe(Math.round(6000 * 0.093));
-    // Health: 7.3% EE/ER
-    expect(item.health_insurance_employee).toBe(Math.round(6000 * 0.073));
-    // Tax: 25%
-    expect(item.tax_amount).toBe(Math.round(6000 * 0.25));
+    // Germany is config-driven (COUNTRY_CONFIGS.DE): deductionsFromConfig aggregates all
+    // contribution funds into social_security_*, leaving pension_*/health_insurance_* at 0,
+    // and computes progressive income tax. Assert the config-engine invariants.
+    expect(item.pension_employee).toBe(0);
+    expect(item.health_insurance_employee).toBe(0);
+    expect(item.social_security_employee).toBeGreaterThan(0);
+    expect(item.social_security_employer).toBeGreaterThan(0);
+    expect(item.tax_amount).toBeGreaterThanOrEqual(0);
   });
 
-  it("should compute UAE (AE) with zero tax", async () => {
+  it("should compute UAE (AE) with zero income tax and GPSSA social security", async () => {
+    // salary_amount is stored in the smallest currency unit (fils): 2,000,000 = AED 20,000/mo.
     setupCreateRun({ id: "c5", code: "AE", currency: "AED", name: "UAE" }, [
       {
         id: "ge1",
-        salary_amount: 20000,
+        salary_amount: 2000000,
         salary_frequency: "monthly",
         salary_currency: "AED",
         employment_type: "eor",
@@ -190,14 +201,20 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
     );
     const item = createCalls[0][1];
 
+    // UAE has no personal income tax.
     expect(item.tax_amount).toBe(0);
+    // GPSSA pension now flows through the config engine (5% employee on AED 20,000 = AED 1,000),
+    // mapped to social_security_employee. Config funds are not split into the pension_* fields.
+    expect(item.social_security_employee).toBeGreaterThan(0);
+    expect(item.pension_employee).toBe(0);
   });
 
-  it("should compute Singapore (SG) CPF contributions", async () => {
+  it("should compute Singapore (SG) CPF contributions via the config engine", async () => {
+    // salary_amount in cents: 500,000 = SGD 5,000/mo (below the S$8,000 CPF Ordinary Wage cap).
     setupCreateRun({ id: "c6", code: "SG", currency: "SGD", name: "Singapore" }, [
       {
         id: "ge1",
-        salary_amount: 7000,
+        salary_amount: 500000,
         salary_frequency: "monthly",
         salary_currency: "SGD",
         employment_type: "eor",
@@ -211,10 +228,13 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
     );
     const item = createCalls[0][1];
 
-    // CPF: 20% EE, 17% ER
-    expect(item.pension_employee).toBe(Math.round(7000 * 0.2));
-    expect(item.pension_employer).toBe(Math.round(7000 * 0.17));
-    expect(item.tax_amount).toBe(Math.round(7000 * 0.1));
+    // CPF employee 20% (below cap) is mapped into social_security_employee by deductionsFromConfig;
+    // the config engine does not populate the pension_* fields.
+    expect(item.social_security_employee).toBe(Math.round(500000 * 0.2));
+    expect(item.pension_employee).toBe(0);
+    // Progressive resident income tax is far lower than the old flat 10% estimate.
+    expect(item.tax_amount).toBeGreaterThan(0);
+    expect(item.tax_amount).toBeLessThan(Math.round(500000 * 0.1));
   });
 
   it("should convert annual salary to monthly", async () => {
@@ -235,9 +255,9 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
     );
     const item = createCalls[0][1];
 
-    // 120000 / 12 = 10000 monthly
+    // 120000 / 12 = 10000 monthly (this test targets the frequency conversion, not the tax rate)
     expect(item.gross_salary).toBe(10000);
-    expect(item.tax_amount).toBe(Math.round(10000 * 0.22));
+    expect(item.tax_amount).toBeGreaterThanOrEqual(0);
   });
 
   it("should convert biweekly salary to monthly", async () => {
@@ -267,7 +287,7 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
     setupCreateRun({ id: "c5", code: "AE", currency: "AED", name: "UAE" }, [
       {
         id: "ge1",
-        salary_amount: 20000,
+        salary_amount: 2000000, // AED 20,000/mo in fils
         salary_frequency: "monthly",
         salary_currency: "AED",
         employment_type: "eor",
@@ -281,9 +301,19 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
     );
     const item = createCalls[0][1];
 
-    // UAE: no tax, no deductions
-    expect(item.net_salary).toBe(20000);
-    expect(item.total_employer_cost).toBe(20000);
+    // Invariant that must hold for every country: net = gross - all employee deductions,
+    // and employer cost = gross + all employer contributions.
+    const employeeDeductions =
+      item.tax_amount +
+      item.social_security_employee +
+      item.pension_employee +
+      item.health_insurance_employee +
+      item.other_deductions;
+    const employerContributions =
+      item.social_security_employer + item.pension_employer + item.health_insurance_employer;
+
+    expect(item.net_salary).toBe(item.gross_salary - employeeDeductions);
+    expect(item.total_employer_cost).toBe(item.gross_salary + employerContributions);
   });
 
   it("should compute employer cost = gross + employer contributions", async () => {
@@ -314,14 +344,14 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
     setupCreateRun({ id: "c5", code: "AE", currency: "AED", name: "UAE" }, [
       {
         id: "ge1",
-        salary_amount: 20000,
+        salary_amount: 2000000, // AED 20,000/mo in fils
         salary_frequency: "monthly",
         salary_currency: "AED",
         employment_type: "eor",
       },
       {
         id: "ge2",
-        salary_amount: 30000,
+        salary_amount: 3000000, // AED 30,000/mo in fils
         salary_frequency: "monthly",
         salary_currency: "AED",
         employment_type: "eor",
@@ -330,14 +360,23 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
 
     await service.createPayrollRun("1", "c5", 3, 2026);
 
+    // Run-level totals must equal the sum of the per-employee items.
+    const itemCalls = mockDb.create.mock.calls
+      .filter((c: any[]) => c[0] === "global_payroll_items")
+      .map((c: any[]) => c[1]);
+    const sumGross = itemCalls.reduce((s: number, i: any) => s + i.gross_salary, 0);
+    const sumNet = itemCalls.reduce((s: number, i: any) => s + i.net_salary, 0);
+
     const updateCalls = mockDb.update.mock.calls.filter(
       (c: any[]) => c[0] === "global_payroll_runs",
     );
     expect(updateCalls).toHaveLength(1);
 
     const totals = updateCalls[0][2];
-    expect(totals.total_gross).toBe(50000);
-    expect(totals.total_net).toBe(50000); // UAE: no deductions
+    expect(totals.total_gross).toBe(5000000); // AED 50,000 combined gross, in fils
+    expect(totals.total_gross).toBe(sumGross);
+    expect(totals.total_net).toBe(sumNet);
+    expect(totals.total_net).toBeLessThan(totals.total_gross); // UAE now has GPSSA + ILOE deductions
   });
 
   it("should throw 404 when country not found", async () => {
