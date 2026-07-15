@@ -23,6 +23,8 @@ export function LoansPage() {
   const [creating, setCreating] = useState(false);
   const [editLoan, setEditLoan] = useState<any | null>(null);
   const [editing, setEditing] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState(false);
   // Filter state lives in the URL so the top stat cards can deep-link into a
   // filtered list via `?status=...` (#71).
   const [searchParams, setSearchParams] = useSearchParams();
@@ -257,24 +259,21 @@ export function LoansPage() {
     }
   }
 
-  async function handleDelete(loan: any) {
-    const label = String(loan.type || "loan").replace(/_/g, " ");
-    if (
-      !window.confirm(
-        `Delete this ${label} for ${loan.employee_name}? This permanently removes the record and cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+  async function performDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await apiDelete(`/loans/${loan.id}`);
+      await apiDelete(`/loans/${deleteTarget.id}`);
       toast.success("Loan deleted");
       qc.invalidateQueries({ queryKey: ["loans"] });
       qc.invalidateQueries({ queryKey: ["loans-summary"] });
       qc.invalidateQueries({ queryKey: ["loans-summary-active"] });
       qc.invalidateQueries({ queryKey: ["loans-summary-completed"] });
+      setDeleteTarget(null);
     } catch (err: any) {
       toast.error(err.response?.data?.error?.message || "Failed to delete loan");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -301,15 +300,21 @@ export function LoansPage() {
     {
       key: "principal_amount",
       header: "Principal",
-      render: (r: any) => formatCurrency(r.principal_amount),
+      className: "text-right",
+      render: (r: any) => (
+        <span className="tabular-nums">{formatCurrency(r.principal_amount)}</span>
+      ),
     },
     {
       key: "outstanding_amount",
       header: "Outstanding",
+      className: "text-right",
       render: (r: any) => (
         <span
           className={
-            Number(r.outstanding_amount) > 0 ? "font-semibold text-orange-600" : "text-green-600"
+            Number(r.outstanding_amount) > 0
+              ? "font-semibold tabular-nums text-orange-600"
+              : "tabular-nums text-green-600"
           }
         >
           {formatCurrency(r.outstanding_amount)}
@@ -319,9 +324,12 @@ export function LoansPage() {
     {
       key: "emi_amount",
       header: "EMI",
+      className: "text-right",
       render: (r: any) => (
         <div>
-          <div className="font-medium">{formatCurrency(r.custom_emi_amount ?? r.emi_amount)}</div>
+          <div className="font-medium tabular-nums">
+            {formatCurrency(r.custom_emi_amount ?? r.emi_amount)}
+          </div>
           {r.custom_emi_amount != null && (
             <div className="text-[10px] uppercase tracking-wide text-amber-600">
               Custom (default {formatCurrency(r.emi_amount)})
@@ -384,7 +392,7 @@ export function LoansPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => handleDelete(r)}
+            onClick={() => setDeleteTarget(r)}
             className="text-red-500 hover:text-red-600"
             title="Delete loan"
           >
@@ -419,7 +427,12 @@ export function LoansPage() {
           <StatCard title="Active Loans" value={String(activeCount)} icon={Banknote} />
         </Link>
         <Link to="/loans?status=active" className={cardLinkCls}>
-          <StatCard title="Outstanding" value={formatCurrency(totalOutstanding)} icon={Clock} />
+          <StatCard
+            title="Outstanding"
+            value={formatCurrency(totalOutstanding)}
+            icon={Clock}
+            accentClassName="bg-amber-50 text-amber-600"
+          />
         </Link>
         <Link to="/loans?status=active" className={cardLinkCls}>
           <StatCard
@@ -427,10 +440,16 @@ export function LoansPage() {
             value={formatCurrency(totalEMI)}
             subtitle="total across all"
             icon={Banknote}
+            accentClassName="bg-sky-50 text-sky-600"
           />
         </Link>
         <Link to="/loans?status=completed" className={cardLinkCls}>
-          <StatCard title="Completed" value={String(completedCount)} icon={CheckCircle2} />
+          <StatCard
+            title="Completed"
+            value={String(completedCount)}
+            icon={CheckCircle2}
+            accentClassName="bg-emerald-50 text-emerald-600"
+          />
         </Link>
       </div>
 
@@ -749,6 +768,52 @@ export function LoansPage() {
               </Button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      {/* Confirm-delete is a Radix <Modal> so it matches the rest of the page
+          instead of the native window.confirm() this used to fire. */}
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => (deleting ? null : setDeleteTarget(null))}
+        title="Delete loan?"
+        description={
+          deleteTarget
+            ? `${String(deleteTarget.type || "loan").replace(/_/g, " ")}${deleteTarget.employee_name ? " · " + deleteTarget.employee_name : ""}${deleteTarget.principal_amount ? " · " + formatCurrency(deleteTarget.principal_amount) : ""}`
+            : undefined
+        }
+      >
+        {deleteTarget && (
+          <div className="space-y-4">
+            {Number(deleteTarget.outstanding_amount) > 0 && deleteTarget.status !== "cancelled" ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+                <p className="font-medium">
+                  {formatCurrency(deleteTarget.outstanding_amount)} still outstanding.
+                </p>
+                <p className="mt-1 text-xs leading-relaxed">
+                  Deleting removes the loan record and stops future EMI deductions. Any EMI already
+                  deducted on past payslips is unaffected. This cannot be undone.
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                This permanently removes the loan record. Any EMI already deducted on past payslips
+                is unaffected. This cannot be undone.
+              </p>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+                Cancel
+              </Button>
+              <Button
+                onClick={performDelete}
+                loading={deleting}
+                className="bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500"
+              >
+                <Trash2 className="h-4 w-4" /> Delete
+              </Button>
+            </div>
+          </div>
         )}
       </Modal>
     </div>

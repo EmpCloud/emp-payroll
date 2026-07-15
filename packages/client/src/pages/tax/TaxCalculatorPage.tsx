@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   CalendarDays,
   Save,
+  TrendingUp,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -198,36 +199,56 @@ export function TaxCalculatorPage() {
   const simulate = useSimulateTax();
   const [result, setResult] = useState<any>(null);
   const [simError, setSimError] = useState<string | null>(null);
+  // Comparison mode — run BOTH regimes and show them side by side with a
+  // recommendation. Uses the same simulate API, one call per regime.
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareResults, setCompareResults] = useState<{ newR: any; oldR: any } | null>(null);
+  const [comparing, setComparing] = useState(false);
 
   useEffect(() => {
     setResult(null);
     setSimError(null);
+    setCompareResults(null);
   }, [selectedId]);
 
-  const runSimulation = () => {
+  const baseSimInput = (regime: "new" | "old") => ({
+    employeeId: selectedId,
+    regime,
+    annualGross: inputs.annualGross,
+    basicAnnual: inputs.basicAnnual,
+    hraAnnual: inputs.hraAnnual,
+    rentPaidAnnual: inputs.rentPaidAnnual,
+    isMetroCity: inputs.isMetroCity,
+    declarations: inputs.declarations.filter((d) => d.section && d.amount > 0),
+    employeePfAnnual: inputs.employeePfAnnual,
+    panNumber: inputs.pan || null,
+    priorEmployerGross: inputs.priorEmployerGross,
+    priorEmployerTds: inputs.priorEmployerTds,
+  });
+
+  const runSimulation = async () => {
     if (!selectedId) return;
     setSimError(null);
-    simulate.mutate(
-      {
-        employeeId: selectedId,
-        regime: inputs.regime,
-        annualGross: inputs.annualGross,
-        basicAnnual: inputs.basicAnnual,
-        hraAnnual: inputs.hraAnnual,
-        rentPaidAnnual: inputs.rentPaidAnnual,
-        isMetroCity: inputs.isMetroCity,
-        declarations: inputs.declarations.filter((d) => d.section && d.amount > 0),
-        employeePfAnnual: inputs.employeePfAnnual,
-        panNumber: inputs.pan || null,
-        priorEmployerGross: inputs.priorEmployerGross,
-        priorEmployerTds: inputs.priorEmployerTds,
-      },
-      {
-        onSuccess: (res: any) => setResult(res?.data || null),
-        onError: (err: any) =>
-          setSimError(err?.message || "Failed to compute tax. Please try again."),
-      },
-    );
+    if (compareMode) {
+      setComparing(true);
+      try {
+        const newR = await simulate.mutateAsync(baseSimInput("new") as any);
+        const oldR = await simulate.mutateAsync(baseSimInput("old") as any);
+        setCompareResults({ newR: newR?.data || null, oldR: oldR?.data || null });
+        setResult((inputs.regime === "new" ? newR : oldR)?.data || null);
+      } catch (err: any) {
+        setSimError(err?.message || "Failed to compute tax. Please try again.");
+      } finally {
+        setComparing(false);
+      }
+      return;
+    }
+    setCompareResults(null);
+    simulate.mutate(baseSimInput(inputs.regime) as any, {
+      onSuccess: (res: any) => setResult(res?.data || null),
+      onError: (err: any) =>
+        setSimError(err?.message || "Failed to compute tax. Please try again."),
+    });
   };
 
   // Auto-run only when there's a non-zero gross to compute against. Without
@@ -339,6 +360,60 @@ export function TaxCalculatorPage() {
     });
     return rows;
   }, [result]);
+
+  // Client-side validation hints (no backend) — PAN format, 80C / NPS caps, HRA.
+  const validations = useMemo(() => {
+    const out: { level: "warn" | "info"; text: string }[] = [];
+    if (inputs.pan && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(inputs.pan)) {
+      out.push({ level: "warn", text: "PAN format looks invalid — expected ABCDE1234F." });
+    }
+    if (inputs.regime === "old") {
+      const total80C =
+        inputs.employeePfAnnual +
+        inputs.declarations.filter((d) => d.section === "80C").reduce((s, d) => s + d.amount, 0);
+      if (total80C > 150000)
+        out.push({
+          level: "info",
+          text: `80C total is ₹${total80C.toLocaleString("en-IN")} — only ₹1,50,000 is deductible (cap).`,
+        });
+      const nps = inputs.declarations
+        .filter((d) => d.section === "80CCD_1B")
+        .reduce((s, d) => s + d.amount, 0);
+      if (nps > 50000) out.push({ level: "info", text: "80CCD(1B) NPS is capped at ₹50,000." });
+      if (inputs.hraAnnual > 0 && inputs.rentPaidAnnual === 0)
+        out.push({
+          level: "info",
+          text: "HRA exemption needs rent paid — enter annual rent to claim it.",
+        });
+    }
+    return out;
+  }, [inputs]);
+
+  // Tax-saving suggestion (old regime) — unused 80C headroom × marginal rate.
+  const savingSuggestion = useMemo(() => {
+    if (inputs.regime !== "old") return null;
+    const total80C =
+      inputs.employeePfAnnual +
+      inputs.declarations.filter((d) => d.section === "80C").reduce((s, d) => s + d.amount, 0);
+    const headroom = Math.max(0, 150000 - total80C);
+    if (headroom < 1000) return null;
+    const ti = Number(result?.taxableIncome || 0);
+    const rate = ti > 1500000 ? 0.3 : ti > 1000000 ? 0.2 : ti > 500000 ? 0.2 : 0.05;
+    return { headroom, saving: Math.round(headroom * rate * 1.04) };
+  }, [inputs, result]);
+
+  // Comparison verdict — which regime wins and by how much.
+  const compareVerdict = useMemo(() => {
+    if (!compareResults?.newR || !compareResults?.oldR) return null;
+    const newTax = Number(compareResults.newR.totalTax || 0);
+    const oldTax = Number(compareResults.oldR.totalTax || 0);
+    return {
+      newTax,
+      oldTax,
+      best: newTax <= oldTax ? "new" : "old",
+      saving: Math.abs(newTax - oldTax),
+    };
+  }, [compareResults]);
 
   return (
     <div className="space-y-6">
@@ -557,25 +632,39 @@ export function TaxCalculatorPage() {
                 </div>
               )}
 
-              {/* Regime toggle as segmented control */}
-              <div>
-                <span className={LABEL_CLS}>Regime</span>
-                <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
-                  {(["new", "old"] as const).map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => setInputs({ ...inputs, regime: r })}
-                      className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-                        inputs.regime === r
-                          ? "bg-brand-600 text-white shadow-sm"
-                          : "text-gray-600 hover:text-gray-900"
-                      }`}
-                    >
-                      {r === "new" ? "New Regime" : "Old Regime"}
-                    </button>
-                  ))}
+              {/* Regime toggle + compare mode */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <span className={LABEL_CLS}>Regime</span>
+                  <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
+                    {(["new", "old"] as const).map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setInputs({ ...inputs, regime: r })}
+                        className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+                          inputs.regime === r
+                            ? "bg-brand-600 text-white shadow-sm"
+                            : "text-gray-600 hover:text-gray-900"
+                        }`}
+                      >
+                        {r === "new" ? "New Regime" : "Old Regime"}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+                <label className="flex cursor-pointer items-center gap-2 pt-4 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={compareMode}
+                    onChange={(e) => {
+                      setCompareMode(e.target.checked);
+                      setCompareResults(null);
+                    }}
+                    className="text-brand-600 focus:ring-brand-500 h-4 w-4 rounded border-gray-300"
+                  />
+                  Compare Old vs New
+                </label>
               </div>
 
               <div>
@@ -779,14 +868,31 @@ export function TaxCalculatorPage() {
                 </div>
               )}
 
+              {/* Client-side validation hints */}
+              {validations.length > 0 && (
+                <div className="space-y-1.5">
+                  {validations.map((v, i) => (
+                    <div
+                      key={i}
+                      className={`flex items-start gap-2 rounded-md px-3 py-1.5 text-xs ${
+                        v.level === "warn" ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-800"
+                      }`}
+                    >
+                      <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                      <span>{v.text}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 pt-4">
                 <Button
                   type="button"
                   onClick={runSimulation}
-                  loading={simulate.isPending}
+                  loading={simulate.isPending || comparing}
                   disabled={!selectedId}
                 >
-                  <Calculator className="h-4 w-4" /> Calculate
+                  <Calculator className="h-4 w-4" /> {compareMode ? "Compare Regimes" : "Calculate"}
                 </Button>
                 {simError && <span className="text-sm text-red-600">{simError}</span>}
               </div>
@@ -831,6 +937,65 @@ export function TaxCalculatorPage() {
                         <strong>Section 206AA applied</strong> — PAN is missing, so a flat 20% of
                         annual gross is being deducted regardless of regime / declarations.
                       </span>
+                    </div>
+                  )}
+
+                  {/* Comparison: recommended regime + side-by-side */}
+                  {compareVerdict && (
+                    <div className="mb-4 space-y-3">
+                      <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+                        <p className="text-sm font-semibold text-green-800">
+                          {compareVerdict.saving === 0
+                            ? "Both regimes result in the same tax"
+                            : `${compareVerdict.best === "new" ? "New" : "Old"} Regime saves ${formatCurrency(compareVerdict.saving)}`}
+                        </p>
+                        <p className="mt-0.5 text-xs text-green-700">
+                          Recommended:{" "}
+                          <strong>
+                            {compareVerdict.best === "new" ? "New Regime" : "Old Regime"}
+                          </strong>
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {(["new", "old"] as const).map((r) => {
+                          const res = r === "new" ? compareResults!.newR : compareResults!.oldR;
+                          const isBest = compareVerdict.best === r;
+                          const isShown = inputs.regime === r;
+                          return (
+                            <button
+                              key={r}
+                              type="button"
+                              onClick={() => {
+                                setInputs((p) => ({ ...p, regime: r }));
+                                setResult(res);
+                              }}
+                              className={`rounded-lg border p-3 text-left transition-colors ${
+                                isShown
+                                  ? "border-brand-500 bg-brand-50 ring-brand-500 ring-1"
+                                  : isBest
+                                    ? "border-green-300 bg-white hover:border-green-400"
+                                    : "border-gray-200 bg-white hover:border-gray-300"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                  {r === "new" ? "New" : "Old"} Regime
+                                </span>
+                                {isBest && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                              </div>
+                              <p className="mt-1 text-lg font-bold tabular-nums text-gray-900">
+                                {formatCurrency(Number(res?.totalTax || 0))}
+                              </p>
+                              <p className="text-[11px] text-gray-500">
+                                Monthly TDS {formatCurrency(Number(res?.monthlyTds || 0))}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-center text-[11px] text-gray-400">
+                        Tap a regime to see its full breakdown below
+                      </p>
                     </div>
                   )}
 
@@ -879,6 +1044,17 @@ export function TaxCalculatorPage() {
                       accent="brand"
                     />
                   </div>
+
+                  {savingSuggestion && (
+                    <div className="mt-4 flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800">
+                      <TrendingUp className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                      <span>
+                        Invest <strong>{formatCurrency(savingSuggestion.headroom)}</strong> more
+                        under Section 80C to save approximately{" "}
+                        <strong>{formatCurrency(savingSuggestion.saving)}</strong> in tax.
+                      </span>
+                    </div>
+                  )}
                 </>
               )}
             </CardContent>

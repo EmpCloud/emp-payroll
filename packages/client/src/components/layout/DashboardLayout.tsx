@@ -80,8 +80,11 @@ export function DashboardLayout() {
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+        {/* Page content. `relative` makes this the containing block for any
+            absolutely-positioned descendant (e.g. Tailwind `sr-only` labels) so
+            they can't escape to <body> and stretch the document — which showed
+            up as a phantom second (window) scrollbar + white space below the app. */}
+        <main className="relative flex-1 overflow-y-auto p-4 lg:p-8">
           <Breadcrumbs />
           <Outlet />
         </main>

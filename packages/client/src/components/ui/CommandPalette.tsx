@@ -4,8 +4,17 @@ import { apiGet } from "@/api/client";
 import { getUser, isLoggedIn } from "@/api/auth";
 import { Avatar } from "./Avatar";
 import {
-  Search, LayoutDashboard, Users, Wallet, Play, FileText,
-  Calculator, CalendarDays, Settings, User, ArrowRight,
+  Search,
+  LayoutDashboard,
+  Users,
+  Wallet,
+  Play,
+  FileText,
+  Calculator,
+  CalendarDays,
+  Settings,
+  User,
+  ArrowRight,
 } from "lucide-react";
 
 interface CommandItem {
@@ -46,9 +55,11 @@ export function CommandPalette() {
       inputRef.current?.focus();
       // Load employees for search
       if (isLoggedIn() && employees.length === 0) {
-        apiGet<any>("/employees", { limit: 100 }).then((res) => {
-          setEmployees(res.data?.data || []);
-        }).catch(() => {});
+        apiGet<any>("/employees", { limit: 100 })
+          .then((res) => {
+            setEmployees(res.data?.data || []);
+          })
+          .catch(() => {});
       }
     }
   }, [open]);
@@ -56,35 +67,216 @@ export function CommandPalette() {
   const user = getUser();
   const isAdmin = user?.role === "hr_admin" || user?.role === "hr_manager";
 
-  function go(path: string) { navigate(path); setOpen(false); }
+  function go(path: string) {
+    navigate(path);
+    setOpen(false);
+  }
 
   const pages: CommandItem[] = [
-    ...(isAdmin ? [
-      { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, action: () => go("/dashboard"), category: "Pages" },
-      { id: "employees", label: "Employees", icon: Users, action: () => go("/employees"), category: "Pages" },
-      { id: "add-employee", label: "Add Employee", icon: Users, action: () => go("/employees/new"), category: "Actions" },
-      { id: "salary-structures", label: "Salary Structures", icon: Wallet, action: () => go("/payroll/structures"), category: "Pages" },
-      { id: "payroll-runs", label: "Payroll Runs", icon: Play, action: () => go("/payroll/runs"), category: "Pages" },
-      { id: "payroll-analytics", label: "Payroll Analytics", icon: Play, action: () => go("/payroll/analytics"), category: "Pages" },
-      { id: "payslips", label: "Payslips", icon: FileText, action: () => go("/payslips"), category: "Pages" },
-      { id: "tax", label: "Tax Overview", icon: Calculator, action: () => go("/tax"), category: "Pages" },
-      { id: "attendance", label: "Attendance", icon: CalendarDays, action: () => go("/attendance"), category: "Pages" },
-      { id: "settings", label: "Settings", icon: Settings, action: () => go("/settings"), category: "Pages" },
-    ] : []),
-    { id: "my-dashboard", label: "My Dashboard", icon: LayoutDashboard, action: () => go("/my"), category: "Self-Service" },
-    { id: "my-payslips", label: "My Payslips", icon: FileText, action: () => go("/my/payslips"), category: "Self-Service" },
-    { id: "my-salary", label: "My Salary", icon: Wallet, action: () => go("/my/salary"), category: "Self-Service" },
-    { id: "my-tax", label: "My Tax", icon: Calculator, action: () => go("/my/tax"), category: "Self-Service" },
-    { id: "my-profile", label: "My Profile", icon: User, action: () => go("/my/profile"), category: "Self-Service" },
+    ...(isAdmin
+      ? [
+          {
+            id: "dashboard",
+            label: "Dashboard",
+            icon: LayoutDashboard,
+            action: () => go("/dashboard"),
+            category: "Pages",
+          },
+          {
+            id: "employees",
+            label: "Employees",
+            icon: Users,
+            action: () => go("/employees"),
+            category: "Pages",
+          },
+          {
+            id: "add-employee",
+            label: "Add Employee",
+            icon: Users,
+            action: () => go("/employees/new"),
+            category: "Actions",
+          },
+          {
+            id: "salary-structures",
+            label: "Salary Structures",
+            icon: Wallet,
+            action: () => go("/payroll/structures"),
+            category: "Pages",
+          },
+          {
+            id: "payroll-runs",
+            label: "Payroll Runs",
+            icon: Play,
+            action: () => go("/payroll/runs"),
+            category: "Pages",
+          },
+          {
+            id: "payroll-analytics",
+            label: "Payroll Analytics",
+            icon: Play,
+            action: () => go("/payroll/analytics"),
+            category: "Pages",
+          },
+          {
+            id: "payslips",
+            label: "Payslips",
+            icon: FileText,
+            action: () => go("/payslips"),
+            category: "Pages",
+          },
+          {
+            id: "tax",
+            label: "Tax Overview",
+            icon: Calculator,
+            action: () => go("/tax"),
+            category: "Pages",
+          },
+          {
+            id: "tax-calculator",
+            label: "Tax Calculator",
+            icon: Calculator,
+            action: () => go("/tax/calculator"),
+            category: "Pages",
+          },
+          {
+            id: "tax-declarations",
+            label: "Tax Declarations",
+            icon: FileText,
+            action: () => go("/tax/declarations"),
+            category: "Pages",
+          },
+          {
+            id: "attendance",
+            label: "Attendance",
+            icon: CalendarDays,
+            action: () => go("/attendance"),
+            category: "Pages",
+          },
+          {
+            id: "departments",
+            label: "Departments",
+            icon: Users,
+            action: () => go("/departments"),
+            category: "Pages",
+          },
+          {
+            id: "org-chart",
+            label: "Org Chart",
+            icon: Users,
+            action: () => go("/employees/org-chart"),
+            category: "Pages",
+          },
+          {
+            id: "reimbursements",
+            label: "Reimbursements",
+            icon: FileText,
+            action: () => go("/reimbursements"),
+            category: "Pages",
+          },
+          {
+            id: "loans",
+            label: "Loans & Advances",
+            icon: Wallet,
+            action: () => go("/loans"),
+            category: "Pages",
+          },
+          {
+            id: "benefits",
+            label: "Benefits",
+            icon: Wallet,
+            action: () => go("/benefits"),
+            category: "Pages",
+          },
+          {
+            id: "holidays",
+            label: "Holidays",
+            icon: CalendarDays,
+            action: () => go("/holidays"),
+            category: "Pages",
+          },
+          {
+            id: "announcements",
+            label: "Announcements",
+            icon: FileText,
+            action: () => go("/announcements"),
+            category: "Pages",
+          },
+          {
+            id: "reports",
+            label: "Reports",
+            icon: FileText,
+            action: () => go("/reports"),
+            category: "Pages",
+          },
+          {
+            id: "global-payroll",
+            label: "Global Payroll",
+            icon: Wallet,
+            action: () => go("/global-payroll"),
+            category: "Pages",
+          },
+          {
+            id: "settings",
+            label: "Settings",
+            icon: Settings,
+            action: () => go("/settings"),
+            category: "Pages",
+          },
+          {
+            id: "run-payroll",
+            label: "New Payroll Run",
+            icon: Play,
+            action: () => go("/payroll/runs"),
+            category: "Actions",
+          },
+        ]
+      : []),
+    {
+      id: "my-dashboard",
+      label: "My Dashboard",
+      icon: LayoutDashboard,
+      action: () => go("/my"),
+      category: "Self-Service",
+    },
+    {
+      id: "my-payslips",
+      label: "My Payslips",
+      icon: FileText,
+      action: () => go("/my/payslips"),
+      category: "Self-Service",
+    },
+    {
+      id: "my-salary",
+      label: "My Salary",
+      icon: Wallet,
+      action: () => go("/my/salary"),
+      category: "Self-Service",
+    },
+    {
+      id: "my-tax",
+      label: "My Tax",
+      icon: Calculator,
+      action: () => go("/my/tax"),
+      category: "Self-Service",
+    },
+    {
+      id: "my-profile",
+      label: "My Profile",
+      icon: User,
+      action: () => go("/my/profile"),
+      category: "Self-Service",
+    },
   ];
 
   const empItems: CommandItem[] = employees
     .filter((e: any) => {
       if (!query) return false;
       const q = query.toLowerCase();
-      return `${e.first_name} ${e.last_name}`.toLowerCase().includes(q) ||
+      return (
+        `${e.first_name} ${e.last_name}`.toLowerCase().includes(q) ||
         e.email.toLowerCase().includes(q) ||
-        e.employee_code.toLowerCase().includes(q);
+        e.employee_code.toLowerCase().includes(q)
+      );
     })
     .slice(0, 5)
     .map((e: any) => ({
@@ -103,9 +295,17 @@ export function CommandPalette() {
   ];
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "ArrowDown") { e.preventDefault(); setSelected((s) => Math.min(s + 1, filtered.length - 1)); }
-    if (e.key === "ArrowUp") { e.preventDefault(); setSelected((s) => Math.max(s - 1, 0)); }
-    if (e.key === "Enter" && filtered[selected]) { filtered[selected].action(); }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelected((s) => Math.min(s + 1, filtered.length - 1));
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelected((s) => Math.max(s - 1, 0));
+    }
+    if (e.key === "Enter" && filtered[selected]) {
+      filtered[selected].action();
+    }
   }
 
   if (!open) return null;
@@ -129,12 +329,17 @@ export function CommandPalette() {
             <input
               ref={inputRef}
               value={query}
-              onChange={(e) => { setQuery(e.target.value); setSelected(0); }}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setSelected(0);
+              }}
               onKeyDown={handleKeyDown}
               placeholder="Search pages, employees..."
               className="h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
             />
-            <kbd className="rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-xs text-gray-400">ESC</kbd>
+            <kbd className="rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-xs text-gray-400">
+              ESC
+            </kbd>
           </div>
 
           <div className="max-h-80 overflow-y-auto p-2">
@@ -154,13 +359,17 @@ export function CommandPalette() {
                       onClick={item.action}
                       onMouseEnter={() => setSelected(i)}
                       className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
-                        i === selected ? "bg-brand-50 text-brand-700" : "text-gray-700 hover:bg-gray-50"
+                        i === selected
+                          ? "bg-brand-50 text-brand-700"
+                          : "text-gray-700 hover:bg-gray-50"
                       }`}
                     >
                       <Icon className="h-4 w-4 shrink-0" />
                       <div className="flex-1">
                         <span className="font-medium">{item.label}</span>
-                        {item.sublabel && <span className="ml-2 text-xs text-gray-400">{item.sublabel}</span>}
+                        {item.sublabel && (
+                          <span className="ml-2 text-xs text-gray-400">{item.sublabel}</span>
+                        )}
                       </div>
                       <ArrowRight className="h-3 w-3 text-gray-300" />
                     </button>
@@ -171,9 +380,15 @@ export function CommandPalette() {
           </div>
 
           <div className="border-t border-gray-100 px-4 py-2 text-xs text-gray-400">
-            <span className="mr-3"><kbd className="rounded border px-1">↑↓</kbd> navigate</span>
-            <span className="mr-3"><kbd className="rounded border px-1">↵</kbd> select</span>
-            <span><kbd className="rounded border px-1">esc</kbd> close</span>
+            <span className="mr-3">
+              <kbd className="rounded border px-1">↑↓</kbd> navigate
+            </span>
+            <span className="mr-3">
+              <kbd className="rounded border px-1">↵</kbd> select
+            </span>
+            <span>
+              <kbd className="rounded border px-1">esc</kbd> close
+            </span>
           </div>
         </div>
       </div>

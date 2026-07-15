@@ -8,9 +8,10 @@ import { DataTable } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
 import { SelectField } from "@/components/ui/SelectField";
 import { Input } from "@/components/ui/Input";
-import { formatCurrency, formatMonth } from "@/lib/utils";
+import { StatCard } from "@/components/ui/StatCard";
+import { formatCurrency, formatMonth, cn } from "@/lib/utils";
 import { usePayrollRuns, useCreatePayrollRun } from "@/api/hooks";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Play, Wallet, CheckCircle2, Clock } from "lucide-react";
 import toast from "react-hot-toast";
 
 const MONTHS = [
@@ -57,22 +58,34 @@ const columns = [
   {
     key: "employee_count",
     header: "Employees",
-    render: (row: any) => (isCancelled(row) ? "—" : row.employee_count || 0),
+    className: "text-right",
+    render: (row: any) => (
+      <span className="tabular-nums">{isCancelled(row) ? "—" : row.employee_count || 0}</span>
+    ),
   },
   {
     key: "total_gross",
     header: "Gross Pay",
-    render: (row: any) => moneyCell(row, row.total_gross),
+    className: "text-right",
+    render: (row: any) => <span className="tabular-nums">{moneyCell(row, row.total_gross)}</span>,
   },
   {
     key: "total_deductions",
     header: "Deductions",
-    render: (row: any) => moneyCell(row, row.total_deductions),
+    className: "text-right",
+    render: (row: any) => (
+      <span className="tabular-nums text-rose-600">{moneyCell(row, row.total_deductions)}</span>
+    ),
   },
   {
     key: "total_net",
     header: "Net Pay",
-    render: (row: any) => moneyCell(row, row.total_net),
+    className: "text-right",
+    render: (row: any) => (
+      <span className="font-semibold tabular-nums text-gray-900">
+        {moneyCell(row, row.total_net)}
+      </span>
+    ),
   },
   {
     key: "status",
@@ -87,9 +100,44 @@ export function PayrollRunsPage() {
   const { data: res, isLoading } = usePayrollRuns();
   const createMutation = useCreatePayrollRun();
   const [showCreate, setShowCreate] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const runs = res?.data?.data || [];
   const now = new Date();
+
+  // Derived summary + status filter (presentation-only).
+  const sortedRuns = [...runs].sort(
+    (a: any, b: any) => Number(b.year) - Number(a.year) || Number(b.month) - Number(a.month),
+  );
+  // Latest run that actually has a computed, non-cancelled net — so the KPI
+  // never shows a cancelled run's audit-only figure (contradicting the table's
+  // "—" per #5) or a ₹0/NaN for an uncomputed draft.
+  const latestRun = sortedRuns.find((r: any) => !isCancelled(r) && Number(r.total_net));
+  const latestMonth =
+    latestRun && latestRun.month && latestRun.year
+      ? formatMonth(latestRun.month, latestRun.year)
+      : undefined;
+  const statusCount = (s: string) =>
+    runs.filter((r: any) => String(r.status).toLowerCase() === s).length;
+  const paidCount = statusCount("paid");
+  const inProgressCount = ["draft", "processing", "computed", "approved"].reduce(
+    (n, s) => n + statusCount(s),
+    0,
+  );
+  const filterOptions = [
+    { key: "all", label: "All", count: runs.length },
+    ...["draft", "processing", "computed", "approved", "paid", "cancelled"]
+      .map((s) => ({
+        key: s,
+        label: s.charAt(0).toUpperCase() + s.slice(1),
+        count: statusCount(s),
+      }))
+      .filter((o) => o.count > 0),
+  ];
+  const filteredRuns =
+    statusFilter === "all"
+      ? runs
+      : runs.filter((r: any) => String(r.status).toLowerCase() === statusFilter);
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -177,24 +225,91 @@ export function PayrollRunsPage() {
         <div className="flex h-64 items-center justify-center">
           <Loader2 className="text-brand-600 h-8 w-8 animate-spin" />
         </div>
+      ) : runs.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-20 text-center">
+          <div className="rounded-full bg-gray-50 p-3">
+            <Play className="h-6 w-6 text-gray-300" />
+          </div>
+          <p className="text-sm text-gray-500">No payroll runs yet.</p>
+          <Button size="sm" variant="outline" onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4" /> Run your first payroll
+          </Button>
+        </div>
       ) : (
-        <DataTable
-          columns={columns}
-          data={runs}
-          onRowClick={(row) => {
-            // #343 — Guard against missing id (avoids navigating to
-            // "/payroll/runs/undefined" which lands on the detail page
-            // and 404s server-side with a misleading "page not found"
-            // message). Surface a real toast so HR knows the row was
-            // somehow malformed instead of getting a confusing 404.
-            if (!row?.id) {
-              toast.error("This payroll run is missing an id — please refresh the list.");
-              return;
-            }
-            navigate(`/payroll/runs/${row.id}`);
-          }}
-          emptyMessage="No payroll runs yet. Click 'New Payroll Run' to get started."
-        />
+        <>
+          {/* Summary */}
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Total Runs"
+              value={String(runs.length)}
+              subtitle="All periods"
+              icon={Play}
+            />
+            <StatCard
+              title="Latest Net Pay"
+              value={latestRun ? formatCurrency(latestRun.total_net) : "—"}
+              subtitle={latestMonth || "No computed runs"}
+              icon={Wallet}
+              accentClassName="bg-emerald-50 text-emerald-600"
+            />
+            <StatCard
+              title="Paid"
+              value={String(paidCount)}
+              subtitle="Marked paid"
+              icon={CheckCircle2}
+              accentClassName="bg-sky-50 text-sky-600"
+            />
+            <StatCard
+              title="In Progress"
+              value={String(inProgressCount)}
+              subtitle="Draft · computed · approved"
+              icon={Clock}
+              accentClassName="bg-amber-50 text-amber-600"
+            />
+          </div>
+
+          {/* Status filter */}
+          <div
+            className="flex flex-wrap items-center gap-2"
+            role="group"
+            aria-label="Filter runs by status"
+          >
+            {filterOptions.map((o) => (
+              <button
+                key={o.key}
+                onClick={() => setStatusFilter(o.key)}
+                aria-pressed={statusFilter === o.key}
+                className={cn(
+                  "focus-visible:ring-brand-500 flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2",
+                  statusFilter === o.key
+                    ? "border-brand-200 bg-brand-50 text-brand-700"
+                    : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50",
+                )}
+              >
+                {o.label}
+                <span className="tabular-nums text-gray-400">{o.count}</span>
+              </button>
+            ))}
+          </div>
+
+          <DataTable
+            columns={columns}
+            data={filteredRuns}
+            onRowClick={(row) => {
+              // #343 — Guard against missing id (avoids navigating to
+              // "/payroll/runs/undefined" which lands on the detail page
+              // and 404s server-side with a misleading "page not found"
+              // message). Surface a real toast so HR knows the row was
+              // somehow malformed instead of getting a confusing 404.
+              if (!row?.id) {
+                toast.error("This payroll run is missing an id — please refresh the list.");
+                return;
+              }
+              navigate(`/payroll/runs/${row.id}`);
+            }}
+            emptyMessage="No runs match this filter."
+          />
+        </>
       )}
 
       <Modal
@@ -204,6 +319,15 @@ export function PayrollRunsPage() {
         description="Create a new monthly payroll run"
       >
         <form onSubmit={handleCreate} className="space-y-4">
+          <div className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <span className="bg-brand-50 text-brand-600 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+              <Play className="h-[18px] w-[18px]" />
+            </span>
+            <p className="text-xs text-gray-500">
+              Creates a draft run and computes gross, deductions, and net for every active employee
+              in the selected month. You can review and approve it before marking it paid.
+            </p>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <SelectField
               id="month"
@@ -236,7 +360,7 @@ export function PayrollRunsPage() {
               Cancel
             </Button>
             <Button type="submit" loading={createMutation.isPending}>
-              Create Run
+              <Play className="h-4 w-4" /> Create Run
             </Button>
           </div>
         </form>

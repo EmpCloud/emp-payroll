@@ -24,6 +24,66 @@ function logoDataUri(logoPath?: string | null): string {
   }
 }
 
+// Render a rupee amount in Indian-numbering words (lakh/crore) for the
+// payslip's "Net Pay in words" line — a standard, professional feature of
+// Indian salary slips. Presentation-only; never used for computation.
+function amountInWords(amount: number): string {
+  const n = Math.round(Math.abs(Number(amount) || 0));
+  if (n === 0) return "Zero Rupees Only";
+  const ones = [
+    "",
+    "One",
+    "Two",
+    "Three",
+    "Four",
+    "Five",
+    "Six",
+    "Seven",
+    "Eight",
+    "Nine",
+    "Ten",
+    "Eleven",
+    "Twelve",
+    "Thirteen",
+    "Fourteen",
+    "Fifteen",
+    "Sixteen",
+    "Seventeen",
+    "Eighteen",
+    "Nineteen",
+  ];
+  const tens = [
+    "",
+    "",
+    "Twenty",
+    "Thirty",
+    "Forty",
+    "Fifty",
+    "Sixty",
+    "Seventy",
+    "Eighty",
+    "Ninety",
+  ];
+  const two = (x: number): string =>
+    x < 20 ? ones[x] : `${tens[Math.floor(x / 10)]}${x % 10 ? " " + ones[x % 10] : ""}`;
+  const three = (x: number): string => {
+    const h = Math.floor(x / 100);
+    const r = x % 100;
+    return `${h ? ones[h] + " Hundred" + (r ? " " : "") : ""}${r ? two(r) : ""}`;
+  };
+  const crore = Math.floor(n / 10000000);
+  const lakh = Math.floor((n % 10000000) / 100000);
+  const thousand = Math.floor((n % 100000) / 1000);
+  const rest = n % 1000;
+  let words = "";
+  if (crore) words += `${three(crore)} Crore `;
+  if (lakh) words += `${two(lakh)} Lakh `;
+  if (thousand) words += `${two(thousand)} Thousand `;
+  if (rest) words += three(rest);
+  const prefix = Number(amount) < 0 ? "Minus " : "";
+  return `${prefix}${words.trim().replace(/\s+/g, " ")} Rupees Only`;
+}
+
 export class PayslipPDFService {
   private db = getDB();
 
@@ -234,40 +294,75 @@ export class PayslipPDFService {
 <title>Payslip — ${employee.first_name} ${employee.last_name} — ${period}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; color: #1a1a1a; padding: 40px; max-width: 800px; margin: 0 auto; }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 20px; }
-  .company-logo { max-height: 56px; max-width: 220px; margin-bottom: 8px; display: block; object-fit: contain; }
-  .company-name { font-size: 22px; font-weight: 700; color: #4f46e5; }
-  .company-detail { font-size: 11px; color: #666; margin-top: 4px; }
-  .payslip-title { font-size: 18px; font-weight: 600; text-align: right; }
-  .payslip-period { font-size: 13px; color: #666; text-align: right; margin-top: 4px; }
-  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-  .info-box { background: #f8f9fa; border-radius: 8px; padding: 16px; }
-  .info-box h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-bottom: 8px; }
-  .info-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-  .info-row .label { color: #666; }
-  .info-row .value { font-weight: 500; }
-  .earnings-deductions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-  .section { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
-  .section-header { background: #f0f0f0; padding: 10px 16px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; line-height: 1.5; color: #0f172a; background: #eef1f6; padding: 32px 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sheet { max-width: 820px; margin: 0 auto; background: #fff; border: 1px solid #e6e9f0; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); }
+  .brand-bar { height: 6px; background: linear-gradient(90deg, #6366f1, #4f46e5 55%, #4338ca); }
+  .pad { padding: 36px 40px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; border-bottom: 1px solid #e2e8f0; padding-bottom: 22px; margin-bottom: 26px; }
+  .company-logo { max-height: 52px; max-width: 200px; margin-bottom: 10px; display: block; object-fit: contain; }
+  .company-name { font-size: 21px; font-weight: 700; color: #4f46e5; letter-spacing: -0.01em; }
+  .company-detail { font-size: 11px; color: #64748b; margin-top: 3px; }
+  .header-right { text-align: right; flex-shrink: 0; }
+  .payslip-title { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #4f46e5; background: #eef2ff; border: 1px solid #e0e7ff; padding: 6px 14px; border-radius: 999px; }
+  .payslip-period { font-size: 16px; font-weight: 700; color: #0f172a; margin-top: 10px; }
+  .payslip-sub { font-size: 10px; color: #94a3b8; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 22px; }
+  .info-box { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 10px; padding: 16px 18px; }
+  .info-box h4 { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 10px; font-weight: 700; }
+  .info-row { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; }
+  .info-row + .info-row { border-top: 1px solid #eef2f7; }
+  .info-row .label { color: #64748b; }
+  .info-row .value { font-weight: 600; color: #0f172a; text-align: right; }
+  .days-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+  .day-pill { border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; text-align: center; background: #fff; }
+  .day-pill .k { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; font-weight: 600; }
+  .day-pill .v { display: block; font-size: 18px; font-weight: 700; color: #0f172a; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .earnings-deductions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 22px; }
+  .section { border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
+  .section-header { padding: 11px 16px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 8px; background: #f8fafc; color: #334155; }
+  .section-header::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: #94a3b8; }
   .section-header.earnings { background: #ecfdf5; color: #065f46; }
+  .section-header.earnings::before { background: #10b981; }
   .section-header.deductions { background: #fef2f2; color: #991b1b; }
+  .section-header.deductions::before { background: #ef4444; }
+  .section-header.employer { background: #eff6ff; color: #1e40af; }
+  .section-header.employer::before { background: #3b82f6; }
   table { width: 100%; border-collapse: collapse; }
-  td { padding: 8px 16px; border-bottom: 1px solid #f3f4f6; }
-  td.amt { text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
-  .total-row td { border-top: 2px solid #e5e7eb; font-weight: 700; background: #fafafa; }
-  .net-pay { text-align: center; background: #4f46e5; color: white; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
-  .net-pay .label { font-size: 12px; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; }
-  .net-pay .amount { font-size: 28px; font-weight: 700; margin-top: 4px; }
-  .footer { border-top: 1px solid #e5e7eb; padding-top: 16px; font-size: 11px; color: #999; text-align: center; }
-  .days-info { display: flex; gap: 24px; justify-content: center; margin-bottom: 24px; }
-  .days-info span { background: #f3f4f6; padding: 6px 14px; border-radius: 6px; font-size: 12px; }
-  @media print { body { padding: 20px; } .no-print { display: none; } }
+  thead th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; font-weight: 600; padding: 8px 16px; background: #fcfcfd; border-bottom: 1px solid #eef2f7; }
+  thead th.amt { text-align: right; }
+  td { padding: 9px 16px; border-bottom: 1px solid #f3f4f6; color: #334155; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.amt { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: #0f172a; }
+  .total-row td { border-top: 1px solid #e5e7eb; font-weight: 700; background: #f8fafc; color: #0f172a; }
+  .summary { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 1px; background: #e2e8f0; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-bottom: 10px; }
+  .summary-item { background: #fff; padding: 16px 18px; }
+  .summary-item .k { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; font-weight: 700; }
+  .summary-item .v { font-size: 17px; font-weight: 700; margin-top: 5px; font-variant-numeric: tabular-nums; }
+  .summary-item.gross .v { color: #059669; }
+  .summary-item.ded .v { color: #dc2626; }
+  .summary-net { background: linear-gradient(135deg, #4f46e5, #4338ca); color: #fff; padding: 16px 20px; display: flex; flex-direction: column; justify-content: center; }
+  .summary-net .k { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.85; font-weight: 700; }
+  .summary-net .v { font-size: 26px; font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .amount-words { font-size: 11px; color: #64748b; margin-bottom: 26px; padding: 10px 14px; background: #f8fafc; border: 1px dashed #e2e8f0; border-radius: 8px; }
+  .amount-words strong { color: #334155; }
+  .employer-note { margin-bottom: 26px; }
+  .footer { border-top: 1px solid #e2e8f0; padding-top: 18px; font-size: 10.5px; color: #94a3b8; text-align: center; line-height: 1.8; }
+  .footer .sign { color: #64748b; font-weight: 600; }
   .actions { display: flex; gap: 12px; justify-content: center; margin-bottom: 24px; }
-  .print-btn { padding: 10px 32px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
+  .print-btn { padding: 10px 26px; background: #4f46e5; color: #fff; border: none; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
   .print-btn:hover { background: #4338ca; }
-  .print-btn.secondary { background: #6b7280; }
-  .print-btn.secondary:hover { background: #4b5563; }
+  .print-btn.secondary { background: #fff; color: #475569; border: 1px solid #cbd5e1; box-shadow: none; }
+  .print-btn.secondary:hover { background: #f8fafc; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .sheet { box-shadow: none; border: none; border-radius: 0; max-width: 100%; }
+    .brand-bar { border-radius: 0; }
+    .no-print { display: none; }
+  }
+  @media (max-width: 640px) {
+    .info-grid, .earnings-deductions, .summary { grid-template-columns: 1fr; }
+    .pad { padding: 24px 20px; }
+  }
 </style>
 </head>
 <body>
@@ -288,6 +383,10 @@ export class PayslipPDFService {
       a.click();
     }
   </script>
+
+  <div class="sheet">
+    <div class="brand-bar"></div>
+    <div class="pad">
 
   <div class="header">
     <div>
@@ -311,9 +410,10 @@ export class PayslipPDFService {
           : ""
       }
     </div>
-    <div>
-      <div class="payslip-title">Payslip</div>
+    <div class="header-right">
+      <span class="payslip-title">Payslip</span>
       <div class="payslip-period">${period}</div>
+      <div class="payslip-sub">Salary Statement</div>
     </div>
   </div>
 
@@ -352,32 +452,49 @@ export class PayslipPDFService {
   </div>
 
   <div class="days-info">
-    <span><strong>Paid Days:</strong> ${payslip.paid_days}</span>
-    <span><strong>Total Days:</strong> ${payslip.total_days}</span>
-    <span><strong>LOP Days:</strong> ${payslip.lop_days}</span>
+    <div class="day-pill"><span class="k">Paid Days</span><span class="v">${payslip.paid_days}</span></div>
+    <div class="day-pill"><span class="k">Total Days</span><span class="v">${payslip.total_days}</span></div>
+    <div class="day-pill"><span class="k">LOP Days</span><span class="v">${payslip.lop_days}</span></div>
   </div>
 
   <div class="earnings-deductions">
     <div class="section">
       <div class="section-header earnings">Earnings</div>
       <table>
-        ${earningsRows}
-        <tr class="total-row"><td>Total Earnings</td><td class="amt">${fmt(payslip.gross_earnings)}</td></tr>
+        <thead><tr><th>Component</th><th class="amt">Amount</th></tr></thead>
+        <tbody>
+          ${earningsRows}
+          <tr class="total-row"><td>Total Earnings</td><td class="amt">${fmt(payslip.gross_earnings)}</td></tr>
+        </tbody>
       </table>
     </div>
     <div class="section">
       <div class="section-header deductions">Deductions</div>
       <table>
-        ${deductionsRows}
-        <tr class="total-row"><td>Total Deductions</td><td class="amt">${fmt(payslip.total_deductions)}</td></tr>
+        <thead><tr><th>Component</th><th class="amt">Amount</th></tr></thead>
+        <tbody>
+          ${deductionsRows}
+          <tr class="total-row"><td>Total Deductions</td><td class="amt">${fmt(payslip.total_deductions)}</td></tr>
+        </tbody>
       </table>
     </div>
   </div>
 
-  <div class="net-pay">
-    <div class="label">Net Pay</div>
-    <div class="amount">${fmt(payslip.net_pay)}</div>
+  <div class="summary">
+    <div class="summary-item gross">
+      <div class="k">Gross Earnings</div>
+      <div class="v">${fmt(payslip.gross_earnings)}</div>
+    </div>
+    <div class="summary-item ded">
+      <div class="k">Total Deductions</div>
+      <div class="v">-${fmt(payslip.total_deductions)}</div>
+    </div>
+    <div class="summary-net">
+      <div class="k">Net Pay</div>
+      <div class="v">${fmt(payslip.net_pay)}</div>
+    </div>
   </div>
+  <div class="amount-words"><strong>Net pay in words:</strong> ${amountInWords(payslip.net_pay)}</div>
 
   ${
     /* Employer Contributions panel — informational only, NOT deducted
@@ -385,18 +502,22 @@ export class PayslipPDFService {
        Company (gross + Employer PF / EPS / EDLI / Admin / Employer ESI)
        and can verify what their offer-letter CTC covers. */
     employerRows
-      ? `<div class="section" style="margin-bottom: 24px;">
-           <div class="section-header" style="background: #eff6ff; color: #1e40af;">Employer Contributions (paid by company, not deducted)</div>
+      ? `<div class="section employer-note">
+           <div class="section-header employer">Employer Contributions · Paid by company, not deducted</div>
            <table>
-             ${employerRows}
-             <tr class="total-row"><td>Total Employer Contribution</td><td class="amt">${fmt(totalEmployerContribs)}</td></tr>
+             <thead><tr><th>Component</th><th class="amt">Amount</th></tr></thead>
+             <tbody>
+               ${employerRows}
+               <tr class="total-row"><td>Total Employer Contribution</td><td class="amt">${fmt(totalEmployerContribs)}</td></tr>
+             </tbody>
            </table>
          </div>`
       : ""
   }
 
   <div class="footer">
-    This is a system-generated payslip. | ${org?.name || "Company"} | Generated on ${
+    <div class="sign">This is a computer-generated payslip and does not require a signature.</div>
+    ${org?.name || "Company"} &middot; Generated on ${
       // BUG-028 — Use unambiguous DD MMM YYYY format. The previous
       // toLocaleDateString("en-IN") output was "06/05/2026", which a US
       // reader would parse as June 5 -- a real concern on a statutory
@@ -407,7 +528,10 @@ export class PayslipPDFService {
         month: "short",
         year: "numeric",
       })
-    }
+    } &middot; Confidential
+  </div>
+
+    </div>
   </div>
 </body>
 </html>`;
