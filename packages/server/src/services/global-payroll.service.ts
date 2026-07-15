@@ -1,5 +1,10 @@
 import { getDB } from "../db/adapters";
 import { AppError } from "../api/middleware/error.middleware";
+import { computeZAPayroll } from "./tax/za-tax.service";
+import { computeUSPayroll } from "./tax/us-tax.service";
+import { computeUKPayroll } from "./tax/uk-tax.service";
+import { COUNTRY_CONFIGS } from "./tax/country-configs";
+import { deductionsFromConfig } from "./tax/country-payroll.service";
 
 // ---------------------------------------------------------------------------
 // Country-specific tax/deduction calculation helpers
@@ -34,6 +39,15 @@ function calculateDeductions(grossMonthly: number, country: any): DeductionResul
   const rules = parseComplianceNotes(country.compliance_notes);
   const code = country.code;
 
+  // Config-driven engine: any country with a data config uses its real ruleset
+  // (progressive income tax + capped contribution funds + levies) instead of the
+  // flat per-country estimates in the switch below. Dedicated engines (IN, US,
+  // GB, ZA) are handled in the switch and are intentionally NOT in the config map.
+  const cfg = COUNTRY_CONFIGS[code];
+  if (cfg) {
+    return deductionsFromConfig(cfg, grossMonthly);
+  }
+
   let tax_amount = 0;
   let ss_employee = 0;
   let ss_employer = 0;
@@ -60,22 +74,62 @@ function calculateDeductions(grossMonthly: number, country: any): DeductionResul
       break;
     }
     case "US": {
-      // FICA
-      ss_employee = Math.round(grossMonthly * 0.0765);
-      ss_employer = Math.round(grossMonthly * 0.0765);
-      // Federal tax estimate (~22% effective for mid-range)
-      tax_amount = Math.round(grossMonthly * 0.22);
+      // United States — real federal + FICA (SS wage-capped) + Medicare (+
+      // additional) + progressive state engine, replacing the prior flat
+      // 7.65%/22% estimate. grossMonthly is in cents; the US engine works in
+      // dollars. W-4 / state / YTD default (single filer, no state, fresh YTD)
+      // since global-payroll doesn't capture them — override upstream when known.
+      const us = computeUSPayroll({
+        employeeId: "",
+        grossPay: grossMonthly / 100,
+        payFrequency: "monthly",
+        w4: {
+          filingStatus: "single",
+          otherIncome: 0,
+          deductions: 0,
+          dependentCredit: 0,
+          extraWithholding: 0,
+        },
+        stateCode: "",
+        ytdGross: 0,
+        ytdSocialSecurity: 0,
+        pretaxDeductions: 0,
+      });
+      tax_amount = Math.round((us.federalTax + us.stateTax) * 100); // income tax (federal + state)
+      ss_employee = Math.round((us.socialSecurity + us.medicare + us.additionalMedicare) * 100); // FICA (employee)
+      ss_employer = Math.round(
+        (us.employerSocialSecurity + us.employerMedicare + us.employerFuta) * 100,
+      ); // employer payroll taxes
       break;
     }
     case "GB": {
-      // NI
-      ss_employee = Math.round(grossMonthly * 0.12);
-      ss_employer = Math.round(grossMonthly * 0.138);
-      // Pension auto-enrollment
-      pension_employee = Math.round(grossMonthly * 0.05);
-      pension_employer = Math.round(grossMonthly * 0.03);
-      // PAYE estimate (~20%)
-      tax_amount = Math.round(grossMonthly * 0.2);
+      // United Kingdom — real PAYE (tax code + personal allowance + bands) + NIC
+      // (thresholds) + auto-enrolment pension, replacing the prior flat 20%/12%
+      // estimate that taxed from the first pound. grossMonthly is in pence; the
+      // UK engine works in pounds. Tax code / region / NIC category / YTD default
+      // (1257L, England, category A, fresh) since global-payroll doesn't capture
+      // them — override upstream when known.
+      const uk = computeUKPayroll({
+        employeeId: "",
+        grossPay: grossMonthly / 100,
+        payFrequency: "monthly",
+        taxCode: "1257L",
+        region: "england",
+        nicCategory: "A",
+        studentLoanPlans: [],
+        pensionMethod: "relief_at_source",
+        pensionEmployeeRate: 5,
+        pensionEmployerRate: 3,
+        periodNumber: 1,
+        ytdGross: 0,
+        ytdTaxPaid: 0,
+        ytdNicPaid: 0,
+      });
+      tax_amount = Math.round(uk.incomeTax * 100);
+      ss_employee = Math.round(uk.employeeNIC * 100);
+      ss_employer = Math.round(uk.employerNIC * 100);
+      pension_employee = Math.round(uk.employeePension * 100);
+      pension_employer = Math.round(uk.employerPension * 100);
       break;
     }
     case "DE": {
@@ -128,6 +182,17 @@ function calculateDeductions(grossMonthly: number, country: any): DeductionResul
       ss_employee = Math.round(grossMonthly * 0.0163); // EI
       ss_employer = Math.round(grossMonthly * 0.02282);
       tax_amount = Math.round(grossMonthly * 0.2);
+      break;
+    }
+    case "ZA": {
+      // South Africa — real SARS engine (progressive PAYE + rebate + capped UIF
+      // + SDL). grossMonthly is in cents; the ZA engine works in rand. Age /
+      // medical / retirement default (primary rebate only) since global-payroll
+      // does not capture them — override upstream when that data is available.
+      const za = computeZAPayroll({ employeeId: "", grossMonthly: grossMonthly / 100 });
+      tax_amount = Math.round(za.paye * 100); // PAYE (employee)
+      ss_employee = Math.round(za.uifEmployee * 100); // UIF (employee)
+      ss_employer = Math.round((za.uifEmployer + za.sdl) * 100); // UIF + SDL (employer)
       break;
     }
     default: {

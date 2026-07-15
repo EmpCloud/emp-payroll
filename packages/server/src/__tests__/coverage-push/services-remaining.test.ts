@@ -2804,13 +2804,20 @@ describe("PayslipService", () => {
 // TAX INDEX (0% -> 100%)
 // ============================================================================
 describe("Tax Index", () => {
-  it("isSupportedCountry returns true for IN", async () => {
-    const { isSupportedCountry, SUPPORTED_COUNTRIES } = await import("../../services/tax/index");
+  it("isSupportedCountry covers dedicated engines and config-driven countries", async () => {
+    const { isSupportedCountry, DEDICATED_ENGINE_COUNTRIES } =
+      await import("../../services/tax/index");
+    // Dedicated engines
     expect(isSupportedCountry("IN")).toBe(true);
     expect(isSupportedCountry("US")).toBe(true);
-    expect(isSupportedCountry("UK")).toBe(true);
-    expect(isSupportedCountry("FR")).toBe(false);
-    expect(SUPPORTED_COUNTRIES.IN).toBe("India");
+    expect(isSupportedCountry("GB")).toBe(true); // UK stores ISO code "GB"
+    // Config-driven countries (FR and the newly added SG both compute)
+    expect(isSupportedCountry("FR")).toBe(true);
+    expect(isSupportedCountry("SG")).toBe(true);
+    // Case-insensitive, and unknown codes are unsupported
+    expect(isSupportedCountry("sg")).toBe(true);
+    expect(isSupportedCountry("XX")).toBe(false);
+    expect(DEDICATED_ENGINE_COUNTRIES.IN).toBe("India");
   });
 });
 
