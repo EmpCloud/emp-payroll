@@ -39,6 +39,34 @@ declare global {
 }
 
 export function authenticate(req: Request, _res: Response, next: NextFunction) {
+  // Internal service bypass for EmpCloud server-to-server reads (dashboard
+  // widgets, AI chatbot). Same convention as the other emp-* modules:
+  // x-internal-service + x-internal-secret, tenant via ?organization_id=.
+  // Disabled unless INTERNAL_SERVICE_SECRET is configured.
+  const internalService = req.headers["x-internal-service"];
+  const internalSecret = req.headers["x-internal-secret"];
+  const expectedSecret = process.env.INTERNAL_SERVICE_SECRET || "";
+  if (
+    internalService === "empcloud-dashboard" &&
+    expectedSecret &&
+    internalSecret === expectedSecret
+  ) {
+    const orgId = Number(req.query.organization_id);
+    if (orgId) {
+      req.user = {
+        empcloudUserId: 0,
+        empcloudOrgId: orgId,
+        payrollProfileId: null,
+        role: "hr_admin",
+        email: "system@empcloud.internal",
+        firstName: "System",
+        lastName: "Service",
+        orgName: "System",
+      };
+      return next();
+    }
+  }
+
   const header = req.headers.authorization;
   // Support token in query param for PDF/download links opened in new tabs
   const queryToken = req.query.token as string | undefined;
