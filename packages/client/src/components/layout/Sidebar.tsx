@@ -24,7 +24,6 @@ import {
   IndianRupee,
   ClipboardList,
   Megaphone,
-  UserMinus,
   Heart,
   BookOpen,
   Scale,
@@ -213,7 +212,6 @@ const navItems: NavItem[] = [
     roles: ADMIN_ROLES,
     section: "Workplace",
   },
-  { to: "/exits", label: "Exits / FnF", icon: UserMinus, roles: ADMIN_ROLES, section: "Workplace" },
 
   {
     to: "/global-payroll",
