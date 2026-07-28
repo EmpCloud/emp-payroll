@@ -87,3 +87,93 @@ export function statusColor(status: string): string {
   };
   return map[status] || "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
 }
+
+/**
+ * Sanitize a rich-text HTML body (announcements, policies — authored in the
+ * EmpCloud editor) for rendering via dangerouslySetInnerHTML. Keeps basic
+ * formatting tags (p, br, b, i, u, lists, headings, links) so the content shows
+ * FORMATTED, but strips scripts, embedded objects, event handlers, and every
+ * `style`/`class` attribute — which is what removes the `--tw-*` inline-style
+ * pollution a paste-from-Tailwind can leave on elements like <br>.
+ */
+export function sanitizeRichHtml(input: string | null | undefined): string {
+  if (!input) return "";
+  let s = String(input);
+  // Remove non-content elements together with their contents.
+  s = s.replace(
+    /<(script|style|head|noscript|svg|iframe|object|embed|link|meta)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,
+    "",
+  );
+  s = s.replace(/<(svg|img|iframe|object|embed|link|meta)\b[^>]*\/?>/gi, "");
+  s = s.replace(/<!--[\s\S]*?-->/g, "");
+  // Strip on* event handlers and class/id attributes entirely.
+  s = s.replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+  s = s.replace(/\s+(?:class|id)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+  // Scrub CSS custom properties (`--tw-*`) from inline styles but KEEP real
+  // declarations (font-weight, font-size, color) — matches the EmpCloud server
+  // sanitizer, so bold/size authored in the editor still renders here.
+  s = s.replace(/\s+style\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, (_m, dq, sq) => {
+    const raw = dq !== undefined ? dq : sq;
+    const kept = raw
+      .split(";")
+      .map((d: string) => d.trim())
+      .filter((d: string) => d && !d.startsWith("--"))
+      .join("; ");
+    return kept ? ` style="${kept}"` : "";
+  });
+  // Neutralize javascript:/data: URIs on any surviving href.
+  s = s.replace(
+    /(href)\s*=\s*(?:"[^"]*(?:javascript|data):[^"]*"|'[^']*(?:javascript|data):[^']*')/gi,
+    "",
+  );
+  return s.trim();
+}
+
+/**
+ * Announcement/notification bodies come from a rich-text editor and can carry
+ * HTML — including junk like a `<br>` with a giant inline Tailwind CSS-variable
+ * style attribute (see the payroll self-service dashboard, where it leaked as
+ * visible text). Wherever we present that body as PLAIN text (previews, cards,
+ * line-clamped summaries), run it through here first: strip tags, decode the
+ * common entities, and collapse whitespace. Not for rendering rich HTML — this
+ * deliberately discards markup. For FORMATTED rendering use sanitizeRichHtml.
+ */
+export function htmlToPlainText(input: string | null | undefined): string {
+  if (!input) return "";
+  let s = String(input);
+  // Drop non-content blocks entirely (with their inner text/attributes).
+  s = s.replace(/<(script|style|head|noscript|svg)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, " ");
+  s = s.replace(/<!--[\s\S]*?-->/g, " ");
+  // Block/line-break tags become newlines so paragraphs don't run together.
+  s = s.replace(/<br\s*\/?>/gi, "\n");
+  s = s.replace(/<\/(p|div|tr|li|h[1-6]|table|section|header|footer|blockquote)\s*>/gi, "\n");
+  // Strip every remaining tag (this is what removes `<br style="--tw-...">`).
+  s = s.replace(/<[^>]*>/g, " ");
+  // Decode the handful of entities a rich-text editor emits.
+  const entities: Record<string, string> = {
+    amp: "&",
+    lt: "<",
+    gt: ">",
+    quot: '"',
+    apos: "'",
+    nbsp: " ",
+    ndash: "–",
+    mdash: "—",
+    hellip: "…",
+    rsquo: "’",
+    lsquo: "‘",
+    ldquo: "“",
+    rdquo: "”",
+  };
+  s = s
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+    .replace(/&([a-z][a-z0-9]*);/gi, (m, n) => entities[n.toLowerCase()] ?? m);
+  // Tidy whitespace, preserving single line breaks.
+  return s
+    .replace(/\r\n?/g, "\n")
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
