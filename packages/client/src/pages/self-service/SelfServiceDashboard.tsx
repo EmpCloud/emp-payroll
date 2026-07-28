@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Modal } from "@/components/ui/Modal";
 import { StatCard } from "@/components/ui/StatCard";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -21,7 +23,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/api/client";
-import { formatDate } from "@/lib/utils";
+import { formatDate, htmlToPlainText, sanitizeRichHtml } from "@/lib/utils";
 
 export function SelfServiceDashboard() {
   const navigate = useNavigate();
@@ -148,55 +150,100 @@ export function SelfServiceDashboard() {
   );
 }
 
+const PRIORITY_COLORS: Record<string, string> = {
+  low: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200",
+  normal: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300",
+  high: "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300",
+  urgent: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
+};
+
 function AnnouncementsWidget() {
   const { data: res } = useQuery({
     queryKey: ["announcements-widget"],
     queryFn: () => apiGet<any>("/announcements", { limit: "5" }),
   });
+  const [openAnn, setOpenAnn] = useState<any>(null);
 
   const announcements = res?.data || [];
   if (announcements.length === 0) return null;
 
-  const priorityColors: Record<string, string> = {
-    low: "bg-gray-100 text-gray-700",
-    normal: "bg-blue-100 text-blue-700",
-    high: "bg-orange-100 text-orange-700",
-    urgent: "bg-red-100 text-red-700",
-  };
-
   return (
-    <Card>
+    <Card className="dark:border-gray-800 dark:bg-gray-900">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 dark:text-gray-100">
           <Megaphone className="h-5 w-5" /> Company Announcements
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
           {announcements.map((a: any) => (
-            <div
+            <button
               key={a.id}
-              className={`rounded-lg border p-3 ${a.is_pinned ? "border-brand-200 bg-brand-50/30" : "border-gray-100"}`}
+              type="button"
+              onClick={() => setOpenAnn(a)}
+              className={`w-full rounded-lg border p-3 text-left transition-colors ${
+                a.is_pinned
+                  ? "border-brand-200 bg-brand-50/40 dark:border-brand-900 dark:bg-brand-950/30"
+                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-800 dark:hover:border-gray-700 dark:hover:bg-gray-800/50"
+              }`}
             >
               <div className="mb-1 flex items-center gap-2">
-                {/* #298 — same JSX boolean trap as #297; is_pinned is a
-                    MySQL TINYINT, so the bare && renders "0" on each card. */}
-                {!!a.is_pinned && <Pin className="text-brand-600 h-3 w-3" />}
-                <h4 className="text-sm font-semibold text-gray-900">{a.title}</h4>
+                {/* #298 — is_pinned is a MySQL TINYINT, so the bare && renders "0". */}
+                {!!a.is_pinned && (
+                  <Pin className="text-brand-600 dark:text-brand-400 h-3.5 w-3.5 shrink-0" />
+                )}
+                <h4 className="flex-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  {a.title}
+                </h4>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${priorityColors[a.priority] || priorityColors.normal}`}
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_COLORS[a.priority] || PRIORITY_COLORS.normal}`}
                 >
                   {a.priority}
                 </span>
               </div>
-              <p className="line-clamp-2 text-xs text-gray-600">{a.content}</p>
-              <p className="mt-1 text-xs text-gray-400">
-                {a.author_name} &middot; {formatDate(a.created_at)}
+              <p className="line-clamp-2 text-sm text-gray-600 dark:text-gray-300">
+                {htmlToPlainText(a.content)}
               </p>
-            </div>
+              <div className="mt-1.5 flex items-center justify-between">
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  {a.author_name} &middot; {formatDate(a.created_at)}
+                </p>
+                <span className="text-brand-600 dark:text-brand-400 inline-flex items-center gap-1 text-xs font-medium">
+                  Read more <ArrowRight className="h-3 w-3" />
+                </span>
+              </div>
+            </button>
           ))}
         </div>
       </CardContent>
+
+      {/* Full announcement — a focused, readable view. Renders the sanitized
+          rich content (formatting preserved, no leaked tags). */}
+      <Modal
+        open={!!openAnn}
+        onClose={() => setOpenAnn(null)}
+        title={openAnn?.title || "Announcement"}
+        description={
+          openAnn ? `${openAnn.author_name} · ${formatDate(openAnn.created_at)}` : undefined
+        }
+        className="max-w-2xl"
+      >
+        {openAnn && (
+          <div>
+            <span
+              className={`mb-3 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                PRIORITY_COLORS[openAnn.priority] || PRIORITY_COLORS.normal
+              }`}
+            >
+              {openAnn.priority} priority
+            </span>
+            <div
+              className="[&_a]:text-brand-600 text-sm leading-relaxed text-gray-700 dark:text-gray-200 [&_a]:underline [&_b]:font-semibold [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-bold [&_h2]:mb-2 [&_h2]:font-semibold [&_ol]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_strong]:font-semibold [&_ul]:mb-2 [&_ul]:list-disc [&_ul]:pl-5"
+              dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(openAnn.content) }}
+            />
+          </div>
+        )}
+      </Modal>
     </Card>
   );
 }

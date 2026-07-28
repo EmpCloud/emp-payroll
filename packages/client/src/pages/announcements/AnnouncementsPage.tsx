@@ -5,7 +5,7 @@ import { apiGet } from "@/api/client";
 import { useQuery } from "@tanstack/react-query";
 import { getUser } from "@/api/auth";
 import { Megaphone, Pin, Loader2, Clock, ExternalLink } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { formatDate, sanitizeRichHtml } from "@/lib/utils";
 
 const priorityColors: Record<string, string> = {
   low: "bg-gray-100 text-gray-700",
@@ -108,7 +108,14 @@ export function AnnouncementsPage() {
                     </span>
                     {!a.is_active && <Badge variant="inactive">Archived</Badge>}
                   </div>
-                  <p className="whitespace-pre-wrap text-sm text-gray-700">{a.content}</p>
+                  {/* Rich content from the EmpCloud editor — render sanitized so
+                      it shows formatted (line breaks, bold, lists) instead of
+                      leaking raw tags. Arbitrary-variant classes style the
+                      rendered elements without needing a global stylesheet. */}
+                  <div
+                    className="[&_a]:text-brand-600 text-sm text-gray-700 dark:text-gray-300 [&_a]:underline [&_b]:font-semibold [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(a.content) }}
+                  />
                   <div className="mt-3 flex items-center gap-4 text-xs text-gray-400">
                     <span>By {a.author_name || "Unknown"}</span>
                     <span>{formatDate(a.created_at)}</span>

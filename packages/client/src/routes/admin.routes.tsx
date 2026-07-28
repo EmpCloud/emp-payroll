@@ -86,9 +86,6 @@ const AnnouncementsPage = lazy(() =>
     default: m.AnnouncementsPage,
   })),
 );
-const ExitManagementPage = lazy(() =>
-  import("@/pages/exits/ExitManagementPage").then((m) => ({ default: m.ExitManagementPage })),
-);
 const BenefitsPage = lazy(() =>
   import("@/pages/benefits/BenefitsPage").then((m) => ({ default: m.BenefitsPage })),
 );
@@ -169,7 +166,6 @@ export function AdminRoutes() {
       <Route path="/audit" element={<AuditLogPage />} />
       <Route path="/system" element={<SystemHealthPage />} />
       <Route path="/announcements" element={<AnnouncementsPage />} />
-      <Route path="/exits" element={<ExitManagementPage />} />
       <Route path="/benefits" element={<BenefitsPage />} />
       <Route path="/gl-accounting" element={<GLAccountingPage />} />
       <Route path="/pay-equity" element={<PayEquityPage />} />
