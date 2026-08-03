@@ -19,7 +19,8 @@ import toast from "react-hot-toast";
 const PAGE_SIZE = 20;
 
 export function LoansPage() {
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreateLoan, setShowCreateLoan] = useState(false);
+  const [showCreateAdvance, setShowCreateAdvance] = useState(false);
   const [creating, setCreating] = useState(false);
   const [editLoan, setEditLoan] = useState<any | null>(null);
   const [editing, setEditing] = useState(false);
@@ -116,13 +117,14 @@ export function LoansPage() {
   }, 0);
   const completedCount = Number(completedRes?.data?.total ?? 0);
 
-  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
+  async function handleCreate(e: React.FormEvent<HTMLFormElement>, kind: "loan" | "advance") {
     e.preventDefault();
 
     const fd = new FormData(e.currentTarget);
     const amount = Number(fd.get("amount"));
-    const tenure = Number(fd.get("tenure"));
-    const interest = Number(fd.get("interest") || 0);
+    const isAdvance = kind === "advance";
+    const tenure = isAdvance ? 1 : Number(fd.get("tenure"));
+    const interest = isAdvance ? 0 : Number(fd.get("interest") || 0);
 
     // Client-side guard: amount, tenure, and interest must be non-negative.
     // Tenure must additionally be at least 1 so EMI math stays finite. (#70)
@@ -142,7 +144,7 @@ export function LoansPage() {
     // Optional per-month override. Empty → undefined (engine uses
     // tenure-derived EMI). A positive number capped at the loan amount is
     // sent through; the last month auto-settles whatever's left.
-    const customEmiRaw = (fd.get("customEmi") || "").toString().trim();
+    const customEmiRaw = isAdvance ? "" : (fd.get("customEmi") || "").toString().trim();
     let customEmiAmount: number | undefined = undefined;
     if (customEmiRaw) {
       const v = Number(customEmiRaw);
@@ -161,7 +163,7 @@ export function LoansPage() {
     try {
       await apiPost("/loans", {
         employeeId: fd.get("employeeId"),
-        type: fd.get("type"),
+        type: isAdvance ? fd.get("advanceType") : "loan",
         description: fd.get("description"),
         principalAmount: amount,
         tenureMonths: tenure,
@@ -170,8 +172,9 @@ export function LoansPage() {
         notes: fd.get("notes"),
         ...(customEmiAmount !== undefined ? { customEmiAmount } : {}),
       });
-      toast.success("Loan created");
-      setShowCreate(false);
+      toast.success(isAdvance ? "Advance created" : "Loan created");
+      setShowCreateLoan(false);
+      setShowCreateAdvance(false);
       qc.invalidateQueries({ queryKey: ["loans"] });
       qc.invalidateQueries({ queryKey: ["loans-summary"] });
       qc.invalidateQueries({ queryKey: ["loans-summary-active"] });
@@ -200,8 +203,9 @@ export function LoansPage() {
     if (!editLoan) return;
     const fd = new FormData(e.currentTarget);
     const amount = Number(fd.get("amount"));
-    const tenure = Number(fd.get("tenure"));
-    const interest = Number(fd.get("interest") || 0);
+    const isAdvance = editLoan.type !== "loan";
+    const tenure = isAdvance ? 1 : Number(fd.get("tenure"));
+    const interest = isAdvance ? 0 : Number(fd.get("interest") || 0);
     if (!Number.isFinite(amount) || amount < 0) {
       toast.error("Amount must be zero or greater");
       return;
@@ -218,9 +222,11 @@ export function LoansPage() {
     //  - blank string → null  (clears any existing override; falls back to
     //                          tenure-based EMI)
     //  - positive number → set / replace
-    const customEmiRawEdit = (fd.get("customEmi") || "").toString().trim();
+    const customEmiRawEdit = isAdvance ? "" : (fd.get("customEmi") || "").toString().trim();
     let customEmiAmount: number | null | undefined = undefined;
-    if (customEmiRawEdit === "") {
+    if (isAdvance) {
+      customEmiAmount = null;
+    } else if (customEmiRawEdit === "") {
       customEmiAmount = null;
     } else {
       const v = Number(customEmiRawEdit);
@@ -247,7 +253,7 @@ export function LoansPage() {
         notes: fd.get("notes"),
         customEmiAmount,
       });
-      toast.success("Loan updated");
+      toast.success(isAdvance ? "Advance updated" : "Loan updated");
       setEditLoan(null);
       qc.invalidateQueries({ queryKey: ["loans"] });
       qc.invalidateQueries({ queryKey: ["loans-summary-active"] });
@@ -323,7 +329,7 @@ export function LoansPage() {
     },
     {
       key: "emi_amount",
-      header: "EMI",
+      header: "Deduction",
       className: "text-right",
       render: (r: any) => (
         <div>
@@ -335,25 +341,33 @@ export function LoansPage() {
               Custom (default {formatCurrency(r.emi_amount)})
             </div>
           )}
+          {r.type !== "loan" && (
+            <div className="text-[10px] uppercase tracking-wide text-gray-500">One-time</div>
+          )}
         </div>
       ),
     },
     {
       key: "progress",
       header: "Progress",
-      render: (r: any) => (
-        <div className="w-20">
-          <div className="mb-1 text-xs text-gray-500">
-            {r.installments_paid}/{r.tenure_months}
+      render: (r: any) =>
+        r.type !== "loan" ? (
+          <span className="text-xs text-gray-500">
+            {r.status === "completed" ? "Recovered" : "Pending recovery"}
+          </span>
+        ) : (
+          <div className="w-20">
+            <div className="mb-1 text-xs text-gray-500">
+              {r.installments_paid}/{r.tenure_months}
+            </div>
+            <div className="h-1.5 rounded-full bg-gray-200">
+              <div
+                className="bg-brand-500 h-full rounded-full"
+                style={{ width: `${(r.installments_paid / r.tenure_months) * 100}%` }}
+              />
+            </div>
           </div>
-          <div className="h-1.5 rounded-full bg-gray-200">
-            <div
-              className="bg-brand-500 h-full rounded-full"
-              style={{ width: `${(r.installments_paid / r.tenure_months) * 100}%` }}
-            />
-          </div>
-        </div>
-      ),
+        ),
     },
     {
       key: "status",
@@ -379,9 +393,9 @@ export function LoansPage() {
               size="sm"
               onClick={() => recordPayment(r.id)}
               className="text-green-600"
-              title="Record EMI payment"
+              title={r.type === "loan" ? "Record EMI payment" : "Record advance recovery"}
             >
-              <CheckCircle2 className="h-4 w-4" /> Pay
+              <CheckCircle2 className="h-4 w-4" /> {r.type === "loan" ? "Pay" : "Recover"}
             </Button>
           )}
           {r.status !== "cancelled" && (
@@ -414,17 +428,22 @@ export function LoansPage() {
     <div className="space-y-6">
       <PageHeader
         title="Loans & Advances"
-        description={`${total} of ${totalLoans} loan${totalLoans === 1 ? "" : "s"}`}
+        description={`${total} of ${totalLoans} loan and advance record${totalLoans === 1 ? "" : "s"}`}
         actions={
-          <Button size="sm" onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4" /> New Loan
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowCreateAdvance(true)}>
+              <Plus className="h-4 w-4" /> Add Advance
+            </Button>
+            <Button size="sm" onClick={() => setShowCreateLoan(true)}>
+              <Plus className="h-4 w-4" /> Add Loan
+            </Button>
+          </div>
         }
       />
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <Link to="/loans?status=active" className={cardLinkCls}>
-          <StatCard title="Active Loans" value={String(activeCount)} icon={Banknote} />
+          <StatCard title="Active Loans & Advances" value={String(activeCount)} icon={Banknote} />
         </Link>
         <Link to="/loans?status=active" className={cardLinkCls}>
           <StatCard
@@ -436,7 +455,7 @@ export function LoansPage() {
         </Link>
         <Link to="/loans?status=active" className={cardLinkCls}>
           <StatCard
-            title="Monthly EMI"
+            title="Monthly Deductions"
             value={formatCurrency(totalEMI)}
             subtitle="total across all"
             icon={Banknote}
@@ -529,7 +548,7 @@ export function LoansPage() {
             columns={columns}
             data={loans}
             paginated={false}
-            emptyMessage="No loans found"
+            emptyMessage="No loans or advances found"
           />
           <Pagination
             page={page}
@@ -543,12 +562,12 @@ export function LoansPage() {
       )}
 
       <Modal
-        open={showCreate}
-        onClose={() => setShowCreate(false)}
-        title="Create Loan / Advance"
+        open={showCreateLoan}
+        onClose={() => setShowCreateLoan(false)}
+        title="Add Loan"
         className="max-w-lg"
       >
-        <form onSubmit={handleCreate} className="space-y-4">
+        <form onSubmit={(e) => handleCreate(e, "loan")} className="space-y-4">
           {hasEmployees ? (
             <SelectField
               id="employeeId"
@@ -571,16 +590,6 @@ export function LoansPage() {
               </div>
             </div>
           )}
-          <SelectField
-            id="type"
-            name="type"
-            label="Type"
-            options={[
-              { value: "salary_advance", label: "Salary Advance" },
-              { value: "loan", label: "Loan" },
-              { value: "emergency", label: "Emergency Advance" },
-            ]}
-          />
           <Input
             id="description"
             name="description"
@@ -650,11 +659,89 @@ export function LoansPage() {
             placeholder="Any additional notes"
           />
           <div className="flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={() => setShowCreate(false)}>
+            <Button variant="outline" type="button" onClick={() => setShowCreateLoan(false)}>
               Cancel
             </Button>
             <Button type="submit" loading={creating} disabled={!hasEmployees}>
-              Create Loan
+              Add Loan
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={showCreateAdvance}
+        onClose={() => setShowCreateAdvance(false)}
+        title="Add Advance"
+        description="Add a one-time salary advance. The full amount will be recovered in one payroll period."
+        className="max-w-lg"
+      >
+        <form onSubmit={(e) => handleCreate(e, "advance")} className="space-y-4">
+          {hasEmployees ? (
+            <SelectField
+              id="advanceEmployeeId"
+              name="employeeId"
+              label="Employee"
+              required
+              options={employees.map((employee: any) => ({
+                value: employee.id,
+                label: `${employee.first_name} ${employee.last_name} (${employee.employee_code})`,
+              }))}
+            />
+          ) : (
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">Employee</label>
+              <div className="block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500">
+                There is no employee
+              </div>
+            </div>
+          )}
+          <SelectField
+            id="advanceType"
+            name="advanceType"
+            label="Advance Type"
+            options={[
+              { value: "salary_advance", label: "Salary Advance" },
+              { value: "emergency", label: "Emergency Advance" },
+            ]}
+          />
+          <Input
+            id="advanceDescription"
+            name="description"
+            label="Reason"
+            placeholder="e.g. Medical emergency"
+            required
+          />
+          <Input
+            id="advanceAmount"
+            name="amount"
+            label="Advance Amount (₹)"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="10000"
+            required
+          />
+          <Input
+            id="advanceStartDate"
+            name="startDate"
+            label="Recovery Date"
+            type="date"
+            defaultValue={new Date().toISOString().slice(0, 10)}
+            required
+          />
+          <Input
+            id="advanceNotes"
+            name="notes"
+            label="Notes (optional)"
+            placeholder="Any additional notes"
+          />
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" type="button" onClick={() => setShowCreateAdvance(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={creating} disabled={!hasEmployees}>
+              Add Advance
             </Button>
           </div>
         </form>
@@ -663,7 +750,7 @@ export function LoansPage() {
       <Modal
         open={!!editLoan}
         onClose={() => setEditLoan(null)}
-        title="Edit Loan / Advance"
+        title={editLoan?.type === "loan" ? "Edit Loan" : "Edit Advance"}
         className="max-w-lg"
       >
         {editLoan && (
@@ -674,17 +761,20 @@ export function LoansPage() {
                 <span className="ml-2 text-gray-400">{editLoan.employee_code}</span>
               )}
             </div>
-            <SelectField
-              id="editType"
-              name="type"
-              label="Type"
-              defaultValue={editLoan.type}
-              options={[
-                { value: "salary_advance", label: "Salary Advance" },
-                { value: "loan", label: "Loan" },
-                { value: "emergency", label: "Emergency Advance" },
-              ]}
-            />
+            {editLoan.type === "loan" ? (
+              <input type="hidden" name="type" value="loan" />
+            ) : (
+              <SelectField
+                id="editType"
+                name="type"
+                label="Advance Type"
+                defaultValue={editLoan.type}
+                options={[
+                  { value: "salary_advance", label: "Salary Advance" },
+                  { value: "emergency", label: "Emergency Advance" },
+                ]}
+              />
+            )}
             <Input
               id="editDescription"
               name="description"
@@ -692,7 +782,7 @@ export function LoansPage() {
               defaultValue={editLoan.description || ""}
               required
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className={editLoan.type === "loan" ? "grid grid-cols-2 gap-4" : ""}>
               <Input
                 id="editAmount"
                 name="amount"
@@ -703,50 +793,58 @@ export function LoansPage() {
                 defaultValue={editLoan.principal_amount}
                 required
               />
-              <Input
-                id="editTenure"
-                name="tenure"
-                label="Tenure (months)"
-                type="number"
-                min="1"
-                step="1"
-                defaultValue={editLoan.tenure_months}
-                required
-              />
+              {editLoan.type === "loan" && (
+                <Input
+                  id="editTenure"
+                  name="tenure"
+                  label="Tenure (months)"
+                  type="number"
+                  min="1"
+                  step="1"
+                  defaultValue={editLoan.tenure_months}
+                  required
+                />
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                id="editInterest"
-                name="interest"
-                label="Interest Rate (%)"
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={editLoan.interest_rate ?? 0}
-              />
+            <div className={editLoan.type === "loan" ? "grid grid-cols-2 gap-4" : ""}>
+              {editLoan.type === "loan" && (
+                <Input
+                  id="editInterest"
+                  name="interest"
+                  label="Interest Rate (%)"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  defaultValue={editLoan.interest_rate ?? 0}
+                />
+              )}
               <Input
                 id="editStartDate"
                 name="startDate"
-                label="Start Date"
+                label={editLoan.type === "loan" ? "Start Date" : "Recovery Date"}
                 type="date"
                 defaultValue={String(editLoan.start_date || "").slice(0, 10)}
                 required
               />
             </div>
-            <Input
-              id="editCustomEmi"
-              name="customEmi"
-              label="Custom Monthly EMI (₹) — optional"
-              type="number"
-              min="1"
-              step="1"
-              defaultValue={editLoan.custom_emi_amount ?? ""}
-              placeholder="Leave blank to use tenure-based EMI"
-            />
-            <div className="-mt-2 text-xs text-gray-500">
-              Override the monthly deduction. Last instalment auto-settles whatever's left. Clear
-              the field to fall back to the tenure-based EMI.
-            </div>
+            {editLoan.type === "loan" && (
+              <Input
+                id="editCustomEmi"
+                name="customEmi"
+                label="Custom Monthly EMI (₹) — optional"
+                type="number"
+                min="1"
+                step="1"
+                defaultValue={editLoan.custom_emi_amount ?? ""}
+                placeholder="Leave blank to use tenure-based EMI"
+              />
+            )}
+            {editLoan.type === "loan" && (
+              <div className="-mt-2 text-xs text-gray-500">
+                Override the monthly deduction. Last instalment auto-settles whatever's left. Clear
+                the field to fall back to the tenure-based EMI.
+              </div>
+            )}
             <Input
               id="editNotes"
               name="notes"
