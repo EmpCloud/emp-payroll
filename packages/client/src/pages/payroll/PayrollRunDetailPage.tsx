@@ -39,6 +39,7 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { api, apiPost } from "@/api/client";
 import { useMemo, useState } from "react";
+import { buildPayrollReportCsv } from "./payroll-report-export";
 import toast from "react-hot-toast";
 import { Search, X } from "lucide-react";
 
@@ -259,103 +260,12 @@ function exportPayrollCSV(payslips: any[], run: any) {
 }
 
 // Export Report — a separate, richer CSV next to the existing Export CSV.
-// 22 columns, same shape the reusable Python tool in
+// 23 columns, same shape the reusable Python tool in
 // D:\EmpCloud\CustomScript\payroll_export.py emits. Ordered so HR reads it
 // as "who is this -> what they earn -> attendance impact -> variable adds ->
 // totals -> deductions -> net".
 function exportPayrollReport(payslips: any[], run: any) {
-  const headers = [
-    "Org",
-    "Employee Code",
-    "Name",
-    "Location",
-    "Department",
-    "Monthly Gross",
-    "Daily Gross",
-    "Basic Salary",
-    "House Rent Allowance",
-    "Special Allowance",
-    "Conveyance Allowance",
-    "No of LOP",
-    "LOP Amount Deducted",
-    "No of Night Days",
-    "Night Allowance",
-    "No of Overtime",
-    "Overtime Allowance",
-    "Total Earnings",
-    "Deductions Employee PF",
-    "Deductions ESIC",
-    "Deductions PT TAX",
-    "Final Net Pay",
-  ];
-
-  // Look up an item in earnings / deductions by its component code. Returns 0
-  // when the line isn't present (e.g. ESI absent for ineligible employees).
-  const findAmt = (items: any, code: string): number => {
-    const arr = typeof items === "string" ? JSON.parse(items) : items || [];
-    if (!Array.isArray(arr)) return 0;
-    const row = arr.find((c: any) => String(c?.code || "").toUpperCase() === code);
-    return Number(row?.amount) || 0;
-  };
-  // Variable components carry their count in meta.{nights, otDays}.
-  const findMeta = (items: any, code: string, key: string): number => {
-    const arr = typeof items === "string" ? JSON.parse(items) : items || [];
-    if (!Array.isArray(arr)) return 0;
-    const row = arr.find((c: any) => String(c?.code || "").toUpperCase() === code);
-    return Number(row?.meta?.[key]) || 0;
-  };
-
-  const fmtCount = (n: number): string => {
-    if (!n) return "0";
-    return n % 1 === 0 ? String(n) : n.toFixed(1);
-  };
-  const fmtMoney = (n: number): string => String(Math.round(Number(n) || 0));
-
-  const csvCell = (v: unknown): string => {
-    const s = v == null ? "" : String(v);
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-
-  const rows = payslips.map((p: any) => {
-    const earnings = p.earnings;
-    const deductions = p.deductions;
-    const monthlyGross = Number(p.monthly_gross) || 0;
-    const totalDays = Number(p.total_days) || 31;
-    const dailyGross = totalDays > 0 ? monthlyGross / totalDays : 0;
-    const lopDays = Number(p.lop_days) || 0;
-    const lopAmount = totalDays > 0 ? (monthlyGross * lopDays) / totalDays : 0;
-
-    const name = `${p.first_name || ""} ${p.last_name || ""}`.trim();
-    return [
-      p.organization_name || run?.organization_name || run?.org_name || "",
-      p.employee_code || "",
-      name,
-      p.location || "",
-      p.department || "",
-      fmtMoney(monthlyGross),
-      fmtMoney(dailyGross),
-      fmtMoney(findAmt(earnings, "BASIC")),
-      fmtMoney(findAmt(earnings, "HRA")),
-      fmtMoney(findAmt(earnings, "SA")),
-      fmtMoney(findAmt(earnings, "CA")),
-      fmtCount(lopDays),
-      fmtMoney(lopAmount),
-      fmtCount(findMeta(earnings, "NIGHT_ALLOW", "nights")),
-      fmtMoney(findAmt(earnings, "NIGHT_ALLOW")),
-      fmtCount(findMeta(earnings, "OVERTIME", "otDays")),
-      fmtMoney(findAmt(earnings, "OVERTIME")),
-      fmtMoney(p.gross_earnings),
-      fmtMoney(findAmt(deductions, "EPF")),
-      fmtMoney(findAmt(deductions, "ESI")),
-      fmtMoney(findAmt(deductions, "PT")),
-      fmtMoney(p.net_pay),
-    ];
-  });
-
-  // UTF-8 with BOM so Excel opens the file with the right encoding (Indian
-  // names + ₹ glyphs render correctly without manual "Import" dance).
-  const csv =
-    "﻿" + [headers.map(csvCell).join(","), ...rows.map((r) => r.map(csvCell).join(","))].join("\n");
+  const csv = buildPayrollReportCsv(payslips, run);
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
