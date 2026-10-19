@@ -70,7 +70,7 @@ router.post(
         error: { code: "INVALID_INPUT", message: "Holiday name is required" },
       });
     }
-    if (!/[A-Za-z]/.test(trimmedName)) {
+    if (!/\p{L}/u.test(trimmedName)) {
       return res.status(400).json({
         success: false,
         error: {
@@ -111,12 +111,10 @@ router.post(
       updated_at: new Date(),
     });
 
-    res
-      .status(201)
-      .json({
-        success: true,
-        data: { id: String(id), name: trimmedName, date, type: normalizedType },
-      });
+    res.status(201).json({
+      success: true,
+      data: { id: String(id), name: trimmedName, date, type: normalizedType },
+    });
   }),
 );
 

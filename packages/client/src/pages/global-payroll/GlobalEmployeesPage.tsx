@@ -13,33 +13,34 @@ import { useDepartments } from "@/api/hooks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Loader2, Globe, Pencil, UserX } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 const EMPLOYMENT_TYPES = [
-  { value: "", label: "All Types" },
-  { value: "eor", label: "EOR" },
-  { value: "contractor", label: "Contractor" },
-  { value: "direct_hire", label: "Direct Hire" },
+  { value: "", labelKey: "globalEmployeesPage.filters.allTypes" },
+  { value: "eor", labelKey: "globalEmployeesPage.employmentTypes.eor" },
+  { value: "contractor", labelKey: "globalEmployeesPage.employmentTypes.contractor" },
+  { value: "direct_hire", labelKey: "globalEmployeesPage.employmentTypes.direct_hire" },
 ];
 
 const CONTRACT_TYPES = [
-  { value: "full_time", label: "Full-time" },
-  { value: "part_time", label: "Part-time" },
-  { value: "fixed_term", label: "Fixed-term" },
+  { value: "full_time", labelKey: "globalEmployeesPage.contractTypes.fullTime" },
+  { value: "part_time", labelKey: "globalEmployeesPage.contractTypes.partTime" },
+  { value: "fixed_term", labelKey: "globalEmployeesPage.contractTypes.fixedTerm" },
 ];
 
 const STATUS_OPTIONS = [
-  { value: "", label: "All Statuses" },
-  { value: "active", label: "Active" },
-  { value: "onboarding", label: "Onboarding" },
-  { value: "offboarding", label: "Offboarding" },
-  { value: "terminated", label: "Terminated" },
+  { value: "", labelKey: "globalEmployeesPage.filters.allStatuses" },
+  { value: "active", labelKey: "globalEmployeesPage.statuses.active" },
+  { value: "onboarding", labelKey: "globalEmployeesPage.statuses.onboarding" },
+  { value: "offboarding", labelKey: "globalEmployeesPage.statuses.offboarding" },
+  { value: "terminated", labelKey: "globalEmployeesPage.statuses.terminated" },
 ];
 
 const SALARY_FREQ = [
-  { value: "monthly", label: "Monthly" },
-  { value: "biweekly", label: "Bi-weekly" },
-  { value: "weekly", label: "Weekly" },
-  { value: "annual", label: "Annual" },
+  { value: "monthly", labelKey: "globalEmployeesPage.salaryFrequencies.monthly" },
+  { value: "biweekly", labelKey: "globalEmployeesPage.salaryFrequencies.biweekly" },
+  { value: "weekly", labelKey: "globalEmployeesPage.salaryFrequencies.weekly" },
+  { value: "annual", labelKey: "globalEmployeesPage.salaryFrequencies.annual" },
 ];
 
 const STATUS_BADGE: Record<string, "active" | "draft" | "inactive"> = {
@@ -89,6 +90,8 @@ const COUNTRY_FLAGS: Record<string, string> = {
 };
 
 export function GlobalEmployeesPage() {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
   const navigate = useNavigate();
   const qc = useQueryClient();
   // #151 — Seed filters from URL params so drill-in links from the Global
@@ -152,8 +155,25 @@ export function GlobalEmployeesPage() {
   const countries = countriesRes?.data || [];
   const employees = empRes?.data || [];
 
+  const employmentTypeOptions = EMPLOYMENT_TYPES.map(({ value, labelKey }) => ({
+    value,
+    label: t(labelKey),
+  }));
+  const contractTypeOptions = CONTRACT_TYPES.map(({ value, labelKey }) => ({
+    value,
+    label: t(labelKey),
+  }));
+  const statusOptions = STATUS_OPTIONS.map(({ value, labelKey }) => ({
+    value,
+    label: t(labelKey),
+  }));
+  const salaryFrequencyOptions = SALARY_FREQ.map(({ value, labelKey }) => ({
+    value,
+    label: t(labelKey),
+  }));
+
   const countryOptions = [
-    { value: "", label: "All Countries" },
+    { value: "", label: t("globalEmployeesPage.filters.allCountries") },
     ...countries.map((c: any) => ({ value: c.id, label: c.name })),
   ];
 
@@ -222,7 +242,7 @@ export function GlobalEmployeesPage() {
       !form.startDate ||
       !form.salaryAmount
     ) {
-      toast.error("Please fill all required fields");
+      toast.error(t("globalEmployeesPage.validation.required"));
       return;
     }
     setSaving(true);
@@ -233,10 +253,10 @@ export function GlobalEmployeesPage() {
       };
       if (editingId) {
         await apiPut(`/global/employees/${editingId}`, payload);
-        toast.success("Global employee updated");
+        toast.success(t("globalEmployeesPage.messages.updated"));
       } else {
         await apiPost("/global/employees", payload);
-        toast.success("Global employee added");
+        toast.success(t("globalEmployeesPage.messages.added"));
       }
       closeModal();
       qc.invalidateQueries({ queryKey: ["global-employees"] });
@@ -244,7 +264,9 @@ export function GlobalEmployeesPage() {
     } catch (err: any) {
       toast.error(
         err.response?.data?.error?.message ||
-          (editingId ? "Failed to update employee" : "Failed to add employee"),
+          (editingId
+            ? t("globalEmployeesPage.messages.updateFailed")
+            : t("globalEmployeesPage.messages.addFailed")),
       );
     } finally {
       setSaving(false);
@@ -253,17 +275,21 @@ export function GlobalEmployeesPage() {
 
   const handleTerminate = async (row: any) => {
     const reason = window.prompt(
-      `Terminate ${row.first_name} ${row.last_name}? Enter a reason (required):`,
+      t("globalEmployeesPage.messages.terminatePrompt", {
+        name: `${row.first_name} ${row.last_name}`,
+      }),
     );
     if (!reason || !reason.trim()) return;
     setTerminatingId(row.id);
     try {
       await apiPost(`/global/employees/${row.id}/terminate`, { reason: reason.trim() });
-      toast.success("Employee terminated");
+      toast.success(t("globalEmployeesPage.messages.terminated"));
       qc.invalidateQueries({ queryKey: ["global-employees"] });
       qc.invalidateQueries({ queryKey: ["global-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to terminate employee");
+      toast.error(
+        err.response?.data?.error?.message || t("globalEmployeesPage.messages.terminateFailed"),
+      );
     } finally {
       setTerminatingId(null);
     }
@@ -272,7 +298,7 @@ export function GlobalEmployeesPage() {
   const columns = [
     {
       key: "name",
-      header: "Name",
+      header: t("globalEmployeesPage.table.name"),
       render: (row: any) => (
         <button
           className="text-brand-600 text-left font-medium hover:underline"
@@ -284,7 +310,7 @@ export function GlobalEmployeesPage() {
     },
     {
       key: "country",
-      header: "Country",
+      header: t("globalEmployeesPage.table.country"),
       render: (row: any) => (
         <span>
           {COUNTRY_FLAGS[row.country_code] || ""} {row.country_name}
@@ -293,49 +319,49 @@ export function GlobalEmployeesPage() {
     },
     {
       key: "employment_type",
-      header: "Type",
+      header: t("globalEmployeesPage.table.type"),
       render: (row: any) => (
         <Badge variant={TYPE_BADGE[row.employment_type] || "draft"}>
-          {row.employment_type === "eor"
-            ? "EOR"
-            : row.employment_type === "direct_hire"
-              ? "Direct Hire"
-              : "Contractor"}
+          {t(`globalEmployeesPage.employmentTypes.${row.employment_type}`, {
+            defaultValue: row.employment_type,
+          })}
         </Badge>
       ),
     },
     {
       key: "status",
-      header: "Status",
+      header: t("globalEmployeesPage.table.status"),
       render: (row: any) => (
         <Badge variant={STATUS_BADGE[row.status] || "draft"}>
-          {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+          {t(`globalEmployeesPage.statuses.${row.status}`, { defaultValue: row.status })}
         </Badge>
       ),
     },
     {
       key: "salary",
-      header: "Salary",
+      header: t("globalEmployeesPage.table.salary"),
       render: (row: any) => (
         <span className="font-mono text-sm">
           {row.country_currency_symbol || row.salary_currency}{" "}
-          {(Number(row.salary_amount) / 100).toLocaleString()}/
-          {row.salary_frequency === "annual" ? "yr" : "mo"}
+          {(Number(row.salary_amount) / 100).toLocaleString(language)}/
+          {t(`globalEmployeesPage.salaryFrequencyShort.${row.salary_frequency}`, {
+            defaultValue: row.salary_frequency,
+          })}
         </span>
       ),
     },
     {
       key: "job_title",
-      header: "Job Title",
+      header: t("globalEmployeesPage.table.jobTitle"),
     },
     {
       key: "start_date",
-      header: "Start Date",
-      render: (row: any) => new Date(row.start_date).toLocaleDateString(),
+      header: t("globalEmployeesPage.table.startDate"),
+      render: (row: any) => new Date(row.start_date).toLocaleDateString(language),
     },
     {
       key: "actions",
-      header: "Actions",
+      header: t("globalEmployeesPage.table.actions"),
       render: (row: any) => (
         // Edit reuses the Add modal in edit-mode (PUT). Terminate prompts for
         // a reason and POSTs to /employees/:id/terminate (the backend's
@@ -345,7 +371,8 @@ export function GlobalEmployeesPage() {
           <Button
             variant="ghost"
             size="sm"
-            title="Edit employee"
+            title={t("globalEmployeesPage.actions.editEmployee")}
+            aria-label={t("globalEmployeesPage.actions.editEmployee")}
             onClick={(e) => {
               e.stopPropagation();
               openEdit(row);
@@ -360,7 +387,14 @@ export function GlobalEmployeesPage() {
             variant="ghost"
             size="sm"
             title={
-              row.status === "terminated" ? "Employee already terminated" : "Terminate employee"
+              row.status === "terminated"
+                ? t("globalEmployeesPage.actions.alreadyTerminated")
+                : t("globalEmployeesPage.actions.terminateEmployee")
+            }
+            aria-label={
+              row.status === "terminated"
+                ? t("globalEmployeesPage.actions.alreadyTerminated")
+                : t("globalEmployeesPage.actions.terminateEmployee")
             }
             disabled={row.status === "terminated" || terminatingId === row.id}
             onClick={(e) => {
@@ -386,12 +420,12 @@ export function GlobalEmployeesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Global Employees"
-        description="Manage EOR, contractor, and direct-hire employees worldwide"
+        title={t("globalEmployeesPage.title")}
+        description={t("globalEmployeesPage.description")}
         actions={
           <Button onClick={() => setShowAdd(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Employee
+            {t("globalEmployeesPage.actions.addEmployee")}
           </Button>
         }
       />
@@ -404,7 +438,7 @@ export function GlobalEmployeesPage() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
                 className="pl-10"
-                placeholder="Search by name, email, or country..."
+                placeholder={t("globalEmployeesPage.filters.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -417,13 +451,13 @@ export function GlobalEmployeesPage() {
             />
             <SelectField
               className="w-36"
-              options={EMPLOYMENT_TYPES}
+              options={employmentTypeOptions}
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
             />
             <SelectField
               className="w-36"
-              options={STATUS_OPTIONS}
+              options={statusOptions}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             />
@@ -440,7 +474,7 @@ export function GlobalEmployeesPage() {
         <DataTable
           columns={columns}
           data={employees}
-          emptyMessage="No global employees found. Click 'Add Employee' to hire your first international team member."
+          emptyMessage={t("globalEmployeesPage.empty")}
         />
       )}
 
@@ -448,50 +482,54 @@ export function GlobalEmployeesPage() {
       <Modal
         open={showAdd}
         onClose={closeModal}
-        title={editingId ? "Edit Global Employee" : "Add Global Employee"}
+        title={
+          editingId
+            ? t("globalEmployeesPage.modal.editTitle")
+            : t("globalEmployeesPage.modal.addTitle")
+        }
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="First Name *"
+              label={t("globalEmployeesPage.modal.firstName")}
               value={form.firstName}
               onChange={(e) => setForm({ ...form, firstName: e.target.value })}
             />
             <Input
-              label="Last Name *"
+              label={t("globalEmployeesPage.modal.lastName")}
               value={form.lastName}
               onChange={(e) => setForm({ ...form, lastName: e.target.value })}
             />
           </div>
           <Input
-            label="Email *"
+            label={t("globalEmployeesPage.modal.email")}
             type="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
           <div className="grid grid-cols-2 gap-4">
             <SelectField
-              label="Country *"
+              label={t("globalEmployeesPage.modal.country")}
               options={countrySelectOptions}
               value={form.countryId}
               onChange={(e) => setForm({ ...form, countryId: e.target.value })}
             />
             <SelectField
-              label="Employment Type *"
-              options={EMPLOYMENT_TYPES.filter((t) => t.value)}
+              label={t("globalEmployeesPage.modal.employmentType")}
+              options={employmentTypeOptions.filter((option) => option.value)}
               value={form.employmentType}
               onChange={(e) => setForm({ ...form, employmentType: e.target.value })}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <SelectField
-              label="Contract Type"
-              options={CONTRACT_TYPES}
+              label={t("globalEmployeesPage.modal.contractType")}
+              options={contractTypeOptions}
               value={form.contractType}
               onChange={(e) => setForm({ ...form, contractType: e.target.value })}
             />
             <Input
-              label="Job Title *"
+              label={t("globalEmployeesPage.modal.jobTitle")}
               value={form.jobTitle}
               onChange={(e) => setForm({ ...form, jobTitle: e.target.value })}
             />
@@ -499,24 +537,24 @@ export function GlobalEmployeesPage() {
           <div className="grid grid-cols-2 gap-4">
             {departments.length > 0 ? (
               <SelectField
-                label="Department"
+                label={t("globalEmployeesPage.modal.department")}
                 value={form.department}
                 onChange={(e) => setForm({ ...form, department: e.target.value })}
                 options={[
-                  { value: "", label: "Select department..." },
+                  { value: "", label: t("globalEmployeesPage.modal.selectDepartment") },
                   ...departments.map((d) => ({ value: d.name, label: d.name })),
                 ]}
               />
             ) : (
               <Input
-                label="Department"
+                label={t("globalEmployeesPage.modal.department")}
                 value={form.department}
                 onChange={(e) => setForm({ ...form, department: e.target.value })}
-                title="No departments configured yet — add some from Settings > Departments"
+                title={t("globalEmployeesPage.modal.noDepartments")}
               />
             )}
             <Input
-              label="Start Date *"
+              label={t("globalEmployeesPage.modal.startDate")}
               type="date"
               value={form.startDate}
               onChange={(e) => setForm({ ...form, startDate: e.target.value })}
@@ -524,25 +562,25 @@ export function GlobalEmployeesPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Salary Amount * (in major currency unit)"
+              label={t("globalEmployeesPage.modal.salaryAmount")}
               type="number"
               value={form.salaryAmount}
               onChange={(e) => setForm({ ...form, salaryAmount: e.target.value })}
             />
             <SelectField
-              label="Pay Frequency"
-              options={SALARY_FREQ}
+              label={t("globalEmployeesPage.modal.payFrequency")}
+              options={salaryFrequencyOptions}
               value={form.salaryFrequency}
               onChange={(e) => setForm({ ...form, salaryFrequency: e.target.value })}
             />
           </div>
 
           <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
-            Banking & Tax (Optional)
+            {t("globalEmployeesPage.modal.bankingTax")}
           </p>
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Tax ID"
+              label={t("globalEmployeesPage.modal.taxId")}
               value={form.taxId}
               onChange={(e) => setForm({ ...form, taxId: e.target.value })}
             />
@@ -550,22 +588,22 @@ export function GlobalEmployeesPage() {
                  it explicit which is the bank, the account number, and the
                  routing number; add placeholders showing the expected shape. */}
             <Input
-              label="Bank Name"
-              placeholder="e.g. HDFC Bank"
+              label={t("globalEmployeesPage.modal.bankName")}
+              placeholder={t("globalEmployeesPage.modal.bankNamePlaceholder")}
               value={form.bankName}
               onChange={(e) => setForm({ ...form, bankName: e.target.value })}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Bank Account Number"
-              placeholder="e.g. 12345678901234"
+              label={t("globalEmployeesPage.modal.bankAccount")}
+              placeholder={t("globalEmployeesPage.modal.bankAccountPlaceholder")}
               value={form.bankAccount}
               onChange={(e) => setForm({ ...form, bankAccount: e.target.value })}
             />
             <Input
-              label="Bank Routing / IFSC"
-              placeholder="e.g. HDFC0001234"
+              label={t("globalEmployeesPage.modal.bankRouting")}
+              placeholder={t("globalEmployeesPage.modal.bankRoutingPlaceholder")}
               value={form.bankRouting}
               onChange={(e) => setForm({ ...form, bankRouting: e.target.value })}
             />
@@ -573,11 +611,13 @@ export function GlobalEmployeesPage() {
 
           <div className="flex justify-end gap-3 pt-4">
             <Button variant="outline" onClick={closeModal}>
-              Cancel
+              {t("globalEmployeesPage.actions.cancel")}
             </Button>
             <Button onClick={handleSubmit} disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {editingId ? "Save Changes" : "Add Employee"}
+              {editingId
+                ? t("globalEmployeesPage.actions.saveChanges")
+                : t("globalEmployeesPage.actions.addEmployee")}
             </Button>
           </div>
         </div>

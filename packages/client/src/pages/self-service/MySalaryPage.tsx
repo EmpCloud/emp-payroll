@@ -5,10 +5,13 @@ import { formatCurrency } from "@/lib/utils";
 import { useMySalary } from "@/api/hooks";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const COLORS = ["#6366F1", "#818CF8", "#A5B4FC", "#C7D2FE", "#E0E7FF"];
 
 export function MySalaryPage() {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
   const { data: res, isLoading } = useMySalary();
 
   if (isLoading) {
@@ -20,31 +23,26 @@ export function MySalaryPage() {
   }
 
   const salary = res?.data;
-  if (!salary) return <div className="p-8 text-gray-500">No salary information available</div>;
+  if (!salary) return <div className="p-8 text-gray-500">{t("mySalaryPage.unavailable")}</div>;
 
   const components =
     typeof salary.components === "string" ? JSON.parse(salary.components) : salary.components || [];
+  const componentName = (code: string) =>
+    t(`mySalaryPage.components.${code}`, { defaultValue: code });
   const pieData = components.map((c: any, i: number) => ({
-    name:
-      c.code === "BASIC"
-        ? "Basic Salary"
-        : c.code === "HRA"
-          ? "HRA"
-          : c.code === "SA"
-            ? "Special Allowance"
-            : c.code,
+    name: componentName(c.code),
     value: c.monthlyAmount,
     color: COLORS[i % COLORS.length],
   }));
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My Salary" description="Your CTC breakdown and salary structure" />
+      <PageHeader title={t("mySalaryPage.title")} description={t("mySalaryPage.description")} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle>Annual Summary</CardTitle>
+            <CardTitle>{t("mySalaryPage.annualSummary")}</CardTitle>
           </CardHeader>
           <CardContent>
             <dl className="space-y-3">
@@ -72,32 +70,32 @@ export function MySalaryPage() {
                 return (
                   <>
                     <div className="flex justify-between text-sm">
-                      <dt className="text-gray-500">Annual CTC (configured)</dt>
+                      <dt className="text-gray-500">{t("mySalaryPage.annualCtcConfigured")}</dt>
                       <dd className="font-medium text-gray-900">{formatCurrency(ctc)}</dd>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <dt className="text-gray-500">Annual gross from components</dt>
+                      <dt className="text-gray-500">{t("mySalaryPage.annualGrossComponents")}</dt>
                       <dd className="font-medium text-gray-900">
                         {formatCurrency(componentsAnnual)}
                       </dd>
                     </div>
                     {showDelta && (
                       <p className="text-xs leading-snug text-gray-400">
-                        Small differences between configured CTC and the sum of components are
-                        expected — components are rounded to whole rupees per month before being
-                        annualised.
+                        {t("mySalaryPage.roundingNotice")}
                       </p>
                     )}
                     {grossAnnual !== componentsAnnual && (
                       <div className="flex justify-between text-sm">
-                        <dt className="text-gray-500">Gross Salary (Annual)</dt>
+                        <dt className="text-gray-500">{t("mySalaryPage.grossSalaryAnnual")}</dt>
                         <dd className="font-medium text-gray-900">{formatCurrency(grossAnnual)}</dd>
                       </div>
                     )}
                     {components.map((c: any) => (
                       <div key={c.code} className="flex justify-between text-sm">
                         <dt className="text-gray-500">
-                          {`Monthly ${c.code === "BASIC" ? "Basic" : c.code === "HRA" ? "HRA" : c.code}`}
+                          {t("mySalaryPage.monthlyComponent", {
+                            component: componentName(c.code),
+                          })}
                         </dt>
                         <dd className="font-medium text-gray-900">
                           {formatCurrency(c.monthlyAmount)}
@@ -113,7 +111,7 @@ export function MySalaryPage() {
 
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Monthly Salary Breakdown</CardTitle>
+            <CardTitle>{t("mySalaryPage.monthlyBreakdown")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-8">
@@ -171,31 +169,37 @@ export function MySalaryPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Salary Components</CardTitle>
-            <Badge variant="active">Effective from {salary.effective_from?.slice(0, 10)}</Badge>
+            <CardTitle>{t("mySalaryPage.salaryComponents")}</CardTitle>
+            <Badge variant="active">
+              {t("mySalaryPage.effectiveFrom", {
+                date: salary.effective_from
+                  ? new Intl.DateTimeFormat(language, { dateStyle: "medium" }).format(
+                      new Date(salary.effective_from),
+                    )
+                  : "—",
+              })}
+            </Badge>
           </div>
         </CardHeader>
         <CardContent>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left">
-                <th className="pb-2 font-medium text-gray-500">Component</th>
-                <th className="pb-2 text-right font-medium text-gray-500">Monthly</th>
-                <th className="pb-2 text-right font-medium text-gray-500">Annual</th>
+                <th className="pb-2 font-medium text-gray-500">
+                  {t("mySalaryPage.columns.component")}
+                </th>
+                <th className="pb-2 text-right font-medium text-gray-500">
+                  {t("mySalaryPage.columns.monthly")}
+                </th>
+                <th className="pb-2 text-right font-medium text-gray-500">
+                  {t("mySalaryPage.columns.annual")}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {components.map((c: any) => (
                 <tr key={c.code}>
-                  <td className="py-2 text-gray-900">
-                    {c.code === "BASIC"
-                      ? "Basic Salary"
-                      : c.code === "HRA"
-                        ? "HRA"
-                        : c.code === "SA"
-                          ? "Special Allowance"
-                          : c.code}
-                  </td>
+                  <td className="py-2 text-gray-900">{componentName(c.code)}</td>
                   <td className="py-2 text-right text-gray-900">
                     {formatCurrency(c.monthlyAmount)}
                   </td>

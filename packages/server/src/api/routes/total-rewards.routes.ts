@@ -31,6 +31,7 @@ router.get(
       String(req.user!.empcloudOrgId),
       param(req, "empId"),
       req.query.financialYear as string,
+      req.query.lang as string,
     );
     res.setHeader("Content-Type", "text/html");
     // #135 — allow inline onclick="window.print()" on the Print / Save as PDF button
@@ -63,6 +64,7 @@ router.get(
       String(req.user!.empcloudOrgId),
       String(req.user!.empcloudUserId),
       req.query.financialYear as string,
+      req.query.lang as string,
     );
     res.setHeader("Content-Type", "text/html");
     // #135 — allow inline onclick="window.print()" on the Print / Save as PDF button

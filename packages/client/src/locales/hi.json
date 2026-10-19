@@ -1,0 +1,2445 @@
+{
+  "language": { "change": "भाषा बदलें", "menuLabel": "भाषा चुनें" },
+  "common": {
+    "appName": "EMP Payroll",
+    "user": "उपयोगकर्ता",
+    "employees": "कर्मचारी",
+    "employee_one": "{{count}} कर्मचारी",
+    "employee_other": "{{count}} कर्मचारी",
+    "unassigned": "अनिर्दिष्ट",
+    "noResults": "कोई परिणाम नहीं मिला"
+  },
+  "employeeList": {
+    "title": "कर्मचारी",
+    "loading": "लोड हो रहा है...",
+    "summary": "{{total}} में से {{visible}} कर्मचारी",
+    "summary_one": "{{total}} में से {{visible}} कर्मचारी",
+    "summary_other": "{{total}} में से {{visible}} कर्मचारी",
+    "pendingBankRequests": "लंबित बैंक अपडेट अनुरोध ({{count}})",
+    "bankDetails": "{{bank}} — खाता {{accountNumber}} — IFSC {{ifscCode}}",
+    "approve": "स्वीकृत करें",
+    "reject": "अस्वीकार करें",
+    "bankUpdated": "बैंक विवरण अपडेट किए गए",
+    "requestRejected": "अनुरोध अस्वीकार किया गया",
+    "actionFailed": "{{action}} की कार्रवाई विफल रही",
+    "selectEmployee": "{{name}} को चुनें",
+    "export": "निर्यात",
+    "exportSuccess": "कर्मचारी CSV निर्यात किया गया",
+    "exportFailed": "निर्यात विफल रहा",
+    "import": "आयात",
+    "importTitle": "CSV फ़ाइल से नए कर्मचारी आयात करें",
+    "bulkUpdate": "सामूहिक अपडेट",
+    "bulkUpdateTitle": "CSV फ़ाइल से मौजूदा कर्मचारियों को अपडेट करें",
+    "bulkSalary": "सामूहिक वेतन",
+    "bulkSalaryTitle": "CSV फ़ाइल से वेतन अपडेट करें",
+    "addEmployee": "कर्मचारी जोड़ें",
+    "searchPlaceholder": "नाम, ईमेल, कोड या पद से खोजें...",
+    "filterDepartment": "विभाग के अनुसार फ़िल्टर करें",
+    "allDepartments": "सभी विभाग",
+    "filterLocation": "स्थान के अनुसार फ़िल्टर करें",
+    "allLocations": "सभी स्थान",
+    "clearFilters": "फ़िल्टर हटाएँ",
+    "selected": "{{count}} कर्मचारी चुने गए",
+    "selected_one": "{{count}} कर्मचारी चुना गया",
+    "selected_other": "{{count}} कर्मचारी चुने गए",
+    "updateSalary": "वेतन अपडेट करें",
+    "clear": "हटाएँ",
+    "columns": {
+      "employee": "कर्मचारी",
+      "designation": "पद",
+      "email": "ईमेल",
+      "location": "स्थान",
+      "joined": "कार्यग्रहण तिथि",
+      "status": "स्थिति"
+    },
+    "statuses": { "active": "सक्रिय", "inactive": "निष्क्रिय" }
+  },
+  "orgChart": {
+    "title": "संगठन चार्ट",
+    "description": "रिपोर्टिंग संरचना — खींचकर स्थान बदलें, स्क्रॉल या पिंच करके ज़ूम करें",
+    "organization": "संगठन",
+    "noEmployees": "चार्ट में दिखाने के लिए अभी कोई कर्मचारी नहीं है।",
+    "people": "लोग",
+    "managers": "प्रबंधक",
+    "departments": "विभाग",
+    "personCount": "{{count}} लोग",
+    "personCount_one": "{{count}} व्यक्ति",
+    "personCount_other": "{{count}} लोग",
+    "collapse": "समेटें",
+    "expand": "फैलाएँ",
+    "expandReports": "{{count}} अधीनस्थ दिखाएँ",
+    "viewAll": "सभी {{label}} देखें",
+    "searchPlaceholder": "लोग, पद या विभाग खोजें…",
+    "searchAria": "संगठन चार्ट में खोजें",
+    "clearSearch": "खोज साफ़ करें",
+    "zoomIn": "ज़ूम इन",
+    "zoomOut": "ज़ूम आउट",
+    "fitToScreen": "स्क्रीन में समायोजित करें",
+    "fullscreen": "पूर्ण स्क्रीन",
+    "hint": "खींचकर स्थान बदलें · स्क्रॉल करके ज़ूम करें · टच पर पिंच करें",
+    "allPeopleTitle": "सभी लोग ({{count}})",
+    "managersTitle": "प्रबंधक ({{count}})",
+    "departmentsTitle": "विभाग ({{count}})",
+    "filterDepartments": "विभाग फ़िल्टर करें…",
+    "filterPeople": "लोगों को फ़िल्टर करें…",
+    "noMatches": "कोई मिलान नहीं।",
+    "reportCount": "{{count}} अधीनस्थ",
+    "reportCount_one": "{{count}} अधीनस्थ",
+    "reportCount_other": "{{count}} अधीनस्थ"
+  },
+  "departmentsPage": {
+    "title": "विभाग",
+    "departmentCount": "{{count}} विभाग",
+    "departmentCount_one": "{{count}} विभाग",
+    "departmentCount_other": "{{count}} विभाग",
+    "employeeCount": "{{count}} कर्मचारी",
+    "employeeCount_one": "{{count}} कर्मचारी",
+    "employeeCount_other": "{{count}} कर्मचारी",
+    "fromEmpCloud": "EmpCloud से",
+    "addDepartment": "विभाग जोड़ें",
+    "noDepartments": "अभी कोई विभाग नहीं है।",
+    "addFirst": "पहला विभाग जोड़ें",
+    "searchPlaceholder": "विभाग खोजें…",
+    "searchAria": "विभाग खोजें",
+    "noSearchMatches": "“{{query}}” से कोई विभाग मेल नहीं खाता।",
+    "nameRequired": "विभाग का नाम आवश्यक है",
+    "added": "विभाग जोड़ा गया",
+    "addFailed": "विभाग नहीं जोड़ा जा सका",
+    "removed": "विभाग हटाया गया",
+    "removeFailed": "विभाग नहीं हटाया जा सका",
+    "addDescription": "यह EmpCloud से सिंक होता है और कर्मचारी प्रोफ़ाइल, संगठन चार्ट तथा रिपोर्ट में चुना जा सकता है।",
+    "uniqueNamesHelp": "आपके संगठन में प्रत्येक नाम अद्वितीय होना चाहिए। मौजूदा पेरोल रिकॉर्ड को प्रभावित किए बिना बाद में विभाग हटाया जा सकता है।",
+    "departmentName": "विभाग का नाम",
+    "namePlaceholder": "जैसे इंजीनियरिंग",
+    "cancel": "रद्द करें",
+    "removeTitle": "विभाग हटाएँ?",
+    "removeDescription": "“{{name}}” को आपके संगठन से हटा दिया जाएगा।",
+    "deleteWarning": "इस विभाग में अभी {{count}} कर्मचारी हैं। उनके रिकॉर्ड सुरक्षित रहेंगे, लेकिन दोबारा असाइन होने तक उनका विभाग नहीं दिखेगा।",
+    "deleteWarning_one": "इस विभाग में अभी {{count}} कर्मचारी है। उसका रिकॉर्ड सुरक्षित रहेगा, लेकिन दोबारा असाइन होने तक विभाग नहीं दिखेगा।",
+    "deleteWarning_other": "इस विभाग में अभी {{count}} कर्मचारी हैं। उनके रिकॉर्ड सुरक्षित रहेंगे, लेकिन दोबारा असाइन होने तक उनका विभाग नहीं दिखेगा।",
+    "remove": "हटाएँ",
+    "removeAria": "{{name}} हटाएँ",
+    "noMembers": "अभी कोई सदस्य नहीं",
+    "created": "{{date}} को बनाया गया"
+  },
+  "attendancePage": {
+    "title": "उपस्थिति",
+    "summary": "{{period}} की उपस्थिति का सारांश",
+    "markAllPresent": "सभी को उपस्थित चिह्नित करें",
+    "markAttendance": "उपस्थिति दर्ज करें",
+    "previousMonth": "पिछला महीना",
+    "nextMonth": "अगला महीना",
+    "searchPlaceholder": "नाम या कोड से खोजें...",
+    "filterDepartment": "विभाग के अनुसार फ़िल्टर करें",
+    "allDepartments": "सभी विभाग",
+    "filterLocation": "स्थान के अनुसार फ़िल्टर करें",
+    "allLocations": "सभी स्थान",
+    "clearFilters": "फ़िल्टर हटाएँ",
+    "employeesShown": "{{total}} में से {{visible}} कर्मचारी",
+    "employeesShown_one": "{{total}} में से {{visible}} कर्मचारी",
+    "employeesShown_other": "{{total}} में से {{visible}} कर्मचारी",
+    "totalPresentDays": "कुल उपस्थित दिन",
+    "totalAbsentDays": "कुल अनुपस्थित दिन",
+    "lopDays": "बिना वेतन छुट्टी के दिन",
+    "overtimeHours": "ओवरटाइम घंटे",
+    "hoursValue": "{{count}} घंटे",
+    "lopValue": "{{count}} बिना वेतन",
+    "employeeFallback": "कर्मचारी #{{id}}",
+    "columns": {
+      "employee": "कर्मचारी",
+      "workingDays": "कार्य दिवस",
+      "present": "उपस्थित",
+      "absent": "अनुपस्थित",
+      "lopDays": "बिना वेतन दिन",
+      "overtimeHours": "ओवरटाइम घंटे"
+    },
+    "markAllDescription": "चुने गए महीने के लिए सभी कर्मचारियों को उपस्थित चिह्नित करें।",
+    "markSingleDescription": "एक कर्मचारी की उपस्थिति दर्ज करें।",
+    "month": "महीना",
+    "year": "वर्ष",
+    "workingDaysInMonth": "महीने के कार्य दिवस",
+    "workingDays": "कार्य दिवस",
+    "presentDays": "उपस्थित दिन",
+    "absentDays": "अनुपस्थित दिन",
+    "employee": "कर्मचारी",
+    "selectEmployee": "कर्मचारी चुनें",
+    "cancel": "रद्द करें",
+    "saveAttendance": "उपस्थिति सहेजें",
+    "overwriteExisting": "इस महीने के मौजूदा रिकॉर्ड बदलें",
+    "overwriteAllHelp": "कर्मचारियों के अपने चेक-इन सुरक्षित रखने के लिए यह डिफ़ॉल्ट रूप से बंद है। दर्ज दिनों को उपस्थित से बदलने के लिए इसे चुनें।",
+    "overwriteSingleHelp": "EmpCloud पर पहले से दर्ज दिन डिफ़ॉल्ट रूप से सुरक्षित रहते हैं। उन्हें ऊपर दिए गए मानों से बदलने के लिए इसे चुनें।",
+    "markAllHelp": "यह {{period}} में सभी {{count}} सक्रिय कर्मचारियों को {{days}} दिनों के लिए उपस्थित चिह्नित करेगा। बाद में अलग-अलग रिकॉर्ड बदले जा सकते हैं।",
+    "workingDaysInvalid": "कार्य दिवस 1 से 31 के बीच पूर्ण संख्या होने चाहिए",
+    "presentDaysInvalid": "उपस्थित दिन 0 और कार्य दिवसों के बीच होने चाहिए",
+    "selectEmployeeRequired": "कृपया कर्मचारी चुनें",
+    "noPayrollEmployees": "पेरोल में कोई कर्मचारी नहीं मिला। पहले EmpCloud उपयोगकर्ताओं को पेरोल में जोड़ें (सेटिंग्स > कर्मचारी)।",
+    "bulkSyncFailed": "{{employeeCount}} कर्मचारियों के लिए स्थानीय रूप से दर्ज किया गया, लेकिन {{failureCount}} के लिए EmpCloud सिंक विफल रहा। डैशबोर्ड पर बदलाव अभी न दिखे।",
+    "nothingChangedAll": "{{period}} के प्रत्येक कार्य दिवस का EmpCloud रिकॉर्ड पहले से है ({{preserved}} सुरक्षित), इसलिए कुछ नहीं बदला। बदलने के लिए ओवरराइट चुनें।",
+    "markedAllOverwrite": "{{period}} के लिए {{count}} कर्मचारियों को उपस्थित चिह्नित किया गया (मौजूदा दिन बदले गए)।",
+    "markedAllSuccess": "{{period}} के लिए {{count}} कर्मचारी दर्ज किए गए — EmpCloud में {{inserted}} नई पंक्तियाँ जोड़ी गईं{{preservedText}}।",
+    "singleSyncFailed": "स्थानीय रूप से दर्ज किया गया, लेकिन EmpCloud सिंक विफल रहा ({{error}})। EmpCloud उपलब्ध होने तक डैशबोर्ड इसे न दिखाए।",
+    "unknownError": "अज्ञात त्रुटि",
+    "nothingChangedSingle": "इस कर्मचारी के लिए {{period}} में पहले से {{preserved}} उपस्थिति रिकॉर्ड हैं, इसलिए कुछ नहीं बदला। ओवरराइट चुनकर फिर सहेजें।",
+    "singleOverwriteSuccess": "{{period}} की उपस्थिति अपडेट हुई ({{count}} दिन सेट किए गए)।",
+    "singleSuccess": "{{period}} की उपस्थिति दर्ज हुई — EmpCloud में {{inserted}} नई पंक्तियाँ जोड़ी गईं{{preservedText}}।",
+    "preservedSuffix": ", {{count}} मौजूदा पंक्तियाँ सुरक्षित रहीं",
+    "markFailed": "उपस्थिति दर्ज नहीं की जा सकी"
+  },
+  "payrollAnalytics": {
+    "title": "पेरोल विश्लेषण",
+    "description": "लागत के रुझान, तुलनाएँ और जानकारियाँ",
+    "notice": "नीचे दिए गए आँकड़े प्रत्येक पेरोल रन में शामिल कर्मचारियों को दर्शाते हैं। गणना के दौरान छोड़े गए कर्मचारी (सक्रिय वेतन संरचना न होना, वेतन अवधि के बाद नियुक्त होना या उससे पहले सेवा छोड़ना) गिने नहीं जाते, इसलिए वास्तविक भर्ती गतिविधि से अलग भी महीनों के बीच कर्मचारियों की संख्या और प्रति-कर्मचारी औसत बदल सकते हैं।",
+    "noRuns": "अभी कोई पेरोल रन नहीं है",
+    "employeeSource": "{{count}} कर्मचारी · {{source}}",
+    "headcountSuppressed": "कर्मचारियों की संख्या में 25% से अधिक बदलाव — तुलना नहीं दिखाई गई",
+    "vsPrevious": "पिछले महीने की तुलना में · {{source}}",
+    "ofGrossPay": "सकल वेतन का · {{source}}",
+    "avgNetPayPerEmployee": "औसत शुद्ध वेतन / कर्मचारी",
+    "grossPayChange": "सकल वेतन में बदलाव",
+    "netPayChange": "शुद्ध वेतन में बदलाव",
+    "deductionRate": "कटौती दर",
+    "payrollCostTrend": "पेरोल लागत का रुझान",
+    "costBreakdownLatest": "लागत विवरण (नवीनतम)",
+    "headcountTrend": "कर्मचारी संख्या का रुझान",
+    "monthComparison": "माह-दर-माह तुलना",
+    "totalEmployerCost": "कुल नियोक्ता लागत (सकल + योगदान)",
+    "needCompletedRun": "विश्लेषण के लिए कम से कम 1 पूर्ण पेरोल रन आवश्यक है",
+    "noData": "अभी कोई डेटा नहीं है",
+    "series": {
+      "gross": "सकल",
+      "net": "शुद्ध",
+      "deductions": "कटौतियाँ",
+      "netPay": "शुद्ध वेतन",
+      "employerContributions": "नियोक्ता योगदान",
+      "employerCost": "नियोक्ता लागत",
+      "amount": "राशि",
+      "employees": "कर्मचारी"
+    },
+    "columns": {
+      "period": "अवधि",
+      "employees": "कर्मचारी",
+      "grossPay": "सकल वेतन",
+      "deductions": "कटौतियाँ",
+      "netPay": "शुद्ध वेतन",
+      "avgPerEmployee": "औसत/कर्मचारी",
+      "grossPercent": "सकल %",
+      "netPercent": "शुद्ध %"
+    },
+    "statuses": { "paid": "भुगतान किया गया", "computed": "गणना की गई", "approved": "स्वीकृत" }
+  },
+  "reimbursementsPage": {
+    "title": "प्रतिपूर्ति",
+    "claimsShown": "{{total}} में से {{visible}} दावे",
+    "fileForEmployee": "कर्मचारी के लिए दर्ज करें",
+    "searchPlaceholder": "कर्मचारी के नाम, कोड या पद से खोजें...",
+    "filterDepartment": "विभाग के अनुसार फ़िल्टर करें",
+    "allDepartments": "सभी विभाग",
+    "filterLocation": "स्थान के अनुसार फ़िल्टर करें",
+    "allLocations": "सभी स्थान",
+    "clearFilters": "फ़िल्टर हटाएँ",
+    "noClaims": "कोई प्रतिपूर्ति दावा नहीं मिला",
+    "forEmployee": "{{name}} के लिए",
+    "statuses": {
+      "pending": "लंबित",
+      "approved": "स्वीकृत",
+      "rejected": "अस्वीकृत",
+      "paid": "भुगतान किया गया"
+    },
+    "filters": { "all": "सभी" },
+    "cards": {
+      "totalClaims": "कुल दावे",
+      "viewAll": "सभी प्रतिपूर्ति दावे देखें",
+      "viewPending": "लंबित प्रतिपूर्ति दावे देखें",
+      "viewApproved": "स्वीकृत प्रतिपूर्ति दावे देखें",
+      "viewRejected": "अस्वीकृत प्रतिपूर्ति दावे देखें",
+      "viewPaid": "भुगतान किए गए प्रतिपूर्ति दावे देखें"
+    },
+    "columns": {
+      "employee": "कर्मचारी",
+      "category": "श्रेणी",
+      "description": "विवरण",
+      "amount": "राशि",
+      "date": "तारीख",
+      "status": "स्थिति"
+    },
+    "actions": {
+      "approve": "स्वीकृत करें",
+      "reject": "अस्वीकृत करें",
+      "awaitingPayroll": "पेरोल की प्रतीक्षा",
+      "awaitingPayrollTitle": "अगले पेरोल रन में भुगतान होगा",
+      "edit": "संपादित करें",
+      "delete": "हटाएँ",
+      "cancel": "रद्द करें"
+    },
+    "fields": {
+      "category": "श्रेणी",
+      "amount": "राशि",
+      "expenseDate": "खर्च की तारीख",
+      "description": "विवरण",
+      "month": "महीना",
+      "year": "वर्ष"
+    },
+    "fileModal": {
+      "title": "कर्मचारी के लिए प्रतिपूर्ति दर्ज करें",
+      "description": "कर्मचारी की ओर से दावा जमा करें। यह उनकी प्रतिपूर्ति सूची में लंबित दिखाई देगा।",
+      "searchEmployee": "कर्मचारी खोजें",
+      "employeePlaceholder": "नाम, कर्मचारी कोड या ईमेल (कम से कम 2 अक्षर)",
+      "searching": "खोज जारी है...",
+      "typeMore": "खोजने के लिए कम से कम 2 अक्षर लिखें।",
+      "noEmployees": "कोई मेल खाता कर्मचारी नहीं मिला।",
+      "change": "बदलें",
+      "categoryPlaceholder": "यात्रा, भोजन, इंटरनेट...",
+      "descriptionPlaceholder": "खर्च किस लिए था?",
+      "submit": "दावा दर्ज करें"
+    },
+    "deleteModal": {
+      "title": "प्रतिपूर्ति हटाएँ?",
+      "paidTitle": "इस दावे का भुगतान हो चुका है।",
+      "paidWarning": "हटाने से केवल प्रतिपूर्ति सूची की पंक्ति हटेगी। इससे कर्मचारी को धनवापसी नहीं होगी और पेस्लिप की पंक्ति नहीं हटेगी। भुगतान उलटने के लिए पेरोल रन हटाएँ; दावा अपने आप फिर से स्वीकृत हो जाएगा।",
+      "warning": "दावा स्थायी रूप से हट जाएगा। इसे वापस नहीं किया जा सकता।"
+    },
+    "editModal": { "title": "प्रतिपूर्ति संपादित करें", "save": "बदलाव सहेजें" },
+    "payModal": {
+      "title": "प्रतिपूर्ति को भुगतान किया हुआ चिह्नित करें",
+      "description": "वह पेरोल अवधि दर्ज करें जिसमें इस दावे का भुगतान हुआ। स्थिति स्वीकृत से भुगतान किया गया हो जाएगी।",
+      "confirm": "भुगतान की पुष्टि करें"
+    },
+    "validation": {
+      "categoryRequired": "श्रेणी आवश्यक है",
+      "descriptionRequired": "विवरण आवश्यक है",
+      "validAmount": "मान्य राशि दर्ज करें",
+      "expenseDateRequired": "खर्च की तारीख आवश्यक है",
+      "pickEmployee": "पहले कर्मचारी चुनें"
+    },
+    "messages": {
+      "approved": "दावा स्वीकृत हुआ",
+      "rejected": "दावा अस्वीकृत हुआ",
+      "failed": "कार्रवाई विफल रही",
+      "updated": "दावा अपडेट हुआ",
+      "updateFailed": "दावा अपडेट नहीं हो सका",
+      "deleted": "दावा हटाया गया",
+      "deleteFailed": "दावा हटाया नहीं जा सका",
+      "filed": "कर्मचारी के लिए दावा दर्ज हुआ",
+      "fileFailed": "दावा दर्ज नहीं हो सका",
+      "markedPaid": "दावा भुगतान किया हुआ चिह्नित हुआ",
+      "markPaidFailed": "दावे को भुगतान किया हुआ चिह्नित नहीं किया जा सका"
+    }
+  },
+  "loansPage": {
+    "title": "ऋण और अग्रिम",
+    "recordsShown": "{{total}} में से {{visible}} ऋण और अग्रिम रिकॉर्ड",
+    "addAdvance": "अग्रिम जोड़ें",
+    "addLoan": "ऋण जोड़ें",
+    "searchPlaceholder": "कर्मचारी के नाम, कोड या पद से खोजें...",
+    "filterDepartment": "विभाग के अनुसार फ़िल्टर करें",
+    "allDepartments": "सभी विभाग",
+    "filterLocation": "स्थान के अनुसार फ़िल्टर करें",
+    "allLocations": "सभी स्थान",
+    "clearFilters": "फ़िल्टर हटाएँ",
+    "noRecords": "कोई ऋण या अग्रिम नहीं मिला",
+    "cards": {
+      "active": "सक्रिय ऋण और अग्रिम",
+      "outstanding": "बकाया",
+      "monthlyDeductions": "मासिक कटौतियाँ",
+      "totalAcrossAll": "सभी का कुल",
+      "completed": "पूर्ण"
+    },
+    "filters": { "all": "सभी" },
+    "statuses": { "active": "सक्रिय", "completed": "पूर्ण", "cancelled": "रद्द" },
+    "types": { "loan": "ऋण", "salary_advance": "वेतन अग्रिम", "emergency": "आपातकालीन अग्रिम" },
+    "columns": {
+      "employee": "कर्मचारी",
+      "type": "प्रकार",
+      "description": "विवरण",
+      "principal": "मूलधन",
+      "outstanding": "बकाया",
+      "deduction": "कटौती",
+      "progress": "प्रगति",
+      "status": "स्थिति"
+    },
+    "deduction": { "customDefault": "कस्टम (डिफ़ॉल्ट {{amount}})", "oneTime": "एक बार" },
+    "progress": { "recovered": "वसूल हुआ", "pendingRecovery": "वसूली लंबित" },
+    "actions": {
+      "recordEmiPayment": "ईएमआई भुगतान दर्ज करें",
+      "recordAdvanceRecovery": "अग्रिम वसूली दर्ज करें",
+      "pay": "भुगतान करें",
+      "recover": "वसूल करें",
+      "edit": "ऋण या अग्रिम संपादित करें",
+      "delete": "हटाएँ",
+      "cancel": "रद्द करें",
+      "saveChanges": "बदलाव सहेजें"
+    },
+    "fields": {
+      "employee": "कर्मचारी",
+      "description": "विवरण",
+      "amount": "राशि (₹)",
+      "tenure": "अवधि (महीने)",
+      "interestRate": "ब्याज दर (%)",
+      "startDate": "आरंभ तारीख",
+      "customMonthlyEmi": "कस्टम मासिक ईएमआई (₹) — वैकल्पिक",
+      "notes": "नोट्स (वैकल्पिक)",
+      "advanceType": "अग्रिम प्रकार",
+      "reason": "कारण",
+      "advanceAmount": "अग्रिम राशि (₹)",
+      "recoveryDate": "वसूली तारीख"
+    },
+    "form": {
+      "noEmployee": "कोई कर्मचारी नहीं है",
+      "descriptionPlaceholder": "जैसे चिकित्सा आपातकाल",
+      "customEmiPlaceholder": "अवधि-आधारित ईएमआई के लिए खाली छोड़ें",
+      "customEmiHelpCreate": "मासिक कटौती को बदलता है। अंतिम किस्त शेष राशि का स्वतः निपटान करती है।",
+      "customEmiHelpEdit": "मासिक कटौती को बदलता है। अंतिम किस्त शेष राशि का स्वतः निपटान करती है। अवधि-आधारित ईएमआई के लिए फ़ील्ड खाली करें।",
+      "notesPlaceholder": "अतिरिक्त नोट्स",
+      "paidInstallmentsNotice": "{{count}} ईएमआई पहले ही भुगतान की गई — पहले चुकाई राशि रखते हुए बकाया नई राशि से फिर गणना होगा।"
+    },
+    "advanceModal": {
+      "description": "एकमुश्त वेतन अग्रिम जोड़ें। पूरी राशि एक पेरोल अवधि में वसूल की जाएगी।"
+    },
+    "editModal": { "loanTitle": "ऋण संपादित करें", "advanceTitle": "अग्रिम संपादित करें" },
+    "deleteModal": {
+      "title": "ऋण या अग्रिम हटाएँ?",
+      "outstandingTitle": "{{amount}} अभी बकाया है।",
+      "outstandingWarning": "हटाने से भविष्य की कटौतियाँ रुक जाएँगी। पिछली पेस्लिप से काटी गई राशि प्रभावित नहीं होगी। इसे वापस नहीं किया जा सकता।",
+      "warning": "रिकॉर्ड स्थायी रूप से हट जाएगा। पहले काटी गई राशि प्रभावित नहीं होगी। इसे वापस नहीं किया जा सकता।"
+    },
+    "validation": {
+      "amountNonNegative": "राशि शून्य या अधिक होनी चाहिए",
+      "tenureMinimum": "अवधि कम से कम 1 महीना होनी चाहिए",
+      "interestNonNegative": "ब्याज दर शून्य या अधिक होनी चाहिए",
+      "customEmiPositive": "कस्टम मासिक ईएमआई शून्य से अधिक होनी चाहिए",
+      "customEmiMaximum": "कस्टम मासिक ईएमआई ऋण राशि से अधिक नहीं हो सकती"
+    },
+    "messages": {
+      "advanceCreated": "अग्रिम बनाया गया",
+      "loanCreated": "ऋण बनाया गया",
+      "failed": "कार्रवाई विफल रही",
+      "paymentRecorded": "भुगतान दर्ज हुआ",
+      "advanceUpdated": "अग्रिम अपडेट हुआ",
+      "loanUpdated": "ऋण अपडेट हुआ",
+      "updateFailed": "ऋण या अग्रिम अपडेट नहीं हो सका",
+      "deleted": "ऋण या अग्रिम हटाया गया",
+      "deleteFailed": "ऋण या अग्रिम हटाया नहीं जा सका"
+    }
+  },
+  "roles": {
+    "super_admin": "सुपर एडमिन",
+    "org_admin": "संगठन एडमिन",
+    "admin": "एडमिन",
+    "hr_admin": "एचआर एडमिन",
+    "hr_manager": "एचआर मैनेजर",
+    "manager": "मैनेजर",
+    "employee": "कर्मचारी"
+  },
+  "header": { "openMenu": "नेविगेशन मेनू खोलें", "searchEmployees": "कर्मचारी खोजें... (Ctrl+K)" },
+  "sidebar": {
+    "collapse": "साइडबार छोटा करें",
+    "expand": "साइडबार खोलें",
+    "search": "मेनू खोजें…",
+    "clearSearch": "खोज साफ़ करें",
+    "noMatches": "“{{query}}” के लिए कोई मिलान नहीं",
+    "pressToSearch": "खोजने के लिए / दबाएँ",
+    "logout": "लॉग आउट",
+    "sections": {
+      "overview": "अवलोकन",
+      "people": "लोग",
+      "payroll": "पेरोल",
+      "compliance": "अनुपालन",
+      "payBenefits": "वेतन और लाभ",
+      "workplace": "कार्यस्थल",
+      "globalPayroll": "वैश्विक पेरोल",
+      "admin": "प्रशासन",
+      "selfService": "स्वयं सेवा"
+    },
+    "items": {
+      "dashboard": "डैशबोर्ड",
+      "employees": "कर्मचारी",
+      "orgChart": "संगठन चार्ट",
+      "departments": "विभाग",
+      "attendance": "उपस्थिति",
+      "structures": "संरचनाएँ",
+      "payrollRuns": "पेरोल रन",
+      "analytics": "विश्लेषण",
+      "payslips": "वेतन पर्चियाँ",
+      "tax": "कर",
+      "taxCalculator": "कर कैलकुलेटर",
+      "taxDeclarations": "कर घोषणाएँ",
+      "reimbursements": "प्रतिपूर्ति",
+      "loans": "ऋण",
+      "benefits": "लाभ",
+      "benchmarks": "मानक",
+      "payEquity": "वेतन समानता",
+      "totalRewards": "कुल पुरस्कार",
+      "earnedWageAccess": "अर्जित वेतन पहुँच",
+      "insurance": "बीमा",
+      "holidays": "छुट्टियाँ",
+      "announcements": "घोषणाएँ",
+      "globalDashboard": "वैश्विक डैशबोर्ड",
+      "globalEmployees": "वैश्विक कर्मचारी",
+      "contractorInvoices": "ठेकेदार चालान",
+      "countryCompliance": "देश अनुपालन",
+      "glAccounting": "जीएल / लेखांकन",
+      "reports": "रिपोर्ट",
+      "auditLog": "ऑडिट लॉग",
+      "system": "सिस्टम",
+      "settings": "सेटिंग्स",
+      "myDashboard": "मेरा डैशबोर्ड",
+      "myPayslips": "मेरी वेतन पर्चियाँ",
+      "mySalary": "मेरा वेतन",
+      "myTax": "मेरा कर",
+      "declarations": "घोषणाएँ",
+      "myClaims": "मेरे दावे",
+      "myProfile": "मेरी प्रोफ़ाइल"
+    }
+  },
+  "dashboard": {
+    "title": "पेरोल डैशबोर्ड",
+    "overviewFor": "{{period}} का अवलोकन",
+    "runPayroll": "पेरोल चलाएँ",
+    "addEmployee": "कर्मचारी जोड़ें",
+    "viewReports": "रिपोर्ट देखें",
+    "activeEmployees": "सक्रिय कर्मचारी",
+    "viewActiveEmployees": "सक्रिय कर्मचारी देखें",
+    "totalEmployees": "कुल {{count}}",
+    "lastPayrollGross": "पिछला पेरोल (सकल)",
+    "lastPayrollNet": "पिछला पेरोल (शुद्ध)",
+    "noPayrollYet": "अभी कोई पेरोल नहीं",
+    "totalDeductions": "कुल कटौतियाँ",
+    "viewDeductions": "नवीनतम पेरोल की कुल कटौतियों का विवरण देखें",
+    "monthOverMonth": "{{value}}% मासिक",
+    "monthlyTrend": "मासिक पेरोल रुझान",
+    "trendPeriods_one": "पिछले {{count}} महीने में सकल बनाम शुद्ध",
+    "trendPeriods_other": "पिछले {{count}} महीनों में सकल बनाम शुद्ध",
+    "trendFallback": "सकल बनाम शुद्ध पेरोल लागत",
+    "gross": "सकल",
+    "net": "शुद्ध",
+    "noTrend": "अभी पेरोल डेटा नहीं है। रुझान देखने के लिए पहला पेरोल चलाएँ।",
+    "headcountByDepartment": "विभाग के अनुसार कर्मचारी संख्या",
+    "moreDepartments": "+{{count}} और विभाग",
+    "noEmployeesToChart": "चार्ट के लिए कर्मचारी नहीं हैं।",
+    "complianceStatus": "अनुपालन स्थिति",
+    "providentFund": "भविष्य निधि",
+    "professionalTax": "व्यावसायिक कर",
+    "tdsForm": "TDS (फॉर्म 24Q)",
+    "filed": "दाखिल",
+    "pending": "लंबित",
+    "recentActivity": "हाल की गतिविधि",
+    "noRecentActivity": "अभी कोई हाल की गतिविधि नहीं।",
+    "activity": "गतिविधि",
+    "actions": {
+      "created": "पेरोल रन बनाया गया",
+      "computed": "पेरोल की गणना हुई",
+      "approved": "पेरोल स्वीकृत हुआ",
+      "paid": "पेरोल भुगतान किया गया",
+      "cancelled": "पेरोल रद्द हुआ",
+      "reverted": "पेरोल ड्राफ्ट में वापस किया गया",
+      "rerun": "पेरोल फिर से चलाया गया",
+      "deleted": "पेरोल रन हटाया गया"
+    }
+  },
+  "breadcrumbs": {
+    "home": "होम",
+    "addNew": "नया जोड़ें",
+    "salaryStructures": "वेतन संरचनाएँ",
+    "myPortal": "मेरा पोर्टल",
+    "salary": "वेतन",
+    "profile": "प्रोफ़ाइल",
+    "setup": "सेटअप"
+  },
+  "selfService": {
+    "employeePortal": "कर्मचारी पोर्टल",
+    "adminPanel": "एडमिन पैनल",
+    "profile": "प्रोफ़ाइल"
+  },
+  "myProfile": {
+    "title": "मेरी प्रोफ़ाइल",
+    "notFound": "प्रोफ़ाइल नहीं मिली",
+    "notAvailable": "उपलब्ध नहीं",
+    "cancel": "रद्द करें",
+    "requestUpdate": "अपडेट का अनुरोध करें",
+    "pendingBankRequest": "आपका बैंक विवरण अपडेट अनुरोध व्यवस्थापक की मंज़ूरी की प्रतीक्षा में है।",
+    "status": { "active": "सक्रिय", "inactive": "निष्क्रिय" },
+    "taxRegime": { "new": "नई कर व्यवस्था", "old": "पुरानी कर व्यवस्था" },
+    "sections": {
+      "personalDetails": "व्यक्तिगत विवरण",
+      "employment": "रोज़गार",
+      "bankDetails": "बैंक विवरण",
+      "statutoryDetails": "वैधानिक विवरण",
+      "security": "सुरक्षा"
+    },
+    "fields": {
+      "email": "ईमेल",
+      "phone": "फ़ोन",
+      "dateOfBirth": "जन्म तिथि",
+      "gender": "लिंग",
+      "employeeCode": "कर्मचारी कोड",
+      "department": "विभाग",
+      "designation": "पद",
+      "employmentType": "रोज़गार का प्रकार",
+      "dateOfJoining": "कार्यग्रहण तिथि",
+      "bank": "बैंक",
+      "accountNumber": "खाता संख्या",
+      "ifsc": "IFSC",
+      "pan": "PAN",
+      "uan": "UAN",
+      "pfNumber": "PF संख्या",
+      "password": "पासवर्ड"
+    },
+    "values": {
+      "gender": { "female": "महिला", "male": "पुरुष", "non_binary": "नॉन-बाइनरी", "other": "अन्य" },
+      "employmentTypes": {
+        "full_time": "पूर्णकालिक",
+        "part_time": "अंशकालिक",
+        "contract": "अनुबंध",
+        "intern": "प्रशिक्षु",
+        "consultant": "सलाहकार"
+      }
+    },
+    "security": {
+      "changePasswordHelp": "अपने खाते का पासवर्ड बदलें",
+      "changePassword": "पासवर्ड बदलें"
+    },
+    "bankModal": {
+      "title": "बैंक विवरण अपडेट का अनुरोध",
+      "reviewNotice": "परिवर्तन लागू होने से पहले HR/व्यवस्थापक आपके अनुरोध की समीक्षा करेंगे।",
+      "newBankName": "नए बैंक का नाम",
+      "bankPlaceholder": "जैसे HDFC Bank",
+      "newAccountNumber": "नई खाता संख्या",
+      "accountPlaceholder": "जैसे 1234567890",
+      "newIfscCode": "नया IFSC कोड",
+      "ifscPlaceholder": "जैसे HDFC0001234",
+      "ifscValidation": "IFSC में 11 अक्षर होने चाहिए: 4 अक्षर + '0' + 6 अक्षर/अंक (जैसे HDFC0001234)।",
+      "accountType": "खाते का प्रकार",
+      "accountTypes": { "savings": "बचत", "current": "चालू", "salary": "वेतन खाता" },
+      "reason": "बदलाव का कारण",
+      "reasonPlaceholder": "जैसे नए बैंक में स्थानांतरण",
+      "submit": "अनुरोध भेजें",
+      "success": "बैंक अपडेट अनुरोध मंज़ूरी के लिए भेजा गया",
+      "failure": "अनुरोध भेजा नहीं जा सका"
+    },
+    "passwordModal": {
+      "title": "पासवर्ड बदलें",
+      "currentPassword": "वर्तमान पासवर्ड",
+      "newPassword": "नया पासवर्ड",
+      "confirmNewPassword": "नए पासवर्ड की पुष्टि करें",
+      "mismatch": "पासवर्ड मेल नहीं खाते",
+      "success": "पासवर्ड बदल दिया गया",
+      "failure": "पासवर्ड बदला नहीं जा सका",
+      "submit": "पासवर्ड बदलें"
+    }
+  },
+  "totalRewardsPage": {
+    "title": "कुल पुरस्कार विवरण",
+    "description": "कर्मचारियों के लिए व्यापक वेतन और लाभ विवरण तैयार करें",
+    "printPdf": "प्रिंट / PDF",
+    "selectEmployee": "कर्मचारी चुनें",
+    "chooseEmployee": "कर्मचारी चुनें…",
+    "searchEmployee": "नाम, पद या कोड से खोजें…",
+    "noEmployeeMatches": "खोज से कोई कर्मचारी मेल नहीं खाता",
+    "employeesAvailable_one": "{{count}} कर्मचारी उपलब्ध",
+    "employeesAvailable_other": "{{count}} कर्मचारी उपलब्ध",
+    "unnamedEmployee": "बिना नाम का कर्मचारी",
+    "totalRewardsValue": "कुल पुरस्कार मूल्य",
+    "financialYear": "वित्त वर्ष {{year}}",
+    "directCompensation": "प्रत्यक्ष मुआवज़ा",
+    "benefitsValue": "लाभ मूल्य",
+    "ytdNetPay": "वर्ष-से-अब-तक शुद्ध वेतन",
+    "reimbursements": "प्रतिपूर्ति",
+    "salaryBreakdown": "वेतन विवरण",
+    "perMonth": "/माह",
+    "annualCtc": "वार्षिक CTC",
+    "benefitsEnrollment": "लाभ नामांकन",
+    "noBenefits": "कोई लाभ नामांकित नहीं",
+    "perYear": "/वर्ष",
+    "totalEmployerContribution": "कुल नियोक्ता योगदान",
+    "ytdEarnings": "वर्ष-से-अब-तक आय",
+    "monthsProcessed_one": "{{count}} माह संसाधित",
+    "monthsProcessed_other": "{{count}} माह संसाधित",
+    "grossEarnings": "सकल आय",
+    "totalDeductions": "कुल कटौतियाँ",
+    "netPay": "शुद्ध वेतन",
+    "taxPaid": "भुगतान किया कर",
+    "activeLoans": "सक्रिय ऋण",
+    "outstanding": "बकाया",
+    "emi": "ईएमआई",
+    "selectPrompt": "कुल पुरस्कार विवरण तैयार करने के लिए कर्मचारी चुनें",
+    "components": { "basic": "मूल वेतन", "hra": "मकान किराया भत्ता", "sa": "विशेष भत्ता" },
+    "benefitTypes": {
+      "health": "स्वास्थ्य",
+      "life": "जीवन",
+      "dental": "दंत",
+      "vision": "दृष्टि",
+      "accident": "दुर्घटना"
+    },
+    "coverageTypes": {
+      "employee": "कर्मचारी",
+      "employee_spouse": "कर्मचारी + जीवनसाथी",
+      "family": "परिवार",
+      "parents": "माता-पिता"
+    },
+    "loanTypes": {
+      "personal_loan": "व्यक्तिगत ऋण",
+      "salary_advance": "वेतन अग्रिम",
+      "home_loan": "गृह ऋण",
+      "car_loan": "वाहन ऋण",
+      "education_loan": "शिक्षा ऋण"
+    }
+  },
+  "benefitsPage": {
+    "title": "लाभ प्रबंधन",
+    "description": "लाभ योजनाओं और कर्मचारी नामांकन का प्रबंधन करें",
+    "enrollEmployee": "कर्मचारी का नामांकन करें",
+    "newPlan": "नई योजना",
+    "stats": {
+      "activePlans": "सक्रिय योजनाएँ",
+      "enrolled": "नामांकित",
+      "pending": "लंबित",
+      "monthlyEmployerCost": "मासिक नियोक्ता लागत"
+    },
+    "tabs": {
+      "plans": "योजनाएँ ({{count}})",
+      "enrollments": "नामांकन ({{count}})",
+      "pending": "लंबित ({{count}})"
+    },
+    "columns": {
+      "planName": "योजना का नाम",
+      "type": "प्रकार",
+      "provider": "प्रदाता",
+      "premium": "प्रीमियम",
+      "employerShare": "नियोक्ता का हिस्सा",
+      "status": "स्थिति",
+      "employee": "कर्मचारी",
+      "plan": "योजना",
+      "coverage": "कवरेज",
+      "employeeShare": "कर्मचारी का हिस्सा"
+    },
+    "empty": {
+      "plans": "अभी तक कोई लाभ योजना नहीं बनाई गई",
+      "enrollments": "अभी तक कोई नामांकन नहीं है",
+      "pending": "कोई लंबित नामांकन नहीं है"
+    },
+    "status": {
+      "active": "सक्रिय",
+      "inactive": "निष्क्रिय",
+      "enrolled": "नामांकित",
+      "pending": "लंबित",
+      "cancelled": "रद्द"
+    },
+    "actions": {
+      "edit": "संपादित करें",
+      "deactivate": "निष्क्रिय करें",
+      "cancel": "रद्द करें"
+    },
+    "planTypes": {
+      "health": "स्वास्थ्य",
+      "dental": "दंत",
+      "vision": "दृष्टि",
+      "life": "जीवन बीमा",
+      "disability": "विकलांगता",
+      "retirement": "सेवानिवृत्ति"
+    },
+    "coverageTypes": {
+      "individual": "व्यक्तिगत",
+      "family": "परिवार",
+      "individual_plus_spouse": "व्यक्तिगत + जीवनसाथी"
+    },
+    "fallbackUser": "उपयोगकर्ता #{{id}}",
+    "messages": {
+      "invalidEnrollmentDates": "नामांकन की समाप्ति तिथि प्रारंभ तिथि से पहले नहीं हो सकती",
+      "planUpdated": "लाभ योजना अपडेट हो गई",
+      "planCreated": "लाभ योजना बनाई गई",
+      "savePlanFailed": "योजना सहेजी नहीं जा सकी",
+      "deactivateConfirm": "क्या इस लाभ योजना को निष्क्रिय करें? मौजूदा नामांकन प्रभावित नहीं होंगे।",
+      "planDeactivated": "लाभ योजना निष्क्रिय कर दी गई",
+      "deactivateFailed": "योजना निष्क्रिय नहीं की जा सकी",
+      "employeeEnrolled": "कर्मचारी को लाभ योजना में नामांकित किया गया",
+      "enrollFailed": "नामांकन नहीं हो सका",
+      "enrollmentCancelled": "नामांकन रद्द किया गया",
+      "actionFailed": "कार्रवाई विफल रही"
+    },
+    "planModal": {
+      "editTitle": "लाभ योजना संपादित करें",
+      "createTitle": "लाभ योजना बनाएँ",
+      "planName": "योजना का नाम",
+      "type": "प्रकार",
+      "provider": "प्रदाता",
+      "description": "विवरण",
+      "monthlyPremium": "मासिक प्रीमियम",
+      "employerContribution": "नियोक्ता योगदान",
+      "enrollmentStart": "नामांकन प्रारंभ",
+      "enrollmentEnd": "नामांकन समाप्ति",
+      "cancel": "रद्द करें",
+      "updatePlan": "योजना अपडेट करें",
+      "createPlan": "योजना बनाएँ"
+    },
+    "enrollModal": {
+      "title": "कर्मचारी को लाभ योजना में नामांकित करें",
+      "employee": "कर्मचारी",
+      "benefitPlan": "लाभ योजना",
+      "coverageType": "कवरेज प्रकार",
+      "startDate": "प्रारंभ तिथि",
+      "employeePremiumShare": "कर्मचारी प्रीमियम हिस्सा",
+      "employerPremiumShare": "नियोक्ता प्रीमियम हिस्सा",
+      "cancel": "रद्द करें",
+      "submit": "नामांकन करें"
+    }
+  },
+  "benchmarksPage": {
+    "title": "वेतन बेंचमार्किंग",
+    "description": "कर्मचारी वेतन की बाज़ार डेटा से तुलना करें",
+    "addBenchmark": "बेंचमार्क जोड़ें",
+    "stats": {
+      "benchmarks": "बेंचमार्क",
+      "avgCompaRatio": "औसत कॉम्पा-अनुपात",
+      "belowMarket": "बाज़ार से नीचे",
+      "aboveMarket": "बाज़ार से ऊपर"
+    },
+    "tabs": {
+      "marketBenchmarks": "बाज़ार बेंचमार्क ({{count}})",
+      "compaRatioReport": "कॉम्पा-अनुपात रिपोर्ट",
+      "belowMarket": "बाज़ार से नीचे ({{count}})",
+      "aboveMarket": "बाज़ार से ऊपर ({{count}})"
+    },
+    "columns": {
+      "jobTitle": "पद का नाम",
+      "department": "विभाग",
+      "location": "स्थान",
+      "p50Median": "P50 (मध्यिका)",
+      "source": "स्रोत",
+      "effective": "प्रभावी",
+      "employee": "कर्मचारी",
+      "marketP50": "बाज़ार P50",
+      "compaRatio": "कॉम्पा-अनुपात",
+      "position": "स्थिति"
+    },
+    "empty": {
+      "benchmarks": "अभी तक कोई बेंचमार्क नहीं जोड़ा गया",
+      "employees": "कोई कर्मचारी डेटा उपलब्ध नहीं है",
+      "belowMarket": "कोई कर्मचारी बाज़ार से नीचे नहीं है",
+      "aboveMarket": "कोई कर्मचारी बाज़ार से ऊपर नहीं है"
+    },
+    "summary": {
+      "employeesTotal": "कुल कर्मचारी",
+      "matchedToBenchmarks": "बेंचमार्क से मेल खाते हैं",
+      "withoutBenchmarkData": "बेंचमार्क डेटा के बिना"
+    },
+    "labels": {
+      "noBenchmark": "कोई बेंचमार्क नहीं",
+      "notAvailable": "उपलब्ध नहीं",
+      "noData": "कोई डेटा नहीं",
+      "below": "नीचे",
+      "above": "ऊपर",
+      "atMarket": "बाज़ार स्तर पर"
+    },
+    "actions": {
+      "edit": "संपादित करें",
+      "delete": "हटाएँ"
+    },
+    "messages": {
+      "validPercentiles": "कृपया P25, P50 और P75 की मान्य राशि दर्ज करें",
+      "nonNegative": "प्रतिशतक मान ऋणात्मक नहीं हो सकते",
+      "ordered": "प्रतिशतक इस क्रम में होने चाहिए: P25 ≤ P50 ≤ P75",
+      "updated": "बेंचमार्क अपडेट हो गया",
+      "created": "बेंचमार्क बनाया गया",
+      "deleted": "बेंचमार्क हटाया गया",
+      "failed": "कार्रवाई विफल रही"
+    },
+    "modal": {
+      "editTitle": "वेतन बेंचमार्क संपादित करें",
+      "addTitle": "वेतन बेंचमार्क जोड़ें",
+      "jobTitle": "पद का नाम",
+      "jobTitlePlaceholder": "जैसे, सॉफ्टवेयर इंजीनियर",
+      "department": "विभाग",
+      "selectDepartment": "विभाग चुनें...",
+      "noDepartments": "कोई विभाग कॉन्फ़िगर नहीं है",
+      "location": "स्थान",
+      "locationPlaceholder": "जैसे, बेंगलुरु",
+      "p25Annual": "P25 (वार्षिक)",
+      "p50Annual": "P50 मध्यिका (वार्षिक)",
+      "p75Annual": "P75 (वार्षिक)",
+      "p25Placeholder": "जैसे 800000",
+      "p50Placeholder": "जैसे 1200000",
+      "p75Placeholder": "जैसे 1800000",
+      "source": "स्रोत",
+      "sourcePlaceholder": "जैसे, Glassdoor 2026",
+      "effectiveDate": "प्रभावी तिथि",
+      "cancel": "रद्द करें",
+      "updateBenchmark": "बेंचमार्क अपडेट करें",
+      "saveBenchmark": "बेंचमार्क सहेजें"
+    }
+  },
+  "payEquityPage": {
+    "title": "वेतन समानता विश्लेषण",
+    "description": "लिंग, विभाग और भूमिका के आधार पर वेतन निष्पक्षता का विश्लेषण करें",
+    "stats": {
+      "employeesAnalyzed": "विश्लेषित कर्मचारी",
+      "medianSalary": "मध्यिका वेतन",
+      "meanPayGap": "औसत वेतन अंतर",
+      "medianPayGap": "मध्यिका वेतन अंतर"
+    },
+    "tabs": {
+      "overview": "विश्लेषण अवलोकन",
+      "compliance": "अनुपालन रिपोर्ट"
+    },
+    "gender": {
+      "title": "लिंग वेतन अंतर विश्लेषण",
+      "maleEmployees": "पुरुष कर्मचारी",
+      "femaleEmployees": "महिला कर्मचारी",
+      "maleMeanSalary": "पुरुषों का औसत वेतन",
+      "femaleMeanSalary": "महिलाओं का औसत वेतन",
+      "menPaidMore": "पुरुषों को औसतन अधिक वेतन मिलता है",
+      "womenPaidMore": "महिलाओं को औसतन अधिक वेतन मिलता है",
+      "noGap": "कोई अंतर नहीं मिला"
+    },
+    "department": {
+      "title": "विभाग विश्लेषण",
+      "department": "विभाग",
+      "employees": "कर्मचारी",
+      "meanSalary": "औसत वेतन",
+      "median": "मध्यिका",
+      "min": "न्यूनतम",
+      "max": "अधिकतम",
+      "spread": "अंतर"
+    },
+    "role": {
+      "title": "भूमिका / पद विश्लेषण",
+      "designation": "पद",
+      "count": "संख्या",
+      "mean": "औसत",
+      "median": "मध्यिका"
+    },
+    "compliance": {
+      "title": "अनुपालन रिपोर्ट",
+      "generated": "तैयार की गई",
+      "findings": "निष्कर्ष",
+      "recommendations": "सिफारिशें",
+      "notAvailable": "उपलब्ध नहीं"
+    },
+    "complianceMessages": {
+      "significantMean": "महत्वपूर्ण औसत वेतन अंतर मिला: {{value}}% ({{group}})",
+      "significantMedian": "महत्वपूर्ण मध्यिका वेतन अंतर मिला: {{value}}%",
+      "menPaidMore": "पुरुषों को अधिक वेतन",
+      "womenPaidMore": "महिलाओं को अधिक वेतन",
+      "highVariance": "विभाग “{{department}}” में वेतन का अधिक अंतर (CV: {{value}}%)",
+      "acceptableGap": "वेतन अंतर स्वीकार्य सीमा में है (5% तक)",
+      "noConcerns": "वेतन समानता से जुड़ी कोई महत्वपूर्ण चिंता नहीं मिली",
+      "reviewDepartment": "आंतरिक समानता सुनिश्चित करने के लिए विभाग “{{department}}” के वेतन बैंड की समीक्षा करें",
+      "reviewCompensation": "महत्वपूर्ण अंतर वाली भूमिकाओं के वेतन की विस्तृत समीक्षा करें",
+      "continueMonitoring": "वेतन समानता की तिमाही निगरानी जारी रखें"
+    }
+  },
+  "earnedWagePage": {
+    "title": "अर्जित वेतन एक्सेस",
+    "description": "मांग पर भुगतान — कर्मचारियों को वेतन दिवस से पहले अर्जित वेतन लेने दें",
+    "actions": {
+      "approve": "स्वीकृत करें",
+      "reject": "अस्वीकार करें",
+      "settings": "सेटिंग्स",
+      "requestAdvance": "अग्रिम का अनुरोध करें"
+    },
+    "stats": {
+      "pendingRequests": "लंबित अनुरोध",
+      "totalDisbursed": "कुल वितरित",
+      "avgRequest": "औसत अनुरोध",
+      "totalRequests": "कुल अनुरोध"
+    },
+    "filter": {
+      "showing": "दिखाए जा रहे हैं",
+      "requests": "अनुरोध",
+      "clear": "फ़िल्टर हटाएँ"
+    },
+    "balance": {
+      "title": "आपकी उपलब्ध शेष राशि",
+      "details": "अब तक अर्जित: {{earned}} | पहले ही निकाला: {{withdrawn}} | दिन {{day}}/{{days}}",
+      "maxPercentage": "अर्जित वेतन का अधिकतम {{value}}%"
+    },
+    "status": {
+      "pending": "लंबित",
+      "approved": "स्वीकृत",
+      "disbursed": "वितरित",
+      "rejected": "अस्वीकृत",
+      "repaid": "चुकाया गया",
+      "enabled": "सक्रिय",
+      "disabled": "निष्क्रिय"
+    },
+    "columns": {
+      "employee": "कर्मचारी",
+      "amount": "राशि",
+      "fee": "शुल्क",
+      "status": "स्थिति",
+      "requested": "अनुरोध तिथि",
+      "reason": "कारण"
+    },
+    "emptyRequests": "अभी तक कोई अग्रिम अनुरोध नहीं है",
+    "messages": {
+      "showingAll": "सभी अनुरोध नीचे दिखाए जा रहे हैं",
+      "requestSubmitted": "अग्रिम अनुरोध जमा किया गया",
+      "submitFailed": "अनुरोध जमा नहीं हो सका",
+      "requestApproved": "अनुरोध स्वीकृत किया गया",
+      "approveFailed": "स्वीकृति विफल रही",
+      "rejectionReason": "अस्वीकृति का कारण (वैकल्पिक):",
+      "requestRejected": "अनुरोध अस्वीकार किया गया",
+      "rejectFailed": "अस्वीकृति विफल रही",
+      "settingsSaved": "सेटिंग्स सहेजी गईं",
+      "settingsSaveFailed": "सेटिंग्स सहेजी नहीं जा सकीं"
+    },
+    "requestModal": {
+      "title": "वेतन अग्रिम का अनुरोध करें",
+      "available": "उपलब्ध: {{amount}}",
+      "salaryDetails": "मासिक वेतन: {{salary}} | दिन {{day}}/{{days}}",
+      "unavailable": "अभी कोई अग्रिम उपलब्ध नहीं है। वेतन कॉन्फ़िगरेशन या प्रतीक्षा अवधि जाँचें।",
+      "amount": "राशि",
+      "amountPlaceholder": "राशि दर्ज करें",
+      "reason": "कारण (वैकल्पिक)",
+      "reasonPlaceholder": "आपको इस अग्रिम की आवश्यकता क्यों है?",
+      "cancel": "रद्द करें",
+      "submit": "अनुरोध जमा करें"
+    },
+    "settingsModal": {
+      "title": "अर्जित वेतन एक्सेस सेटिंग्स",
+      "enable": "अर्जित वेतन एक्सेस सक्रिय करें",
+      "maxPercentage": "अर्जित वेतन का अधिकतम %",
+      "cooldownDays": "प्रतीक्षा अवधि के दिन",
+      "minAmount": "न्यूनतम राशि",
+      "maxAmount": "अधिकतम राशि (0 = कोई सीमा नहीं)",
+      "feePercentage": "शुल्क %",
+      "flatFee": "निश्चित शुल्क",
+      "autoApproveBelow": "इससे कम पर स्वतः स्वीकृत करें (0 = निष्क्रिय)",
+      "requiresApproval": "प्रबंधक की स्वीकृति आवश्यक",
+      "cancel": "रद्द करें",
+      "save": "सेटिंग्स सहेजें"
+    }
+  },
+  "insurancePage": {
+    "title": "बीमा प्रबंधन",
+    "description": "समूह बीमा पॉलिसियों, नामांकन और दावों का प्रबंधन करें",
+    "actions": {
+      "edit": "संपादित करें",
+      "deactivate": "निष्क्रिय करें",
+      "cancel": "रद्द करें",
+      "settle": "निपटाएँ",
+      "approve": "स्वीकृत करें",
+      "reject": "अस्वीकार करें",
+      "submitClaim": "दावा जमा करें",
+      "enrollEmployee": "कर्मचारी का नामांकन करें",
+      "newPolicy": "नई पॉलिसी"
+    },
+    "stats": {
+      "activePolicies": "सक्रिय पॉलिसियाँ",
+      "activeEnrollments": "सक्रिय नामांकन",
+      "pendingClaims": "लंबित दावे",
+      "totalApproved": "कुल स्वीकृत"
+    },
+    "tabs": {
+      "policies": "पॉलिसियाँ ({{count}})",
+      "enrollments": "नामांकन ({{count}})",
+      "claims": "दावे ({{count}})"
+    },
+    "empty": {
+      "policies": "अभी तक कोई बीमा पॉलिसी नहीं बनाई गई",
+      "enrollments": "अभी तक कोई नामांकन नहीं है",
+      "claims": "अभी तक कोई दावा जमा नहीं किया गया"
+    },
+    "columns": {
+      "policyName": "पॉलिसी का नाम",
+      "number": "संख्या",
+      "provider": "प्रदाता",
+      "type": "प्रकार",
+      "coverage": "कवरेज",
+      "premiumPerEmployee": "प्रति कर्मचारी प्रीमियम",
+      "status": "स्थिति",
+      "employee": "कर्मचारी",
+      "policy": "पॉलिसी",
+      "sumInsured": "बीमित राशि",
+      "premiumShare": "प्रीमियम हिस्सा",
+      "nominee": "नामित व्यक्ति",
+      "claimNumber": "दावा संख्या",
+      "claimed": "दावा राशि",
+      "approved": "स्वीकृत",
+      "submitted": "जमा किया गया"
+    },
+    "policyTypes": {
+      "group_health": "समूह स्वास्थ्य",
+      "group_life": "समूह जीवन",
+      "disability": "विकलांगता",
+      "accidental": "दुर्घटना",
+      "travel": "यात्रा"
+    },
+    "claimTypes": {
+      "hospitalization": "अस्पताल में भर्ती",
+      "outpatient": "बाह्य रोगी",
+      "dental": "दंत",
+      "vision": "दृष्टि",
+      "life": "जीवन",
+      "disability": "विकलांगता",
+      "accidental": "दुर्घटना",
+      "travel": "यात्रा",
+      "group_health": "समूह स्वास्थ्य",
+      "group_life": "समूह जीवन"
+    },
+    "status": {
+      "active": "सक्रिय",
+      "expired": "समाप्त",
+      "cancelled": "रद्द",
+      "submitted": "जमा किया गया",
+      "under_review": "समीक्षाधीन",
+      "approved": "स्वीकृत",
+      "rejected": "अस्वीकृत",
+      "settled": "निपटाया गया",
+      "inactive": "निष्क्रिय",
+      "claimed": "दावा किया गया"
+    },
+    "messages": {
+      "invalidEndDate": "पॉलिसी की समाप्ति तिथि प्रारंभ तिथि से पहले नहीं हो सकती",
+      "renewalInPast": "नवीनीकरण तिथि बीती हुई नहीं हो सकती",
+      "invalidRenewalDate": "नवीनीकरण तिथि पॉलिसी की समाप्ति तिथि को या उसके बाद होनी चाहिए",
+      "invalidPolicyNumber": "पॉलिसी संख्या ऋण चिह्न से शुरू नहीं हो सकती",
+      "policyUpdated": "बीमा पॉलिसी अपडेट हो गई",
+      "policyCreated": "बीमा पॉलिसी बनाई गई",
+      "saveFailed": "पॉलिसी सहेजी नहीं जा सकी",
+      "deactivateConfirm": "क्या इस बीमा पॉलिसी को निष्क्रिय करें? मौजूदा नामांकन प्रभावित नहीं होंगे।",
+      "policyDeactivated": "बीमा पॉलिसी निष्क्रिय कर दी गई",
+      "deactivateFailed": "पॉलिसी निष्क्रिय नहीं की जा सकी",
+      "employeeEnrolled": "कर्मचारी का बीमा में नामांकन किया गया",
+      "enrollFailed": "नामांकन नहीं हो सका",
+      "claimSubmitted": "दावा जमा किया गया",
+      "claimSubmitFailed": "दावा जमा नहीं हो सका",
+      "approvedAmountPrompt": "स्वीकृत राशि (पूरी राशि के लिए खाली छोड़ें):",
+      "claimApproved": "दावा स्वीकृत किया गया",
+      "actionFailed": "कार्रवाई विफल रही",
+      "rejectionReason": "अस्वीकृति का कारण:",
+      "claimRejected": "दावा अस्वीकार किया गया",
+      "claimSettled": "दावा निपटाया गया",
+      "enrollmentCancelled": "नामांकन रद्द किया गया"
+    },
+    "policyModal": {
+      "editTitle": "बीमा पॉलिसी संपादित करें",
+      "createTitle": "बीमा पॉलिसी बनाएँ",
+      "policyName": "पॉलिसी का नाम",
+      "policyNumber": "पॉलिसी संख्या",
+      "policyNumberPlaceholder": "जैसे POL-2024-001",
+      "provider": "प्रदाता",
+      "type": "प्रकार",
+      "totalPremium": "कुल प्रीमियम",
+      "premiumPerEmployee": "प्रति कर्मचारी प्रीमियम",
+      "coverageAmount": "कवरेज राशि",
+      "startDate": "प्रारंभ तिथि",
+      "endDate": "समाप्ति तिथि",
+      "renewalDate": "नवीनीकरण तिथि",
+      "terms": "नियम और शर्तें",
+      "cancel": "रद्द करें",
+      "updatePolicy": "पॉलिसी अपडेट करें",
+      "createPolicy": "पॉलिसी बनाएँ"
+    },
+    "enrollModal": {
+      "title": "कर्मचारी का बीमा में नामांकन करें",
+      "employee": "कर्मचारी",
+      "policy": "बीमा पॉलिसी",
+      "sumInsured": "बीमित राशि",
+      "premiumShare": "कर्मचारी प्रीमियम हिस्सा",
+      "nomineeName": "नामित व्यक्ति का नाम",
+      "nomineeRelationship": "नामित व्यक्ति से संबंध",
+      "relationshipPlaceholder": "जैसे जीवनसाथी, माता-पिता",
+      "cancel": "रद्द करें",
+      "submit": "नामांकन करें"
+    },
+    "claimModal": {
+      "title": "बीमा दावा जमा करें",
+      "policy": "बीमा पॉलिसी",
+      "claimType": "दावे का प्रकार",
+      "amountClaimed": "दावा राशि",
+      "description": "विवरण",
+      "descriptionPlaceholder": "दावे का विवरण दें",
+      "notes": "नोट्स",
+      "cancel": "रद्द करें",
+      "submit": "दावा जमा करें"
+    }
+  },
+  "countryCompliancePage": {
+    "title": "देश अनुपालन",
+    "description": "देश के अनुसार श्रम कानून, कर दरें और वैधानिक आवश्यकताएँ देखें",
+    "filters": {
+      "searchPlaceholder": "देश खोजें...",
+      "configuredOnly": "केवल मेरे कॉन्फ़िगर किए गए देश ({{count}})"
+    },
+    "regions": {
+      "all": "सभी क्षेत्र",
+      "asia": "एशिया",
+      "europe": "यूरोप",
+      "americas": "अमेरिका",
+      "africa": "अफ्रीका",
+      "oceania": "ओशिनिया",
+      "middle_east": "मध्य पूर्व"
+    },
+    "metrics": {
+      "maxHours": "अधिकतम कार्य घंटे/सप्ताह",
+      "annualLeave": "वार्षिक अवकाश",
+      "publicHolidays": "सार्वजनिक अवकाश",
+      "noticePeriod": "नोटिस अवधि",
+      "probation": "परिवीक्षा",
+      "payFrequency": "भुगतान आवृत्ति"
+    },
+    "units": {
+      "hours": "{{value}} घंटे",
+      "days": "{{value}} दिन",
+      "months": "{{value}} महीने"
+    },
+    "payFrequencies": {
+      "monthly": "मासिक",
+      "biweekly": "हर दो सप्ताह",
+      "weekly": "साप्ताहिक",
+      "annual": "वार्षिक"
+    },
+    "benefits": {
+      "title": "वैधानिक लाभ",
+      "socialSecurity": "सामाजिक सुरक्षा",
+      "pension": "पेंशन",
+      "healthInsurance": "स्वास्थ्य बीमा",
+      "required": "आवश्यक",
+      "notRequired": "आवश्यक नहीं"
+    },
+    "ratesTitle": "कर और सामाजिक सुरक्षा दरें",
+    "additional": {
+      "title": "अतिरिक्त जानकारी",
+      "taxYearStart": "कर वर्ष प्रारंभ",
+      "minimumWage": "न्यूनतम वेतन (मासिक)",
+      "notSet": "निर्धारित नहीं / परिवर्तनीय",
+      "countryCode": "देश कोड",
+      "region": "क्षेत्र"
+    },
+    "empty": {
+      "title": "अनुपालन विवरण देखने के लिए देश चुनें",
+      "description": "श्रम कानून, कर दरें और वैधानिक आवश्यकताएँ देखें"
+    },
+    "complianceKeys": {
+      "income_tax": "आयकर",
+      "solidarity_surcharge": "एकजुटता अधिभार",
+      "health_insurance_employer": "नियोक्ता स्वास्थ्य बीमा",
+      "health_insurance_employee": "कर्मचारी स्वास्थ्य बीमा",
+      "pension_employer": "नियोक्ता पेंशन",
+      "pension_employee": "कर्मचारी पेंशन",
+      "unemployment_employer": "नियोक्ता बेरोजगारी बीमा",
+      "unemployment_employee": "कर्मचारी बेरोजगारी बीमा",
+      "care_insurance_employer": "नियोक्ता देखभाल बीमा",
+      "care_insurance_employee": "कर्मचारी देखभाल बीमा",
+      "employer_social_charges": "नियोक्ता सामाजिक शुल्क",
+      "employee_social_charges": "कर्मचारी सामाजिक शुल्क",
+      "social_security_rate": "सामाजिक सुरक्षा दर",
+      "social_security_cap": "सामाजिक सुरक्षा सीमा",
+      "federal_tax": "संघीय कर",
+      "state_tax": "राज्य कर",
+      "epf_employer": "नियोक्ता EPF",
+      "epf_employee": "कर्मचारी EPF",
+      "esi_employer": "नियोक्ता ESI",
+      "esi_employee": "कर्मचारी ESI"
+    }
+  },
+  "glAccountingPage": {
+    "title": "सामान्य बही / लेखांकन",
+    "description": "पेरोल घटकों को सामान्य बही खातों से मैप करें और जर्नल प्रविष्टियाँ बनाएँ",
+    "actions": {
+      "generateJournal": "जर्नल बनाएँ",
+      "addMapping": "मैपिंग जोड़ें",
+      "deleteMapping": "मैपिंग हटाएँ",
+      "cancel": "रद्द करें",
+      "saveMapping": "मैपिंग सहेजें",
+      "generate": "बनाएँ"
+    },
+    "stats": {
+      "mappings": "सामान्य बही मैपिंग",
+      "journals": "जर्नल प्रविष्टियाँ",
+      "exported": "निर्यातित"
+    },
+    "tabs": {
+      "mappings": "सामान्य बही मैपिंग",
+      "journals": "जर्नल प्रविष्टियाँ",
+      "exported": "निर्यातित"
+    },
+    "mappingTable": {
+      "payComponent": "वेतन घटक",
+      "accountCode": "खाता कोड",
+      "accountName": "खाता नाम",
+      "description": "विवरण"
+    },
+    "journalTable": {
+      "date": "तिथि",
+      "payrollRun": "पेरोल रन",
+      "totalDebit": "कुल डेबिट",
+      "totalCredit": "कुल क्रेडिट",
+      "status": "स्थिति",
+      "export": "निर्यात"
+    },
+    "statuses": {
+      "draft": "प्रारूप",
+      "posted": "पोस्ट किया गया",
+      "exported": "निर्यातित"
+    },
+    "empty": {
+      "mappings": "कोई सामान्य बही मैपिंग कॉन्फ़िगर नहीं है",
+      "journals": "कोई जर्नल प्रविष्टि नहीं बनाई गई",
+      "exported": "अभी कोई जर्नल निर्यात नहीं किया गया"
+    },
+    "mappingModal": {
+      "title": "सामान्य बही मैपिंग जोड़ें",
+      "payComponentCode": "वेतन घटक कोड",
+      "payComponentPlaceholder": "जैसे BASIC, HRA, EPF, TDS",
+      "accountCode": "खाता कोड",
+      "accountCodePlaceholder": "जैसे 4001",
+      "accountName": "खाता नाम",
+      "accountNamePlaceholder": "जैसे वेतन व्यय",
+      "description": "विवरण"
+    },
+    "journalModal": {
+      "title": "जर्नल प्रविष्टि बनाएँ",
+      "payrollRun": "पेरोल रन",
+      "selectRun": "पेरोल रन चुनें...",
+      "help": "यह आपके कॉन्फ़िगर किए गए सामान्य बही मैपिंग का उपयोग करके चुने गए पेरोल रन से जर्नल प्रविष्टियाँ बनाएगा।"
+    },
+    "validation": {
+      "accountCode": "खाता कोड एक धनात्मक संख्या होना चाहिए, जिसमें ऋण चिह्न, अक्षर या रिक्त स्थान न हों"
+    },
+    "messages": {
+      "mappingCreated": "सामान्य बही मैपिंग बनाई गई",
+      "journalGenerated": "जर्नल प्रविष्टि बनाई गई",
+      "mappingDeleted": "मैपिंग हटाई गई",
+      "failed": "कार्रवाई विफल रही"
+    },
+    "exports": {
+      "tallyTitle": "Tally में निर्यात करें",
+      "quickbooksTitle": "QuickBooks में निर्यात करें",
+      "zohoTitle": "Zoho में निर्यात करें"
+    }
+  },
+  "globalEmployeesPage": {
+    "title": "वैश्विक कर्मचारी",
+    "description": "दुनिया भर के EOR, ठेकेदार और सीधे नियुक्त कर्मचारियों का प्रबंधन करें",
+    "actions": {
+      "addEmployee": "कर्मचारी जोड़ें",
+      "editEmployee": "कर्मचारी संपादित करें",
+      "terminateEmployee": "कर्मचारी को सेवा से हटाएँ",
+      "alreadyTerminated": "कर्मचारी पहले ही सेवा से हटाया जा चुका है",
+      "cancel": "रद्द करें",
+      "saveChanges": "बदलाव सहेजें"
+    },
+    "filters": {
+      "searchPlaceholder": "नाम, ईमेल या देश से खोजें...",
+      "allCountries": "सभी देश",
+      "allTypes": "सभी प्रकार",
+      "allStatuses": "सभी स्थितियाँ"
+    },
+    "employmentTypes": {
+      "eor": "EOR",
+      "contractor": "ठेकेदार",
+      "direct_hire": "सीधी नियुक्ति"
+    },
+    "contractTypes": {
+      "fullTime": "पूर्णकालिक",
+      "partTime": "अंशकालिक",
+      "fixedTerm": "निश्चित अवधि"
+    },
+    "statuses": {
+      "active": "सक्रिय",
+      "onboarding": "ऑनबोर्डिंग",
+      "offboarding": "ऑफबोर्डिंग",
+      "terminated": "सेवा समाप्त"
+    },
+    "salaryFrequencies": {
+      "monthly": "मासिक",
+      "biweekly": "हर दो सप्ताह",
+      "weekly": "साप्ताहिक",
+      "annual": "वार्षिक"
+    },
+    "salaryFrequencyShort": {
+      "monthly": "माह",
+      "biweekly": "2 सप्ताह",
+      "weekly": "सप्ताह",
+      "annual": "वर्ष"
+    },
+    "table": {
+      "name": "नाम",
+      "country": "देश",
+      "type": "प्रकार",
+      "status": "स्थिति",
+      "salary": "वेतन",
+      "jobTitle": "पद",
+      "startDate": "प्रारंभ तिथि",
+      "actions": "कार्रवाइयाँ"
+    },
+    "empty": "कोई वैश्विक कर्मचारी नहीं मिला। अपना पहला अंतरराष्ट्रीय टीम सदस्य नियुक्त करने के लिए “कर्मचारी जोड़ें” पर क्लिक करें।",
+    "modal": {
+      "addTitle": "वैश्विक कर्मचारी जोड़ें",
+      "editTitle": "वैश्विक कर्मचारी संपादित करें",
+      "firstName": "पहला नाम *",
+      "lastName": "अंतिम नाम *",
+      "email": "ईमेल *",
+      "country": "देश *",
+      "employmentType": "रोजगार प्रकार *",
+      "contractType": "अनुबंध प्रकार",
+      "jobTitle": "पद *",
+      "department": "विभाग",
+      "selectDepartment": "विभाग चुनें...",
+      "noDepartments": "अभी कोई विभाग कॉन्फ़िगर नहीं है — सेटिंग्स > विभाग में जोड़ें",
+      "startDate": "प्रारंभ तिथि *",
+      "salaryAmount": "वेतन राशि * (मुख्य मुद्रा इकाई में)",
+      "payFrequency": "भुगतान आवृत्ति",
+      "bankingTax": "बैंकिंग और कर (वैकल्पिक)",
+      "taxId": "कर आईडी",
+      "bankName": "बैंक का नाम",
+      "bankNamePlaceholder": "जैसे HDFC Bank",
+      "bankAccount": "बैंक खाता संख्या",
+      "bankAccountPlaceholder": "जैसे 12345678901234",
+      "bankRouting": "बैंक रूटिंग / IFSC",
+      "bankRoutingPlaceholder": "जैसे HDFC0001234"
+    },
+    "validation": {
+      "required": "कृपया सभी आवश्यक फ़ील्ड भरें"
+    },
+    "messages": {
+      "added": "वैश्विक कर्मचारी जोड़ा गया",
+      "updated": "वैश्विक कर्मचारी अपडेट किया गया",
+      "addFailed": "कर्मचारी नहीं जोड़ा जा सका",
+      "updateFailed": "कर्मचारी अपडेट नहीं किया जा सका",
+      "terminatePrompt": "{{name}} को सेवा से हटाएँ? कारण दर्ज करें (आवश्यक):",
+      "terminated": "कर्मचारी की सेवा समाप्त की गई",
+      "terminateFailed": "कर्मचारी की सेवा समाप्त नहीं की जा सकी"
+    }
+  },
+  "contractorInvoicesPage": {
+    "title": "ठेकेदार चालान",
+    "description": "ठेकेदार चालानों का प्रबंधन और भुगतान करें",
+    "actions": {
+      "submitInvoice": "चालान जमा करें",
+      "approve": "स्वीकृत करें",
+      "reject": "अस्वीकार करें",
+      "markPaid": "भुगतान किया हुआ चिह्नित करें",
+      "cancel": "रद्द करें"
+    },
+    "filters": {
+      "allStatuses": "सभी स्थितियाँ"
+    },
+    "statuses": {
+      "pending": "लंबित",
+      "approved": "स्वीकृत",
+      "paid": "भुगतान किया गया",
+      "rejected": "अस्वीकृत"
+    },
+    "table": {
+      "invoiceNumber": "चालान संख्या",
+      "contractor": "ठेकेदार",
+      "period": "अवधि",
+      "amount": "राशि",
+      "status": "स्थिति",
+      "submitted": "जमा किया गया",
+      "actions": "कार्रवाइयाँ"
+    },
+    "empty": "अभी कोई ठेकेदार चालान नहीं है।",
+    "modal": {
+      "title": "ठेकेदार चालान जमा करें",
+      "contractorLabel": "ठेकेदार *",
+      "selectContractor": "ठेकेदार चुनें...",
+      "noContractors": "अभी कोई ठेकेदार नहीं है — वैश्विक कर्मचारी में एक जोड़ें",
+      "amountLabel": "राशि",
+      "amountUnitHint": "मुख्य मुद्रा इकाई",
+      "periodStart": "अवधि प्रारंभ *",
+      "periodEnd": "अवधि समाप्ति *",
+      "description": "विवरण"
+    },
+    "validation": {
+      "required": "कृपया सभी आवश्यक फ़ील्ड भरें",
+      "positiveAmount": "राशि एक धनात्मक संख्या होनी चाहिए",
+      "invalidPeriod": "समाप्ति तिथि प्रारंभ तिथि के समान या उसके बाद होनी चाहिए"
+    },
+    "messages": {
+      "submitted": "चालान जमा किया गया",
+      "submitFailed": "चालान जमा नहीं हो सका",
+      "approved": "चालान स्वीकृत किया गया",
+      "approveFailed": "चालान स्वीकृत नहीं हो सका",
+      "rejectConfirm": "इस चालान को अस्वीकार करें?",
+      "rejected": "चालान अस्वीकृत किया गया",
+      "rejectFailed": "चालान अस्वीकार नहीं हो सका",
+      "paid": "चालान को भुगतान किया हुआ चिह्नित किया गया",
+      "paidFailed": "चालान को भुगतान किया हुआ चिह्नित नहीं किया जा सका"
+    }
+  },
+  "globalPayrollDashboard": {
+    "title": "वैश्विक पेरोल",
+    "description": "देशों, मुद्राओं और अनुपालन आवश्यकताओं में अपने वैश्विक कार्यबल का प्रबंधन करें",
+    "stats": {
+      "activeEmployees": "सक्रिय कर्मचारी",
+      "countries": "देश",
+      "eorWorkers": "EOR कर्मचारी",
+      "contractors": "ठेकेदार",
+      "complianceScore": "अनुपालन स्कोर",
+      "pendingInvoices": "लंबित चालान",
+      "onboarding": "ऑनबोर्डिंग"
+    },
+    "compliance": {
+      "good": "अच्छा",
+      "needsAttention": "ध्यान आवश्यक"
+    },
+    "employeesByCountry": {
+      "title": "देश के अनुसार कर्मचारी",
+      "empty": "अभी कोई कर्मचारी नहीं है। अपना पहला वैश्विक कर्मचारी जोड़ें।"
+    },
+    "costByCurrency": {
+      "title": "मुद्रा के अनुसार मासिक लागत",
+      "empty": "अभी कोई सक्रिय पेरोल लागत नहीं है।"
+    },
+    "costAnalysis": {
+      "title": "देश के अनुसार लागत विश्लेषण",
+      "columns": {
+        "country": "देश",
+        "employees": "कर्मचारी",
+        "averageSalary": "औसत वेतन",
+        "totalGross": "कुल सकल",
+        "employerCost": "नियोक्ता लागत",
+        "netPay": "शुद्ध वेतन"
+      }
+    }
+  },
+  "globalPayrollRuns": {
+    "title": "वैश्विक पेरोल रन",
+    "description": "हर देश के लिए मासिक पेरोल चलाएं, समीक्षा और अनुमोदन करें तथा भुगतान किया हुआ चिह्नित करें",
+    "statusFilter": "स्थिति के अनुसार पेरोल रन फ़िल्टर करें",
+    "allStatuses": "सभी स्थितियां",
+    "empty": "अभी कोई पेरोल रन नहीं है। अपना पहला वैश्विक पेरोल रन बनाएं।",
+    "columns": {
+      "country": "देश",
+      "period": "अवधि",
+      "status": "स्थिति",
+      "gross": "सकल",
+      "net": "शुद्ध",
+      "deductions": "कटौतियां",
+      "employerCost": "नियोक्ता लागत",
+      "actions": "कार्रवाइयां"
+    },
+    "actions": {
+      "view": "पेरोल रन देखें",
+      "approve": "अनुमोदित करें",
+      "markPaid": "भुगतान किया हुआ चिह्नित करें"
+    },
+    "createModal": {
+      "title": "वैश्विक पेरोल रन बनाएं",
+      "country": "देश *",
+      "selectCountry": "देश चुनें...",
+      "noCountries": "सक्रिय EOR या सीधे नियुक्त कर्मचारी वाला कोई देश नहीं है",
+      "calculationNotice": "चुने गए देश के सभी सक्रिय EOR और सीधे नियुक्त कर्मचारियों की कटौतियां अपने आप गणना की जाएंगी।"
+    },
+    "detailModal": {
+      "title": "पेरोल रन — {{country}}",
+      "netPay": "शुद्ध वेतन",
+      "employee": "कर्मचारी",
+      "tax": "कर",
+      "socialSecurityEmployee": "सामाजिक सुरक्षा (कर्मचारी)",
+      "pensionEmployee": "पेंशन (कर्मचारी)"
+    },
+    "messages": {
+      "selectCountry": "कृपया देश चुनें",
+      "approved": "पेरोल रन अनुमोदित हुआ",
+      "approveFailed": "पेरोल रन अनुमोदित नहीं हो सका",
+      "markedPaid": "पेरोल रन को भुगतान किया हुआ चिह्नित किया गया",
+      "markPaidFailed": "पेरोल रन को भुगतान किया हुआ चिह्नित नहीं किया जा सका"
+    }
+  },
+  "announcementsPage": {
+    "title": "घोषणाएं",
+    "description": "EmpCloud से प्रकाशित कंपनी-व्यापी सूचनाएं",
+    "manageInEmpCloud": "EmpCloud में प्रबंधित करें",
+    "empty": "अभी कोई घोषणा नहीं है",
+    "postFromEmpCloud": "EmpCloud से प्रकाशित करें",
+    "pinned": "पिन किया गया",
+    "archived": "संग्रहित",
+    "byAuthor": "{{author}} द्वारा",
+    "unknownAuthor": "अज्ञात",
+    "expires": "{{date}} को समाप्त होगा",
+    "priorities": {
+      "low": "कम",
+      "normal": "सामान्य",
+      "high": "उच्च",
+      "urgent": "अत्यावश्यक"
+    },
+    "categories": {
+      "general": "सामान्य",
+      "hr": "मानव संसाधन",
+      "policy": "नीति",
+      "event": "कार्यक्रम",
+      "holiday": "अवकाश",
+      "maintenance": "रखरखाव"
+    }
+  },
+  "notificationsPage": {
+    "title": "सूचनाएँ",
+    "description": "आपकी सभी हाल की सूचनाएँ और अपडेट एक ही स्थान पर",
+    "markAllRead": "सभी को पढ़ा हुआ चिह्नित करें",
+    "bellAria": "सूचनाएँ, {{count}} अपठित",
+    "newCount": "{{count}} नई — पढ़ा हुआ चिह्नित करें",
+    "viewAll": "सभी सूचनाएँ देखें",
+    "tabs": {
+      "all": "सभी ({{count}})",
+      "unread": "अपठित ({{count}})"
+    },
+    "empty": {
+      "noUnread": "कोई अपठित सूचना नहीं",
+      "none": "कोई सूचना नहीं",
+      "caughtUp": "आप पूरी तरह अपडेट हैं!",
+      "updatesHere": "नए अपडेट यहाँ दिखाई देंगे।"
+    },
+    "items": {
+      "admin": {
+        "tdsDue": {
+          "title": "TDS फाइलिंग की समय सीमा",
+          "description": "वित्त वर्ष 2025–26 की चौथी तिमाही का फॉर्म 24Q जल्द देय है",
+          "time": "कार्रवाई आवश्यक"
+        },
+        "payrollPending": {
+          "title": "{{month}} का पेरोल लंबित",
+          "description": "इस महीने का पेरोल बनाएँ और चलाएँ",
+          "time": "इस महीने"
+        },
+        "payrollCompleted": {
+          "title": "पिछला पेरोल पूरा हुआ",
+          "description": "सभी वेतन पर्चियाँ तैयार और भुगतान की गईं",
+          "time": "पिछले महीने"
+        },
+        "activeEmployees": {
+          "title": "{{count}} सक्रिय कर्मचारी",
+          "description": "सभी वैधानिक पंजीकरण अद्यतन हैं",
+          "time": "सिस्टम"
+        }
+      },
+      "employee": {
+        "payslipAvailable": {
+          "title": "वेतन पर्ची उपलब्ध",
+          "description": "आपकी नवीनतम वेतन पर्ची देखने के लिए तैयार है",
+          "time": "हाल ही में"
+        },
+        "taxReminder": {
+          "title": "कर घोषणा अनुस्मारक",
+          "description": "समय सीमा से पहले निवेश प्रमाण जमा करें",
+          "time": "इस तिमाही"
+        },
+        "salaryCredited": {
+          "title": "वेतन जमा हुआ",
+          "description": "आपका वेतन आपके बैंक खाते में जमा हो गया है",
+          "time": "पिछले महीने"
+        }
+      }
+    }
+  },
+  "selfServiceDashboard": {
+    "greeting": "स्वागत है, {{name}}!",
+    "userFallback": "उपयोगकर्ता",
+    "description": "यह रहा आपका वेतन सारांश",
+    "stats": {
+      "monthlyCtc": "मासिक CTC",
+      "latestNetPay": "नवीनतम शुद्ध वेतन",
+      "taxRegime": "कर व्यवस्था",
+      "daysAtCompany": "कंपनी में दिन"
+    },
+    "regimes": {
+      "old": "पुरानी व्यवस्था",
+      "new": "नई व्यवस्था"
+    },
+    "latestPayslip": "नवीनतम वेतन पर्ची — {{period}}",
+    "payslip": {
+      "grossPay": "सकल वेतन",
+      "deductions": "कटौतियां",
+      "netPay": "शुद्ध वेतन",
+      "viewAll": "सभी देखें"
+    },
+    "actions": {
+      "salaryBreakdown": "वेतन विवरण देखें",
+      "taxComputation": "कर गणना",
+      "submitDeclarations": "घोषणाएं जमा करें",
+      "reimbursements": "प्रतिपूर्ति",
+      "profile": "मेरी प्रोफ़ाइल"
+    },
+    "announcements": {
+      "title": "कंपनी की घोषणाएं",
+      "readMore": "और पढ़ें",
+      "fallbackTitle": "घोषणा",
+      "priorityLabel": "{{priority}} प्राथमिकता",
+      "priorities": {
+        "low": "कम",
+        "normal": "सामान्य",
+        "high": "उच्च",
+        "urgent": "अत्यावश्यक"
+      }
+    }
+  },
+  "myPayslipsPage": {
+    "title": "मेरी वेतन पर्चियां",
+    "description": "अपनी वेतन पर्चियां देखें और डाउनलोड करें",
+    "financialYear": "वित्त वर्ष {{start}}-{{end}}",
+    "financialYearFilter": "वित्त वर्ष के अनुसार फ़िल्टर करें",
+    "empty": "अभी कोई वेतन पर्ची उपलब्ध नहीं है",
+    "gross": "सकल",
+    "net": "शुद्ध",
+    "actions": {
+      "hide": "छिपाएं",
+      "details": "विवरण",
+      "downloadPdf": "PDF डाउनलोड करें",
+      "dispute": "वेतन पर्ची पर आपत्ति दर्ज करें"
+    },
+    "earnings": "आय",
+    "totalEarnings": "कुल आय",
+    "deductions": "कटौतियां",
+    "totalDeductions": "कुल कटौतियां",
+    "components": {
+      "EPF": "कर्मचारी भविष्य निधि",
+      "PF": "भविष्य निधि",
+      "PF_EE": "कर्मचारी भविष्य निधि अंशदान",
+      "ESI": "कर्मचारी राज्य बीमा",
+      "PT": "व्यवसाय कर",
+      "TDS": "आयकर (TDS)",
+      "INCOME_TAX": "आयकर",
+      "LOP": "वेतन हानि"
+    },
+    "dispute": {
+      "title": "वेतन पर्ची पर आपत्ति दर्ज करें",
+      "reasonRequired": "कृपया कारण बताएं",
+      "success": "आपत्ति दर्ज हो गई है। HR इसकी समीक्षा करेगा।",
+      "failed": "आपत्ति दर्ज नहीं हो सकी",
+      "description": "यदि आपको लगता है कि इस वेतन पर्ची में कोई त्रुटि है, तो नीचे समस्या का वर्णन करें। HR इसकी समीक्षा करके उत्तर देगा।",
+      "placeholder": "समस्या का वर्णन करें (जैसे गलत कटौती या अनुपस्थित भत्ता)",
+      "cancel": "रद्द करें",
+      "submit": "आपत्ति दर्ज करें"
+    }
+  },
+  "mySalaryPage": {
+    "title": "मेरा वेतन",
+    "description": "आपके CTC का विवरण और वेतन संरचना",
+    "unavailable": "वेतन की जानकारी उपलब्ध नहीं है",
+    "annualSummary": "वार्षिक सारांश",
+    "annualCtcConfigured": "वार्षिक CTC (कॉन्फ़िगर किया गया)",
+    "annualGrossComponents": "घटकों से वार्षिक सकल वेतन",
+    "roundingNotice": "कॉन्फ़िगर किए गए CTC और घटकों के योग में मामूली अंतर सामान्य है: वार्षिक गणना से पहले मासिक राशियों को निकटतम पूर्ण रुपये में पूर्णांकित किया जाता है।",
+    "grossSalaryAnnual": "सकल वेतन (वार्षिक)",
+    "monthlyComponent": "मासिक {{component}}",
+    "monthlyBreakdown": "मासिक वेतन विवरण",
+    "salaryComponents": "वेतन घटक",
+    "effectiveFrom": "{{date}} से प्रभावी",
+    "columns": {
+      "component": "घटक",
+      "monthly": "मासिक",
+      "annual": "वार्षिक"
+    },
+    "components": {
+      "BASIC": "मूल वेतन",
+      "HRA": "मकान किराया भत्ता (HRA)",
+      "SA": "विशेष भत्ता"
+    }
+  },
+  "myTaxPage": {
+    "title": "मेरा कर",
+    "description": "वित्त वर्ष {{financialYear}} की कर गणना",
+    "form16": "फ़ॉर्म 16",
+    "stats": {
+      "annualIncome": "वार्षिक आय",
+      "taxableIncome": "कर योग्य आय",
+      "estimatedTax": "अनुमानित कर",
+      "tdsDeductedYtd": "इस वर्ष अब तक काटा गया TDS"
+    },
+    "computationTitle": "कर गणना",
+    "regimes": {
+      "new": "नई कर व्यवस्था",
+      "old": "पुरानी कर व्यवस्था"
+    },
+    "rows": {
+      "grossAnnualIncome": "सकल वार्षिक आय",
+      "standardDeduction": "घटाएँ: मानक कटौती",
+      "chapterDeductions": "घटाएँ: अध्याय VI-A की कटौतियाँ",
+      "taxableIncome": "कर योग्य आय",
+      "taxOnIncome": "आय पर कर",
+      "cess": "स्वास्थ्य और शिक्षा उपकर (4%)",
+      "totalLiability": "कुल कर देयता",
+      "monthlyTds": "मासिक TDS"
+    },
+    "tracker": {
+      "title": "TDS कटौती ट्रैकर",
+      "totalTax": "वित्त वर्ष का कुल कर",
+      "tdsDeductedYtd": "इस वर्ष अब तक काटा गया TDS",
+      "remaining": "शेष",
+      "progress": "प्रगति",
+      "monthlyMessage": "हर महीने आपके वेतन से <strong>{{amount}}</strong> का TDS काटा जाएगा।"
+    }
+  },
+  "myDeclarationsPage": {
+    "description": "वित्त वर्ष {{financialYear}} — निवेश प्रमाण और दावे जमा करें",
+    "actions": {
+      "quickDeclare": "सभी की त्वरित घोषणा करें",
+      "newDeclaration": "नई घोषणा",
+      "cancel": "रद्द करें",
+      "submitAll": "सभी घोषणाएँ जमा करें",
+      "submit": "घोषणा जमा करें"
+    },
+    "stats": {
+      "totalDeclared": "कुल घोषित",
+      "totalApproved": "कुल स्वीकृत",
+      "pendingApproval": "स्वीकृति के लिए लंबित"
+    },
+    "declarations": "घोषणाएँ",
+    "empty": "अभी कोई घोषणा नहीं है। अपना पहला निवेश प्रमाण जमा करने के लिए नई घोषणा चुनें।",
+    "proof": {
+      "submitted": "प्रमाण जमा किया गया",
+      "upload": "अपलोड करें"
+    },
+    "quick": {
+      "title": "त्वरित कर घोषणा",
+      "description": "अपने सभी निवेश एक साथ घोषित करें",
+      "tip": "सुझाव: धारा 80C के अंतर्गत PPF, ELSS, LIC आदि के लिए ₹1,50,000 तक का दावा किया जा सकता है। 80CCD(1B) के अंतर्गत NPS पर ₹50,000 की अतिरिक्त कटौती मिलती है।",
+      "defaultDescription": "धारा {{section}} के अंतर्गत कर घोषणा"
+    },
+    "sections": {
+      "80C": "80C — PPF, ELSS, LIC आदि",
+      "80CCD_1B": "80CCD(1B) — NPS",
+      "80D": "80D — चिकित्सा बीमा",
+      "80E": "80E — शिक्षा ऋण ब्याज",
+      "80G": "80G — दान",
+      "80TTA": "80TTA — बचत ब्याज",
+      "HRA": "HRA — मकान किराया"
+    },
+    "validation": {
+      "sectionRequired": "कृपया एक धारा चुनें",
+      "fieldRequired": "कृपया यह फ़ील्ड भरें",
+      "validAmount": "कृपया मान्य राशि दर्ज करें",
+      "nonnegativeAmount": "राशि ऋणात्मक नहीं हो सकती",
+      "fileTooLarge": "फ़ाइल 5 MB से बड़ी है",
+      "fileType": "केवल PDF, JPG या PNG फ़ाइलें स्वीकार्य हैं",
+      "oneAmount": "कम से कम एक राशि दर्ज करें"
+    },
+    "messages": {
+      "proofUploaded": "प्रमाण अपलोड किया गया",
+      "proofUploadFailed": "प्रमाण अपलोड नहीं किया जा सका",
+      "submitted": "घोषणा जमा की गई",
+      "submitFailed": "घोषणा जमा नहीं की जा सकी",
+      "submittedCount_one": "{{count}} घोषणा जमा की गई",
+      "submittedCount_other": "{{count}} घोषणाएँ जमा की गईं",
+      "submitAllFailed": "घोषणाएँ जमा नहीं की जा सकीं"
+    },
+    "form": {
+      "descriptionPlaceholder": "जैसे, PPF योगदान",
+      "amount": "राशि",
+      "proofDocument": "प्रमाण दस्तावेज़",
+      "optional": "वैकल्पिक",
+      "uploadProof": "प्रमाण दस्तावेज़ अपलोड करें",
+      "fileSelected": "{{size}} KB — बदलने के लिए चुनें",
+      "dropzone": "अपलोड करने के लिए चुनें या खींचकर छोड़ें",
+      "fileHelp": "PDF, JPG या PNG, अधिकतम 5 MB"
+    }
+  },
+  "myReimbursementsPage": {
+    "title": "मेरी प्रतिपूर्तियाँ",
+    "description": "खर्च के दावे जमा करें और उनकी स्थिति देखें",
+    "newClaim": "नया दावा",
+    "stats": {
+      "total": "कुल दावे",
+      "pending": "लंबित",
+      "approvedPaid": "स्वीकृत / भुगतान किए गए"
+    },
+    "empty": {
+      "title": "कोई प्रतिपूर्ति दावा नहीं है",
+      "description": "खर्च जमा करने के लिए नया दावा चुनें"
+    },
+    "columns": {
+      "category": "श्रेणी",
+      "description": "विवरण",
+      "amount": "राशि",
+      "date": "तारीख",
+      "status": "स्थिति"
+    },
+    "categories": {
+      "medical": "चिकित्सा",
+      "travel": "यात्रा",
+      "food": "भोजन",
+      "equipment": "उपकरण",
+      "internet": "इंटरनेट / फ़ोन",
+      "books": "किताबें और प्रशिक्षण",
+      "other": "अन्य"
+    },
+    "status": {
+      "pending": "लंबित",
+      "approved": "स्वीकृत",
+      "paid": "भुगतान किया गया",
+      "rejected": "अस्वीकृत"
+    },
+    "messages": {
+      "invalidAmount": "राशि शून्य या धनात्मक होनी चाहिए",
+      "submitted": "दावा स्वीकृति के लिए जमा किया गया",
+      "failed": "दावा जमा नहीं किया जा सका"
+    },
+    "modal": {
+      "title": "खर्च का दावा जमा करें",
+      "category": "श्रेणी",
+      "description": "विवरण",
+      "descriptionPlaceholder": "जैसे, ग्राहक बैठक के लिए टैक्सी",
+      "amount": "राशि (₹)",
+      "expenseDate": "खर्च की तारीख",
+      "cancel": "रद्द करें",
+      "submit": "दावा जमा करें"
+    }
+  },
+  "holidaysPage": {
+    "title": "अवकाश कैलेंडर",
+    "configured_one": "{{year}} — {{count}} अवकाश कॉन्फ़िगर किया गया",
+    "configured_other": "{{year}} — {{count}} अवकाश कॉन्फ़िगर किए गए",
+    "noHolidays": "कोई अवकाश नहीं",
+    "upcoming": "आगामी अवकाश",
+    "past": "पिछले अवकाश",
+    "actions": {
+      "add": "अवकाश जोड़ें",
+      "remove": "अवकाश हटाएँ",
+      "cancel": "रद्द करें"
+    },
+    "columns": {
+      "holiday": "अवकाश",
+      "date": "तारीख",
+      "day": "दिन",
+      "type": "प्रकार"
+    },
+    "types": {
+      "national": "राष्ट्रीय",
+      "regional": "क्षेत्रीय",
+      "optional": "वैकल्पिक / प्रतिबंधित"
+    },
+    "messages": {
+      "nameRequired": "अवकाश का नाम आवश्यक है",
+      "nameLetter": "अवकाश के नाम में कम से कम एक अक्षर होना चाहिए",
+      "added": "अवकाश जोड़ा गया",
+      "addFailed": "अवकाश नहीं जोड़ा जा सका",
+      "removed": "अवकाश हटाया गया",
+      "removeFailed": "अवकाश नहीं हटाया जा सका"
+    },
+    "modal": {
+      "title": "अवकाश जोड़ें",
+      "name": "अवकाश का नाम",
+      "namePlaceholder": "जैसे, दिवाली",
+      "nameTitle": "कम से कम एक अक्षर होना चाहिए",
+      "date": "तारीख",
+      "type": "प्रकार"
+    }
+  },
+  "payrollRuns": {
+    "title": "पेरोल रन",
+    "description": "मासिक पेरोल प्रक्रिया",
+    "runPayroll": "पेरोल चलाएँ",
+    "noRuns": "अभी कोई पेरोल रन नहीं है।",
+    "runFirst": "पहला पेरोल चलाएँ",
+    "totalRuns": "कुल रन",
+    "allPeriods": "सभी अवधियाँ",
+    "latestNetPay": "नवीनतम शुद्ध वेतन",
+    "noComputedRuns": "कोई गणना किया गया रन नहीं",
+    "markedPaid": "भुगतान चिह्नित",
+    "inProgress": "प्रगति पर",
+    "inProgressSubtitle": "ड्राफ्ट · गणना किया गया · स्वीकृत",
+    "filterAria": "स्थिति के अनुसार रन फ़िल्टर करें",
+    "noMatches": "इस फ़िल्टर से कोई रन मेल नहीं खाता।",
+    "newTitle": "नया पेरोल रन",
+    "newDescription": "नया मासिक पेरोल रन बनाएँ",
+    "createInfo": "चुने गए महीने के हर सक्रिय कर्मचारी के लिए एक ड्राफ्ट रन बनाता है और सकल वेतन, कटौतियों व शुद्ध वेतन की गणना करता है। भुगतान चिह्नित करने से पहले आप इसकी समीक्षा और स्वीकृति कर सकते हैं।",
+    "month": "महीना",
+    "year": "वर्ष",
+    "payDate": "भुगतान तिथि",
+    "cancel": "रद्द करें",
+    "createRun": "रन बनाएँ",
+    "created": "पेरोल रन बनाया गया",
+    "missingReturnedId": "रन जमा हुआ, लेकिन सर्वर ने आईडी नहीं लौटाई। पुष्टि के लिए सूची रीफ़्रेश करें।",
+    "createFailed": "पेरोल रन नहीं बनाया जा सका",
+    "missingId": "इस पेरोल रन की आईडी नहीं है — सूची रीफ़्रेश करें।",
+    "columns": {
+      "period": "अवधि",
+      "employees": "कर्मचारी",
+      "grossPay": "सकल वेतन",
+      "deductions": "कटौतियाँ",
+      "netPay": "शुद्ध वेतन",
+      "status": "स्थिति"
+    },
+    "statuses": {
+      "all": "सभी",
+      "draft": "ड्राफ्ट",
+      "processing": "प्रक्रिया में",
+      "computed": "गणना किया गया",
+      "approved": "स्वीकृत",
+      "paid": "भुगतान हुआ",
+      "cancelled": "रद्द"
+    },
+    "validation": {
+      "month": "मान्य महीना चुनें",
+      "year": "मान्य वर्ष दर्ज करें (2020–2100)",
+      "futurePeriod": "भविष्य की अवधि के लिए पेरोल रन नहीं बनाया जा सकता",
+      "payDate": "भुगतान तिथि चुनें"
+    }
+  },
+  "pagination": {
+    "range": "{{total}} में से {{start}}–{{end}}",
+    "pageOf": "पृष्ठ {{page}} / {{totalPages}}",
+    "previous": "पिछला",
+    "previousPage": "पिछला पृष्ठ",
+    "next": "अगला",
+    "nextPage": "अगला पृष्ठ"
+  },
+  "adminDeclarations": {
+    "title": "कर घोषणाएँ",
+    "description": "{{financialYear}} के लिए कर्मचारियों द्वारा जमा निवेश घोषणाओं की समीक्षा करें।",
+    "pending": {
+      "title": "लंबित स्वीकृतियाँ",
+      "badge": "{{pending}} लंबित · {{count}} कर्मचारी",
+      "badge_one": "{{pending}} लंबित · {{count}} कर्मचारी",
+      "badge_other": "{{pending}} लंबित · {{count}} कर्मचारी",
+      "loading": "लंबित घोषणाएँ लोड हो रही हैं…",
+      "empty": "{{financialYear}} के लिए कोई घोषणा स्वीकृति की प्रतीक्षा में नहीं है। सब पूरा है।",
+      "declaredAmount": "{{amount}} घोषित"
+    },
+    "employees": {
+      "title": "कर्मचारी",
+      "loading": "लोड हो रहा है…",
+      "noMatches": "कोई मेल खाता कर्मचारी नहीं मिला।",
+      "shownOf": "{{total}} में से {{shown}}"
+    },
+    "filters": {
+      "searchPlaceholder": "नाम, ईमेल या कोड",
+      "filterDepartment": "विभाग के अनुसार फ़िल्टर करें",
+      "allDepartments": "सभी विभाग",
+      "filterLocation": "स्थान के अनुसार फ़िल्टर करें",
+      "allLocations": "सभी स्थान",
+      "clear": "फ़िल्टर हटाएँ"
+    },
+    "declarations": {
+      "pickEmployee": "कर्मचारी चुनें",
+      "approving": "स्वीकृत किया जा रहा है…",
+      "approvePending": "{{count}} लंबित घोषणाएँ स्वीकृत करें",
+      "approvePending_one": "{{count}} लंबित घोषणा स्वीकृत करें",
+      "approvePending_other": "{{count}} लंबित घोषणाएँ स्वीकृत करें",
+      "selectPrompt": "कर घोषणाएँ देखने के लिए सूची से कर्मचारी चुनें।",
+      "loading": "घोषणाएँ लोड हो रही हैं…",
+      "empty": "{{financialYear}} के लिए कोई घोषणा जमा नहीं हुई।"
+    },
+    "stats": {
+      "declared": "घोषित",
+      "approved": "स्वीकृत",
+      "pending": "लंबित"
+    },
+    "columns": {
+      "section": "धारा",
+      "description": "विवरण",
+      "declared": "घोषित",
+      "approved": "स्वीकृत",
+      "status": "स्थिति",
+      "proof": "प्रमाण",
+      "action": "कार्रवाई"
+    },
+    "statuses": {
+      "pending": "लंबित",
+      "approved": "स्वीकृत",
+      "rejected": "अस्वीकृत"
+    },
+    "proof": {
+      "view": "देखें"
+    },
+    "actions": {
+      "approve": "स्वीकृत करें"
+    },
+    "toasts": {
+      "noPending": "स्वीकृति के लिए कोई लंबित घोषणा नहीं है।",
+      "approvedCount": "{{count}} घोषणाएँ स्वीकृत की गईं।",
+      "approvedCount_one": "{{count}} घोषणा स्वीकृत की गई।",
+      "approvedCount_other": "{{count}} घोषणाएँ स्वीकृत की गईं।",
+      "approveAllFailed": "घोषणाएँ स्वीकृत नहीं की जा सकीं",
+      "alreadyApproved": "पहले ही स्वीकृत है।",
+      "approvedOne": "घोषणा स्वीकृत की गई।",
+      "approveOneFailed": "घोषणा स्वीकृत नहीं की जा सकी"
+    }
+  },
+  "taxCalculator": {
+    "title": "कर कैलकुलेटर",
+    "description": "आयकर का अनुमान — कोई कर्मचारी चुनें और अपने आंकड़ों के साथ दोबारा गणना करें",
+    "financialYearShort": "वित्त वर्ष {{year}}",
+    "simulationFailed": "कर की गणना नहीं हो सकी। कृपया फिर प्रयास करें।",
+    "newRegimeInfo": "नई कर व्यवस्था — केवल ₹75,000 की मानक कटौती लागू होती है। HRA, 80C, 80D और अध्याय VI-A की अन्य कटौतियाँ उपलब्ध नहीं हैं।",
+    "steps": {
+      "employee": "चरण 1 · कर्मचारी",
+      "inputs": "चरण 2 · आंकड़े",
+      "taxBreakdown": "चरण 3 · कर विवरण"
+    },
+    "regimes": {
+      "new": "नई कर व्यवस्था",
+      "old": "पुरानी कर व्यवस्था"
+    },
+    "employee": {
+      "ctc": "CTC",
+      "select": "कर्मचारी खोजें और चुनें…",
+      "joined": "कार्यग्रहण {{date}}",
+      "monthsLeft": "इस वित्त वर्ष में {{count}} महीने शेष",
+      "monthsLeft_one": "इस वित्त वर्ष में {{count}} महीना शेष",
+      "monthsLeft_other": "इस वित्त वर्ष में {{count}} महीने शेष",
+      "midFyJoiner": "वित्त वर्ष के बीच में कार्यग्रहण",
+      "searchPlaceholder": "नाम, ईमेल या कोड खोजें…",
+      "noMatches": "“{{search}}” से कोई कर्मचारी मेल नहीं खाता"
+    },
+    "empty": {
+      "title": "शुरू करने के लिए कर्मचारी चुनें",
+      "description": "कैलकुलेटर कर्मचारी का मौजूदा वेतन, कर व्यवस्था और स्वीकृत घोषणाएँ लोड करता है, ताकि आप आंकड़े बदलकर मासिक TDS देख सकें।"
+    },
+    "inputs": {
+      "reset": "सहेजे गए मान फिर लागू करें",
+      "loadingSaved": "सहेजे गए मान लोड हो रहे हैं…",
+      "noSalary": "कोई सक्रिय वेतन संरचना असाइन नहीं है। सभी फ़ील्ड शून्य से शुरू होते हैं — कर अनुमान के लिए आंकड़े स्वयं दर्ज करें।",
+      "midFyTitle": "वित्त वर्ष के बीच कार्यग्रहण — नीचे फ़ॉर्म 12B दर्ज करें",
+      "midFyDescription": "यह कर्मचारी वित्त वर्ष {{financialYear}} के बीच में जुड़ा। पिछले नियोक्ता की आय और TDS के बिना, सिस्टम पूरे वार्षिक कर को केवल {{count}} महीनों में बाँटेगा और अधिक कटौती करेगा।",
+      "midFyDescription_one": "यह कर्मचारी वित्त वर्ष {{financialYear}} के बीच में जुड़ा। पिछले नियोक्ता की आय और TDS के बिना, सिस्टम पूरे वार्षिक कर को केवल {{count}} महीने में लागू करेगा और अधिक कटौती करेगा।",
+      "midFyDescription_other": "यह कर्मचारी वित्त वर्ष {{financialYear}} के बीच में जुड़ा। पिछले नियोक्ता की आय और TDS के बिना, सिस्टम पूरे वार्षिक कर को केवल {{count}} महीनों में बाँटेगा और अधिक कटौती करेगा।",
+      "regime": "कर व्यवस्था",
+      "compare": "पुरानी और नई व्यवस्था की तुलना करें",
+      "pan": "PAN",
+      "panHint": "खाली होने पर 206AA के तहत 20% समान दर",
+      "annualGross": "वार्षिक सकल",
+      "annualBasic": "वार्षिक मूल वेतन",
+      "annualHra": "वार्षिक HRA",
+      "employeePfAnnual": "कर्मचारी PF (वार्षिक)"
+    },
+    "priorEmployer": {
+      "title": "पिछला नियोक्ता (फ़ॉर्म 12B)",
+      "save": "प्रोफ़ाइल में सहेजें",
+      "saved": "पिछले नियोक्ता का TDS सहेजा गया",
+      "saveFailed": "पिछला TDS सहेजा नहीं जा सका",
+      "description": "इस वित्त वर्ष में पिछले नियोक्ता से मिली आय और काटा गया TDS। सहेजे गए मान अगली पेरोल प्रक्रिया में जाते हैं, जिससे दोहरी कटौती नहीं होती।",
+      "gross": "पिछले नियोक्ता का सकल (इस वित्त वर्ष)",
+      "tds": "पिछले नियोक्ता का TDS",
+      "source": "स्रोत / नोट्स (वैकल्पिक)",
+      "sourcePlaceholder": "उदा., “फ़ॉर्म 12B 01-09-2026 को अपलोड किया”"
+    },
+    "oldRegime": {
+      "title": "पुरानी कर व्यवस्था के अतिरिक्त आंकड़े",
+      "annualRent": "भुगतान किया गया वार्षिक किराया",
+      "metro": "महानगर (मूल वेतन के 50% की HRA सीमा)",
+      "declarations": "अध्याय VI-A घोषणाएँ",
+      "add": "जोड़ें",
+      "noDeclarations": "कोई घोषणा नहीं है। 80C, 80D, 80CCD(1B) आदि का अनुमान लगाने के लिए “जोड़ें” पर क्लिक करें।",
+      "remove": "हटाएँ"
+    },
+    "actions": {
+      "compareRegimes": "कर व्यवस्थाओं की तुलना करें",
+      "calculate": "गणना करें"
+    },
+    "validation": {
+      "invalidPan": "PAN का प्रारूप अमान्य लगता है — अपेक्षित प्रारूप ABCDE1234F है।",
+      "section80CCap": "80C का कुल {{amount}} है — केवल ₹1,50,000 कटौती योग्य है (सीमा)।",
+      "npsCap": "80CCD(1B) NPS की सीमा ₹50,000 है।",
+      "hraNeedsRent": "HRA छूट के लिए किराया भुगतान आवश्यक है — दावा करने के लिए वार्षिक किराया दर्ज करें।"
+    },
+    "results": {
+      "calculating": "गणना हो रही है…",
+      "clickCalculate": "कर अनुमान के लिए गणना करें पर क्लिक करें",
+      "enterAnnualGross": "कर अनुमान के लिए वार्षिक सकल दर्ज करें",
+      "section206aaTitle": "धारा 206AA लागू",
+      "section206aaDetail": "PAN उपलब्ध नहीं है, इसलिए कर व्यवस्था या घोषणाओं की परवाह किए बिना वार्षिक सकल का 20% काटा जा रहा है।",
+      "sameTax": "दोनों कर व्यवस्थाओं में कर समान है",
+      "saves": "{{regime}} से {{amount}} की बचत",
+      "recommended": "अनुशंसित:",
+      "monthlyTds": "मासिक TDS",
+      "tapRegime": "पूरा विवरण देखने के लिए कर व्यवस्था चुनें",
+      "grossAnnualIncome": "सकल वार्षिक आय",
+      "less": "घटाएँ: {{item}}",
+      "taxableIncome": "कर योग्य आय",
+      "taxOnIncome": "आयकर (87A छूट के बाद)",
+      "surcharge": "अधिभार",
+      "cess": "स्वास्थ्य और शिक्षा उपकर (4%)",
+      "totalAnnualTax": "कुल वार्षिक कर",
+      "tdsPaidYtd": "इस वर्ष भुगतान किया गया TDS",
+      "remainingTax": "शेष कर",
+      "savingSuggestion": "धारा 80C के तहत {{investment}} और निवेश करके लगभग {{saving}} कर बचाएँ।"
+    },
+    "sections": {
+      "80C": "PPF / ELSS / LIC / मूलधन",
+      "80CCD_1B": "अतिरिक्त NPS",
+      "80D": "चिकित्सा बीमा",
+      "80E": "शिक्षा ऋण ब्याज",
+      "80G": "दान",
+      "80TTA": "बचत ब्याज"
+    }
+  },
+  "taxOverview": {
+    "title": "कर अवलोकन",
+    "financialYear": "वित्त वर्ष {{start}}-{{end}}",
+    "description": "{{fy}} आयकर सारांश",
+    "missingPanCount": "इस पृष्ठ पर {{count}} कर्मचारी बिना वैध PAN के हैं",
+    "missingPanCount_one": "इस पृष्ठ पर {{count}} कर्मचारी बिना वैध PAN के है",
+    "missingPanCount_other": "इस पृष्ठ पर {{count}} कर्मचारी बिना वैध PAN के हैं",
+    "missingPanDetail": "इन कर्मचारियों का TDS धारा 206AA की 20% समान दर से काटा जा रहा है। मानक स्लैब दरें लागू करने के लिए प्रत्येक कर्मचारी से अपने प्रोफ़ाइल में PAN अपडेट करने को कहें।",
+    "summaryTitle": "कर्मचारी कर सारांश",
+    "regimeSuffix": "{{regime}} कर व्यवस्था",
+    "noSalaryStructure": "कोई वेतन संरचना असाइन नहीं है",
+    "empty": "कोई कर्मचारी नहीं मिला।",
+    "stats": {
+      "totalEmployees": "कुल कर्मचारी",
+      "estimatedTaxPage": "अनुमानित कर (पृष्ठ)",
+      "tdsDeductedYtdPage": "इस वर्ष काटा गया TDS (पृष्ठ)",
+      "pageOf": "पृष्ठ {{page}} / {{totalPages}}",
+      "newRegimePage": "नई कर व्यवस्था (पृष्ठ)",
+      "optedIn": "कर्मचारियों ने चुना"
+    },
+    "filters": {
+      "searchPlaceholder": "नाम, ईमेल, कोड या पद से खोजें…",
+      "filterDepartment": "विभाग के अनुसार फ़िल्टर करें",
+      "allDepartments": "सभी विभाग",
+      "filterLocation": "स्थान के अनुसार फ़िल्टर करें",
+      "allLocations": "सभी स्थान",
+      "clear": "फ़िल्टर हटाएँ"
+    },
+    "columns": {
+      "employee": "कर्मचारी",
+      "regime": "कर व्यवस्था",
+      "estimatedTax": "अनुमानित कर",
+      "tdsDeductedYtd": "इस वर्ष काटा गया TDS"
+    },
+    "pan": {
+      "label": "PAN",
+      "invalidTitle": "वैध PAN नहीं — धारा 206AA के तहत 20% समान दर से TDS कटौती।",
+      "missing": "PAN नहीं"
+    },
+    "regimes": {
+      "new": "नई",
+      "old": "पुरानी"
+    }
+  },
+  "payslipList": {
+    "title": "वेतन पर्चियाँ",
+    "count": "{{count}} वेतन पर्चियाँ",
+    "count_one": "{{count}} वेतन पर्ची",
+    "count_other": "{{count}} वेतन पर्चियाँ",
+    "loading": "लोड हो रहा है…",
+    "firstOf": "कुल {{total}} में से पहली {{loaded}} वेतन पर्चियाँ — सूची घटाने के लिए फ़िल्टर चुनें",
+    "filteredOf": "{{total}} में से {{filtered}} वेतन पर्चियाँ",
+    "exportAll": "सभी निर्यात करें",
+    "exportSuccess": "वेतन पर्चियों की CSV निर्यात की गई",
+    "exportFailed": "निर्यात विफल रहा",
+    "emptyTitle": "इस चयन के लिए कोई वेतन पर्ची नहीं है।",
+    "emptyHint": "कोई दूसरा महीना या वर्ष चुनें।",
+    "cappedNotice": "कुल {{total}} में से पहली {{loaded}} वेतन पर्चियाँ दिखाई जा रही हैं — ऊपर के योग इसी दृश्य पर आधारित हैं। सटीक आंकड़ों के लिए महीना, वर्ष या विभाग चुनें।",
+    "excludedTotals": "योग में {{count}} विवादित या रद्द वेतन पर्चियाँ शामिल नहीं हैं।",
+    "excludedTotals_one": "योग में {{count}} विवादित या रद्द वेतन पर्ची शामिल नहीं है।",
+    "excludedTotals_other": "योग में {{count}} विवादित या रद्द वेतन पर्चियाँ शामिल नहीं हैं।",
+    "emptyFiltered": "आपके फ़िल्टर से कोई वेतन पर्ची मेल नहीं खाती।",
+    "filters": {
+      "search": "खोजें",
+      "searchPlaceholder": "नाम या कोड…",
+      "department": "विभाग",
+      "allDepartments": "सभी विभाग",
+      "location": "स्थान",
+      "allLocations": "सभी स्थान",
+      "month": "महीना",
+      "allMonths": "सभी महीने",
+      "year": "वर्ष",
+      "allYears": "सभी वर्ष"
+    },
+    "stats": {
+      "payslips": "वेतन पर्चियाँ",
+      "inView": "दृश्य में",
+      "of": "कुल {{count}} में से",
+      "gross": "सकल",
+      "grossEarnings": "सकल आय",
+      "deductions": "कटौतियाँ",
+      "totalDeductions": "कुल कटौतियाँ",
+      "netPay": "शुद्ध वेतन",
+      "takeHome": "हाथ में वेतन"
+    },
+    "columns": {
+      "employee": "कर्मचारी",
+      "period": "अवधि",
+      "days": "दिन",
+      "gross": "सकल",
+      "deductions": "कटौतियाँ",
+      "netPay": "शुद्ध वेतन",
+      "status": "स्थिति"
+    },
+    "statuses": {
+      "draft": "प्रारूप",
+      "generated": "तैयार",
+      "sent": "भेजी गई",
+      "viewed": "देखी गई",
+      "paid": "भुगतान किया गया",
+      "disputed": "विवादित",
+      "resolved": "समाधान हुआ",
+      "cancelled": "रद्द",
+      "pending": "लंबित",
+      "rejected": "अस्वीकृत"
+    },
+    "actions": {
+      "view": "देखें",
+      "downloadPdf": "PDF डाउनलोड करें"
+    },
+    "modal": {
+      "fallbackTitle": "वेतन पर्ची",
+      "lopNotice": "{{total}} में से {{paid}} दिनों का भुगतान — {{lop}} LOP दिनों की कटौती",
+      "earnings": "आय",
+      "grossPay": "सकल वेतन",
+      "deductions": "कटौतियाँ",
+      "totalDeductions": "कुल कटौतियाँ",
+      "netPay": "शुद्ध वेतन",
+      "printSavePdf": "PDF प्रिंट / सेव करें",
+      "close": "बंद करें"
+    }
+  },
+  "salaryStructures": {
+    "title": "वेतन संरचनाएँ",
+    "configured": "{{count}} संरचनाएँ कॉन्फ़िगर की गईं",
+    "configured_one": "{{count}} संरचना कॉन्फ़िगर की गई",
+    "configured_other": "{{count}} संरचनाएँ कॉन्फ़िगर की गईं",
+    "newStructure": "नई संरचना",
+    "noStructures": "अभी कोई वेतन संरचना नहीं है।",
+    "createFirst": "पहली संरचना बनाएँ",
+    "editTitle": "वेतन संरचना संपादित करें",
+    "newTitle": "नई वेतन संरचना",
+    "structureName": "संरचना का नाम",
+    "structureNamePlaceholder": "जैसे मानक भारत CTC",
+    "description": "विवरण",
+    "descriptionPlaceholder": "पूर्णकालिक कर्मचारियों के लिए",
+    "components": "घटक",
+    "nightHelpAria": "रात्रि भत्ता गणना सहायता",
+    "nightHelpTitle": "रात्रि भत्ता कैसे गणना होता है",
+    "nightOvertimeHelp": "रात्रि भत्ता और ओवरटाइम की गणना",
+    "addPresetAria": "पूर्वनिर्धारित घटक जोड़ें",
+    "addPreset": "+ प्रीसेट जोड़ें…",
+    "custom": "कस्टम",
+    "componentName": "घटक का नाम",
+    "auto": "स्वतः",
+    "nightRatePlaceholder": "₹/रात",
+    "dayRatePlaceholder": "₹/दिन",
+    "percentPlaceholder": "% जैसे 10",
+    "multiplierPlaceholder": "जैसे 2",
+    "autoTitle": "असाइनमेंट पर CTC से स्वतः भरा जाता है",
+    "info": "जानकारी",
+    "noteTitle": "नोट:",
+    "noteText": "वैधानिक कटौतियाँ (EPF, ESI, PT, TDS) पेरोल में स्वतः गणना होती हैं। आवर्ती गैर-वैधानिक कटौती के लिए कटौती और शेष CTC समायोजित करने के लिए किसी एक आय पर बैलेंस चुनें।",
+    "cancel": "रद्द करें",
+    "updateStructure": "संरचना अपडेट करें",
+    "createStructure": "संरचना बनाएँ",
+    "gotIt": "समझ गया",
+    "deleteTitle": "वेतन संरचना हटाएँ?",
+    "deleteDescription": "“{{name}}” हटा दी जाएगी। पहले से असाइन कर्मचारियों का वेतन और गणना की गई पेस्लिप प्रभावित नहीं होंगी।",
+    "delete": "हटाएँ",
+    "active": "सक्रिय",
+    "inactive": "निष्क्रिय",
+    "default": "डिफ़ॉल्ट",
+    "defaultStructureName": "मानक CTC संरचना",
+    "defaultStructureDescription": "बेसिक, HRA, SA, PF और ESI घटकों वाली डिफ़ॉल्ट वेतन संरचना",
+    "noComponents": "कोई घटक नहीं",
+    "noComponentsDefined": "कोई घटक निर्धारित नहीं",
+    "duplicate": "डुप्लिकेट",
+    "duplicateAria": "संरचना की प्रतिलिपि बनाएँ",
+    "edit": "संपादित करें",
+    "editAria": "संरचना संपादित करें",
+    "deleteAria": "संरचना हटाएँ",
+    "collapse": "समेटें",
+    "expand": "खोलें",
+    "statutoryNote": "EPF, ESI, प्रोफेशनल टैक्स और TDS पेरोल के दौरान स्वतः गणना होते हैं—वे वेतन संरचना का हिस्सा नहीं हैं।",
+    "created": "वेतन संरचना बनाई गई",
+    "updated": "वेतन संरचना अपडेट की गई",
+    "deleted": "वेतन संरचना हटाई गई",
+    "duplicated": "संरचना की प्रतिलिपि बनाई गई",
+    "saveFailed": "सहेजा नहीं जा सका",
+    "deleteFailed": "हटाया नहीं जा सका",
+    "duplicateFailed": "प्रतिलिपि नहीं बन सकी",
+    "copyName": "{{name}} (प्रतिलिपि)",
+    "columns": {
+      "name": "नाम",
+      "code": "कोड",
+      "type": "प्रकार",
+      "calc": "गणना",
+      "value": "मान",
+      "percentOf": "% आधार",
+      "component": "घटक",
+      "calculation": "गणना"
+    },
+    "types": {
+      "earning": "आय",
+      "deduction": "कटौती",
+      "reimbursement": "प्रतिपूर्ति",
+      "reimbursementShort": "प्रतिपूर्ति"
+    },
+    "counts": {
+      "earning": "{{count}} आय",
+      "earning_one": "{{count}} आय",
+      "earning_other": "{{count}} आय",
+      "deduction": "{{count}} कटौतियाँ",
+      "deduction_one": "{{count}} कटौती",
+      "deduction_other": "{{count}} कटौतियाँ",
+      "reimbursement": "{{count}} प्रतिपूर्तियाँ",
+      "reimbursement_one": "{{count}} प्रतिपूर्ति",
+      "reimbursement_other": "{{count}} प्रतिपूर्तियाँ",
+      "earningLabel": "आय",
+      "earningLabel_one": "आय",
+      "earningLabel_other": "आय",
+      "deductionLabel": "कटौतियाँ",
+      "deductionLabel_one": "कटौती",
+      "deductionLabel_other": "कटौतियाँ"
+    },
+    "calcs": {
+      "perNight": "प्रति रात ₹",
+      "dayPay": "× दैनिक वेतन",
+      "netPayPercent": "शुद्ध वेतन का %",
+      "perOtDay": "प्रति OT दिन ₹",
+      "fixed": "निश्चित",
+      "balance": "बैलेंस"
+    },
+    "calculationText": {
+      "percentageOf": "{{base}} का {{value}}%",
+      "fixed": "निश्चित ₹{{value}}",
+      "perNight": "₹{{value}} / रात",
+      "wholeSalaryNight": "{{value}}× पूरा वेतन (रात्रि शिफ्ट)",
+      "netPayNight": "शुद्ध वेतन का {{value}}% (रात्रि शिफ्ट)",
+      "perOtDay": "₹{{value}} / OT दिन",
+      "dayPayOt": "{{value}}× दैनिक वेतन / OT दिन",
+      "balancing": "बैलेंस"
+    },
+    "presetNames": {
+      "BASIC": "मूल वेतन",
+      "HRA": "मकान किराया भत्ता",
+      "SA": "विशेष भत्ता",
+      "CA": "यातायात भत्ता",
+      "MA": "चिकित्सा भत्ता",
+      "LTA": "यात्रा भत्ता",
+      "BONUS": "प्रदर्शन बोनस",
+      "NIGHT_ALLOW": "रात्रि भत्ता",
+      "OVERTIME": "ओवरटाइम",
+      "CANTEEN": "कैंटीन कटौती",
+      "WELFARE": "कल्याण निधि",
+      "ADV_REC": "अग्रिम वसूली"
+    },
+    "validation": {
+      "singleBalance": "केवल एक घटक बैलेंस गणना उपयोग कर सकता है।",
+      "balanceEarning": "बैलेंस केवल आय के लिए मान्य है ({{code}})।",
+      "percentage": "{{code}}: प्रतिशत 0 और 100 के बीच होना चाहिए।",
+      "percentageBase": "{{code}}: % आधार चुनें (जैसे CTC, BASIC)।",
+      "fixedEarning": "{{code}}: निश्चित आय 0 से अधिक होनी चाहिए।",
+      "nightRate": "{{code}}: प्रति रात दर 0 से अधिक दर्ज करें।",
+      "nightMultiplier": "{{code}}: रात्रि गुणक कम से कम 1 होना चाहिए।",
+      "netPercentage": "{{code}}: शुद्ध प्रतिशत 0 से 100 के बीच दर्ज करें।",
+      "overtimeRate": "{{code}}: प्रति OT दिन दर 0 से अधिक दर्ज करें।",
+      "overtimeMultiplier": "{{code}}: ओवरटाइम गुणक कम से कम 1 होना चाहिए।"
+    },
+    "help": {
+      "title": "रात्रि भत्ता और ओवरटाइम — गणना मोड",
+      "intro": "रात्रि भत्ता केवल is_night_shift = 1 चिह्नित शिफ्ट में काम किए दिनों के लिए मिलता है। LOP दिन नहीं गिने जाते।",
+      "modeValue": "मोड + मान",
+      "allowanceAdded": "जोड़ा गया भत्ता",
+      "perNight": "प्रति रात",
+      "flatExample": "निश्चित ₹250 × 22 रातें",
+      "addedOnBase": "मूल वेतन के ऊपर जोड़ा",
+      "double": "दोगुना",
+      "doubleFormula": "मूल 166,666 × (2 − 1)",
+      "doubleTotal": "→ कुल सकल = मूल × 2 = 333,332",
+      "oneHalfFormula": "मूल 166,666 × (1.5 − 1)",
+      "oneHalfTotal": "→ कुल सकल = मूल × 1.5 = 250,000",
+      "howModesWork": "हर मोड कैसे काम करता है:",
+      "perNightExplanation": "प्रति रात ₹ — हर काम की रात के लिए निश्चित राशि, सामान्य वेतन के ऊपर।",
+      "dayPayExplanation": "× दैनिक वेतन — रात्रि कर्मचारी का पूरा वेतन गुणक से दिया जाता है। महीने में कम से कम एक रात काम होना चाहिए।",
+      "exampleBase": "उदाहरण का मासिक मूल सकल: ₹166,666।",
+      "overtimeTitle": "ओवरटाइम (साप्ताहिक अवकाश/छुट्टी पर काम):",
+      "overtimeCount": "OT दिन वे हैं जब कर्मचारी अवकाश या छुट्टी पर उपस्थित था; इन्हें WOT/HOT स्वतः चिह्नित किया जाता है।",
+      "perOtExplanation": "प्रति OT दिन ₹ — हर OT दिन की निश्चित राशि।",
+      "otDayPayExplanation": "× दैनिक वेतन — हर OT दिन के लिए दैनिक वेतन का गुणक।",
+      "notesTitle": "नोट।",
+      "notesText": "भत्ता कर योग्य है, इसलिए EPF और TDS सीधे दोगुने नहीं होते। केवल वास्तव में काम की गई रात्रि गिनी जाती है (आधा दिन = 0.5)।"
+    }
+  }
+}

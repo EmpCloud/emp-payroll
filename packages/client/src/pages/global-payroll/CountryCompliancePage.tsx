@@ -5,6 +5,7 @@ import { SelectField } from "@/components/ui/SelectField";
 import { Input } from "@/components/ui/Input";
 import { apiGet } from "@/api/client";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import {
   Globe,
   Loader2,
@@ -51,16 +52,34 @@ const COUNTRY_FLAGS: Record<string, string> = {
 };
 
 const REGION_OPTIONS = [
-  { value: "", label: "All Regions" },
-  { value: "asia", label: "Asia" },
-  { value: "europe", label: "Europe" },
-  { value: "americas", label: "Americas" },
-  { value: "africa", label: "Africa" },
-  { value: "oceania", label: "Oceania" },
-  { value: "middle_east", label: "Middle East" },
+  { value: "", labelKey: "countryCompliancePage.regions.all" },
+  { value: "asia", labelKey: "countryCompliancePage.regions.asia" },
+  { value: "europe", labelKey: "countryCompliancePage.regions.europe" },
+  { value: "americas", labelKey: "countryCompliancePage.regions.americas" },
+  { value: "africa", labelKey: "countryCompliancePage.regions.africa" },
+  { value: "oceania", labelKey: "countryCompliancePage.regions.oceania" },
+  { value: "middle_east", labelKey: "countryCompliancePage.regions.middle_east" },
 ];
 
 export function CountryCompliancePage() {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
+  const numberFormatter = new Intl.NumberFormat(language);
+  const countryDisplayNames = new Intl.DisplayNames([language], { type: "region" });
+  const getCountryName = (code: string, fallback: string) =>
+    countryDisplayNames.of(code.toUpperCase()) || fallback;
+  const getRegionName = (region: string) =>
+    t(`countryCompliancePage.regions.${region}`, {
+      defaultValue: region.replace(/_/g, " "),
+    });
+  const getComplianceLabel = (key: string) =>
+    t(`countryCompliancePage.complianceKeys.${key}`, {
+      defaultValue: key.replace(/_/g, " "),
+    });
+  const regionOptions = REGION_OPTIONS.map(({ value, labelKey }) => ({
+    value,
+    label: t(labelKey),
+  }));
   const [search, setSearch] = useState("");
   const [regionFilter, setRegionFilter] = useState("");
   const [selectedCountryId, setSelectedCountryId] = useState<string | null>(null);
@@ -104,7 +123,11 @@ export function CountryCompliancePage() {
     }
     if (!search) return true;
     const q = search.toLowerCase();
-    return c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q);
+    return (
+      getCountryName(c.code, c.name).toLowerCase().includes(q) ||
+      c.name.toLowerCase().includes(q) ||
+      c.code.toLowerCase().includes(q)
+    );
   });
 
   const detail = countryDetail?.data;
@@ -112,8 +135,8 @@ export function CountryCompliancePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Country Compliance"
-        description="Browse labor laws, tax rates, and statutory requirements by country"
+        title={t("countryCompliancePage.title")}
+        description={t("countryCompliancePage.description")}
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -125,13 +148,13 @@ export function CountryCompliancePage() {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
                   className="pl-10"
-                  placeholder="Search countries..."
+                  placeholder={t("countryCompliancePage.filters.searchPlaceholder")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
               <SelectField
-                options={REGION_OPTIONS}
+                options={regionOptions}
                 value={regionFilter}
                 onChange={(e) => setRegionFilter(e.target.value)}
               />
@@ -143,7 +166,9 @@ export function CountryCompliancePage() {
                     onChange={(e) => setConfiguredOnly(e.target.checked)}
                     className="h-4 w-4 rounded border-gray-300"
                   />
-                  Only my configured countries ({configuredCountryCodes.size})
+                  {t("countryCompliancePage.filters.configuredOnly", {
+                    count: numberFormatter.format(configuredCountryCodes.size),
+                  })}
                 </label>
               )}
             </CardContent>
@@ -168,10 +193,10 @@ export function CountryCompliancePage() {
                       <span className="text-xl">{COUNTRY_FLAGS[c.code] || ""}</span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                          {c.name}
+                          {getCountryName(c.code, c.name)}
                         </p>
                         <p className="text-xs text-gray-400">
-                          {c.currency} ({c.currency_symbol}) - {c.region.replace("_", " ")}
+                          {c.currency} ({c.currency_symbol}) - {getRegionName(c.region)}
                         </p>
                       </div>
                     </button>
@@ -192,11 +217,11 @@ export function CountryCompliancePage() {
                     <span className="text-4xl">{COUNTRY_FLAGS[detail.code] || ""}</span>
                     <div>
                       <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {detail.name}
+                        {getCountryName(detail.code, detail.name)}
                       </h2>
                       <p className="text-sm text-gray-500">
                         {detail.currency} ({detail.currency_symbol}) -{" "}
-                        {detail.region.replace("_", " ")}
+                        {getRegionName(detail.region)}
                       </p>
                     </div>
                   </div>
@@ -205,43 +230,79 @@ export function CountryCompliancePage() {
                     <div className="flex items-start gap-3">
                       <Clock className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
                       <div>
-                        <p className="text-xs text-gray-500">Max Work Hours/Week</p>
-                        <p className="text-lg font-bold">{detail.max_work_hours_week} hrs</p>
+                        <p className="text-xs text-gray-500">
+                          {t("countryCompliancePage.metrics.maxHours")}
+                        </p>
+                        <p className="text-lg font-bold">
+                          {t("countryCompliancePage.units.hours", {
+                            value: numberFormatter.format(detail.max_work_hours_week),
+                          })}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <Calendar className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
                       <div>
-                        <p className="text-xs text-gray-500">Annual Leave</p>
-                        <p className="text-lg font-bold">{detail.annual_leave_days} days</p>
+                        <p className="text-xs text-gray-500">
+                          {t("countryCompliancePage.metrics.annualLeave")}
+                        </p>
+                        <p className="text-lg font-bold">
+                          {t("countryCompliancePage.units.days", {
+                            value: numberFormatter.format(detail.annual_leave_days),
+                          })}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <Calendar className="mt-0.5 h-5 w-5 shrink-0 text-purple-500" />
                       <div>
-                        <p className="text-xs text-gray-500">Public Holidays</p>
-                        <p className="text-lg font-bold">{detail.public_holidays} days</p>
+                        <p className="text-xs text-gray-500">
+                          {t("countryCompliancePage.metrics.publicHolidays")}
+                        </p>
+                        <p className="text-lg font-bold">
+                          {t("countryCompliancePage.units.days", {
+                            value: numberFormatter.format(detail.public_holidays),
+                          })}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <Shield className="mt-0.5 h-5 w-5 shrink-0 text-orange-500" />
                       <div>
-                        <p className="text-xs text-gray-500">Notice Period</p>
-                        <p className="text-lg font-bold">{detail.notice_period_days} days</p>
+                        <p className="text-xs text-gray-500">
+                          {t("countryCompliancePage.metrics.noticePeriod")}
+                        </p>
+                        <p className="text-lg font-bold">
+                          {t("countryCompliancePage.units.days", {
+                            value: numberFormatter.format(detail.notice_period_days),
+                          })}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <Briefcase className="mt-0.5 h-5 w-5 shrink-0 text-teal-500" />
                       <div>
-                        <p className="text-xs text-gray-500">Probation</p>
-                        <p className="text-lg font-bold">{detail.probation_months} months</p>
+                        <p className="text-xs text-gray-500">
+                          {t("countryCompliancePage.metrics.probation")}
+                        </p>
+                        <p className="text-lg font-bold">
+                          {t("countryCompliancePage.units.months", {
+                            value: numberFormatter.format(detail.probation_months),
+                          })}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <DollarSign className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
                       <div>
-                        <p className="text-xs text-gray-500">Pay Frequency</p>
-                        <p className="text-lg font-bold capitalize">{detail.payroll_frequency}</p>
+                        <p className="text-xs text-gray-500">
+                          {t("countryCompliancePage.metrics.payFrequency")}
+                        </p>
+                        <p className="text-lg font-bold">
+                          {t(`countryCompliancePage.payFrequencies.${detail.payroll_frequency}`, {
+                            defaultValue: detail.payroll_frequency,
+                          })}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -252,7 +313,7 @@ export function CountryCompliancePage() {
               <Card>
                 <CardContent className="p-6">
                   <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-                    Statutory Benefits
+                    {t("countryCompliancePage.benefits.title")}
                   </h3>
                   <div className="grid grid-cols-3 gap-4">
                     <div
@@ -261,11 +322,15 @@ export function CountryCompliancePage() {
                       <Shield
                         className={`mx-auto h-6 w-6 ${detail.has_social_security ? "text-green-600" : "text-gray-400"}`}
                       />
-                      <p className="mt-2 text-sm font-medium">Social Security</p>
+                      <p className="mt-2 text-sm font-medium">
+                        {t("countryCompliancePage.benefits.socialSecurity")}
+                      </p>
                       <p
                         className={`text-xs ${detail.has_social_security ? "text-green-600" : "text-gray-400"}`}
                       >
-                        {detail.has_social_security ? "Required" : "Not Required"}
+                        {detail.has_social_security
+                          ? t("countryCompliancePage.benefits.required")
+                          : t("countryCompliancePage.benefits.notRequired")}
                       </p>
                     </div>
                     <div
@@ -274,11 +339,15 @@ export function CountryCompliancePage() {
                       <DollarSign
                         className={`mx-auto h-6 w-6 ${detail.has_pension ? "text-blue-600" : "text-gray-400"}`}
                       />
-                      <p className="mt-2 text-sm font-medium">Pension</p>
+                      <p className="mt-2 text-sm font-medium">
+                        {t("countryCompliancePage.benefits.pension")}
+                      </p>
                       <p
                         className={`text-xs ${detail.has_pension ? "text-blue-600" : "text-gray-400"}`}
                       >
-                        {detail.has_pension ? "Required" : "Not Required"}
+                        {detail.has_pension
+                          ? t("countryCompliancePage.benefits.required")
+                          : t("countryCompliancePage.benefits.notRequired")}
                       </p>
                     </div>
                     <div
@@ -287,11 +356,15 @@ export function CountryCompliancePage() {
                       <Heart
                         className={`mx-auto h-6 w-6 ${detail.has_health_insurance ? "text-purple-600" : "text-gray-400"}`}
                       />
-                      <p className="mt-2 text-sm font-medium">Health Insurance</p>
+                      <p className="mt-2 text-sm font-medium">
+                        {t("countryCompliancePage.benefits.healthInsurance")}
+                      </p>
                       <p
                         className={`text-xs ${detail.has_health_insurance ? "text-purple-600" : "text-gray-400"}`}
                       >
-                        {detail.has_health_insurance ? "Required" : "Not Required"}
+                        {detail.has_health_insurance
+                          ? t("countryCompliancePage.benefits.required")
+                          : t("countryCompliancePage.benefits.notRequired")}
                       </p>
                     </div>
                   </div>
@@ -303,7 +376,7 @@ export function CountryCompliancePage() {
                 <Card>
                   <CardContent className="p-6">
                     <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-                      Tax & Social Security Rates
+                      {t("countryCompliancePage.ratesTitle")}
                     </h3>
                     <div className="space-y-2">
                       {Object.entries(detail.compliance_notes).map(([key, value]) => (
@@ -312,7 +385,7 @@ export function CountryCompliancePage() {
                           className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3 dark:bg-gray-800/50"
                         >
                           <span className="text-sm capitalize text-gray-600 dark:text-gray-400">
-                            {key.replace(/_/g, " ")}
+                            {getComplianceLabel(key)}
                           </span>
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">
                             {typeof value === "number" ? `${value}%` : String(value)}
@@ -328,28 +401,36 @@ export function CountryCompliancePage() {
               <Card>
                 <CardContent className="p-6">
                   <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-                    Additional Information
+                    {t("countryCompliancePage.additional.title")}
                   </h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-gray-500">Tax Year Start</p>
+                      <p className="text-gray-500">
+                        {t("countryCompliancePage.additional.taxYearStart")}
+                      </p>
                       <p className="font-medium">{detail.tax_year_start}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Minimum Wage (Monthly)</p>
+                      <p className="text-gray-500">
+                        {t("countryCompliancePage.additional.minimumWage")}
+                      </p>
                       <p className="font-medium">
                         {detail.min_wage_monthly
-                          ? `${detail.currency_symbol} ${(Number(detail.min_wage_monthly) / 100).toLocaleString()}`
-                          : "Not set / Varies"}
+                          ? `${detail.currency_symbol} ${numberFormatter.format(Number(detail.min_wage_monthly) / 100)}`
+                          : t("countryCompliancePage.additional.notSet")}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Country Code</p>
+                      <p className="text-gray-500">
+                        {t("countryCompliancePage.additional.countryCode")}
+                      </p>
                       <p className="font-medium">{detail.code}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Region</p>
-                      <p className="font-medium capitalize">{detail.region.replace("_", " ")}</p>
+                      <p className="text-gray-500">
+                        {t("countryCompliancePage.additional.region")}
+                      </p>
+                      <p className="font-medium">{getRegionName(detail.region)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -359,9 +440,9 @@ export function CountryCompliancePage() {
             <Card>
               <CardContent className="flex h-64 flex-col items-center justify-center p-6 text-center">
                 <Globe className="mb-3 h-12 w-12 text-gray-300" />
-                <p className="text-gray-500">Select a country to view compliance details</p>
+                <p className="text-gray-500">{t("countryCompliancePage.empty.title")}</p>
                 <p className="mt-1 text-xs text-gray-400">
-                  Browse labor laws, tax rates, and statutory requirements
+                  {t("countryCompliancePage.empty.description")}
                 </p>
               </CardContent>
             </Card>

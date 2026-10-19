@@ -25,10 +25,13 @@ import {
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 import { Modal } from "@/components/ui/Modal";
+import { useTranslation } from "react-i18next";
 
 const PAGE_SIZE = 20;
 
 export function ReimbursementsPage() {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
   const [filter, setFilter] = useState("");
   const qc = useQueryClient();
 
@@ -112,11 +115,17 @@ export function ReimbursementsPage() {
   async function handleAction(id: string, action: "approve" | "reject") {
     try {
       await apiPost(`/reimbursements/${id}/${action}`);
-      toast.success(`Claim ${action}d`);
+      toast.success(
+        t(
+          action === "approve"
+            ? "reimbursementsPage.messages.approved"
+            : "reimbursementsPage.messages.rejected",
+        ),
+      );
       qc.invalidateQueries({ queryKey: ["reimbursements"] });
       qc.invalidateQueries({ queryKey: ["reimbursements-summary"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed");
+      toast.error(err.response?.data?.error?.message || t("reimbursementsPage.messages.failed"));
     }
   }
 
@@ -223,10 +232,14 @@ export function ReimbursementsPage() {
   async function confirmEdit() {
     if (!editClaim) return;
     const amt = Number(editClaim.amount);
-    if (!editClaim.category.trim()) return toast.error("Category is required");
-    if (!editClaim.description.trim()) return toast.error("Description is required");
-    if (!Number.isFinite(amt) || amt < 0) return toast.error("Enter a valid amount");
-    if (!editClaim.expenseDate) return toast.error("Expense date is required");
+    if (!editClaim.category.trim())
+      return toast.error(t("reimbursementsPage.validation.categoryRequired"));
+    if (!editClaim.description.trim())
+      return toast.error(t("reimbursementsPage.validation.descriptionRequired"));
+    if (!Number.isFinite(amt) || amt < 0)
+      return toast.error(t("reimbursementsPage.validation.validAmount"));
+    if (!editClaim.expenseDate)
+      return toast.error(t("reimbursementsPage.validation.expenseDateRequired"));
 
     setEditing(true);
     try {
@@ -236,11 +249,15 @@ export function ReimbursementsPage() {
         amount: amt,
         expenseDate: editClaim.expenseDate,
       });
-      toast.success("Claim updated");
+      toast.success(t("reimbursementsPage.messages.updated"));
       setEditClaim(null);
       qc.invalidateQueries({ queryKey: ["reimbursements"] });
     } catch (err: any) {
-      toast.error(err?.response?.data?.error?.message || err?.message || "Failed to update claim");
+      toast.error(
+        err?.response?.data?.error?.message ||
+          err?.message ||
+          t("reimbursementsPage.messages.updateFailed"),
+      );
     } finally {
       setEditing(false);
     }
@@ -275,11 +292,15 @@ export function ReimbursementsPage() {
     setDeleting(true);
     try {
       await apiDelete(`/reimbursements/${deleteTarget.id}`);
-      toast.success("Claim deleted");
+      toast.success(t("reimbursementsPage.messages.deleted"));
       setDeleteTarget(null);
       qc.invalidateQueries({ queryKey: ["reimbursements"] });
     } catch (err: any) {
-      toast.error(err?.response?.data?.error?.message || err?.message || "Failed to delete claim");
+      toast.error(
+        err?.response?.data?.error?.message ||
+          err?.message ||
+          t("reimbursementsPage.messages.deleteFailed"),
+      );
     } finally {
       setDeleting(false);
     }
@@ -287,14 +308,18 @@ export function ReimbursementsPage() {
 
   async function submitAddOnBehalf() {
     if (!addEmp) {
-      toast.error("Pick an employee first");
+      toast.error(t("reimbursementsPage.validation.pickEmployee"));
       return;
     }
     const amt = Number(addForm.amount);
-    if (!addForm.category.trim()) return toast.error("Category is required");
-    if (!addForm.description.trim()) return toast.error("Description is required");
-    if (!Number.isFinite(amt) || amt < 0) return toast.error("Enter a valid amount");
-    if (!addForm.expenseDate) return toast.error("Expense date is required");
+    if (!addForm.category.trim())
+      return toast.error(t("reimbursementsPage.validation.categoryRequired"));
+    if (!addForm.description.trim())
+      return toast.error(t("reimbursementsPage.validation.descriptionRequired"));
+    if (!Number.isFinite(amt) || amt < 0)
+      return toast.error(t("reimbursementsPage.validation.validAmount"));
+    if (!addForm.expenseDate)
+      return toast.error(t("reimbursementsPage.validation.expenseDateRequired"));
 
     setSubmittingAdd(true);
     try {
@@ -305,11 +330,15 @@ export function ReimbursementsPage() {
         amount: amt,
         expenseDate: addForm.expenseDate,
       });
-      toast.success("Claim filed for employee");
+      toast.success(t("reimbursementsPage.messages.filed"));
       setAddOpen(false);
       qc.invalidateQueries({ queryKey: ["reimbursements"] });
     } catch (err: any) {
-      toast.error(err?.response?.data?.error?.message || err?.message || "Failed to file claim");
+      toast.error(
+        err?.response?.data?.error?.message ||
+          err?.message ||
+          t("reimbursementsPage.messages.fileFailed"),
+      );
     } finally {
       setSubmittingAdd(false);
     }
@@ -326,12 +355,14 @@ export function ReimbursementsPage() {
     setPaying(true);
     try {
       await apiPost(`/reimbursements/${payClaim.id}/pay`, { month: payMonth, year: payYear });
-      toast.success("Claim marked as paid");
+      toast.success(t("reimbursementsPage.messages.markedPaid"));
       qc.invalidateQueries({ queryKey: ["reimbursements"] });
       qc.invalidateQueries({ queryKey: ["reimbursements-summary"] });
       setPayClaim(null);
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to mark paid");
+      toast.error(
+        err.response?.data?.error?.message || t("reimbursementsPage.messages.markPaidFailed"),
+      );
     } finally {
       setPaying(false);
     }
@@ -340,7 +371,7 @@ export function ReimbursementsPage() {
   const columns = [
     {
       key: "employee",
-      header: "Employee",
+      header: t("reimbursementsPage.columns.employee"),
       render: (r: any) => (
         <div>
           <p className="font-medium text-gray-900">{r.employee_name}</p>
@@ -350,17 +381,17 @@ export function ReimbursementsPage() {
     },
     {
       key: "category",
-      header: "Category",
+      header: t("reimbursementsPage.columns.category"),
       render: (r: any) => <Badge variant="draft">{r.category}</Badge>,
     },
     {
       key: "description",
-      header: "Description",
+      header: t("reimbursementsPage.columns.description"),
       render: (r: any) => <span className="text-sm text-gray-700">{r.description}</span>,
     },
     {
       key: "amount",
-      header: "Amount",
+      header: t("reimbursementsPage.columns.amount"),
       className: "text-right",
       render: (r: any) => (
         <span className="font-medium tabular-nums">{formatCurrency(r.amount)}</span>
@@ -368,17 +399,21 @@ export function ReimbursementsPage() {
     },
     {
       key: "expense_date",
-      header: "Date",
+      header: t("reimbursementsPage.columns.date"),
       render: (r: any) => (
         <span className="whitespace-nowrap tabular-nums">
-          {new Date(r.expense_date).toLocaleDateString("en-IN")}
+          {new Date(r.expense_date).toLocaleDateString(language)}
         </span>
       ),
     },
     {
       key: "status",
-      header: "Status",
-      render: (r: any) => <Badge variant={r.status}>{r.status}</Badge>,
+      header: t("reimbursementsPage.columns.status"),
+      render: (r: any) => (
+        <Badge variant={r.status}>
+          {t(`reimbursementsPage.statuses.${r.status}`, { defaultValue: r.status })}
+        </Badge>
+      ),
     },
     {
       key: "actions",
@@ -407,7 +442,7 @@ export function ReimbursementsPage() {
                   size="sm"
                   onClick={() => handleAction(r.id, "approve")}
                   className="text-green-600 hover:text-green-700"
-                  title="Approve"
+                  title={t("reimbursementsPage.actions.approve")}
                 >
                   <CheckCircle2 className="h-4 w-4" />
                 </Button>
@@ -416,15 +451,18 @@ export function ReimbursementsPage() {
                   size="sm"
                   onClick={() => handleAction(r.id, "reject")}
                   className="text-red-600 hover:text-red-700"
-                  title="Reject"
+                  title={t("reimbursementsPage.actions.reject")}
                 >
                   <XCircle className="h-4 w-4" />
                 </Button>
               </>
             )}
             {r.status === "approved" && (
-              <span className="text-xs text-gray-500" title="Will be paid in the next payroll run">
-                Awaiting payroll
+              <span
+                className="text-xs text-gray-500"
+                title={t("reimbursementsPage.actions.awaitingPayrollTitle")}
+              >
+                {t("reimbursementsPage.actions.awaitingPayroll")}
               </span>
             )}
             {canEdit && (
@@ -433,7 +471,7 @@ export function ReimbursementsPage() {
                 size="sm"
                 onClick={() => openEditModal(r)}
                 className="text-gray-500 hover:text-gray-700"
-                title="Edit"
+                title={t("reimbursementsPage.actions.edit")}
               >
                 <Pencil className="h-4 w-4" />
               </Button>
@@ -444,7 +482,7 @@ export function ReimbursementsPage() {
                 size="sm"
                 onClick={() => handleDelete(r)}
                 className="text-red-500 hover:text-red-700"
-                title="Delete"
+                title={t("reimbursementsPage.actions.delete")}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -455,20 +493,9 @@ export function ReimbursementsPage() {
     },
   ];
 
-  const monthOptions = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
+  const monthOptions = Array.from({ length: 12 }, (_, index) =>
+    new Intl.DateTimeFormat(language, { month: "long" }).format(new Date(2026, index, 1)),
+  );
   // Show ±2 years around today so HR can backdate or pre-date a payment.
   const yearOptions = [
     today.getFullYear() - 2,
@@ -478,21 +505,25 @@ export function ReimbursementsPage() {
   ];
 
   const filters = [
-    { value: "", label: "All" },
-    { value: "pending", label: "Pending" },
-    { value: "approved", label: "Approved" },
-    { value: "rejected", label: "Rejected" },
-    { value: "paid", label: "Paid" },
+    { value: "", label: t("reimbursementsPage.filters.all") },
+    { value: "pending", label: t("reimbursementsPage.statuses.pending") },
+    { value: "approved", label: t("reimbursementsPage.statuses.approved") },
+    { value: "rejected", label: t("reimbursementsPage.statuses.rejected") },
+    { value: "paid", label: t("reimbursementsPage.statuses.paid") },
   ];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Reimbursements"
-        description={`${total} of ${totalClaims} claim${totalClaims === 1 ? "" : "s"}`}
+        title={t("reimbursementsPage.title")}
+        description={t("reimbursementsPage.claimsShown", {
+          visible: total,
+          total: totalClaims,
+          count: totalClaims,
+        })}
         actions={
           <Button onClick={openAddModal}>
-            <Plus className="h-4 w-4" /> File for Employee
+            <Plus className="h-4 w-4" /> {t("reimbursementsPage.fileForEmployee")}
           </Button>
         }
       />
@@ -502,18 +533,22 @@ export function ReimbursementsPage() {
           to="/reimbursements"
           onClick={() => setFilter("")}
           className="focus-visible:ring-brand-500 block rounded-xl transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2"
-          aria-label="View all reimbursement claims"
+          aria-label={t("reimbursementsPage.cards.viewAll")}
         >
-          <StatCard title="Total Claims" value={String(totalClaims)} icon={Receipt} />
+          <StatCard
+            title={t("reimbursementsPage.cards.totalClaims")}
+            value={String(totalClaims)}
+            icon={Receipt}
+          />
         </Link>
         <Link
           to="/reimbursements"
           onClick={() => setFilter("pending")}
           className="focus-visible:ring-brand-500 block rounded-xl transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2"
-          aria-label="View pending reimbursement claims"
+          aria-label={t("reimbursementsPage.cards.viewPending")}
         >
           <StatCard
-            title="Pending"
+            title={t("reimbursementsPage.statuses.pending")}
             value={String(pendingCount)}
             subtitle={formatCurrency(totalPending)}
             icon={Clock}
@@ -524,10 +559,10 @@ export function ReimbursementsPage() {
           to="/reimbursements"
           onClick={() => setFilter("approved")}
           className="focus-visible:ring-brand-500 block rounded-xl transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2"
-          aria-label="View approved reimbursement claims"
+          aria-label={t("reimbursementsPage.cards.viewApproved")}
         >
           <StatCard
-            title="Approved"
+            title={t("reimbursementsPage.statuses.approved")}
             value={String(approvedCount)}
             subtitle={formatCurrency(totalApproved)}
             icon={CheckCircle2}
@@ -538,10 +573,10 @@ export function ReimbursementsPage() {
           to="/reimbursements"
           onClick={() => setFilter("rejected")}
           className="focus-visible:ring-brand-500 block rounded-xl transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2"
-          aria-label="View rejected reimbursement claims"
+          aria-label={t("reimbursementsPage.cards.viewRejected")}
         >
           <StatCard
-            title="Rejected"
+            title={t("reimbursementsPage.statuses.rejected")}
             value={String(rejectedCount)}
             subtitle={formatCurrency(totalRejected)}
             icon={XCircle}
@@ -552,10 +587,10 @@ export function ReimbursementsPage() {
           to="/reimbursements"
           onClick={() => setFilter("paid")}
           className="focus-visible:ring-brand-500 block rounded-xl transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2"
-          aria-label="View paid reimbursement claims"
+          aria-label={t("reimbursementsPage.cards.viewPaid")}
         >
           <StatCard
-            title="Paid"
+            title={t("reimbursementsPage.statuses.paid")}
             value={String(paidCount)}
             icon={CreditCard}
             accentClassName="bg-sky-50 text-sky-600"
@@ -569,7 +604,7 @@ export function ReimbursementsPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by employee name, code, or designation..."
+            placeholder={t("reimbursementsPage.searchPlaceholder")}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
@@ -579,9 +614,9 @@ export function ReimbursementsPage() {
           value={departmentId}
           onChange={(e) => setDepartmentId(e.target.value)}
           className="focus:border-brand-500 focus:ring-brand-500 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-          aria-label="Filter by department"
+          aria-label={t("reimbursementsPage.filterDepartment")}
         >
-          <option value="">All departments</option>
+          <option value="">{t("reimbursementsPage.allDepartments")}</option>
           {departments.map((d) => (
             <option key={d.id} value={d.id}>
               {d.name}
@@ -592,9 +627,9 @@ export function ReimbursementsPage() {
           value={locationId}
           onChange={(e) => setLocationId(e.target.value)}
           className="focus:border-brand-500 focus:ring-brand-500 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-          aria-label="Filter by location"
+          aria-label={t("reimbursementsPage.filterLocation")}
         >
-          <option value="">All locations</option>
+          <option value="">{t("reimbursementsPage.allLocations")}</option>
           {locations.map((l) => (
             <option key={l.id} value={l.id}>
               {l.name}
@@ -628,7 +663,7 @@ export function ReimbursementsPage() {
             }}
             className="ml-auto text-xs text-gray-500 underline hover:text-gray-700"
           >
-            Clear filters
+            {t("reimbursementsPage.clearFilters")}
           </button>
         )}
       </div>
@@ -643,7 +678,7 @@ export function ReimbursementsPage() {
             columns={columns}
             data={claims}
             paginated={false}
-            emptyMessage="No reimbursement claims found"
+            emptyMessage={t("reimbursementsPage.noClaims")}
           />
           <Pagination
             page={page}
@@ -664,14 +699,14 @@ export function ReimbursementsPage() {
       <Modal
         open={addOpen}
         onClose={() => (submittingAdd ? null : setAddOpen(false))}
-        title="File reimbursement for employee"
-        description="Submit a claim on behalf of an employee. They will see it as pending in their reimbursement list."
+        title={t("reimbursementsPage.fileModal.title")}
+        description={t("reimbursementsPage.fileModal.description")}
       >
         <div className="space-y-4">
           {!addEmp ? (
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">
-                Search employee
+                {t("reimbursementsPage.fileModal.searchEmployee")}
               </label>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -680,7 +715,7 @@ export function ReimbursementsPage() {
                   autoFocus
                   value={empSearchQ}
                   onChange={(e) => setEmpSearchQ(e.target.value)}
-                  placeholder="Name, employee code, or email (min 2 chars)"
+                  placeholder={t("reimbursementsPage.fileModal.employeePlaceholder")}
                   className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-1"
                 />
               </div>
@@ -692,13 +727,14 @@ export function ReimbursementsPage() {
               <div className="mt-2 h-44 overflow-y-auto rounded-lg border border-gray-200">
                 {empSearchLoading ? (
                   <div className="flex h-full items-center justify-center text-sm text-gray-400">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Searching...
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t("reimbursementsPage.fileModal.searching")}
                   </div>
                 ) : empSearchResults.length === 0 ? (
                   <div className="flex h-full items-center justify-center px-3 text-center text-xs text-gray-400">
                     {empSearchQ.trim().length < 2
-                      ? "Type at least 2 characters to search."
-                      : "No matching employees."}
+                      ? t("reimbursementsPage.fileModal.typeMore")
+                      : t("reimbursementsPage.fileModal.noEmployees")}
                   </div>
                 ) : (
                   <ul className="divide-y divide-gray-100">
@@ -744,24 +780,28 @@ export function ReimbursementsPage() {
                 onClick={() => setAddEmp(null)}
                 className="text-xs font-medium text-gray-500 hover:text-gray-700"
               >
-                Change
+                {t("reimbursementsPage.fileModal.change")}
               </button>
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-gray-600">Category</span>
+              <span className="mb-1 block text-xs font-medium text-gray-600">
+                {t("reimbursementsPage.fields.category")}
+              </span>
               <input
                 type="text"
                 value={addForm.category}
                 onChange={(e) => setAddForm({ ...addForm, category: e.target.value })}
-                placeholder="Travel, Food, Internet..."
+                placeholder={t("reimbursementsPage.fileModal.categoryPlaceholder")}
                 className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1"
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-gray-600">Amount</span>
+              <span className="mb-1 block text-xs font-medium text-gray-600">
+                {t("reimbursementsPage.fields.amount")}
+              </span>
               <input
                 type="number"
                 step="0.01"
@@ -774,7 +814,9 @@ export function ReimbursementsPage() {
             </label>
           </div>
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-gray-600">Expense date</span>
+            <span className="mb-1 block text-xs font-medium text-gray-600">
+              {t("reimbursementsPage.fields.expenseDate")}
+            </span>
             <input
               type="date"
               value={addForm.expenseDate}
@@ -784,22 +826,24 @@ export function ReimbursementsPage() {
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-gray-600">Description</span>
+            <span className="mb-1 block text-xs font-medium text-gray-600">
+              {t("reimbursementsPage.fields.description")}
+            </span>
             <textarea
               rows={3}
               value={addForm.description}
               onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
-              placeholder="What was the expense for?"
+              placeholder={t("reimbursementsPage.fileModal.descriptionPlaceholder")}
               className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1"
             />
           </label>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setAddOpen(false)} disabled={submittingAdd}>
-              Cancel
+              {t("reimbursementsPage.actions.cancel")}
             </Button>
             <Button onClick={submitAddOnBehalf} loading={submittingAdd} disabled={!addEmp}>
-              <Plus className="h-4 w-4" /> File claim
+              <Plus className="h-4 w-4" /> {t("reimbursementsPage.fileModal.submit")}
             </Button>
           </div>
         </div>
@@ -813,10 +857,12 @@ export function ReimbursementsPage() {
       <Modal
         open={!!deleteTarget}
         onClose={() => (deleting ? null : setDeleteTarget(null))}
-        title="Delete reimbursement?"
+        title={t("reimbursementsPage.deleteModal.title")}
         description={
           deleteTarget?.employee_name
-            ? `For ${deleteTarget.employee_name}${deleteTarget.category ? " · " + deleteTarget.category : ""}${deleteTarget.amount ? " · " + formatCurrency(deleteTarget.amount) : ""}`
+            ? `${t("reimbursementsPage.forEmployee", {
+                name: deleteTarget.employee_name,
+              })}${deleteTarget.category ? " · " + deleteTarget.category : ""}${deleteTarget.amount ? " · " + formatCurrency(deleteTarget.amount) : ""}`
             : undefined
         }
       >
@@ -824,29 +870,26 @@ export function ReimbursementsPage() {
           <div className="space-y-4">
             {deleteTarget.status === "paid" ? (
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
-                <p className="font-medium">This claim is already paid.</p>
+                <p className="font-medium">{t("reimbursementsPage.deleteModal.paidTitle")}</p>
                 <p className="mt-1 text-xs leading-relaxed">
-                  Deleting only removes the row from the reimbursements list. It does{" "}
-                  <strong>not</strong> refund the employee or remove the line from the payslip. If
-                  you need to reverse the payment, delete the payroll run instead -- that reverts
-                  the claim back to <em>approved</em> automatically.
+                  {t("reimbursementsPage.deleteModal.paidWarning")}
                 </p>
               </div>
             ) : (
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                This will permanently remove the claim. This cannot be undone.
+                {t("reimbursementsPage.deleteModal.warning")}
               </p>
             )}
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
-                Cancel
+                {t("reimbursementsPage.actions.cancel")}
               </Button>
               <Button
                 onClick={performDelete}
                 loading={deleting}
                 className="bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500"
               >
-                <Trash2 className="h-4 w-4" /> Delete
+                <Trash2 className="h-4 w-4" /> {t("reimbursementsPage.actions.delete")}
               </Button>
             </div>
           </div>
@@ -859,14 +902,20 @@ export function ReimbursementsPage() {
       <Modal
         open={!!editClaim}
         onClose={() => (editing ? null : setEditClaim(null))}
-        title="Edit reimbursement"
-        description={editClaim?.employee_name ? `For ${editClaim.employee_name}` : undefined}
+        title={t("reimbursementsPage.editModal.title")}
+        description={
+          editClaim?.employee_name
+            ? t("reimbursementsPage.forEmployee", { name: editClaim.employee_name })
+            : undefined
+        }
       >
         {editClaim && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
-                <span className="mb-1 block text-xs font-medium text-gray-600">Category</span>
+                <span className="mb-1 block text-xs font-medium text-gray-600">
+                  {t("reimbursementsPage.fields.category")}
+                </span>
                 <input
                   type="text"
                   value={editClaim.category}
@@ -875,7 +924,9 @@ export function ReimbursementsPage() {
                 />
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs font-medium text-gray-600">Amount</span>
+                <span className="mb-1 block text-xs font-medium text-gray-600">
+                  {t("reimbursementsPage.fields.amount")}
+                </span>
                 <input
                   type="number"
                   step="0.01"
@@ -887,7 +938,9 @@ export function ReimbursementsPage() {
               </label>
             </div>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-gray-600">Expense date</span>
+              <span className="mb-1 block text-xs font-medium text-gray-600">
+                {t("reimbursementsPage.fields.expenseDate")}
+              </span>
               <input
                 type="date"
                 value={editClaim.expenseDate}
@@ -897,7 +950,9 @@ export function ReimbursementsPage() {
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-gray-600">Description</span>
+              <span className="mb-1 block text-xs font-medium text-gray-600">
+                {t("reimbursementsPage.fields.description")}
+              </span>
               <textarea
                 rows={3}
                 value={editClaim.description}
@@ -907,10 +962,10 @@ export function ReimbursementsPage() {
             </label>
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={() => setEditClaim(null)} disabled={editing}>
-                Cancel
+                {t("reimbursementsPage.actions.cancel")}
               </Button>
               <Button onClick={confirmEdit} loading={editing}>
-                Save changes
+                {t("reimbursementsPage.editModal.save")}
               </Button>
             </div>
           </div>
@@ -922,7 +977,7 @@ export function ReimbursementsPage() {
       <Modal
         open={!!payClaim}
         onClose={() => (paying ? null : setPayClaim(null))}
-        title="Mark reimbursement as paid"
+        title={t("reimbursementsPage.payModal.title")}
         description={
           payClaim
             ? `${payClaim.employeeName ? payClaim.employeeName + " · " : ""}${formatCurrency(payClaim.amount || 0)}`
@@ -930,13 +985,12 @@ export function ReimbursementsPage() {
         }
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Record the payroll period this claim was disbursed in. The status will move from{" "}
-            <strong>approved</strong> to <strong>paid</strong>.
-          </p>
+          <p className="text-sm text-gray-600">{t("reimbursementsPage.payModal.description")}</p>
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-gray-600">Month</span>
+              <span className="mb-1 block text-xs font-medium text-gray-600">
+                {t("reimbursementsPage.fields.month")}
+              </span>
               <select
                 value={payMonth}
                 onChange={(e) => setPayMonth(Number(e.target.value))}
@@ -950,7 +1004,9 @@ export function ReimbursementsPage() {
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-gray-600">Year</span>
+              <span className="mb-1 block text-xs font-medium text-gray-600">
+                {t("reimbursementsPage.fields.year")}
+              </span>
               <select
                 value={payYear}
                 onChange={(e) => setPayYear(Number(e.target.value))}
@@ -966,10 +1022,10 @@ export function ReimbursementsPage() {
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setPayClaim(null)} disabled={paying}>
-              Cancel
+              {t("reimbursementsPage.actions.cancel")}
             </Button>
             <Button onClick={confirmMarkPaid} loading={paying}>
-              <CreditCard className="h-4 w-4" /> Confirm payment
+              <CreditCard className="h-4 w-4" /> {t("reimbursementsPage.payModal.confirm")}
             </Button>
           </div>
         </div>

@@ -1,0 +1,2436 @@
+{
+  "language": { "change": "切换语言", "menuLabel": "选择语言" },
+  "common": {
+    "appName": "EMP Payroll",
+    "user": "用户",
+    "employees": "员工",
+    "employee_one": "{{count}} 名员工",
+    "employee_other": "{{count}} 名员工",
+    "unassigned": "未分配",
+    "noResults": "未找到结果"
+  },
+  "employeeList": {
+    "title": "员工",
+    "loading": "正在加载...",
+    "summary": "共 {{total}} 名员工，显示 {{visible}} 名",
+    "summary_one": "共 {{total}} 名员工，显示 {{visible}} 名",
+    "summary_other": "共 {{total}} 名员工，显示 {{visible}} 名",
+    "pendingBankRequests": "待处理的银行信息更新申请（{{count}}）",
+    "bankDetails": "{{bank}} — 账户 {{accountNumber}} — IFSC {{ifscCode}}",
+    "approve": "批准",
+    "reject": "拒绝",
+    "bankUpdated": "银行信息已更新",
+    "requestRejected": "申请已拒绝",
+    "actionFailed": "操作失败：{{action}}",
+    "selectEmployee": "选择 {{name}}",
+    "export": "导出",
+    "exportSuccess": "员工 CSV 已导出",
+    "exportFailed": "导出失败",
+    "import": "导入",
+    "importTitle": "从 CSV 文件导入新员工",
+    "bulkUpdate": "批量更新",
+    "bulkUpdateTitle": "从 CSV 文件批量更新现有员工",
+    "bulkSalary": "批量更新薪资",
+    "bulkSalaryTitle": "从 CSV 文件批量更新薪资",
+    "addEmployee": "添加员工",
+    "searchPlaceholder": "按姓名、邮箱、编号或职位搜索...",
+    "filterDepartment": "按部门筛选",
+    "allDepartments": "所有部门",
+    "filterLocation": "按地点筛选",
+    "allLocations": "所有地点",
+    "clearFilters": "清除筛选",
+    "selected": "已选择 {{count}} 名员工",
+    "selected_one": "已选择 {{count}} 名员工",
+    "selected_other": "已选择 {{count}} 名员工",
+    "updateSalary": "更新薪资",
+    "clear": "清除",
+    "columns": {
+      "employee": "员工",
+      "designation": "职位",
+      "email": "电子邮箱",
+      "location": "地点",
+      "joined": "入职日期",
+      "status": "状态"
+    },
+    "statuses": { "active": "在职", "inactive": "离职" }
+  },
+  "orgChart": {
+    "title": "组织架构图",
+    "description": "汇报结构 — 拖动平移，滚动或双指缩放",
+    "organization": "组织",
+    "noEmployees": "暂无员工可显示。",
+    "people": "员工",
+    "managers": "管理人员",
+    "departments": "部门",
+    "personCount": "{{count}} 人",
+    "personCount_one": "{{count}} 人",
+    "personCount_other": "{{count}} 人",
+    "collapse": "收起",
+    "expand": "展开",
+    "expandReports": "展开 {{count}} 名下属",
+    "viewAll": "查看全部{{label}}",
+    "searchPlaceholder": "搜索员工、职位或部门…",
+    "searchAria": "搜索组织架构图",
+    "clearSearch": "清除搜索",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "fitToScreen": "适应屏幕",
+    "fullscreen": "全屏",
+    "hint": "拖动平移 · 滚动缩放 · 触摸屏双指缩放",
+    "allPeopleTitle": "所有员工（{{count}}）",
+    "managersTitle": "管理人员（{{count}}）",
+    "departmentsTitle": "部门（{{count}}）",
+    "filterDepartments": "筛选部门…",
+    "filterPeople": "筛选员工…",
+    "noMatches": "没有匹配项。",
+    "reportCount": "{{count}} 名下属",
+    "reportCount_one": "{{count}} 名下属",
+    "reportCount_other": "{{count}} 名下属"
+  },
+  "departmentsPage": {
+    "title": "部门",
+    "departmentCount": "{{count}} 个部门",
+    "departmentCount_one": "{{count}} 个部门",
+    "departmentCount_other": "{{count}} 个部门",
+    "employeeCount": "{{count}} 名员工",
+    "employeeCount_one": "{{count}} 名员工",
+    "employeeCount_other": "{{count}} 名员工",
+    "fromEmpCloud": "来自 EmpCloud",
+    "addDepartment": "添加部门",
+    "noDepartments": "暂无部门。",
+    "addFirst": "添加第一个部门",
+    "searchPlaceholder": "搜索部门…",
+    "searchAria": "搜索部门",
+    "noSearchMatches": "没有与“{{query}}”匹配的部门。",
+    "nameRequired": "部门名称为必填项",
+    "added": "部门已添加",
+    "addFailed": "无法添加部门",
+    "removed": "部门已删除",
+    "removeFailed": "无法删除部门",
+    "addDescription": "与 EmpCloud 同步，并可在员工资料、组织架构图和报表中选择。",
+    "uniqueNamesHelp": "部门名称在组织内必须唯一。以后删除部门不会影响现有的薪资记录。",
+    "departmentName": "部门名称",
+    "namePlaceholder": "例如：工程部",
+    "cancel": "取消",
+    "removeTitle": "删除部门？",
+    "removeDescription": "“{{name}}”将从组织中删除。",
+    "deleteWarning": "当前有 {{count}} 名员工属于此部门。他们的记录会保留，但在重新分配前不会显示部门。",
+    "deleteWarning_one": "当前有 {{count}} 名员工属于此部门。该员工的记录会保留，但在重新分配前不会显示部门。",
+    "deleteWarning_other": "当前有 {{count}} 名员工属于此部门。他们的记录会保留，但在重新分配前不会显示部门。",
+    "remove": "删除",
+    "removeAria": "删除 {{name}}",
+    "noMembers": "暂无成员",
+    "created": "创建于 {{date}}"
+  },
+  "attendancePage": {
+    "title": "考勤",
+    "summary": "{{period}}考勤汇总",
+    "markAllPresent": "全部标记为出勤",
+    "markAttendance": "登记考勤",
+    "previousMonth": "上个月",
+    "nextMonth": "下个月",
+    "searchPlaceholder": "按姓名或编号搜索...",
+    "filterDepartment": "按部门筛选",
+    "allDepartments": "所有部门",
+    "filterLocation": "按地点筛选",
+    "allLocations": "所有地点",
+    "clearFilters": "清除筛选",
+    "employeesShown": "共 {{total}} 名员工，显示 {{visible}} 名",
+    "employeesShown_one": "共 {{total}} 名员工，显示 {{visible}} 名",
+    "employeesShown_other": "共 {{total}} 名员工，显示 {{visible}} 名",
+    "totalPresentDays": "出勤总天数",
+    "totalAbsentDays": "缺勤总天数",
+    "lopDays": "无薪天数",
+    "overtimeHours": "加班小时",
+    "hoursValue": "{{count}} 小时",
+    "lopValue": "无薪 {{count}} 天",
+    "employeeFallback": "员工 #{{id}}",
+    "columns": {
+      "employee": "员工",
+      "workingDays": "工作日",
+      "present": "出勤",
+      "absent": "缺勤",
+      "lopDays": "无薪天数",
+      "overtimeHours": "加班小时"
+    },
+    "markAllDescription": "将所选月份的所有员工标记为出勤。",
+    "markSingleDescription": "登记一名员工的考勤。",
+    "month": "月份",
+    "year": "年份",
+    "workingDaysInMonth": "本月工作日",
+    "workingDays": "工作日",
+    "presentDays": "出勤天数",
+    "absentDays": "缺勤天数",
+    "employee": "员工",
+    "selectEmployee": "选择员工",
+    "cancel": "取消",
+    "saveAttendance": "保存考勤",
+    "overwriteExisting": "覆盖本月现有记录",
+    "overwriteAllHelp": "默认关闭，以保留员工自己的打卡记录。选择此项可将已登记的日期替换为出勤。",
+    "overwriteSingleHelp": "EmpCloud中已登记的日期默认会保留。选择此项可将其替换为上面的值。",
+    "markAllHelp": "这会将{{period}}的全部 {{count}} 名在职员工标记为出勤 {{days}} 天。之后可以单独编辑记录。",
+    "workingDaysInvalid": "工作日必须是1到31之间的整数",
+    "presentDaysInvalid": "出勤天数必须介于0和工作日之间",
+    "selectEmployeeRequired": "请选择员工",
+    "noPayrollEmployees": "工资单中没有员工。请先将EmpCloud用户加入工资单（设置 > 员工）。",
+    "bulkSyncFailed": "已为 {{employeeCount}} 名员工在本地登记，但有 {{failureCount}} 名员工未能同步到EmpCloud。仪表板可能尚未反映更改。",
+    "nothingChangedAll": "{{period}}的每个工作日在EmpCloud中都已有记录（保留 {{preserved}} 条），因此没有更改。选择覆盖可替换这些记录。",
+    "markedAllOverwrite": "已将{{period}}的 {{count}} 名员工标记为出勤（已覆盖现有日期）。",
+    "markedAllSuccess": "已登记{{period}}的 {{count}} 名员工 — 向EmpCloud添加了 {{inserted}} 行{{preservedText}}。",
+    "singleSyncFailed": "已在本地登记，但EmpCloud同步失败（{{error}}）。在EmpCloud恢复连接之前，仪表板可能不会显示此更改。",
+    "unknownError": "未知错误",
+    "nothingChangedSingle": "该员工在{{period}}已有 {{preserved}} 条考勤记录，因此没有更改。请选择覆盖并再次保存。",
+    "singleOverwriteSuccess": "已更新{{period}}的考勤（设置了 {{count}} 天）。",
+    "singleSuccess": "已登记{{period}}的考勤 — 向EmpCloud添加了 {{inserted}} 行{{preservedText}}。",
+    "preservedSuffix": "，保留了现有 {{count}} 行",
+    "markFailed": "无法登记考勤"
+  },
+  "payrollAnalytics": {
+    "title": "薪资分析",
+    "description": "成本趋势、对比与洞察",
+    "notice": "以下数据仅反映每次薪资核算中包含的员工。计算时跳过的员工（没有有效薪资结构、在发薪周期后入职或在周期开始前离职）不会计入，因此各月员工人数和人均值可能在与实际招聘活动无关的情况下发生变化。",
+    "noRuns": "暂无薪资核算",
+    "employeeSource": "{{count}} 名员工 · {{source}}",
+    "headcountSuppressed": "员工人数变化超过 25% — 已隐藏对比",
+    "vsPrevious": "较上月 · {{source}}",
+    "ofGrossPay": "占总薪资 · {{source}}",
+    "avgNetPayPerEmployee": "员工平均实发薪资",
+    "grossPayChange": "总薪资变化",
+    "netPayChange": "实发薪资变化",
+    "deductionRate": "扣款率",
+    "payrollCostTrend": "薪资成本趋势",
+    "costBreakdownLatest": "成本明细（最新）",
+    "headcountTrend": "员工人数趋势",
+    "monthComparison": "月度环比",
+    "totalEmployerCost": "雇主总成本（总薪资 + 缴费）",
+    "needCompletedRun": "至少需要 1 次已完成的薪资核算才能显示分析",
+    "noData": "暂无数据",
+    "series": {
+      "gross": "总薪资",
+      "net": "实发薪资",
+      "deductions": "扣款",
+      "netPay": "实发薪资",
+      "employerContributions": "雇主缴费",
+      "employerCost": "雇主成本",
+      "amount": "金额",
+      "employees": "员工"
+    },
+    "columns": {
+      "period": "期间",
+      "employees": "员工",
+      "grossPay": "总薪资",
+      "deductions": "扣款",
+      "netPay": "实发薪资",
+      "avgPerEmployee": "人均",
+      "grossPercent": "总薪资 %",
+      "netPercent": "实发 %"
+    },
+    "statuses": { "paid": "已支付", "computed": "已计算", "approved": "已批准" }
+  },
+  "reimbursementsPage": {
+    "title": "费用报销",
+    "claimsShown": "共 {{total}} 项，显示 {{visible}} 项",
+    "fileForEmployee": "为员工提交",
+    "searchPlaceholder": "按员工姓名、编号或职位搜索...",
+    "filterDepartment": "按部门筛选",
+    "allDepartments": "所有部门",
+    "filterLocation": "按地点筛选",
+    "allLocations": "所有地点",
+    "clearFilters": "清除筛选条件",
+    "noClaims": "未找到报销申请",
+    "forEmployee": "申请人：{{name}}",
+    "statuses": {
+      "pending": "待处理",
+      "approved": "已批准",
+      "rejected": "已拒绝",
+      "paid": "已支付"
+    },
+    "filters": { "all": "全部" },
+    "cards": {
+      "totalClaims": "申请总数",
+      "viewAll": "查看所有报销申请",
+      "viewPending": "查看待处理报销申请",
+      "viewApproved": "查看已批准报销申请",
+      "viewRejected": "查看已拒绝报销申请",
+      "viewPaid": "查看已支付报销申请"
+    },
+    "columns": {
+      "employee": "员工",
+      "category": "类别",
+      "description": "说明",
+      "amount": "金额",
+      "date": "日期",
+      "status": "状态"
+    },
+    "actions": {
+      "approve": "批准",
+      "reject": "拒绝",
+      "awaitingPayroll": "等待发薪",
+      "awaitingPayrollTitle": "将在下次薪资核算中支付",
+      "edit": "编辑",
+      "delete": "删除",
+      "cancel": "取消"
+    },
+    "fields": {
+      "category": "类别",
+      "amount": "金额",
+      "expenseDate": "支出日期",
+      "description": "说明",
+      "month": "月份",
+      "year": "年份"
+    },
+    "fileModal": {
+      "title": "为员工提交报销",
+      "description": "代表员工提交申请。该申请将在员工的报销列表中显示为待处理。",
+      "searchEmployee": "搜索员工",
+      "employeePlaceholder": "姓名、员工编号或邮箱（至少 2 个字符）",
+      "searching": "正在搜索...",
+      "typeMore": "请输入至少 2 个字符进行搜索。",
+      "noEmployees": "没有匹配的员工。",
+      "change": "更改",
+      "categoryPlaceholder": "差旅、餐饮、网络...",
+      "descriptionPlaceholder": "这笔支出的用途是什么？",
+      "submit": "提交申请"
+    },
+    "deleteModal": {
+      "title": "删除报销？",
+      "paidTitle": "该申请已支付。",
+      "paidWarning": "删除操作只会从报销列表中移除该行，不会向员工退款，也不会删除工资单中的对应项目。若要撤销付款，请删除该次薪资核算；申请将自动恢复为已批准。",
+      "warning": "该申请将被永久删除，且无法撤销。"
+    },
+    "editModal": { "title": "编辑报销", "save": "保存更改" },
+    "payModal": {
+      "title": "将报销标记为已支付",
+      "description": "记录支付该申请的薪资期间。其状态将从已批准变为已支付。",
+      "confirm": "确认支付"
+    },
+    "validation": {
+      "categoryRequired": "类别为必填项",
+      "descriptionRequired": "说明为必填项",
+      "validAmount": "请输入有效金额",
+      "expenseDateRequired": "支出日期为必填项",
+      "pickEmployee": "请先选择员工"
+    },
+    "messages": {
+      "approved": "申请已批准",
+      "rejected": "申请已拒绝",
+      "failed": "操作失败",
+      "updated": "申请已更新",
+      "updateFailed": "无法更新申请",
+      "deleted": "申请已删除",
+      "deleteFailed": "无法删除申请",
+      "filed": "已为员工提交申请",
+      "fileFailed": "无法提交申请",
+      "markedPaid": "申请已标记为已支付",
+      "markPaidFailed": "无法将申请标记为已支付"
+    }
+  },
+  "loansPage": {
+    "title": "贷款与预支",
+    "recordsShown": "共 {{total}} 条，显示 {{visible}} 条贷款和预支记录",
+    "addAdvance": "添加预支",
+    "addLoan": "添加贷款",
+    "searchPlaceholder": "按员工姓名、编号或职位搜索...",
+    "filterDepartment": "按部门筛选",
+    "allDepartments": "所有部门",
+    "filterLocation": "按地点筛选",
+    "allLocations": "所有地点",
+    "clearFilters": "清除筛选条件",
+    "noRecords": "未找到贷款或预支记录",
+    "cards": {
+      "active": "有效贷款与预支",
+      "outstanding": "未偿金额",
+      "monthlyDeductions": "每月扣款",
+      "totalAcrossAll": "全部合计",
+      "completed": "已完成"
+    },
+    "filters": { "all": "全部" },
+    "statuses": { "active": "有效", "completed": "已完成", "cancelled": "已取消" },
+    "types": { "loan": "贷款", "salary_advance": "工资预支", "emergency": "紧急预支" },
+    "columns": {
+      "employee": "员工",
+      "type": "类型",
+      "description": "说明",
+      "principal": "本金",
+      "outstanding": "未偿",
+      "deduction": "扣款",
+      "progress": "进度",
+      "status": "状态"
+    },
+    "deduction": { "customDefault": "自定义（默认 {{amount}}）", "oneTime": "一次性" },
+    "progress": { "recovered": "已收回", "pendingRecovery": "待收回" },
+    "actions": {
+      "recordEmiPayment": "记录分期付款",
+      "recordAdvanceRecovery": "记录预支收回",
+      "pay": "付款",
+      "recover": "收回",
+      "edit": "编辑贷款或预支",
+      "delete": "删除",
+      "cancel": "取消",
+      "saveChanges": "保存更改"
+    },
+    "fields": {
+      "employee": "员工",
+      "description": "说明",
+      "amount": "金额 (₹)",
+      "tenure": "期限（月）",
+      "interestRate": "利率 (%)",
+      "startDate": "开始日期",
+      "customMonthlyEmi": "自定义月供 (₹) — 可选",
+      "notes": "备注（可选）",
+      "advanceType": "预支类型",
+      "reason": "原因",
+      "advanceAmount": "预支金额 (₹)",
+      "recoveryDate": "收回日期"
+    },
+    "form": {
+      "noEmployee": "暂无员工",
+      "descriptionPlaceholder": "例如：医疗紧急情况",
+      "customEmiPlaceholder": "留空以使用按期限计算的月供",
+      "customEmiHelpCreate": "覆盖每月扣款。最后一期将自动结清剩余金额。",
+      "customEmiHelpEdit": "覆盖每月扣款。最后一期将自动结清剩余金额。清空此字段可恢复按期限计算的月供。",
+      "notesPlaceholder": "其他备注",
+      "paidInstallmentsNotice": "已支付 {{count}} 期；系统将在保留已还金额的同时，根据新金额重新计算未偿余额。"
+    },
+    "advanceModal": { "description": "添加一次性工资预支。全部金额将在一个薪资周期内收回。" },
+    "editModal": { "loanTitle": "编辑贷款", "advanceTitle": "编辑预支" },
+    "deleteModal": {
+      "title": "删除贷款或预支？",
+      "outstandingTitle": "仍有 {{amount}} 未偿。",
+      "outstandingWarning": "删除后将停止今后的扣款。过去工资单中已扣除的金额不受影响。此操作无法撤销。",
+      "warning": "该记录将被永久删除。过去已扣除的金额不受影响。此操作无法撤销。"
+    },
+    "validation": {
+      "amountNonNegative": "金额必须大于或等于零",
+      "tenureMinimum": "期限必须至少为1个月",
+      "interestNonNegative": "利率必须大于或等于零",
+      "customEmiPositive": "自定义月供必须大于零",
+      "customEmiMaximum": "自定义月供不能超过贷款金额"
+    },
+    "messages": {
+      "advanceCreated": "预支已创建",
+      "loanCreated": "贷款已创建",
+      "failed": "操作失败",
+      "paymentRecorded": "付款已记录",
+      "advanceUpdated": "预支已更新",
+      "loanUpdated": "贷款已更新",
+      "updateFailed": "无法更新贷款或预支",
+      "deleted": "贷款或预支已删除",
+      "deleteFailed": "无法删除贷款或预支"
+    }
+  },
+  "roles": {
+    "super_admin": "超级管理员",
+    "org_admin": "组织管理员",
+    "admin": "管理员",
+    "hr_admin": "人力资源管理员",
+    "hr_manager": "人力资源经理",
+    "manager": "经理",
+    "employee": "员工"
+  },
+  "header": { "openMenu": "打开导航菜单", "searchEmployees": "搜索员工... (Ctrl+K)" },
+  "sidebar": {
+    "collapse": "收起侧边栏",
+    "expand": "展开侧边栏",
+    "search": "搜索菜单…",
+    "clearSearch": "清除搜索",
+    "noMatches": "没有与“{{query}}”匹配的结果",
+    "pressToSearch": "按 / 搜索",
+    "logout": "退出登录",
+    "sections": {
+      "overview": "概览",
+      "people": "人员",
+      "payroll": "薪资",
+      "compliance": "合规",
+      "payBenefits": "薪酬与福利",
+      "workplace": "工作场所",
+      "globalPayroll": "全球薪资",
+      "admin": "管理",
+      "selfService": "自助服务"
+    },
+    "items": {
+      "dashboard": "仪表盘",
+      "employees": "员工",
+      "orgChart": "组织架构",
+      "departments": "部门",
+      "attendance": "考勤",
+      "structures": "薪资结构",
+      "payrollRuns": "薪资批次",
+      "analytics": "分析",
+      "payslips": "工资单",
+      "tax": "税务",
+      "taxCalculator": "税务计算器",
+      "taxDeclarations": "税务申报",
+      "reimbursements": "报销",
+      "loans": "贷款",
+      "benefits": "福利",
+      "benchmarks": "薪酬基准",
+      "payEquity": "薪酬公平",
+      "totalRewards": "全面薪酬",
+      "earnedWageAccess": "已赚工资访问",
+      "insurance": "保险",
+      "holidays": "节假日",
+      "announcements": "公告",
+      "globalDashboard": "全球仪表盘",
+      "globalEmployees": "全球员工",
+      "contractorInvoices": "承包商发票",
+      "countryCompliance": "国家合规",
+      "glAccounting": "总账 / 会计",
+      "reports": "报表",
+      "auditLog": "审计日志",
+      "system": "系统",
+      "settings": "设置",
+      "myDashboard": "我的仪表盘",
+      "myPayslips": "我的工资单",
+      "mySalary": "我的薪资",
+      "myTax": "我的税务",
+      "declarations": "申报",
+      "myClaims": "我的申请",
+      "myProfile": "我的资料"
+    }
+  },
+  "dashboard": {
+    "title": "薪资仪表盘",
+    "overviewFor": "{{period}}概览",
+    "runPayroll": "运行薪资",
+    "addEmployee": "添加员工",
+    "viewReports": "查看报表",
+    "activeEmployees": "在职员工",
+    "viewActiveEmployees": "查看在职员工",
+    "totalEmployees": "共 {{count}} 名",
+    "lastPayrollGross": "最近薪资（税前）",
+    "lastPayrollNet": "最近薪资（实发）",
+    "noPayrollYet": "暂无薪资记录",
+    "totalDeductions": "扣款总额",
+    "viewDeductions": "查看最新薪资处理的扣款总额明细",
+    "monthOverMonth": "环比 {{value}}%",
+    "monthlyTrend": "月度薪资趋势",
+    "trendPeriods_one": "最近 1 个月税前与实发对比",
+    "trendPeriods_other": "最近 {{count}} 个月税前与实发对比",
+    "trendFallback": "税前与实发薪资成本",
+    "gross": "税前",
+    "net": "实发",
+    "noTrend": "暂无薪资数据。请运行首次薪资以查看趋势。",
+    "headcountByDepartment": "各部门人数",
+    "moreDepartments": "另有 {{count}} 个部门",
+    "noEmployeesToChart": "暂无员工可供展示。",
+    "complianceStatus": "合规状态",
+    "providentFund": "公积金",
+    "professionalTax": "职业税",
+    "tdsForm": "TDS（表格24Q）",
+    "filed": "已申报",
+    "pending": "待处理",
+    "recentActivity": "最近活动",
+    "noRecentActivity": "暂无最近活动。",
+    "activity": "活动",
+    "actions": {
+      "created": "已创建薪资处理",
+      "computed": "已计算薪资",
+      "approved": "已批准薪资",
+      "paid": "已将薪资标记为已支付",
+      "cancelled": "已取消薪资",
+      "reverted": "已将薪资恢复为草稿",
+      "rerun": "已重新运行薪资",
+      "deleted": "已删除薪资处理"
+    }
+  },
+  "breadcrumbs": {
+    "home": "首页",
+    "addNew": "新增",
+    "salaryStructures": "薪资结构",
+    "myPortal": "我的门户",
+    "salary": "薪资",
+    "profile": "个人资料",
+    "setup": "设置"
+  },
+  "selfService": { "employeePortal": "员工门户", "adminPanel": "管理面板", "profile": "个人资料" },
+  "myProfile": {
+    "title": "我的资料",
+    "notFound": "未找到个人资料",
+    "notAvailable": "不可用",
+    "cancel": "取消",
+    "requestUpdate": "申请更新",
+    "pendingBankRequest": "您的银行信息更新申请正在等待管理员审批。",
+    "status": { "active": "在职", "inactive": "离职" },
+    "taxRegime": { "new": "新税制", "old": "旧税制" },
+    "sections": {
+      "personalDetails": "个人信息",
+      "employment": "任职信息",
+      "bankDetails": "银行信息",
+      "statutoryDetails": "法定信息",
+      "security": "安全"
+    },
+    "fields": {
+      "email": "电子邮箱",
+      "phone": "电话",
+      "dateOfBirth": "出生日期",
+      "gender": "性别",
+      "employeeCode": "员工编号",
+      "department": "部门",
+      "designation": "职位",
+      "employmentType": "雇佣类型",
+      "dateOfJoining": "入职日期",
+      "bank": "银行",
+      "accountNumber": "账号",
+      "ifsc": "IFSC",
+      "pan": "PAN",
+      "uan": "UAN",
+      "pfNumber": "PF编号",
+      "password": "密码"
+    },
+    "values": {
+      "gender": { "female": "女性", "male": "男性", "non_binary": "非二元性别", "other": "其他" },
+      "employmentTypes": {
+        "full_time": "全职",
+        "part_time": "兼职",
+        "contract": "合同工",
+        "intern": "实习生",
+        "consultant": "顾问"
+      }
+    },
+    "security": { "changePasswordHelp": "更改您的账户密码", "changePassword": "更改密码" },
+    "bankModal": {
+      "title": "申请更新银行信息",
+      "reviewNotice": "更改生效前，人力资源或管理员将审核您的申请。",
+      "newBankName": "新银行名称",
+      "bankPlaceholder": "例如：HDFC Bank",
+      "newAccountNumber": "新账号",
+      "accountPlaceholder": "例如：1234567890",
+      "newIfscCode": "新IFSC代码",
+      "ifscPlaceholder": "例如：HDFC0001234",
+      "ifscValidation": "IFSC必须为11个字符：4个字母 + '0' + 6个字母或数字（例如：HDFC0001234）。",
+      "accountType": "账户类型",
+      "accountTypes": { "savings": "储蓄账户", "current": "活期账户", "salary": "工资账户" },
+      "reason": "更改原因",
+      "reasonPlaceholder": "例如：更换银行",
+      "submit": "提交申请",
+      "success": "银行信息更新申请已提交审批",
+      "failure": "无法提交申请"
+    },
+    "passwordModal": {
+      "title": "更改密码",
+      "currentPassword": "当前密码",
+      "newPassword": "新密码",
+      "confirmNewPassword": "确认新密码",
+      "mismatch": "两次输入的密码不一致",
+      "success": "密码已更改",
+      "failure": "无法更改密码",
+      "submit": "更改密码"
+    }
+  },
+  "totalRewardsPage": {
+    "title": "总薪酬报告",
+    "description": "为员工生成完整的薪酬与福利报告",
+    "printPdf": "打印 / PDF",
+    "selectEmployee": "选择员工",
+    "chooseEmployee": "请选择员工…",
+    "searchEmployee": "按姓名、职位或编号搜索…",
+    "noEmployeeMatches": "没有员工符合搜索条件",
+    "employeesAvailable_one": "可选择 {{count}} 名员工",
+    "employeesAvailable_other": "可选择 {{count}} 名员工",
+    "unnamedEmployee": "未命名员工",
+    "totalRewardsValue": "总薪酬价值",
+    "financialYear": "财年 {{year}}",
+    "directCompensation": "直接薪酬",
+    "benefitsValue": "福利价值",
+    "ytdNetPay": "本年累计净薪资",
+    "reimbursements": "报销",
+    "salaryBreakdown": "薪资明细",
+    "perMonth": "/月",
+    "annualCtc": "年度CTC",
+    "benefitsEnrollment": "福利参保",
+    "noBenefits": "尚未参加福利计划",
+    "perYear": "/年",
+    "totalEmployerContribution": "雇主缴费总额",
+    "ytdEarnings": "本年累计收入",
+    "monthsProcessed_one": "已处理 {{count}} 个月",
+    "monthsProcessed_other": "已处理 {{count}} 个月",
+    "grossEarnings": "总收入",
+    "totalDeductions": "扣款总额",
+    "netPay": "净薪资",
+    "taxPaid": "已缴税款",
+    "activeLoans": "当前贷款",
+    "outstanding": "未偿余额",
+    "emi": "月供",
+    "selectPrompt": "请选择员工以生成其总薪酬报告",
+    "components": { "basic": "基本工资", "hra": "住房补贴", "sa": "特别津贴" },
+    "benefitTypes": {
+      "health": "医疗",
+      "life": "人寿",
+      "dental": "牙科",
+      "vision": "视力",
+      "accident": "意外"
+    },
+    "coverageTypes": {
+      "employee": "员工本人",
+      "employee_spouse": "员工及配偶",
+      "family": "家庭",
+      "parents": "父母"
+    },
+    "loanTypes": {
+      "personal_loan": "个人贷款",
+      "salary_advance": "预支工资",
+      "home_loan": "住房贷款",
+      "car_loan": "汽车贷款",
+      "education_loan": "教育贷款"
+    }
+  },
+  "benefitsPage": {
+    "title": "福利管理",
+    "description": "管理福利计划和员工加入情况",
+    "enrollEmployee": "为员工办理加入",
+    "newPlan": "新建计划",
+    "stats": {
+      "activePlans": "有效计划",
+      "enrolled": "已加入",
+      "pending": "待处理",
+      "monthlyEmployerCost": "雇主月度成本"
+    },
+    "tabs": {
+      "plans": "计划 ({{count}})",
+      "enrollments": "加入记录 ({{count}})",
+      "pending": "待处理 ({{count}})"
+    },
+    "columns": {
+      "planName": "计划名称",
+      "type": "类型",
+      "provider": "提供商",
+      "premium": "保费",
+      "employerShare": "雇主承担",
+      "status": "状态",
+      "employee": "员工",
+      "plan": "计划",
+      "coverage": "保障范围",
+      "employeeShare": "员工承担"
+    },
+    "empty": {
+      "plans": "尚未创建福利计划",
+      "enrollments": "尚无加入记录",
+      "pending": "没有待处理的加入记录"
+    },
+    "status": {
+      "active": "有效",
+      "inactive": "无效",
+      "enrolled": "已加入",
+      "pending": "待处理",
+      "cancelled": "已取消"
+    },
+    "actions": {
+      "edit": "编辑",
+      "deactivate": "停用",
+      "cancel": "取消"
+    },
+    "planTypes": {
+      "health": "健康",
+      "dental": "牙科",
+      "vision": "视力",
+      "life": "人寿保险",
+      "disability": "伤残保障",
+      "retirement": "退休"
+    },
+    "coverageTypes": {
+      "individual": "个人",
+      "family": "家庭",
+      "individual_plus_spouse": "个人 + 配偶"
+    },
+    "fallbackUser": "用户 #{{id}}",
+    "messages": {
+      "invalidEnrollmentDates": "加入结束日期不能早于开始日期",
+      "planUpdated": "福利计划已更新",
+      "planCreated": "福利计划已创建",
+      "savePlanFailed": "无法保存计划",
+      "deactivateConfirm": "是否停用此福利计划？现有加入记录不会受到影响。",
+      "planDeactivated": "福利计划已停用",
+      "deactivateFailed": "无法停用计划",
+      "employeeEnrolled": "员工已加入福利计划",
+      "enrollFailed": "加入失败",
+      "enrollmentCancelled": "加入已取消",
+      "actionFailed": "操作失败"
+    },
+    "planModal": {
+      "editTitle": "编辑福利计划",
+      "createTitle": "创建福利计划",
+      "planName": "计划名称",
+      "type": "类型",
+      "provider": "提供商",
+      "description": "说明",
+      "monthlyPremium": "月度保费",
+      "employerContribution": "雇主缴费",
+      "enrollmentStart": "加入开始日期",
+      "enrollmentEnd": "加入结束日期",
+      "cancel": "取消",
+      "updatePlan": "更新计划",
+      "createPlan": "创建计划"
+    },
+    "enrollModal": {
+      "title": "为员工办理福利计划加入",
+      "employee": "员工",
+      "benefitPlan": "福利计划",
+      "coverageType": "保障类型",
+      "startDate": "开始日期",
+      "employeePremiumShare": "员工保费份额",
+      "employerPremiumShare": "雇主保费份额",
+      "cancel": "取消",
+      "submit": "加入"
+    }
+  },
+  "benchmarksPage": {
+    "title": "薪酬基准分析",
+    "description": "将员工薪酬与市场数据进行比较",
+    "addBenchmark": "添加基准",
+    "stats": {
+      "benchmarks": "基准",
+      "avgCompaRatio": "平均薪酬比率",
+      "belowMarket": "低于市场",
+      "aboveMarket": "高于市场"
+    },
+    "tabs": {
+      "marketBenchmarks": "市场基准 ({{count}})",
+      "compaRatioReport": "薪酬比率报告",
+      "belowMarket": "低于市场 ({{count}})",
+      "aboveMarket": "高于市场 ({{count}})"
+    },
+    "columns": {
+      "jobTitle": "职位名称",
+      "department": "部门",
+      "location": "地点",
+      "p50Median": "P50（中位数）",
+      "source": "来源",
+      "effective": "生效日期",
+      "employee": "员工",
+      "marketP50": "市场P50",
+      "compaRatio": "薪酬比率",
+      "position": "市场位置"
+    },
+    "empty": {
+      "benchmarks": "尚未添加基准",
+      "employees": "没有可用的员工数据",
+      "belowMarket": "没有员工低于市场水平",
+      "aboveMarket": "没有员工高于市场水平"
+    },
+    "summary": {
+      "employeesTotal": "名员工",
+      "matchedToBenchmarks": "名员工已匹配基准",
+      "withoutBenchmarkData": "名员工没有基准数据"
+    },
+    "labels": {
+      "noBenchmark": "无基准",
+      "notAvailable": "不适用",
+      "noData": "无数据",
+      "below": "低于",
+      "above": "高于",
+      "atMarket": "符合市场"
+    },
+    "actions": {
+      "edit": "编辑",
+      "delete": "删除"
+    },
+    "messages": {
+      "validPercentiles": "请输入有效的P25、P50和P75金额",
+      "nonNegative": "百分位值不能为负数",
+      "ordered": "百分位必须按以下顺序：P25 ≤ P50 ≤ P75",
+      "updated": "基准已更新",
+      "created": "基准已创建",
+      "deleted": "基准已删除",
+      "failed": "操作失败"
+    },
+    "modal": {
+      "editTitle": "编辑薪酬基准",
+      "addTitle": "添加薪酬基准",
+      "jobTitle": "职位名称",
+      "jobTitlePlaceholder": "例如：软件工程师",
+      "department": "部门",
+      "selectDepartment": "选择部门...",
+      "noDepartments": "未配置部门",
+      "location": "地点",
+      "locationPlaceholder": "例如：班加罗尔",
+      "p25Annual": "P25（年薪）",
+      "p50Annual": "P50中位数（年薪）",
+      "p75Annual": "P75（年薪）",
+      "p25Placeholder": "例如 800000",
+      "p50Placeholder": "例如 1200000",
+      "p75Placeholder": "例如 1800000",
+      "source": "来源",
+      "sourcePlaceholder": "例如：Glassdoor 2026",
+      "effectiveDate": "生效日期",
+      "cancel": "取消",
+      "updateBenchmark": "更新基准",
+      "saveBenchmark": "保存基准"
+    }
+  },
+  "payEquityPage": {
+    "title": "薪酬公平性分析",
+    "description": "按性别、部门和职位分析薪酬公平性",
+    "stats": {
+      "employeesAnalyzed": "已分析员工",
+      "medianSalary": "薪资中位数",
+      "meanPayGap": "平均薪酬差距",
+      "medianPayGap": "薪酬差距中位数"
+    },
+    "tabs": {
+      "overview": "分析概览",
+      "compliance": "合规报告"
+    },
+    "gender": {
+      "title": "性别薪酬差距分析",
+      "maleEmployees": "男性员工",
+      "femaleEmployees": "女性员工",
+      "maleMeanSalary": "男性平均薪资",
+      "femaleMeanSalary": "女性平均薪资",
+      "menPaidMore": "男性平均薪资更高",
+      "womenPaidMore": "女性平均薪资更高",
+      "noGap": "未检测到差距"
+    },
+    "department": {
+      "title": "部门分析",
+      "department": "部门",
+      "employees": "员工",
+      "meanSalary": "平均薪资",
+      "median": "中位数",
+      "min": "最低",
+      "max": "最高",
+      "spread": "差幅"
+    },
+    "role": {
+      "title": "职位分析",
+      "designation": "职位",
+      "count": "人数",
+      "mean": "平均值",
+      "median": "中位数"
+    },
+    "compliance": {
+      "title": "合规报告",
+      "generated": "生成日期",
+      "findings": "发现",
+      "recommendations": "建议",
+      "notAvailable": "不适用"
+    },
+    "complianceMessages": {
+      "significantMean": "检测到显著的平均薪酬差距：{{value}}%（{{group}}）",
+      "significantMedian": "检测到显著的薪酬差距中位数：{{value}}%",
+      "menPaidMore": "男性薪资更高",
+      "womenPaidMore": "女性薪资更高",
+      "highVariance": "部门“{{department}}”的薪资差异较大（CV：{{value}}%）",
+      "acceptableGap": "薪酬差距处于可接受范围内（5%以内）",
+      "noConcerns": "未发现显著的薪酬公平性问题",
+      "reviewDepartment": "审查部门“{{department}}”的薪资区间，以确保内部公平",
+      "reviewCompensation": "详细审查存在显著差距的职位薪酬",
+      "continueMonitoring": "继续按季度监测薪酬公平性"
+    }
+  },
+  "earnedWagePage": {
+    "title": "已赚工资提取",
+    "description": "按需发薪 — 允许员工在发薪日前提取已赚工资",
+    "actions": {
+      "approve": "批准",
+      "reject": "拒绝",
+      "settings": "设置",
+      "requestAdvance": "申请预支"
+    },
+    "stats": {
+      "pendingRequests": "待处理申请",
+      "totalDisbursed": "累计发放",
+      "avgRequest": "平均申请额",
+      "totalRequests": "申请总数"
+    },
+    "filter": {
+      "showing": "正在显示",
+      "requests": "申请",
+      "clear": "清除筛选"
+    },
+    "balance": {
+      "title": "可用余额",
+      "details": "目前已赚：{{earned}} | 已提取：{{withdrawn}} | 第 {{day}}/{{days}} 天",
+      "maxPercentage": "最多可提取已赚工资的{{value}}%"
+    },
+    "status": {
+      "pending": "待处理",
+      "approved": "已批准",
+      "disbursed": "已发放",
+      "rejected": "已拒绝",
+      "repaid": "已偿还",
+      "enabled": "已启用",
+      "disabled": "已禁用"
+    },
+    "columns": {
+      "employee": "员工",
+      "amount": "金额",
+      "fee": "费用",
+      "status": "状态",
+      "requested": "申请日期",
+      "reason": "原因"
+    },
+    "emptyRequests": "尚无预支申请",
+    "messages": {
+      "showingAll": "下方显示所有申请",
+      "requestSubmitted": "预支申请已提交",
+      "submitFailed": "无法提交申请",
+      "requestApproved": "申请已批准",
+      "approveFailed": "无法批准",
+      "rejectionReason": "拒绝原因（可选）：",
+      "requestRejected": "申请已拒绝",
+      "rejectFailed": "无法拒绝",
+      "settingsSaved": "设置已保存",
+      "settingsSaveFailed": "无法保存设置"
+    },
+    "requestModal": {
+      "title": "申请工资预支",
+      "available": "可用：{{amount}}",
+      "salaryDetails": "月薪：{{salary}} | 第 {{day}}/{{days}} 天",
+      "unavailable": "目前没有可用的预支额度。请检查薪资配置或等待期。",
+      "amount": "金额",
+      "amountPlaceholder": "输入金额",
+      "reason": "原因（可选）",
+      "reasonPlaceholder": "您为什么需要这笔预支？",
+      "cancel": "取消",
+      "submit": "提交申请"
+    },
+    "settingsModal": {
+      "title": "已赚工资提取设置",
+      "enable": "启用已赚工资提取",
+      "maxPercentage": "已赚工资最高百分比",
+      "cooldownDays": "等待天数",
+      "minAmount": "最低金额",
+      "maxAmount": "最高金额（0 = 无上限）",
+      "feePercentage": "费用百分比",
+      "flatFee": "固定费用",
+      "autoApproveBelow": "低于此金额自动批准（0 = 禁用）",
+      "requiresApproval": "需要经理批准",
+      "cancel": "取消",
+      "save": "保存设置"
+    }
+  },
+  "insurancePage": {
+    "title": "保险管理",
+    "description": "管理团体保险、参保和理赔",
+    "actions": {
+      "edit": "编辑",
+      "deactivate": "停用",
+      "cancel": "取消",
+      "settle": "结算",
+      "approve": "批准",
+      "reject": "拒绝",
+      "submitClaim": "提交理赔",
+      "enrollEmployee": "为员工参保",
+      "newPolicy": "新建保单"
+    },
+    "stats": {
+      "activePolicies": "有效保单",
+      "activeEnrollments": "有效参保",
+      "pendingClaims": "待处理理赔",
+      "totalApproved": "批准总额"
+    },
+    "tabs": {
+      "policies": "保单 ({{count}})",
+      "enrollments": "参保 ({{count}})",
+      "claims": "理赔 ({{count}})"
+    },
+    "empty": {
+      "policies": "尚未创建保险保单",
+      "enrollments": "尚无参保记录",
+      "claims": "尚未提交理赔"
+    },
+    "columns": {
+      "policyName": "保单名称",
+      "number": "编号",
+      "provider": "保险公司",
+      "type": "类型",
+      "coverage": "保额",
+      "premiumPerEmployee": "每位员工保费",
+      "status": "状态",
+      "employee": "员工",
+      "policy": "保单",
+      "sumInsured": "保险金额",
+      "premiumShare": "保费分摊",
+      "nominee": "受益人",
+      "claimNumber": "理赔编号",
+      "claimed": "申请金额",
+      "approved": "批准金额",
+      "submitted": "提交日期"
+    },
+    "policyTypes": {
+      "group_health": "团体医疗",
+      "group_life": "团体人寿",
+      "disability": "伤残",
+      "accidental": "意外",
+      "travel": "旅行"
+    },
+    "claimTypes": {
+      "hospitalization": "住院",
+      "outpatient": "门诊",
+      "dental": "牙科",
+      "vision": "视力",
+      "life": "人寿",
+      "disability": "伤残",
+      "accidental": "意外",
+      "travel": "旅行",
+      "group_health": "团体医疗",
+      "group_life": "团体人寿"
+    },
+    "status": {
+      "active": "有效",
+      "expired": "已过期",
+      "cancelled": "已取消",
+      "submitted": "已提交",
+      "under_review": "审核中",
+      "approved": "已批准",
+      "rejected": "已拒绝",
+      "settled": "已结算",
+      "inactive": "无效",
+      "claimed": "已理赔"
+    },
+    "messages": {
+      "invalidEndDate": "保单结束日期不能早于开始日期",
+      "renewalInPast": "续保日期不能是过去的日期",
+      "invalidRenewalDate": "续保日期必须等于或晚于保单结束日期",
+      "invalidPolicyNumber": "保单编号不能以负号开头",
+      "policyUpdated": "保险保单已更新",
+      "policyCreated": "保险保单已创建",
+      "saveFailed": "无法保存保单",
+      "deactivateConfirm": "是否停用此保险保单？现有参保记录不会受到影响。",
+      "policyDeactivated": "保险保单已停用",
+      "deactivateFailed": "无法停用保单",
+      "employeeEnrolled": "员工已参保",
+      "enrollFailed": "参保失败",
+      "claimSubmitted": "理赔已提交",
+      "claimSubmitFailed": "无法提交理赔",
+      "approvedAmountPrompt": "批准金额（留空表示全额）：",
+      "claimApproved": "理赔已批准",
+      "actionFailed": "操作失败",
+      "rejectionReason": "拒绝原因：",
+      "claimRejected": "理赔已拒绝",
+      "claimSettled": "理赔已结算",
+      "enrollmentCancelled": "参保已取消"
+    },
+    "policyModal": {
+      "editTitle": "编辑保险保单",
+      "createTitle": "创建保险保单",
+      "policyName": "保单名称",
+      "policyNumber": "保单编号",
+      "policyNumberPlaceholder": "例如 POL-2024-001",
+      "provider": "保险公司",
+      "type": "类型",
+      "totalPremium": "保费总额",
+      "premiumPerEmployee": "每位员工保费",
+      "coverageAmount": "保险金额",
+      "startDate": "开始日期",
+      "endDate": "结束日期",
+      "renewalDate": "续保日期",
+      "terms": "条款和条件",
+      "cancel": "取消",
+      "updatePolicy": "更新保单",
+      "createPolicy": "创建保单"
+    },
+    "enrollModal": {
+      "title": "为员工办理参保",
+      "employee": "员工",
+      "policy": "保险保单",
+      "sumInsured": "保险金额",
+      "premiumShare": "员工保费分摊",
+      "nomineeName": "受益人姓名",
+      "nomineeRelationship": "与受益人的关系",
+      "relationshipPlaceholder": "例如：配偶、父母",
+      "cancel": "取消",
+      "submit": "参保"
+    },
+    "claimModal": {
+      "title": "提交保险理赔",
+      "policy": "保险保单",
+      "claimType": "理赔类型",
+      "amountClaimed": "申请金额",
+      "description": "说明",
+      "descriptionPlaceholder": "描述理赔情况",
+      "notes": "备注",
+      "cancel": "取消",
+      "submit": "提交理赔"
+    }
+  },
+  "countryCompliancePage": {
+    "title": "国家/地区合规",
+    "description": "按国家/地区查看劳动法、税率和法定要求",
+    "filters": {
+      "searchPlaceholder": "搜索国家/地区...",
+      "configuredOnly": "仅显示我已配置的国家/地区 ({{count}})"
+    },
+    "regions": {
+      "all": "全部地区",
+      "asia": "亚洲",
+      "europe": "欧洲",
+      "americas": "美洲",
+      "africa": "非洲",
+      "oceania": "大洋洲",
+      "middle_east": "中东"
+    },
+    "metrics": {
+      "maxHours": "每周最长工作时间",
+      "annualLeave": "年假",
+      "publicHolidays": "公共假日",
+      "noticePeriod": "通知期",
+      "probation": "试用期",
+      "payFrequency": "支付频率"
+    },
+    "units": {
+      "hours": "{{value}}小时",
+      "days": "{{value}}天",
+      "months": "{{value}}个月"
+    },
+    "payFrequencies": {
+      "monthly": "每月",
+      "biweekly": "每两周",
+      "weekly": "每周",
+      "annual": "每年"
+    },
+    "benefits": {
+      "title": "法定福利",
+      "socialSecurity": "社会保障",
+      "pension": "养老金",
+      "healthInsurance": "医疗保险",
+      "required": "必需",
+      "notRequired": "非必需"
+    },
+    "ratesTitle": "税率与社会保障费率",
+    "additional": {
+      "title": "其他信息",
+      "taxYearStart": "税务年度开始",
+      "minimumWage": "最低工资（每月）",
+      "notSet": "未设置 / 因地而异",
+      "countryCode": "国家/地区代码",
+      "region": "地区"
+    },
+    "empty": {
+      "title": "选择一个国家/地区以查看合规详情",
+      "description": "查看劳动法、税率和法定要求"
+    },
+    "complianceKeys": {
+      "income_tax": "所得税",
+      "solidarity_surcharge": "团结附加税",
+      "health_insurance_employer": "雇主医疗保险",
+      "health_insurance_employee": "员工医疗保险",
+      "pension_employer": "雇主养老金",
+      "pension_employee": "员工养老金",
+      "unemployment_employer": "雇主失业保险",
+      "unemployment_employee": "员工失业保险",
+      "care_insurance_employer": "雇主护理保险",
+      "care_insurance_employee": "员工护理保险",
+      "employer_social_charges": "雇主社会费用",
+      "employee_social_charges": "员工社会费用",
+      "social_security_rate": "社会保障费率",
+      "social_security_cap": "社会保障上限",
+      "federal_tax": "联邦税",
+      "state_tax": "州税",
+      "epf_employer": "雇主EPF",
+      "epf_employee": "员工EPF",
+      "esi_employer": "雇主ESI",
+      "esi_employee": "员工ESI"
+    }
+  },
+  "glAccountingPage": {
+    "title": "总账 / 会计",
+    "description": "将薪资组成映射到总账科目并生成日记账分录",
+    "actions": {
+      "generateJournal": "生成日记账",
+      "addMapping": "添加映射",
+      "deleteMapping": "删除映射",
+      "cancel": "取消",
+      "saveMapping": "保存映射",
+      "generate": "生成"
+    },
+    "stats": {
+      "mappings": "总账映射",
+      "journals": "日记账分录",
+      "exported": "已导出"
+    },
+    "tabs": {
+      "mappings": "总账映射",
+      "journals": "日记账分录",
+      "exported": "已导出"
+    },
+    "mappingTable": {
+      "payComponent": "薪资组成",
+      "accountCode": "总账科目代码",
+      "accountName": "总账科目名称",
+      "description": "说明"
+    },
+    "journalTable": {
+      "date": "日期",
+      "payrollRun": "薪资运行",
+      "totalDebit": "借方合计",
+      "totalCredit": "贷方合计",
+      "status": "状态",
+      "export": "导出"
+    },
+    "statuses": {
+      "draft": "草稿",
+      "posted": "已过账",
+      "exported": "已导出"
+    },
+    "empty": {
+      "mappings": "尚未配置总账映射",
+      "journals": "尚未生成日记账分录",
+      "exported": "尚未导出任何日记账"
+    },
+    "mappingModal": {
+      "title": "添加总账映射",
+      "payComponentCode": "薪资组成代码",
+      "payComponentPlaceholder": "例如：BASIC、HRA、EPF、TDS",
+      "accountCode": "总账科目代码",
+      "accountCodePlaceholder": "例如：4001",
+      "accountName": "总账科目名称",
+      "accountNamePlaceholder": "例如：工资费用",
+      "description": "说明"
+    },
+    "journalModal": {
+      "title": "生成日记账分录",
+      "payrollRun": "薪资运行",
+      "selectRun": "选择薪资运行...",
+      "help": "系统将使用已配置的总账映射，从所选薪资运行生成日记账分录。"
+    },
+    "validation": {
+      "accountCode": "总账科目代码必须为正数，不能包含负号、字母或空格"
+    },
+    "messages": {
+      "mappingCreated": "总账映射已创建",
+      "journalGenerated": "日记账分录已生成",
+      "mappingDeleted": "映射已删除",
+      "failed": "操作失败"
+    },
+    "exports": {
+      "tallyTitle": "导出到Tally",
+      "quickbooksTitle": "导出到QuickBooks",
+      "zohoTitle": "导出到Zoho"
+    }
+  },
+  "globalEmployeesPage": {
+    "title": "全球员工",
+    "description": "管理全球EOR员工、承包商和直接雇用员工",
+    "actions": {
+      "addEmployee": "添加员工",
+      "editEmployee": "编辑员工",
+      "terminateEmployee": "终止员工雇佣",
+      "alreadyTerminated": "员工雇佣已终止",
+      "cancel": "取消",
+      "saveChanges": "保存更改"
+    },
+    "filters": {
+      "searchPlaceholder": "按姓名、邮箱或国家/地区搜索...",
+      "allCountries": "全部国家/地区",
+      "allTypes": "全部类型",
+      "allStatuses": "全部状态"
+    },
+    "employmentTypes": {
+      "eor": "EOR",
+      "contractor": "承包商",
+      "direct_hire": "直接雇用"
+    },
+    "contractTypes": {
+      "fullTime": "全职",
+      "partTime": "兼职",
+      "fixedTerm": "固定期限"
+    },
+    "statuses": {
+      "active": "有效",
+      "onboarding": "入职中",
+      "offboarding": "离职中",
+      "terminated": "已终止"
+    },
+    "salaryFrequencies": {
+      "monthly": "每月",
+      "biweekly": "每两周",
+      "weekly": "每周",
+      "annual": "每年"
+    },
+    "salaryFrequencyShort": {
+      "monthly": "月",
+      "biweekly": "两周",
+      "weekly": "周",
+      "annual": "年"
+    },
+    "table": {
+      "name": "姓名",
+      "country": "国家/地区",
+      "type": "类型",
+      "status": "状态",
+      "salary": "工资",
+      "jobTitle": "职位",
+      "startDate": "开始日期",
+      "actions": "操作"
+    },
+    "empty": "未找到全球员工。点击“添加员工”以雇用首位国际团队成员。",
+    "modal": {
+      "addTitle": "添加全球员工",
+      "editTitle": "编辑全球员工",
+      "firstName": "名字 *",
+      "lastName": "姓氏 *",
+      "email": "邮箱 *",
+      "country": "国家/地区 *",
+      "employmentType": "雇佣类型 *",
+      "contractType": "合同类型",
+      "jobTitle": "职位 *",
+      "department": "部门",
+      "selectDepartment": "选择部门...",
+      "noDepartments": "尚未配置部门 — 请在设置 > 部门中添加",
+      "startDate": "开始日期 *",
+      "salaryAmount": "工资金额 *（主要货币单位）",
+      "payFrequency": "支付频率",
+      "bankingTax": "银行与税务信息（可选）",
+      "taxId": "税务编号",
+      "bankName": "银行名称",
+      "bankNamePlaceholder": "例如：HDFC Bank",
+      "bankAccount": "银行账号",
+      "bankAccountPlaceholder": "例如：12345678901234",
+      "bankRouting": "银行路由代码 / IFSC",
+      "bankRoutingPlaceholder": "例如：HDFC0001234"
+    },
+    "validation": {
+      "required": "请填写所有必填字段"
+    },
+    "messages": {
+      "added": "全球员工已添加",
+      "updated": "全球员工已更新",
+      "addFailed": "员工添加失败",
+      "updateFailed": "员工更新失败",
+      "terminatePrompt": "终止{{name}}的雇佣？请输入原因（必填）：",
+      "terminated": "员工雇佣已终止",
+      "terminateFailed": "无法终止员工雇佣"
+    }
+  },
+  "contractorInvoicesPage": {
+    "title": "承包商发票",
+    "description": "管理并支付承包商发票",
+    "actions": {
+      "submitInvoice": "提交发票",
+      "approve": "批准",
+      "reject": "拒绝",
+      "markPaid": "标记为已支付",
+      "cancel": "取消"
+    },
+    "filters": {
+      "allStatuses": "全部状态"
+    },
+    "statuses": {
+      "pending": "待处理",
+      "approved": "已批准",
+      "paid": "已支付",
+      "rejected": "已拒绝"
+    },
+    "table": {
+      "invoiceNumber": "发票编号",
+      "contractor": "承包商",
+      "period": "期间",
+      "amount": "金额",
+      "status": "状态",
+      "submitted": "提交日期",
+      "actions": "操作"
+    },
+    "empty": "暂无承包商发票。",
+    "modal": {
+      "title": "提交承包商发票",
+      "contractorLabel": "承包商 *",
+      "selectContractor": "选择承包商...",
+      "noContractors": "暂无承包商 — 请在全球员工中添加",
+      "amountLabel": "金额",
+      "amountUnitHint": "主要货币单位",
+      "periodStart": "期间开始 *",
+      "periodEnd": "期间结束 *",
+      "description": "说明"
+    },
+    "validation": {
+      "required": "请填写所有必填字段",
+      "positiveAmount": "金额必须为正数",
+      "invalidPeriod": "结束日期必须等于或晚于开始日期"
+    },
+    "messages": {
+      "submitted": "发票已提交",
+      "submitFailed": "发票提交失败",
+      "approved": "发票已批准",
+      "approveFailed": "发票批准失败",
+      "rejectConfirm": "拒绝此发票？",
+      "rejected": "发票已拒绝",
+      "rejectFailed": "发票拒绝失败",
+      "paid": "发票已标记为已支付",
+      "paidFailed": "无法将发票标记为已支付"
+    }
+  },
+  "globalPayrollDashboard": {
+    "title": "全球薪资",
+    "description": "跨国家/地区、货币和合规要求管理您的全球员工",
+    "stats": {
+      "activeEmployees": "有效员工",
+      "countries": "国家/地区",
+      "eorWorkers": "EOR员工",
+      "contractors": "承包商",
+      "complianceScore": "合规评分",
+      "pendingInvoices": "待处理发票",
+      "onboarding": "入职中"
+    },
+    "compliance": {
+      "good": "良好",
+      "needsAttention": "需要关注"
+    },
+    "employeesByCountry": {
+      "title": "按国家/地区统计员工",
+      "empty": "暂无员工。请添加首位全球员工。"
+    },
+    "costByCurrency": {
+      "title": "按货币统计月度成本",
+      "empty": "暂无有效薪资成本。"
+    },
+    "costAnalysis": {
+      "title": "按国家/地区进行成本分析",
+      "columns": {
+        "country": "国家/地区",
+        "employees": "员工",
+        "averageSalary": "平均工资",
+        "totalGross": "税前总额",
+        "employerCost": "雇主成本",
+        "netPay": "实发工资"
+      }
+    }
+  },
+  "globalPayrollRuns": {
+    "title": "全球薪资运行",
+    "description": "按国家和月份运行薪资，进行审核、批准并标记为已支付",
+    "statusFilter": "按状态筛选薪资运行",
+    "allStatuses": "所有状态",
+    "empty": "暂无薪资运行。请创建首个全球薪资运行。",
+    "columns": {
+      "country": "国家/地区",
+      "period": "期间",
+      "status": "状态",
+      "gross": "税前金额",
+      "net": "实发金额",
+      "deductions": "扣除额",
+      "employerCost": "雇主成本",
+      "actions": "操作"
+    },
+    "actions": {
+      "view": "查看薪资运行",
+      "approve": "批准",
+      "markPaid": "标记为已支付"
+    },
+    "createModal": {
+      "title": "创建全球薪资运行",
+      "country": "国家/地区 *",
+      "selectCountry": "选择国家/地区...",
+      "noCountries": "没有包含有效EOR或直接雇用员工的国家/地区",
+      "calculationNotice": "系统将自动计算所选国家/地区所有有效EOR和直接雇用员工的扣除额。"
+    },
+    "detailModal": {
+      "title": "薪资运行 — {{country}}",
+      "netPay": "实发工资",
+      "employee": "员工",
+      "tax": "税款",
+      "socialSecurityEmployee": "社会保障（员工）",
+      "pensionEmployee": "养老金（员工）"
+    },
+    "messages": {
+      "selectCountry": "请选择国家/地区",
+      "approved": "薪资运行已批准",
+      "approveFailed": "薪资运行批准失败",
+      "markedPaid": "薪资运行已标记为已支付",
+      "markPaidFailed": "无法将薪资运行标记为已支付"
+    }
+  },
+  "announcementsPage": {
+    "title": "公告",
+    "description": "通过EmpCloud发布的全公司通知",
+    "manageInEmpCloud": "在EmpCloud中管理",
+    "empty": "暂无公告",
+    "postFromEmpCloud": "通过EmpCloud发布",
+    "pinned": "已置顶",
+    "archived": "已归档",
+    "byAuthor": "由{{author}}发布",
+    "unknownAuthor": "未知",
+    "expires": "于{{date}}到期",
+    "priorities": {
+      "low": "低",
+      "normal": "普通",
+      "high": "高",
+      "urgent": "紧急"
+    },
+    "categories": {
+      "general": "常规",
+      "hr": "人力资源",
+      "policy": "政策",
+      "event": "活动",
+      "holiday": "节假日",
+      "maintenance": "维护"
+    }
+  },
+  "notificationsPage": {
+    "title": "通知",
+    "description": "集中查看最近的提醒和更新",
+    "markAllRead": "全部标为已读",
+    "bellAria": "通知，{{count}}条未读",
+    "newCount": "{{count}}条新通知 — 标为已读",
+    "viewAll": "查看全部通知",
+    "tabs": {
+      "all": "全部（{{count}}）",
+      "unread": "未读（{{count}}）"
+    },
+    "empty": {
+      "noUnread": "没有未读通知",
+      "none": "没有通知",
+      "caughtUp": "您已查看全部通知！",
+      "updatesHere": "新的更新将显示在这里。"
+    },
+    "items": {
+      "admin": {
+        "tdsDue": {
+          "title": "TDS申报即将到期",
+          "description": "2025–26财年第4季度的24Q表即将到期",
+          "time": "需要处理"
+        },
+        "payrollPending": {
+          "title": "{{month}}薪资待处理",
+          "description": "创建并运行本月薪资",
+          "time": "本月"
+        },
+        "payrollCompleted": {
+          "title": "上次薪资处理已完成",
+          "description": "所有工资单均已生成并支付",
+          "time": "上个月"
+        },
+        "activeEmployees": {
+          "title": "{{count}}名在职员工",
+          "description": "所有法定登记均为最新状态",
+          "time": "系统"
+        }
+      },
+      "employee": {
+        "payslipAvailable": {
+          "title": "工资单可查看",
+          "description": "您的最新工资单已可查看",
+          "time": "最近"
+        },
+        "taxReminder": {
+          "title": "税务申报提醒",
+          "description": "请在截止日期前提交投资证明",
+          "time": "本季度"
+        },
+        "salaryCredited": {
+          "title": "工资已到账",
+          "description": "您的工资已存入银行账户",
+          "time": "上个月"
+        }
+      }
+    }
+  },
+  "selfServiceDashboard": {
+    "greeting": "欢迎，{{name}}！",
+    "userFallback": "用户",
+    "description": "这是您的薪资摘要",
+    "stats": {
+      "monthlyCtc": "月度CTC",
+      "latestNetPay": "最新实发工资",
+      "taxRegime": "税制",
+      "daysAtCompany": "入职天数"
+    },
+    "regimes": {
+      "old": "旧税制",
+      "new": "新税制"
+    },
+    "latestPayslip": "最新工资单 — {{period}}",
+    "payslip": {
+      "grossPay": "税前工资",
+      "deductions": "扣除额",
+      "netPay": "实发工资",
+      "viewAll": "查看全部"
+    },
+    "actions": {
+      "salaryBreakdown": "查看薪资明细",
+      "taxComputation": "税额计算",
+      "submitDeclarations": "提交申报",
+      "reimbursements": "费用报销",
+      "profile": "我的资料"
+    },
+    "announcements": {
+      "title": "公司公告",
+      "readMore": "阅读更多",
+      "fallbackTitle": "公告",
+      "priorityLabel": "{{priority}}优先级",
+      "priorities": {
+        "low": "低",
+        "normal": "普通",
+        "high": "高",
+        "urgent": "紧急"
+      }
+    }
+  },
+  "myPayslipsPage": {
+    "title": "我的工资单",
+    "description": "查看并下载您的工资单",
+    "financialYear": "{{start}}-{{end}}财年",
+    "financialYearFilter": "按财年筛选",
+    "empty": "暂无工资单",
+    "gross": "税前",
+    "net": "实发",
+    "actions": {
+      "hide": "收起",
+      "details": "详情",
+      "downloadPdf": "下载PDF",
+      "dispute": "对工资单提出异议"
+    },
+    "earnings": "收入项",
+    "totalEarnings": "收入合计",
+    "deductions": "扣除项",
+    "totalDeductions": "扣除合计",
+    "components": {
+      "EPF": "员工公积金",
+      "PF": "公积金",
+      "PF_EE": "员工公积金缴款",
+      "ESI": "员工国家保险",
+      "PT": "职业税",
+      "TDS": "所得税（TDS）",
+      "INCOME_TAX": "所得税",
+      "LOP": "无薪扣款"
+    },
+    "dispute": {
+      "title": "对工资单提出异议",
+      "reasonRequired": "请填写异议原因",
+      "success": "异议已提交，人力资源部门将进行审核。",
+      "failed": "异议提交失败",
+      "description": "如果您认为此工资单有误，请在下方描述问题。人力资源部门将审核并回复。",
+      "placeholder": "描述问题（例如扣除有误或津贴缺失）",
+      "cancel": "取消",
+      "submit": "提交异议"
+    }
+  },
+  "mySalaryPage": {
+    "title": "我的薪资",
+    "description": "您的CTC明细和薪资结构",
+    "unavailable": "暂无薪资信息",
+    "annualSummary": "年度摘要",
+    "annualCtcConfigured": "年度CTC（配置值）",
+    "annualGrossComponents": "根据薪资组成计算的年度总额",
+    "roundingNotice": "配置的CTC与各薪资组成之和出现细微差异属于正常情况：月度金额会先四舍五入到整数卢比，再换算为年度金额。",
+    "grossSalaryAnnual": "年度税前工资",
+    "monthlyComponent": "每月{{component}}",
+    "monthlyBreakdown": "月度薪资明细",
+    "salaryComponents": "薪资组成",
+    "effectiveFrom": "自{{date}}起生效",
+    "columns": {
+      "component": "组成项",
+      "monthly": "月度",
+      "annual": "年度"
+    },
+    "components": {
+      "BASIC": "基本工资",
+      "HRA": "住房补贴（HRA）",
+      "SA": "特别津贴"
+    }
+  },
+  "myTaxPage": {
+    "title": "我的税务",
+    "description": "财年 {{financialYear}} 税额计算",
+    "form16": "表格16",
+    "stats": {
+      "annualIncome": "年度收入",
+      "taxableIncome": "应税收入",
+      "estimatedTax": "预计税额",
+      "tdsDeductedYtd": "本年至今已扣TDS"
+    },
+    "computationTitle": "税额计算",
+    "regimes": {
+      "new": "新税制",
+      "old": "旧税制"
+    },
+    "rows": {
+      "grossAnnualIncome": "年度总收入",
+      "standardDeduction": "减：标准扣除",
+      "chapterDeductions": "减：第VI-A章扣除",
+      "taxableIncome": "应税收入",
+      "taxOnIncome": "所得税",
+      "cess": "健康和教育附加税（4%）",
+      "totalLiability": "应纳税总额",
+      "monthlyTds": "每月TDS"
+    },
+    "tracker": {
+      "title": "TDS扣除跟踪",
+      "totalTax": "本财年税额总计",
+      "tdsDeductedYtd": "本年至今已扣TDS",
+      "remaining": "剩余",
+      "progress": "进度",
+      "monthlyMessage": "每月将从您的工资中扣除<strong>{{amount}}</strong>的TDS。"
+    }
+  },
+  "myDeclarationsPage": {
+    "description": "财年 {{financialYear}} — 提交投资证明和申报",
+    "actions": {
+      "quickDeclare": "快速申报全部",
+      "newDeclaration": "新建申报",
+      "cancel": "取消",
+      "submitAll": "提交所有申报",
+      "submit": "提交申报"
+    },
+    "stats": {
+      "totalDeclared": "申报总额",
+      "totalApproved": "批准总额",
+      "pendingApproval": "待审批"
+    },
+    "declarations": "申报",
+    "empty": "暂无申报。请选择“新建申报”提交第一份投资证明。",
+    "proof": {
+      "submitted": "证明已提交",
+      "upload": "上传"
+    },
+    "quick": {
+      "title": "快速税务申报",
+      "description": "一次申报所有投资",
+      "tip": "提示：根据第80C条，PPF、ELSS、LIC等最多可申报₹1,50,000。80CCD(1B)下的NPS另可享受₹50,000扣除额。",
+      "defaultDescription": "第{{section}}条税务申报"
+    },
+    "sections": {
+      "80C": "80C — PPF、ELSS、LIC等",
+      "80CCD_1B": "80CCD(1B) — NPS",
+      "80D": "80D — 医疗保险",
+      "80E": "80E — 教育贷款利息",
+      "80G": "80G — 捐赠",
+      "80TTA": "80TTA — 储蓄利息",
+      "HRA": "HRA — 房屋租金"
+    },
+    "validation": {
+      "sectionRequired": "请选择一个条款",
+      "fieldRequired": "请填写此字段",
+      "validAmount": "请输入有效金额",
+      "nonnegativeAmount": "金额不能为负数",
+      "fileTooLarge": "文件大于5MB",
+      "fileType": "仅允许PDF、JPG或PNG文件",
+      "oneAmount": "请至少输入一个金额"
+    },
+    "messages": {
+      "proofUploaded": "证明已上传",
+      "proofUploadFailed": "证明上传失败",
+      "submitted": "申报已提交",
+      "submitFailed": "申报提交失败",
+      "submittedCount_one": "已提交 {{count}} 项申报",
+      "submittedCount_other": "已提交 {{count}} 项申报",
+      "submitAllFailed": "申报提交失败"
+    },
+    "form": {
+      "descriptionPlaceholder": "例如：PPF缴款",
+      "amount": "金额",
+      "proofDocument": "证明文件",
+      "optional": "可选",
+      "uploadProof": "上传证明文件",
+      "fileSelected": "{{size}} KB — 选择以更改",
+      "dropzone": "选择上传或拖放文件",
+      "fileHelp": "PDF、JPG或PNG，最大5MB"
+    }
+  },
+  "myReimbursementsPage": {
+    "title": "我的报销",
+    "description": "提交并跟踪费用报销申请",
+    "newClaim": "新建申请",
+    "stats": {
+      "total": "申请总数",
+      "pending": "待处理",
+      "approvedPaid": "已批准 / 已支付"
+    },
+    "empty": {
+      "title": "暂无报销申请",
+      "description": "选择“新建申请”以提交费用"
+    },
+    "columns": {
+      "category": "类别",
+      "description": "说明",
+      "amount": "金额",
+      "date": "日期",
+      "status": "状态"
+    },
+    "categories": {
+      "medical": "医疗",
+      "travel": "差旅",
+      "food": "餐饮",
+      "equipment": "设备",
+      "internet": "网络 / 电话",
+      "books": "书籍与培训",
+      "other": "其他"
+    },
+    "status": {
+      "pending": "待处理",
+      "approved": "已批准",
+      "paid": "已支付",
+      "rejected": "已拒绝"
+    },
+    "messages": {
+      "invalidAmount": "金额必须为零或正数",
+      "submitted": "申请已提交审批",
+      "failed": "提交申请失败"
+    },
+    "modal": {
+      "title": "提交费用申请",
+      "category": "类别",
+      "description": "说明",
+      "descriptionPlaceholder": "例如：客户会议出租车费",
+      "amount": "金额 (₹)",
+      "expenseDate": "费用日期",
+      "cancel": "取消",
+      "submit": "提交申请"
+    }
+  },
+  "holidaysPage": {
+    "title": "节假日日历",
+    "configured_one": "{{year}}年 — 已配置 {{count}} 个节假日",
+    "configured_other": "{{year}}年 — 已配置 {{count}} 个节假日",
+    "noHolidays": "无节假日",
+    "upcoming": "即将到来的节假日",
+    "past": "过去的节假日",
+    "actions": {
+      "add": "添加节假日",
+      "remove": "删除节假日",
+      "cancel": "取消"
+    },
+    "columns": {
+      "holiday": "节假日",
+      "date": "日期",
+      "day": "星期",
+      "type": "类型"
+    },
+    "types": {
+      "national": "全国性",
+      "regional": "地区性",
+      "optional": "可选 / 限制性"
+    },
+    "messages": {
+      "nameRequired": "节假日名称为必填项",
+      "nameLetter": "节假日名称必须至少包含一个文字",
+      "added": "已添加节假日",
+      "addFailed": "添加节假日失败",
+      "removed": "已删除节假日",
+      "removeFailed": "删除节假日失败"
+    },
+    "modal": {
+      "title": "添加节假日",
+      "name": "节假日名称",
+      "namePlaceholder": "例如：排灯节",
+      "nameTitle": "必须至少包含一个文字",
+      "date": "日期",
+      "type": "类型"
+    }
+  },
+  "payrollRuns": {
+    "title": "薪资批次",
+    "description": "月度薪资处理",
+    "runPayroll": "运行薪资",
+    "noRuns": "暂无薪资批次。",
+    "runFirst": "运行第一个薪资批次",
+    "totalRuns": "批次总数",
+    "allPeriods": "所有期间",
+    "latestNetPay": "最近实发工资",
+    "noComputedRuns": "暂无已计算批次",
+    "markedPaid": "已标记付款",
+    "inProgress": "处理中",
+    "inProgressSubtitle": "草稿 · 已计算 · 已批准",
+    "filterAria": "按状态筛选批次",
+    "noMatches": "没有符合此筛选条件的批次。",
+    "newTitle": "新建薪资批次",
+    "newDescription": "创建新的月度薪资批次",
+    "createInfo": "为所选月份的每位在职员工创建草稿批次，并计算税前工资、扣款和实发工资。标记付款前可进行审核和批准。",
+    "month": "月份",
+    "year": "年份",
+    "payDate": "发薪日期",
+    "cancel": "取消",
+    "createRun": "创建批次",
+    "created": "薪资批次已创建",
+    "missingReturnedId": "批次已提交，但服务器未返回ID。请刷新列表进行确认。",
+    "createFailed": "无法创建薪资批次",
+    "missingId": "此薪资批次缺少ID，请刷新列表。",
+    "columns": {
+      "period": "期间",
+      "employees": "员工",
+      "grossPay": "税前工资",
+      "deductions": "扣款",
+      "netPay": "实发工资",
+      "status": "状态"
+    },
+    "statuses": {
+      "all": "全部",
+      "draft": "草稿",
+      "processing": "处理中",
+      "computed": "已计算",
+      "approved": "已批准",
+      "paid": "已付款",
+      "cancelled": "已取消"
+    },
+    "validation": {
+      "month": "请选择有效月份",
+      "year": "请输入有效年份（2020–2100）",
+      "futurePeriod": "无法为未来期间创建薪资批次",
+      "payDate": "请选择发薪日期"
+    }
+  },
+  "pagination": {
+    "range": "第 {{start}}–{{end}} 条，共 {{total}} 条",
+    "pageOf": "第 {{page}} 页，共 {{totalPages}} 页",
+    "previous": "上一页",
+    "previousPage": "上一页",
+    "next": "下一页",
+    "nextPage": "下一页"
+  },
+  "adminDeclarations": {
+    "title": "税务申报",
+    "description": "审核员工为{{financialYear}}提交的投资申报。",
+    "pending": {
+      "title": "待审批",
+      "badge": "{{pending}} 项待审批 · {{count}} 名员工",
+      "badge_one": "{{pending}} 项待审批 · {{count}} 名员工",
+      "badge_other": "{{pending}} 项待审批 · {{count}} 名员工",
+      "loading": "正在加载待审批申报…",
+      "empty": "{{financialYear}}没有待审批的申报，所有事项均已处理。",
+      "declaredAmount": "申报 {{amount}}"
+    },
+    "employees": {
+      "title": "员工",
+      "loading": "正在加载…",
+      "noMatches": "没有匹配的员工。",
+      "shownOf": "显示 {{shown}} 名，共 {{total}} 名"
+    },
+    "filters": {
+      "searchPlaceholder": "姓名、邮箱或代码",
+      "filterDepartment": "按部门筛选",
+      "allDepartments": "所有部门",
+      "filterLocation": "按地点筛选",
+      "allLocations": "所有地点",
+      "clear": "清除筛选"
+    },
+    "declarations": {
+      "pickEmployee": "选择员工",
+      "approving": "正在审批…",
+      "approvePending": "批准 {{count}} 项待审批申报",
+      "approvePending_one": "批准 {{count}} 项待审批申报",
+      "approvePending_other": "批准 {{count}} 项待审批申报",
+      "selectPrompt": "从列表中选择员工以查看其税务申报。",
+      "loading": "正在加载申报…",
+      "empty": "{{financialYear}}没有提交申报。"
+    },
+    "stats": {
+      "declared": "申报金额",
+      "approved": "批准金额",
+      "pending": "待审批"
+    },
+    "columns": {
+      "section": "条款",
+      "description": "说明",
+      "declared": "申报金额",
+      "approved": "批准金额",
+      "status": "状态",
+      "proof": "证明材料",
+      "action": "操作"
+    },
+    "statuses": {
+      "pending": "待审批",
+      "approved": "已批准",
+      "rejected": "已拒绝"
+    },
+    "proof": {
+      "view": "查看"
+    },
+    "actions": {
+      "approve": "批准"
+    },
+    "toasts": {
+      "noPending": "没有待审批的申报。",
+      "approvedCount": "已批准 {{count}} 项申报。",
+      "approvedCount_one": "已批准 {{count}} 项申报。",
+      "approvedCount_other": "已批准 {{count}} 项申报。",
+      "approveAllFailed": "无法批准申报",
+      "alreadyApproved": "已批准。",
+      "approvedOne": "申报已批准。",
+      "approveOneFailed": "无法批准申报"
+    }
+  },
+  "taxCalculator": {
+    "title": "税款计算器",
+    "description": "所得税假设测算 — 选择员工并使用自定义数据重新计算",
+    "financialYearShort": "财年 {{year}}",
+    "simulationFailed": "无法计算税款，请重试。",
+    "newRegimeInfo": "新税制 — 仅适用₹75,000标准扣除。HRA、80C、80D及第VI-A章的其他扣除均不适用。",
+    "steps": {
+      "employee": "第1步 · 员工",
+      "inputs": "第2步 · 输入数据",
+      "taxBreakdown": "第3步 · 税款明细"
+    },
+    "regimes": {
+      "new": "新税制",
+      "old": "旧税制"
+    },
+    "employee": {
+      "ctc": "CTC",
+      "select": "搜索并选择员工…",
+      "joined": "入职日期 {{date}}",
+      "monthsLeft": "本财年剩余 {{count}} 个月",
+      "monthsLeft_one": "本财年剩余 {{count}} 个月",
+      "monthsLeft_other": "本财年剩余 {{count}} 个月",
+      "midFyJoiner": "财年中途入职",
+      "searchPlaceholder": "按姓名、邮箱或代码搜索…",
+      "noMatches": "没有员工匹配“{{search}}”"
+    },
+    "empty": {
+      "title": "选择员工以开始",
+      "description": "计算器会加载员工当前薪资、税制和已批准申报，您可以调整任意输入并查看由此产生的每月TDS。"
+    },
+    "inputs": {
+      "reset": "恢复已保存数据",
+      "loadingSaved": "正在加载已保存数据…",
+      "noSalary": "未分配有效薪资结构。所有字段从零开始 — 请手动输入数据以测算税款。",
+      "midFyTitle": "财年中途入职 — 请在下方填写表格12B",
+      "midFyDescription": "该员工在财年{{financialYear}}中途入职。若没有前雇主收入和TDS，系统会将全年税款分摊到仅剩的{{count}}个月，导致超额扣税。",
+      "midFyDescription_one": "该员工在财年{{financialYear}}中途入职。若没有前雇主收入和TDS，系统会将全年税款计入仅剩的{{count}}个月，导致超额扣税。",
+      "midFyDescription_other": "该员工在财年{{financialYear}}中途入职。若没有前雇主收入和TDS，系统会将全年税款分摊到仅剩的{{count}}个月，导致超额扣税。",
+      "regime": "税制",
+      "compare": "比较旧税制和新税制",
+      "pan": "PAN",
+      "panHint": "留空时根据206AA按20%固定税率",
+      "annualGross": "年度总收入",
+      "annualBasic": "年度基本工资",
+      "annualHra": "年度HRA",
+      "employeePfAnnual": "员工PF（年度）"
+    },
+    "priorEmployer": {
+      "title": "前雇主（表格12B）",
+      "save": "保存到个人资料",
+      "saved": "已保存前雇主TDS",
+      "saveFailed": "无法保存前雇主TDS",
+      "description": "本财年从前雇主获得的收入及已扣TDS。保存的数据会进入下一次薪资处理，以避免重复扣税。",
+      "gross": "前雇主总收入（本财年）",
+      "tds": "前雇主TDS",
+      "source": "来源 / 备注（可选）",
+      "sourcePlaceholder": "例如：“表格12B已于2026-09-01上传”"
+    },
+    "oldRegime": {
+      "title": "旧税制附加数据",
+      "annualRent": "年度已付租金",
+      "metro": "大都市（HRA上限为基本工资的50%）",
+      "declarations": "第VI-A章申报",
+      "add": "添加",
+      "noDeclarations": "暂无申报。点击“添加”可测算80C、80D、80CCD(1B)等。",
+      "remove": "移除"
+    },
+    "actions": {
+      "compareRegimes": "比较税制",
+      "calculate": "计算"
+    },
+    "validation": {
+      "invalidPan": "PAN格式似乎无效 — 应为ABCDE1234F。",
+      "section80CCap": "80C合计为{{amount}} — 仅₹1,50,000可抵扣（上限）。",
+      "npsCap": "80CCD(1B) NPS上限为₹50,000。",
+      "hraNeedsRent": "HRA免税要求支付租金 — 请输入年度租金以申请。"
+    },
+    "results": {
+      "calculating": "正在计算…",
+      "clickCalculate": "点击“计算”以测算税款",
+      "enterAnnualGross": "输入年度总收入以测算税款",
+      "section206aaTitle": "已应用第206AA条",
+      "section206aaDetail": "缺少PAN，因此无论税制或申报如何，均按年度总收入的20%固定扣除。",
+      "sameTax": "两种税制的税额相同",
+      "saves": "{{regime}}可节省{{amount}}",
+      "recommended": "建议：",
+      "monthlyTds": "每月TDS",
+      "tapRegime": "选择税制以查看下方完整明细",
+      "grossAnnualIncome": "年度总收入",
+      "less": "减：{{item}}",
+      "taxableIncome": "应税收入",
+      "taxOnIncome": "所得税（87A减免后）",
+      "surcharge": "附加税",
+      "cess": "健康与教育税（4%）",
+      "totalAnnualTax": "年度税款总额",
+      "tdsPaidYtd": "本年累计已付TDS",
+      "remainingTax": "剩余税款",
+      "savingSuggestion": "根据第80C条再投资{{investment}}，预计可节省{{saving}}税款。"
+    },
+    "sections": {
+      "80C": "PPF / ELSS / LIC / 本金",
+      "80CCD_1B": "额外NPS",
+      "80D": "医疗保险",
+      "80E": "教育贷款利息",
+      "80G": "捐赠",
+      "80TTA": "储蓄利息"
+    }
+  },
+  "taxOverview": {
+    "title": "税务概览",
+    "financialYear": "财年 {{start}}-{{end}}",
+    "description": "{{fy}} 所得税摘要",
+    "missingPanCount": "本页有 {{count}} 名员工没有有效的PAN",
+    "missingPanCount_one": "本页有 {{count}} 名员工没有有效的PAN",
+    "missingPanCount_other": "本页有 {{count}} 名员工没有有效的PAN",
+    "missingPanDetail": "这些员工的TDS正根据第206AA条按20%的固定税率扣除。请员工在个人资料中更新PAN，以便应用标准税率。",
+    "summaryTitle": "员工税务摘要",
+    "regimeSuffix": "{{regime}}税制",
+    "noSalaryStructure": "未分配薪资结构",
+    "empty": "未找到员工。",
+    "stats": {
+      "totalEmployees": "员工总数",
+      "estimatedTaxPage": "预计税额（本页）",
+      "tdsDeductedYtdPage": "本年累计已扣TDS（本页）",
+      "pageOf": "第 {{page}} 页，共 {{totalPages}} 页",
+      "newRegimePage": "新税制（本页）",
+      "optedIn": "名员工已选择"
+    },
+    "filters": {
+      "searchPlaceholder": "按姓名、邮箱、代码或职位搜索…",
+      "filterDepartment": "按部门筛选",
+      "allDepartments": "所有部门",
+      "filterLocation": "按地点筛选",
+      "allLocations": "所有地点",
+      "clear": "清除筛选"
+    },
+    "columns": {
+      "employee": "员工",
+      "regime": "税制",
+      "estimatedTax": "预计税额",
+      "tdsDeductedYtd": "本年累计已扣TDS"
+    },
+    "pan": {
+      "label": "PAN",
+      "invalidTitle": "没有有效的PAN — 根据第206AA条按20%的固定税率扣除TDS。",
+      "missing": "无PAN"
+    },
+    "regimes": {
+      "new": "新",
+      "old": "旧"
+    }
+  },
+  "payslipList": {
+    "title": "工资单",
+    "count": "{{count}} 份工资单",
+    "count_one": "{{count}} 份工资单",
+    "count_other": "{{count}} 份工资单",
+    "loading": "正在加载…",
+    "firstOf": "显示前 {{loaded}} 份，共 {{total}} 份 — 请使用筛选条件缩小范围",
+    "filteredOf": "{{filtered}} 份，共 {{total}} 份",
+    "exportAll": "全部导出",
+    "exportSuccess": "工资单 CSV 已导出",
+    "exportFailed": "导出失败",
+    "emptyTitle": "此选择没有工资单。",
+    "emptyHint": "请尝试其他月份或年份。",
+    "cappedNotice": "正在显示前 {{loaded}} 份工资单，共 {{total}} 份 — 上方合计仅反映当前视图。请按月份、年份或部门筛选以查看准确数据。",
+    "excludedTotals": "合计中已排除 {{count}} 份有争议或已取消的工资单。",
+    "excludedTotals_one": "合计中已排除 {{count}} 份有争议或已取消的工资单。",
+    "excludedTotals_other": "合计中已排除 {{count}} 份有争议或已取消的工资单。",
+    "emptyFiltered": "没有工资单符合筛选条件。",
+    "filters": {
+      "search": "搜索",
+      "searchPlaceholder": "姓名或代码…",
+      "department": "部门",
+      "allDepartments": "所有部门",
+      "location": "地点",
+      "allLocations": "所有地点",
+      "month": "月份",
+      "allMonths": "所有月份",
+      "year": "年份",
+      "allYears": "所有年份"
+    },
+    "stats": {
+      "payslips": "工资单",
+      "inView": "当前视图",
+      "of": "共 {{count}} 份",
+      "gross": "应发工资",
+      "grossEarnings": "总收入",
+      "deductions": "扣款",
+      "totalDeductions": "扣款总额",
+      "netPay": "实发工资",
+      "takeHome": "到手工资"
+    },
+    "columns": {
+      "employee": "员工",
+      "period": "期间",
+      "days": "天数",
+      "gross": "应发工资",
+      "deductions": "扣款",
+      "netPay": "实发工资",
+      "status": "状态"
+    },
+    "statuses": {
+      "draft": "草稿",
+      "generated": "已生成",
+      "sent": "已发送",
+      "viewed": "已查看",
+      "paid": "已支付",
+      "disputed": "有争议",
+      "resolved": "已解决",
+      "cancelled": "已取消",
+      "pending": "待处理",
+      "rejected": "已拒绝"
+    },
+    "actions": {
+      "view": "查看",
+      "downloadPdf": "下载 PDF"
+    },
+    "modal": {
+      "fallbackTitle": "工资单",
+      "lopNotice": "共 {{total}} 天，支付 {{paid}} 天 — 已扣除 {{lop}} 个 LOP 日",
+      "earnings": "收入",
+      "grossPay": "应发工资",
+      "deductions": "扣款",
+      "totalDeductions": "扣款总额",
+      "netPay": "实发工资",
+      "printSavePdf": "打印 / 保存 PDF",
+      "close": "关闭"
+    }
+  },
+  "salaryStructures": {
+    "title": "薪资结构",
+    "configured": "已配置 {{count}} 个结构",
+    "configured_one": "已配置 {{count}} 个结构",
+    "configured_other": "已配置 {{count}} 个结构",
+    "newStructure": "新建结构",
+    "noStructures": "暂无薪资结构。",
+    "createFirst": "创建第一个结构",
+    "editTitle": "编辑薪资结构",
+    "newTitle": "新建薪资结构",
+    "structureName": "结构名称",
+    "structureNamePlaceholder": "例如：印度标准 CTC",
+    "description": "说明",
+    "descriptionPlaceholder": "适用于全职员工",
+    "components": "薪资项目",
+    "nightHelpAria": "夜班津贴计算帮助",
+    "nightHelpTitle": "夜班津贴计算方式",
+    "nightOvertimeHelp": "夜班津贴和加班费计算方式",
+    "addPresetAria": "添加预设项目",
+    "addPreset": "+ 添加预设…",
+    "custom": "自定义",
+    "componentName": "项目名称",
+    "auto": "自动",
+    "nightRatePlaceholder": "₹/夜",
+    "dayRatePlaceholder": "₹/天",
+    "percentPlaceholder": "% 例如 10",
+    "multiplierPlaceholder": "例如 2",
+    "autoTitle": "分配时根据 CTC 自动填充",
+    "info": "信息",
+    "noteTitle": "注意：",
+    "noteText": "法定扣款（EPF、ESI、PT、TDS）在薪资处理时自动计算。周期性非法定扣款请选择“扣款”；在某个收入项目上使用“余额”来吸收剩余 CTC。",
+    "cancel": "取消",
+    "updateStructure": "更新结构",
+    "createStructure": "创建结构",
+    "gotIt": "知道了",
+    "deleteTitle": "删除薪资结构？",
+    "deleteDescription": "将删除“{{name}}”。已分配员工的薪资保持不变，已计算的工资单不受影响。",
+    "delete": "删除",
+    "active": "启用",
+    "inactive": "停用",
+    "default": "默认",
+    "defaultStructureName": "标准 CTC 结构",
+    "defaultStructureDescription": "包含基本工资、HRA、SA、PF 和 ESI 项目的默认薪资结构",
+    "noComponents": "无项目",
+    "noComponentsDefined": "未定义薪资项目",
+    "duplicate": "复制",
+    "duplicateAria": "复制结构",
+    "edit": "编辑",
+    "editAria": "编辑结构",
+    "deleteAria": "删除结构",
+    "collapse": "收起",
+    "expand": "展开",
+    "statutoryNote": "EPF、ESI、职业税和 TDS 在薪资处理时自动计算，不属于薪资结构。",
+    "created": "薪资结构已创建",
+    "updated": "薪资结构已更新",
+    "deleted": "薪资结构已删除",
+    "duplicated": "结构已复制",
+    "saveFailed": "保存失败",
+    "deleteFailed": "删除失败",
+    "duplicateFailed": "复制失败",
+    "copyName": "{{name}}（副本）",
+    "columns": {
+      "name": "名称",
+      "code": "代码",
+      "type": "类型",
+      "calc": "计算",
+      "value": "数值",
+      "percentOf": "% 基数",
+      "component": "薪资项目",
+      "calculation": "计算方式"
+    },
+    "types": {
+      "earning": "收入",
+      "deduction": "扣款",
+      "reimbursement": "报销",
+      "reimbursementShort": "报销"
+    },
+    "counts": {
+      "earning": "{{count}} 项收入",
+      "earning_one": "{{count}} 项收入",
+      "earning_other": "{{count}} 项收入",
+      "deduction": "{{count}} 项扣款",
+      "deduction_one": "{{count}} 项扣款",
+      "deduction_other": "{{count}} 项扣款",
+      "reimbursement": "{{count}} 项报销",
+      "reimbursement_one": "{{count}} 项报销",
+      "reimbursement_other": "{{count}} 项报销",
+      "earningLabel": "收入",
+      "earningLabel_one": "收入",
+      "earningLabel_other": "收入",
+      "deductionLabel": "扣款",
+      "deductionLabel_one": "扣款",
+      "deductionLabel_other": "扣款"
+    },
+    "calcs": {
+      "perNight": "每夜 ₹",
+      "dayPay": "× 日薪",
+      "netPayPercent": "实发工资的%",
+      "perOtDay": "每个加班日 ₹",
+      "fixed": "固定",
+      "balance": "余额"
+    },
+    "calculationText": {
+      "percentageOf": "{{base}} 的 {{value}}%",
+      "fixed": "固定 ₹{{value}}",
+      "perNight": "₹{{value}} / 夜",
+      "wholeSalaryNight": "{{value}}× 全部工资（夜班）",
+      "netPayNight": "实发工资的 {{value}}%（夜班）",
+      "perOtDay": "₹{{value}} / 加班日",
+      "dayPayOt": "{{value}}× 日薪 / 加班日",
+      "balancing": "余额调整"
+    },
+    "presetNames": {
+      "BASIC": "基本工资",
+      "HRA": "住房津贴",
+      "SA": "特别津贴",
+      "CA": "交通津贴",
+      "MA": "医疗津贴",
+      "LTA": "差旅津贴",
+      "BONUS": "绩效奖金",
+      "NIGHT_ALLOW": "夜班津贴",
+      "OVERTIME": "加班",
+      "CANTEEN": "食堂扣款",
+      "WELFARE": "福利基金",
+      "ADV_REC": "预支款回收"
+    },
+    "validation": {
+      "singleBalance": "只有一个项目可以使用余额计算。",
+      "balanceEarning": "余额计算仅适用于收入项目（{{code}}）。",
+      "percentage": "{{code}}：百分比必须在 0 到 100 之间。",
+      "percentageBase": "{{code}}：请选择百分比基数（例如 CTC、BASIC）。",
+      "fixedEarning": "{{code}}：固定收入金额必须大于 0。",
+      "nightRate": "{{code}}：请输入大于 0 的每夜金额。",
+      "nightMultiplier": "{{code}}：夜班倍数必须至少为 1。",
+      "netPercentage": "{{code}}：请输入 0 到 100 之间的实发百分比。",
+      "overtimeRate": "{{code}}：请输入大于 0 的加班日金额。",
+      "overtimeMultiplier": "{{code}}：加班倍数必须至少为 1。"
+    },
+    "help": {
+      "title": "夜班津贴与加班 — 计算模式",
+      "intro": "夜班津贴仅适用于考勤中标记为 is_night_shift = 1 的实际工作日。LOP 天数不计入。",
+      "modeValue": "模式 + 数值",
+      "allowanceAdded": "增加的津贴",
+      "perNight": "每夜",
+      "flatExample": "固定 ₹250 × 22 夜",
+      "addedOnBase": "在基本工资之上增加",
+      "double": "双倍",
+      "doubleFormula": "基本工资 166,666 × (2 − 1)",
+      "doubleTotal": "→ 总税前工资 = 基本工资 × 2 = 333,332",
+      "oneHalfFormula": "基本工资 166,666 × (1.5 − 1)",
+      "oneHalfTotal": "→ 总税前工资 = 基本工资 × 1.5 = 250,000",
+      "howModesWork": "各模式说明：",
+      "perNightExplanation": "每夜 ₹ — 每个实际夜班的固定金额，加到正常工资之上。",
+      "dayPayExplanation": "× 日薪 — 夜班员工的全部工资按倍数支付，当月至少需要一个实际夜班。",
+      "exampleBase": "上述示例的月度基本税前工资：₹166,666。",
+      "overtimeTitle": "加班（休息日或节假日工作）：",
+      "overtimeCount": "加班日是在休息日或节假日出勤的日期，系统会自动标记为 WOT/HOT。",
+      "perOtExplanation": "每个加班日 ₹ — 每个加班日的固定金额。",
+      "otDayPayExplanation": "× 日薪 — 每个加班日按日薪倍数计算。",
+      "notesTitle": "注意。",
+      "notesText": "津贴属于应税收入，因此 EPF 和 TDS 不会简单翻倍。仅计算实际夜班工作日（半天 = 0.5）。"
+    }
+  }
+}

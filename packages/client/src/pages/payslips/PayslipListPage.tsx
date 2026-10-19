@@ -7,7 +7,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
 import { Card, CardContent } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
-import { formatCurrency, formatMonth } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import { apiGet } from "@/api/client";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
@@ -22,23 +22,9 @@ import {
   CreditCard,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 const now = new Date();
-const MONTHS = [
-  { value: "", label: "All Months" },
-  ...Array.from({ length: 12 }, (_, i) => ({
-    value: String(i + 1),
-    label: new Date(2026, i).toLocaleString("en-US", { month: "long" }),
-  })),
-];
-
-const YEARS = [
-  { value: "", label: "All Years" },
-  ...Array.from({ length: 5 }, (_, i) => {
-    const y = now.getFullYear() - i;
-    return { value: String(y), label: String(y) };
-  }),
-];
 
 // Disputed/cancelled payslips are not finalised payroll and can carry corrupt
 // figures (e.g. a ₹0-gross record flagged by migration 028 with a bogus
@@ -47,6 +33,8 @@ const YEARS = [
 const EXCLUDE_FROM_TOTALS = new Set(["disputed", "cancelled"]);
 
 export function PayslipListPage() {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage || i18n.language;
   const [selected, setSelected] = useState<any | null>(null);
   // Default to All Months / All Years so the list always shows whatever
   // payslips exist on first load — defaulting to the current calendar month/
@@ -57,6 +45,33 @@ export function PayslipListPage() {
   const [search, setSearch] = useState("");
   const [dept, setDept] = useState("");
   const [location, setLocation] = useState("");
+
+  const months = useMemo(
+    () => [
+      { value: "", label: t("payslipList.filters.allMonths") },
+      ...Array.from({ length: 12 }, (_, i) => ({
+        value: String(i + 1),
+        label: new Intl.DateTimeFormat(locale, { month: "long" }).format(new Date(2026, i)),
+      })),
+    ],
+    [locale, t],
+  );
+
+  const years = useMemo(
+    () => [
+      { value: "", label: t("payslipList.filters.allYears") },
+      ...Array.from({ length: 5 }, (_, i) => {
+        const value = now.getFullYear() - i;
+        return { value: String(value), label: String(value) };
+      }),
+    ],
+    [locale, t],
+  );
+
+  const localizedMonth = (monthValue: number, yearValue: number) =>
+    new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(
+      new Date(yearValue, monthValue - 1),
+    );
 
   const { data: res, isLoading } = useQuery({
     queryKey: ["payslips", month, year],
@@ -81,21 +96,21 @@ export function PayslipListPage() {
   // Department / location dropdown options derived from the loaded payslips.
   const departments = useMemo(
     () => [
-      { value: "", label: "All Departments" },
+      { value: "", label: t("payslipList.filters.allDepartments") },
       ...Array.from(new Set(payslips.map((p: any) => p.department).filter(Boolean)))
         .sort()
         .map((d: any) => ({ value: d, label: d })),
     ],
-    [payslips],
+    [payslips, t],
   );
   const locations = useMemo(
     () => [
-      { value: "", label: "All Locations" },
+      { value: "", label: t("payslipList.filters.allLocations") },
       ...Array.from(new Set(payslips.map((p: any) => p.location).filter(Boolean)))
         .sort()
         .map((l: any) => ({ value: l, label: l })),
     ],
-    [payslips],
+    [payslips, t],
   );
 
   // Clamp facet selections to options that still exist after a reload, so a
@@ -147,7 +162,7 @@ export function PayslipListPage() {
   const columns = [
     {
       key: "employee",
-      header: "Employee",
+      header: t("payslipList.columns.employee"),
       render: (row: any) => (
         <div>
           <p className="font-medium text-gray-900">
@@ -165,12 +180,12 @@ export function PayslipListPage() {
     },
     {
       key: "period",
-      header: "Period",
-      render: (row: any) => formatMonth(row.month, row.year),
+      header: t("payslipList.columns.period"),
+      render: (row: any) => localizedMonth(row.month, row.year),
     },
     {
       key: "days",
-      header: "Days",
+      header: t("payslipList.columns.days"),
       render: (row: any) => {
         const paid = Number(row.paid_days || 0);
         const total = Number(row.total_days || 0);
@@ -187,7 +202,7 @@ export function PayslipListPage() {
     },
     {
       key: "gross",
-      header: "Gross",
+      header: t("payslipList.columns.gross"),
       className: "text-right",
       render: (row: any) => (
         <span className="tabular-nums">{formatCurrency(row.gross_earnings)}</span>
@@ -195,7 +210,7 @@ export function PayslipListPage() {
     },
     {
       key: "total_deductions",
-      header: "Deductions",
+      header: t("payslipList.columns.deductions"),
       className: "text-right",
       render: (row: any) => (
         <span className="tabular-nums text-rose-600">{formatCurrency(row.total_deductions)}</span>
@@ -203,7 +218,7 @@ export function PayslipListPage() {
     },
     {
       key: "net_pay",
-      header: "Net Pay",
+      header: t("payslipList.columns.netPay"),
       className: "text-right",
       render: (row: any) => (
         <span className="font-semibold tabular-nums text-gray-900">
@@ -213,8 +228,14 @@ export function PayslipListPage() {
     },
     {
       key: "status",
-      header: "Status",
-      render: (row: any) => <Badge variant={row.status}>{row.status}</Badge>,
+      header: t("payslipList.columns.status"),
+      render: (row: any) => (
+        <Badge variant={row.status}>
+          {t(`payslipList.statuses.${String(row.status || "").toLowerCase()}`, {
+            defaultValue: row.status,
+          })}
+        </Badge>
+      ),
     },
     {
       key: "actions",
@@ -228,7 +249,8 @@ export function PayslipListPage() {
               setSelected(row);
             }}
             className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-            title="View"
+            title={t("payslipList.actions.view")}
+            aria-label={t("payslipList.actions.view")}
           >
             <Eye className="h-4 w-4" />
           </button>
@@ -238,7 +260,8 @@ export function PayslipListPage() {
               openPDF(row.id);
             }}
             className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-            title="Download PDF"
+            title={t("payslipList.actions.downloadPdf")}
+            aria-label={t("payslipList.actions.downloadPdf")}
           >
             <Download className="h-4 w-4" />
           </button>
@@ -260,15 +283,18 @@ export function PayslipListPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Payslips"
+        title={t("payslipList.title")}
         description={
           isLoading
-            ? "Loading…"
+            ? t("payslipList.loading")
             : capped
-              ? `First ${payslips.length} of ${total} payslips — refine filters to narrow`
+              ? t("payslipList.firstOf", { loaded: payslips.length, total })
               : filtered.length === payslips.length
-                ? `${payslips.length} payslips`
-                : `${filtered.length} of ${payslips.length} payslips`
+                ? t("payslipList.count", { count: payslips.length })
+                : t("payslipList.filteredOf", {
+                    filtered: filtered.length,
+                    total: payslips.length,
+                  })
         }
         actions={
           <Button
@@ -283,13 +309,13 @@ export function PayslipListPage() {
                 a.download = "payslips.csv";
                 a.click();
                 URL.revokeObjectURL(url);
-                toast.success("Exported payslips CSV");
+                toast.success(t("payslipList.exportSuccess"));
               } catch {
-                toast.error("Export failed");
+                toast.error(t("payslipList.exportFailed"));
               }
             }}
           >
-            <Download className="h-4 w-4" /> Export All
+            <Download className="h-4 w-4" /> {t("payslipList.exportAll")}
           </Button>
         }
       />
@@ -302,14 +328,14 @@ export function PayslipListPage() {
               htmlFor="payslip-search"
               className="mb-1 block text-sm font-medium text-gray-700"
             >
-              Search
+              {t("payslipList.filters.search")}
             </label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 id="payslip-search"
                 type="search"
-                placeholder="Name or code…"
+                placeholder={t("payslipList.filters.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="focus:border-brand-500 focus:ring-brand-500 block w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm shadow-sm focus:outline-none focus:ring-1"
@@ -318,31 +344,31 @@ export function PayslipListPage() {
           </div>
           <SelectField
             id="dept-filter"
-            label="Department"
+            label={t("payslipList.filters.department")}
             value={activeDept}
             onChange={(e) => setDept(e.target.value)}
             options={departments}
           />
           <SelectField
             id="location-filter"
-            label="Location"
+            label={t("payslipList.filters.location")}
             value={activeLocation}
             onChange={(e) => setLocation(e.target.value)}
             options={locations}
           />
           <SelectField
             id="month-filter"
-            label="Month"
+            label={t("payslipList.filters.month")}
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            options={MONTHS}
+            options={months}
           />
           <SelectField
             id="year-filter"
-            label="Year"
+            label={t("payslipList.filters.year")}
             value={year}
             onChange={(e) => setYear(e.target.value)}
-            options={YEARS}
+            options={years}
           />
         </div>
       </div>
@@ -356,57 +382,61 @@ export function PayslipListPage() {
           <div className="rounded-full bg-gray-50 p-3">
             <FileText className="h-6 w-6 text-gray-300" />
           </div>
-          <p className="text-sm text-gray-500">No payslips for this selection.</p>
-          <p className="text-xs text-gray-400">Try a different month or year.</p>
+          <p className="text-sm text-gray-500">{t("payslipList.emptyTitle")}</p>
+          <p className="text-xs text-gray-400">{t("payslipList.emptyHint")}</p>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              title="Payslips"
+              title={t("payslipList.stats.payslips")}
               value={String(filtered.length)}
-              subtitle={filtered.length === payslips.length ? "in view" : `of ${payslips.length}`}
+              subtitle={
+                filtered.length === payslips.length
+                  ? t("payslipList.stats.inView")
+                  : t("payslipList.stats.of", { count: payslips.length })
+              }
               icon={FileText}
             />
             <StatCard
-              title="Gross"
+              title={t("payslipList.stats.gross")}
               value={formatCurrency(totals.gross)}
-              subtitle="gross earnings"
+              subtitle={t("payslipList.stats.grossEarnings")}
               icon={Wallet}
               accentClassName="bg-emerald-50 text-emerald-600"
             />
             <StatCard
-              title="Deductions"
+              title={t("payslipList.stats.deductions")}
               value={formatCurrency(totals.deductions)}
-              subtitle="total deductions"
+              subtitle={t("payslipList.stats.totalDeductions")}
               icon={TrendingDown}
               accentClassName="bg-rose-50 text-rose-600"
             />
             <StatCard
-              title="Net Pay"
+              title={t("payslipList.stats.netPay")}
               value={formatCurrency(totals.net)}
-              subtitle="take-home"
+              subtitle={t("payslipList.stats.takeHome")}
               icon={CreditCard}
               accentClassName="bg-sky-50 text-sky-600"
             />
           </div>
           {capped && (
             <p className="text-xs text-amber-600">
-              Showing the first {payslips.length} of {total} payslips — the totals above reflect
-              this view. Narrow by month, year, or department to see exact figures.
+              {t("payslipList.cappedNotice", { loaded: payslips.length, total })}
             </p>
           )}
           {totals.count < filtered.length && (
             <p className="text-xs text-gray-400">
-              Totals exclude {filtered.length - totals.count} disputed/cancelled payslip
-              {filtered.length - totals.count === 1 ? "" : "s"}.
+              {t("payslipList.excludedTotals", {
+                count: filtered.length - totals.count,
+              })}
             </p>
           )}
           <DataTable
             columns={columns}
             data={filtered}
             onRowClick={(row) => setSelected(row)}
-            emptyMessage="No payslips match your filters."
+            emptyMessage={t("payslipList.emptyFiltered")}
           />
         </>
       )}
@@ -415,10 +445,10 @@ export function PayslipListPage() {
       <Modal
         open={!!selected}
         onClose={() => setSelected(null)}
-        title={selected ? `${selected.employee_name || "Payslip"}` : ""}
+        title={selected ? `${selected.employee_name || t("payslipList.modal.fallbackTitle")}` : ""}
         description={
           selected
-            ? `${formatMonth(selected.month, selected.year)} — ${selected.employee_code || ""}`
+            ? `${localizedMonth(selected.month, selected.year)} — ${selected.employee_code || ""}`
             : ""
         }
         className="max-w-xl"
@@ -428,22 +458,31 @@ export function PayslipListPage() {
             {/* Days info */}
             {Number(selected.lop_days) > 0 && (
               <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                Paid {selected.paid_days} of {selected.total_days} days — {selected.lop_days} LOP
-                days deducted
+                {t("payslipList.modal.lopNotice", {
+                  paid: selected.paid_days,
+                  total: selected.total_days,
+                  lop: selected.lop_days,
+                })}
               </div>
             )}
 
             <Card>
               <CardContent className="space-y-2">
-                <h4 className="text-sm font-semibold text-gray-900">Earnings</h4>
+                <h4 className="text-sm font-semibold text-gray-900">
+                  {t("payslipList.modal.earnings")}
+                </h4>
                 {parseJSON(selected.earnings).map((e: any) => (
                   <div key={e.code} className="flex justify-between text-sm">
-                    <span className="text-gray-500">{e.name || e.code}</span>
+                    <span className="text-gray-500">
+                      {t(`salaryStructures.presetNames.${e.code}`, {
+                        defaultValue: e.name || e.code,
+                      })}
+                    </span>
                     <span className="tabular-nums text-gray-900">{formatCurrency(e.amount)}</span>
                   </div>
                 ))}
                 <div className="flex justify-between border-t border-gray-100 pt-2 text-sm font-semibold">
-                  <span>Gross Pay</span>
+                  <span>{t("payslipList.modal.grossPay")}</span>
                   <span className="tabular-nums">{formatCurrency(selected.gross_earnings)}</span>
                 </div>
               </CardContent>
@@ -451,15 +490,21 @@ export function PayslipListPage() {
 
             <Card>
               <CardContent className="space-y-2">
-                <h4 className="text-sm font-semibold text-gray-900">Deductions</h4>
+                <h4 className="text-sm font-semibold text-gray-900">
+                  {t("payslipList.modal.deductions")}
+                </h4>
                 {parseJSON(selected.deductions).map((d: any) => (
                   <div key={d.code} className="flex justify-between text-sm">
-                    <span className="text-gray-500">{d.name || d.code}</span>
+                    <span className="text-gray-500">
+                      {t(`salaryStructures.presetNames.${d.code}`, {
+                        defaultValue: d.name || d.code,
+                      })}
+                    </span>
                     <span className="tabular-nums text-rose-600">-{formatCurrency(d.amount)}</span>
                   </div>
                 ))}
                 <div className="flex justify-between border-t border-gray-100 pt-2 text-sm font-semibold">
-                  <span>Total Deductions</span>
+                  <span>{t("payslipList.modal.totalDeductions")}</span>
                   <span className="tabular-nums text-rose-600">
                     -{formatCurrency(selected.total_deductions)}
                   </span>
@@ -468,7 +513,7 @@ export function PayslipListPage() {
             </Card>
 
             <div className="from-brand-600 flex items-center justify-between rounded-lg bg-gradient-to-r to-indigo-500 p-4 text-white">
-              <span className="text-lg font-bold">Net Pay</span>
+              <span className="text-lg font-bold">{t("payslipList.modal.netPay")}</span>
               <span className="text-lg font-bold tabular-nums">
                 {formatCurrency(selected.net_pay)}
               </span>
@@ -476,10 +521,10 @@ export function PayslipListPage() {
 
             <div className="flex justify-end gap-3">
               <Button variant="outline" size="sm" onClick={() => openPDF(selected.id)}>
-                <FileText className="h-4 w-4" /> Print / Save PDF
+                <FileText className="h-4 w-4" /> {t("payslipList.modal.printSavePdf")}
               </Button>
               <Button size="sm" onClick={() => setSelected(null)}>
-                Close
+                {t("payslipList.modal.close")}
               </Button>
             </div>
           </div>

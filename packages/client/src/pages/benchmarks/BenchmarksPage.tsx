@@ -25,8 +25,10 @@ import {
   FileUp,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 export function BenchmarksPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<"benchmarks" | "compa-ratio" | "below-market" | "above-market">(
     "benchmarks",
   );
@@ -76,15 +78,15 @@ export function BenchmarksPage() {
     // the submit before hitting the API so the user sees the mistake inline
     // instead of a cryptic 400.
     if (!Number.isFinite(marketP25) || !Number.isFinite(marketP50) || !Number.isFinite(marketP75)) {
-      toast.error("Please enter valid P25, P50 and P75 amounts");
+      toast.error(t("benchmarksPage.messages.validPercentiles"));
       return;
     }
     if (marketP25 < 0 || marketP50 < 0 || marketP75 < 0) {
-      toast.error("Percentile values cannot be negative");
+      toast.error(t("benchmarksPage.messages.nonNegative"));
       return;
     }
     if (!(marketP25 <= marketP50 && marketP50 <= marketP75)) {
-      toast.error("Percentiles must be ordered: P25 ≤ P50 ≤ P75");
+      toast.error(t("benchmarksPage.messages.ordered"));
       return;
     }
 
@@ -102,15 +104,15 @@ export function BenchmarksPage() {
     try {
       if (editing) {
         await apiPut(`/benchmarks/${editing.id}`, payload);
-        toast.success("Benchmark updated");
+        toast.success(t("benchmarksPage.messages.updated"));
       } else {
         await apiPost("/benchmarks", payload);
-        toast.success("Benchmark created");
+        toast.success(t("benchmarksPage.messages.created"));
       }
       closeModal();
       qc.invalidateQueries({ queryKey: ["benchmarks"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed");
+      toast.error(err.response?.data?.error?.message || t("benchmarksPage.messages.failed"));
     } finally {
       setCreating(false);
     }
@@ -119,36 +121,36 @@ export function BenchmarksPage() {
   async function deleteBenchmark(id: string) {
     try {
       await apiDelete(`/benchmarks/${id}`);
-      toast.success("Benchmark deleted");
+      toast.success(t("benchmarksPage.messages.deleted"));
       qc.invalidateQueries({ queryKey: ["benchmarks"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed");
+      toast.error(err.response?.data?.error?.message || t("benchmarksPage.messages.failed"));
     }
   }
 
   const benchColumns = [
     {
       key: "job_title",
-      header: "Job Title",
+      header: t("benchmarksPage.columns.jobTitle"),
       render: (r: any) => <span className="font-medium text-gray-900">{r.job_title}</span>,
     },
-    { key: "department", header: "Department" },
-    { key: "location", header: "Location" },
+    { key: "department", header: t("benchmarksPage.columns.department") },
+    { key: "location", header: t("benchmarksPage.columns.location") },
     { key: "market_p25", header: "P25", render: (r: any) => formatCurrency(r.market_p25) },
     {
       key: "market_p50",
-      header: "P50 (Median)",
+      header: t("benchmarksPage.columns.p50Median"),
       render: (r: any) => <span className="font-semibold">{formatCurrency(r.market_p50)}</span>,
     },
     { key: "market_p75", header: "P75", render: (r: any) => formatCurrency(r.market_p75) },
     {
       key: "source",
-      header: "Source",
+      header: t("benchmarksPage.columns.source"),
       render: (r: any) => <span className="text-xs text-gray-500">{r.source || "—"}</span>,
     },
     {
       key: "effective_date",
-      header: "Effective",
+      header: t("benchmarksPage.columns.effective"),
       render: (r: any) => formatDate(r.effective_date),
     },
     {
@@ -159,7 +161,7 @@ export function BenchmarksPage() {
           <Button
             variant="ghost"
             size="sm"
-            title="Edit"
+            title={t("benchmarksPage.actions.edit")}
             onClick={() => {
               setEditing(r);
               setShowCreate(true);
@@ -170,7 +172,7 @@ export function BenchmarksPage() {
           <Button
             variant="ghost"
             size="sm"
-            title="Delete"
+            title={t("benchmarksPage.actions.delete")}
             onClick={() => deleteBenchmark(r.id)}
             className="text-red-600"
           >
@@ -184,7 +186,7 @@ export function BenchmarksPage() {
   const compaColumns = [
     {
       key: "name",
-      header: "Employee",
+      header: t("benchmarksPage.columns.employee"),
       render: (r: any) => (
         <div>
           <p className="font-medium text-gray-900">
@@ -197,19 +199,20 @@ export function BenchmarksPage() {
     { key: "ctc", header: "CTC", render: (r: any) => formatCurrency(r.ctc) },
     {
       key: "benchmarkP50",
-      header: "Market P50",
+      header: t("benchmarksPage.columns.marketP50"),
       render: (r: any) =>
         r.benchmarkP50 ? (
           formatCurrency(r.benchmarkP50)
         ) : (
-          <span className="text-gray-400">No benchmark</span>
+          <span className="text-gray-400">{t("benchmarksPage.labels.noBenchmark")}</span>
         ),
     },
     {
       key: "compaRatio",
-      header: "Compa-Ratio",
+      header: t("benchmarksPage.columns.compaRatio"),
       render: (r: any) => {
-        if (r.compaRatio === null) return <span className="text-gray-400">N/A</span>;
+        if (r.compaRatio === null)
+          return <span className="text-gray-400">{t("benchmarksPage.labels.notAvailable")}</span>;
         const color =
           r.compaRatio < 0.9
             ? "text-red-600"
@@ -221,24 +224,25 @@ export function BenchmarksPage() {
     },
     {
       key: "marketPosition",
-      header: "Position",
+      header: t("benchmarksPage.columns.position"),
       render: (r: any) => {
-        if (r.marketPosition === "no_benchmark") return <Badge variant="draft">No Data</Badge>;
+        if (r.marketPosition === "no_benchmark")
+          return <Badge variant="draft">{t("benchmarksPage.labels.noData")}</Badge>;
         if (r.marketPosition === "below_market")
           return (
             <Badge variant="inactive">
-              <TrendingDown className="mr-1 inline h-3 w-3" /> Below
+              <TrendingDown className="mr-1 inline h-3 w-3" /> {t("benchmarksPage.labels.below")}
             </Badge>
           );
         if (r.marketPosition === "above_market")
           return (
             <Badge variant="approved">
-              <TrendingUp className="mr-1 inline h-3 w-3" /> Above
+              <TrendingUp className="mr-1 inline h-3 w-3" /> {t("benchmarksPage.labels.above")}
             </Badge>
           );
         return (
           <Badge variant="active">
-            <Minus className="mr-1 inline h-3 w-3" /> At Market
+            <Minus className="mr-1 inline h-3 w-3" /> {t("benchmarksPage.labels.atMarket")}
           </Badge>
         );
       },
@@ -250,11 +254,11 @@ export function BenchmarksPage() {
   return (
     <div>
       <PageHeader
-        title="Compensation Benchmarking"
-        description="Compare employee pay against market data"
+        title={t("benchmarksPage.title")}
+        description={t("benchmarksPage.description")}
         actions={
           <Button onClick={() => setShowCreate(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Add Benchmark
+            <Plus className="mr-2 h-4 w-4" /> {t("benchmarksPage.addBenchmark")}
           </Button>
         }
       />
@@ -262,25 +266,25 @@ export function BenchmarksPage() {
       {/* Stats — cards drill into the matching tab (#85) */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Benchmarks"
+          title={t("benchmarksPage.stats.benchmarks")}
           value={benchmarks.length}
           icon={BarChart3}
           onClick={() => setTab("benchmarks")}
         />
         <StatCard
-          title="Avg Compa-Ratio"
+          title={t("benchmarksPage.stats.avgCompaRatio")}
           value={compaData.averageCompaRatio?.toFixed(2) || "—"}
           icon={Target}
           onClick={() => setTab("compa-ratio")}
         />
         <StatCard
-          title="Below Market"
+          title={t("benchmarksPage.stats.belowMarket")}
           value={dist.belowMarket || 0}
           icon={TrendingDown}
           onClick={() => setTab("below-market")}
         />
         <StatCard
-          title="Above Market"
+          title={t("benchmarksPage.stats.aboveMarket")}
           value={dist.aboveMarket || 0}
           icon={TrendingUp}
           onClick={() => setTab("above-market")}
@@ -297,25 +301,25 @@ export function BenchmarksPage() {
           onClick={() => setTab("benchmarks")}
           className={`px-4 py-2 text-sm font-medium ${tab === "benchmarks" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
         >
-          Market Benchmarks ({benchmarks.length})
+          {t("benchmarksPage.tabs.marketBenchmarks", { count: benchmarks.length })}
         </button>
         <button
           onClick={() => setTab("compa-ratio")}
           className={`px-4 py-2 text-sm font-medium ${tab === "compa-ratio" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
         >
-          Compa-Ratio Report
+          {t("benchmarksPage.tabs.compaRatioReport")}
         </button>
         <button
           onClick={() => setTab("below-market")}
           className={`px-4 py-2 text-sm font-medium ${tab === "below-market" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
         >
-          Below Market ({dist.belowMarket || 0})
+          {t("benchmarksPage.tabs.belowMarket", { count: dist.belowMarket || 0 })}
         </button>
         <button
           onClick={() => setTab("above-market")}
           className={`px-4 py-2 text-sm font-medium ${tab === "above-market" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
         >
-          Above Market ({dist.aboveMarket || 0})
+          {t("benchmarksPage.tabs.aboveMarket", { count: dist.aboveMarket || 0 })}
         </button>
       </div>
 
@@ -330,7 +334,7 @@ export function BenchmarksPage() {
               <DataTable
                 columns={benchColumns}
                 data={benchmarks}
-                emptyMessage="No benchmarks added yet"
+                emptyMessage={t("benchmarksPage.empty.benchmarks")}
               />
             )}
           </CardContent>
@@ -350,13 +354,16 @@ export function BenchmarksPage() {
                 <CardContent className="p-4">
                   <div className="flex items-center gap-8 text-sm">
                     <span>
-                      <strong>{compaData.totalEmployees || 0}</strong> employees total
+                      <strong>{compaData.totalEmployees || 0}</strong>{" "}
+                      {t("benchmarksPage.summary.employeesTotal")}
                     </span>
                     <span>
-                      <strong>{compaData.matchedToBenchmark || 0}</strong> matched to benchmarks
+                      <strong>{compaData.matchedToBenchmark || 0}</strong>{" "}
+                      {t("benchmarksPage.summary.matchedToBenchmarks")}
                     </span>
                     <span>
-                      <strong>{compaData.unmatchedCount || 0}</strong> without benchmark data
+                      <strong>{compaData.unmatchedCount || 0}</strong>{" "}
+                      {t("benchmarksPage.summary.withoutBenchmarkData")}
                     </span>
                   </div>
                 </CardContent>
@@ -367,7 +374,7 @@ export function BenchmarksPage() {
                   <DataTable
                     columns={compaColumns}
                     data={compaEmployees}
-                    emptyMessage="No employee data available"
+                    emptyMessage={t("benchmarksPage.empty.employees")}
                   />
                 </CardContent>
               </Card>
@@ -394,8 +401,8 @@ export function BenchmarksPage() {
                   )}
                   emptyMessage={
                     tab === "below-market"
-                      ? "No employees below market"
-                      : "No employees above market"
+                      ? t("benchmarksPage.empty.belowMarket")
+                      : t("benchmarksPage.empty.aboveMarket")
                   }
                 />
               </CardContent>
@@ -412,13 +419,13 @@ export function BenchmarksPage() {
       <Modal
         open={showCreate}
         onClose={closeModal}
-        title={editing ? "Edit Compensation Benchmark" : "Add Compensation Benchmark"}
+        title={editing ? t("benchmarksPage.modal.editTitle") : t("benchmarksPage.modal.addTitle")}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label="Job Title"
+            label={t("benchmarksPage.modal.jobTitle")}
             name="jobTitle"
-            placeholder="e.g., Software Engineer"
+            placeholder={t("benchmarksPage.modal.jobTitlePlaceholder")}
             defaultValue={editing?.job_title || ""}
             required
           />
@@ -426,7 +433,7 @@ export function BenchmarksPage() {
             {/* #86 — was a free-text Input; now a SelectField wired to the
                 org's real department list via useDepartments(). */}
             <SelectField
-              label="Department"
+              label={t("benchmarksPage.modal.department")}
               name="department"
               defaultValue={editing?.department || ""}
               options={[
@@ -434,16 +441,16 @@ export function BenchmarksPage() {
                   value: "",
                   label:
                     departmentOptions.length > 0
-                      ? "Select department..."
-                      : "No departments configured",
+                      ? t("benchmarksPage.modal.selectDepartment")
+                      : t("benchmarksPage.modal.noDepartments"),
                 },
                 ...departmentOptions,
               ]}
             />
             <Input
-              label="Location"
+              label={t("benchmarksPage.modal.location")}
               name="location"
-              placeholder="e.g., Bangalore"
+              placeholder={t("benchmarksPage.modal.locationPlaceholder")}
               defaultValue={editing?.location || ""}
             />
           </div>
@@ -453,45 +460,45 @@ export function BenchmarksPage() {
               create forms nudges positive values. */}
           <div className="grid grid-cols-3 gap-4">
             <Input
-              label="P25 (Annual)"
+              label={t("benchmarksPage.modal.p25Annual")}
               name="marketP25"
               type="number"
               min={0}
               step="any"
-              placeholder="e.g. 800000"
+              placeholder={t("benchmarksPage.modal.p25Placeholder")}
               defaultValue={editing?.market_p25 ?? ""}
               required
             />
             <Input
-              label="P50 Median (Annual)"
+              label={t("benchmarksPage.modal.p50Annual")}
               name="marketP50"
               type="number"
               min={0}
               step="any"
-              placeholder="e.g. 1200000"
+              placeholder={t("benchmarksPage.modal.p50Placeholder")}
               defaultValue={editing?.market_p50 ?? ""}
               required
             />
             <Input
-              label="P75 (Annual)"
+              label={t("benchmarksPage.modal.p75Annual")}
               name="marketP75"
               type="number"
               min={0}
               step="any"
-              placeholder="e.g. 1800000"
+              placeholder={t("benchmarksPage.modal.p75Placeholder")}
               defaultValue={editing?.market_p75 ?? ""}
               required
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Source"
+              label={t("benchmarksPage.modal.source")}
               name="source"
-              placeholder="e.g., Glassdoor 2026"
+              placeholder={t("benchmarksPage.modal.sourcePlaceholder")}
               defaultValue={editing?.source || ""}
             />
             <Input
-              label="Effective Date"
+              label={t("benchmarksPage.modal.effectiveDate")}
               name="effectiveDate"
               type="date"
               defaultValue={
@@ -502,11 +509,13 @@ export function BenchmarksPage() {
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={closeModal}>
-              Cancel
+              {t("benchmarksPage.modal.cancel")}
             </Button>
             <Button type="submit" disabled={creating}>
               {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {editing ? "Update Benchmark" : "Save Benchmark"}
+              {editing
+                ? t("benchmarksPage.modal.updateBenchmark")
+                : t("benchmarksPage.modal.saveBenchmark")}
             </Button>
           </div>
         </form>

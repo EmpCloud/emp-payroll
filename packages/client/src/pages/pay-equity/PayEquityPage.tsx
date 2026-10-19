@@ -17,8 +17,10 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export function PayEquityPage() {
+  const { t, i18n } = useTranslation();
   const [tab, setTab] = useState<"overview" | "compliance">("overview");
 
   const { data: analysisRes, isLoading: analysisLoading } = useQuery({
@@ -43,12 +45,66 @@ export function PayEquityPage() {
         ? "medium"
         : "low";
 
+  function translateFinding(finding: string) {
+    let match = finding.match(
+      /^Significant mean pay gap detected: ([\d.-]+)% \((men paid more|women paid more)\)$/,
+    );
+    if (match) {
+      return t("payEquityPage.complianceMessages.significantMean", {
+        value: match[1],
+        group:
+          match[2] === "men paid more"
+            ? t("payEquityPage.complianceMessages.menPaidMore")
+            : t("payEquityPage.complianceMessages.womenPaidMore"),
+      });
+    }
+
+    match = finding.match(/^Significant median pay gap detected: ([\d.-]+)%$/);
+    if (match) {
+      return t("payEquityPage.complianceMessages.significantMedian", { value: match[1] });
+    }
+
+    match = finding.match(/^High salary variance in department "(.+)" \(CV: ([\d.]+)%\)$/);
+    if (match) {
+      return t("payEquityPage.complianceMessages.highVariance", {
+        department: match[1],
+        value: match[2],
+      });
+    }
+
+    if (finding === "Pay gap is within acceptable range (within 5%)") {
+      return t("payEquityPage.complianceMessages.acceptableGap");
+    }
+    if (finding === "No significant pay equity concerns detected") {
+      return t("payEquityPage.complianceMessages.noConcerns");
+    }
+    return finding;
+  }
+
+  function translateRecommendation(recommendation: string) {
+    const match = recommendation.match(
+      /^Review salary bands for department "(.+)" to ensure internal equity$/,
+    );
+    if (match) {
+      return t("payEquityPage.complianceMessages.reviewDepartment", {
+        department: match[1],
+      });
+    }
+    if (
+      recommendation ===
+      "Conduct detailed review of compensation for roles where significant gaps exist"
+    ) {
+      return t("payEquityPage.complianceMessages.reviewCompensation");
+    }
+    if (recommendation === "Continue monitoring pay equity on a quarterly basis") {
+      return t("payEquityPage.complianceMessages.continueMonitoring");
+    }
+    return recommendation;
+  }
+
   return (
     <div>
-      <PageHeader
-        title="Pay Equity Analysis"
-        description="Analyze compensation fairness across gender, department, and role"
-      />
+      <PageHeader title={t("payEquityPage.title")} description={t("payEquityPage.description")} />
 
       {analysisLoading ? (
         <div className="flex h-64 items-center justify-center">
@@ -69,7 +125,7 @@ export function PayEquityPage() {
                 like the same card duplicated (#203). */}
           <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              title="Employees Analyzed"
+              title={t("payEquityPage.stats.employeesAnalyzed")}
               value={analysis.totalEmployees || 0}
               icon={Users}
               onClick={() => {
@@ -82,7 +138,7 @@ export function PayEquityPage() {
               }}
             />
             <StatCard
-              title="Median Salary"
+              title={t("payEquityPage.stats.medianSalary")}
               value={formatCurrency(analysis.overallStats?.median || 0)}
               icon={BarChart3}
               onClick={() => {
@@ -95,7 +151,7 @@ export function PayEquityPage() {
               }}
             />
             <StatCard
-              title="Mean Pay Gap"
+              title={t("payEquityPage.stats.meanPayGap")}
               value={`${payGap.meanGapPercentage || 0}%`}
               icon={gapSeverity === "low" ? Scale : AlertTriangle}
               accentClassName={
@@ -115,7 +171,7 @@ export function PayEquityPage() {
               }}
             />
             <StatCard
-              title="Median Pay Gap"
+              title={t("payEquityPage.stats.medianPayGap")}
               value={`${payGap.medianGapPercentage || 0}%`}
               icon={TrendingDown}
               accentClassName="bg-indigo-50 text-indigo-600"
@@ -136,13 +192,13 @@ export function PayEquityPage() {
               onClick={() => setTab("overview")}
               className={`px-4 py-2 text-sm font-medium ${tab === "overview" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
             >
-              Analysis Overview
+              {t("payEquityPage.tabs.overview")}
             </button>
             <button
               onClick={() => setTab("compliance")}
               className={`px-4 py-2 text-sm font-medium ${tab === "compliance" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
             >
-              Compliance Report
+              {t("payEquityPage.tabs.compliance")}
             </button>
           </div>
 
@@ -153,29 +209,37 @@ export function PayEquityPage() {
                 <Card>
                   <CardContent className="p-6">
                     <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                      Gender Pay Gap Analysis
+                      {t("payEquityPage.gender.title")}
                     </h3>
                     <div className="grid gap-6 md:grid-cols-2">
                       <div>
                         <div className="space-y-3">
                           <div className="flex items-center justify-between rounded-lg bg-blue-50 p-3">
-                            <span className="text-sm text-blue-700">Male Employees</span>
+                            <span className="text-sm text-blue-700">
+                              {t("payEquityPage.gender.maleEmployees")}
+                            </span>
                             <span className="font-semibold text-blue-900">{payGap.maleCount}</span>
                           </div>
                           <div className="flex items-center justify-between rounded-lg bg-pink-50 p-3">
-                            <span className="text-sm text-pink-700">Female Employees</span>
+                            <span className="text-sm text-pink-700">
+                              {t("payEquityPage.gender.femaleEmployees")}
+                            </span>
                             <span className="font-semibold text-pink-900">
                               {payGap.femaleCount}
                             </span>
                           </div>
                           <div className="flex items-center justify-between rounded-lg bg-blue-50 p-3">
-                            <span className="text-sm text-blue-700">Male Mean Salary</span>
+                            <span className="text-sm text-blue-700">
+                              {t("payEquityPage.gender.maleMeanSalary")}
+                            </span>
                             <span className="font-semibold text-blue-900">
                               {formatCurrency(payGap.maleMean || 0)}
                             </span>
                           </div>
                           <div className="flex items-center justify-between rounded-lg bg-pink-50 p-3">
-                            <span className="text-sm text-pink-700">Female Mean Salary</span>
+                            <span className="text-sm text-pink-700">
+                              {t("payEquityPage.gender.femaleMeanSalary")}
+                            </span>
                             <span className="font-semibold text-pink-900">
                               {formatCurrency(payGap.femaleMean || 0)}
                             </span>
@@ -192,7 +256,9 @@ export function PayEquityPage() {
                                 : "bg-green-50"
                           }`}
                         >
-                          <p className="text-sm text-gray-600">Mean Pay Gap</p>
+                          <p className="text-sm text-gray-600">
+                            {t("payEquityPage.stats.meanPayGap")}
+                          </p>
                           <p
                             className={`text-4xl font-bold ${
                               gapSeverity === "high"
@@ -211,10 +277,10 @@ export function PayEquityPage() {
                           </p>
                           <p className="mt-1 text-xs text-gray-500">
                             {payGap.meanGapPercentage > 0
-                              ? "Men are paid more on average"
+                              ? t("payEquityPage.gender.menPaidMore")
                               : payGap.meanGapPercentage < 0
-                                ? "Women are paid more on average"
-                                : "No gap detected"}
+                                ? t("payEquityPage.gender.womenPaidMore")
+                                : t("payEquityPage.gender.noGap")}
                           </p>
                         </div>
                       </div>
@@ -228,19 +294,23 @@ export function PayEquityPage() {
                 <Card>
                   <CardContent className="p-6" id="pe-employees-analyzed">
                     <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                      Department Analysis
+                      {t("payEquityPage.department.title")}
                     </h3>
                     <div className="overflow-x-auto">
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase text-gray-500">
-                            <th className="pb-2 pr-4">Department</th>
-                            <th className="pb-2 pr-4">Employees</th>
-                            <th className="pb-2 pr-4">Mean Salary</th>
-                            <th className="pb-2 pr-4">Median</th>
-                            <th className="pb-2 pr-4">Min</th>
-                            <th className="pb-2 pr-4">Max</th>
-                            <th className="pb-2">Spread</th>
+                            <th className="pb-2 pr-4">
+                              {t("payEquityPage.department.department")}
+                            </th>
+                            <th className="pb-2 pr-4">{t("payEquityPage.department.employees")}</th>
+                            <th className="pb-2 pr-4">
+                              {t("payEquityPage.department.meanSalary")}
+                            </th>
+                            <th className="pb-2 pr-4">{t("payEquityPage.department.median")}</th>
+                            <th className="pb-2 pr-4">{t("payEquityPage.department.min")}</th>
+                            <th className="pb-2 pr-4">{t("payEquityPage.department.max")}</th>
+                            <th className="pb-2">{t("payEquityPage.department.spread")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -281,16 +351,16 @@ export function PayEquityPage() {
                 <Card>
                   <CardContent className="p-6" id="pe-role-analysis">
                     <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                      Role / Designation Analysis
+                      {t("payEquityPage.role.title")}
                     </h3>
                     <div className="overflow-x-auto">
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase text-gray-500">
-                            <th className="pb-2 pr-4">Designation</th>
-                            <th className="pb-2 pr-4">Count</th>
-                            <th className="pb-2 pr-4">Mean</th>
-                            <th className="pb-2 pr-4">Median</th>
+                            <th className="pb-2 pr-4">{t("payEquityPage.role.designation")}</th>
+                            <th className="pb-2 pr-4">{t("payEquityPage.role.count")}</th>
+                            <th className="pb-2 pr-4">{t("payEquityPage.role.mean")}</th>
+                            <th className="pb-2 pr-4">{t("payEquityPage.role.median")}</th>
                             <th className="pb-2 pr-4">P25</th>
                             <th className="pb-2">P75</th>
                           </tr>
@@ -332,17 +402,21 @@ export function PayEquityPage() {
                   <Card>
                     <CardContent className="p-6">
                       <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                        Compliance Report
+                        {t("payEquityPage.compliance.title")}
                       </h3>
                       <p className="mb-4 text-sm text-gray-500">
-                        Generated:{" "}
+                        {t("payEquityPage.compliance.generated")}:{" "}
                         {compliance.generatedAt
-                          ? new Date(compliance.generatedAt).toLocaleDateString("en-IN")
-                          : "N/A"}
+                          ? new Date(compliance.generatedAt).toLocaleDateString(
+                              i18n.resolvedLanguage || i18n.language,
+                            )
+                          : t("payEquityPage.compliance.notAvailable")}
                       </p>
 
                       <div className="mb-6">
-                        <h4 className="mb-2 text-sm font-semibold text-gray-700">Findings</h4>
+                        <h4 className="mb-2 text-sm font-semibold text-gray-700">
+                          {t("payEquityPage.compliance.findings")}
+                        </h4>
                         <ul className="space-y-2">
                           {(compliance.findings || []).map((f: string, i: number) => (
                             <li
@@ -350,7 +424,7 @@ export function PayEquityPage() {
                               className="flex items-start gap-2 rounded-lg bg-gray-50 p-3 text-sm"
                             >
                               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
-                              {f}
+                              {translateFinding(f)}
                             </li>
                           ))}
                         </ul>
@@ -358,7 +432,7 @@ export function PayEquityPage() {
 
                       <div>
                         <h4 className="mb-2 text-sm font-semibold text-gray-700">
-                          Recommendations
+                          {t("payEquityPage.compliance.recommendations")}
                         </h4>
                         {/* #170 — The recommendation items were rendered in
                             blue-on-light-blue with a link-style icon, which
@@ -373,7 +447,7 @@ export function PayEquityPage() {
                               className="flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50 p-3 text-sm text-gray-700"
                             >
                               <FileText className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                              <span>{r}</span>
+                              <span>{translateRecommendation(r)}</span>
                             </li>
                           ))}
                         </ul>

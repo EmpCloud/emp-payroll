@@ -11,11 +11,14 @@ import { Plus, Calendar, Trash2, Loader2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiDelete } from "@/api/client";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 export function HolidaysPage() {
+  const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
   const [year] = useState(new Date().getFullYear());
+  const locale = i18n.resolvedLanguage || i18n.language || "en";
 
   const { data: holidayRes, isLoading } = useQuery({
     queryKey: ["holidays", year],
@@ -43,46 +46,46 @@ export function HolidaysPage() {
     // one alphabet character is required. Server re-validates with the same
     // regex, but we catch it here so the user doesn't round-trip.
     if (!name) {
-      toast.error("Holiday name is required");
+      toast.error(t("holidaysPage.messages.nameRequired"));
       return;
     }
-    if (!/[A-Za-z]/.test(name)) {
-      toast.error("Holiday name must contain at least one letter");
+    if (!/\p{L}/u.test(name)) {
+      toast.error(t("holidaysPage.messages.nameLetter"));
       return;
     }
 
     try {
       await apiPost("/holidays", { name, date, type });
-      toast.success("Holiday added");
+      toast.success(t("holidaysPage.messages.added"));
       qc.invalidateQueries({ queryKey: ["holidays"] });
       setShowAdd(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.error?.message || "Failed to add holiday");
+      toast.error(err?.response?.data?.error?.message || t("holidaysPage.messages.addFailed"));
     }
   }
 
   async function removeHoliday(id: string) {
     try {
       await apiDelete(`/holidays/${id}`);
-      toast.success("Holiday removed");
+      toast.success(t("holidaysPage.messages.removed"));
       qc.invalidateQueries({ queryKey: ["holidays"] });
     } catch {
-      toast.error("Failed to remove holiday");
+      toast.error(t("holidaysPage.messages.removeFailed"));
     }
   }
 
   const columns = [
     {
       key: "name",
-      header: "Holiday",
+      header: t("holidaysPage.columns.holiday"),
       render: (r: any) => <span className="font-medium text-gray-900">{r.name}</span>,
     },
     {
       key: "date",
-      header: "Date",
+      header: t("holidaysPage.columns.date"),
       render: (r: any) => (
         <span>
-          {new Date(r.date).toLocaleDateString("en-IN", {
+          {new Date(r.date).toLocaleDateString(locale, {
             day: "numeric",
             month: "short",
             year: "numeric",
@@ -92,16 +95,17 @@ export function HolidaysPage() {
     },
     {
       key: "day",
-      header: "Day",
+      header: t("holidaysPage.columns.day"),
+      render: (r: any) => new Date(r.date).toLocaleDateString(locale, { weekday: "long" }),
     },
     {
       key: "type",
-      header: "Type",
+      header: t("holidaysPage.columns.type"),
       render: (r: any) => (
         <Badge
           variant={r.type === "national" ? "approved" : r.type === "regional" ? "pending" : "draft"}
         >
-          {r.type}
+          {t(`holidaysPage.types.${r.type}`, { defaultValue: r.type })}
         </Badge>
       ),
     },
@@ -114,6 +118,8 @@ export function HolidaysPage() {
           size="sm"
           onClick={() => removeHoliday(r.id)}
           className="text-red-400 hover:text-red-600"
+          title={t("holidaysPage.actions.remove")}
+          aria-label={t("holidaysPage.actions.remove")}
         >
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -134,11 +140,11 @@ export function HolidaysPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Holiday Calendar"
-        description={`${year} — ${holidays.length} holidays configured`}
+        title={t("holidaysPage.title")}
+        description={t("holidaysPage.configured", { year, count: holidays.length })}
         actions={
           <Button size="sm" onClick={() => setShowAdd(true)}>
-            <Plus className="h-4 w-4" /> Add Holiday
+            <Plus className="h-4 w-4" /> {t("holidaysPage.actions.add")}
           </Button>
         }
       />
@@ -147,7 +153,7 @@ export function HolidaysPage() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {months.map((month) => {
           const monthHolidays = holidays.filter((h: any) => new Date(h.date).getMonth() === month);
-          const monthName = new Date(year, month).toLocaleString("en-US", { month: "long" });
+          const monthName = new Date(year, month).toLocaleString(locale, { month: "long" });
           return (
             <Card key={month} className={monthHolidays.length > 0 ? "border-brand-200" : ""}>
               <CardContent className="py-3">
@@ -162,7 +168,7 @@ export function HolidaysPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-2 text-xs text-gray-300">No holidays</p>
+                  <p className="mt-2 text-xs text-gray-300">{t("holidaysPage.noHolidays")}</p>
                 )}
               </CardContent>
             </Card>
@@ -175,7 +181,7 @@ export function HolidaysPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" /> Upcoming Holidays
+              <Calendar className="h-5 w-5" /> {t("holidaysPage.upcoming")}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -188,7 +194,7 @@ export function HolidaysPage() {
       {past.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Past Holidays</CardTitle>
+            <CardTitle>{t("holidaysPage.past")}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <DataTable columns={columns} data={past} />
@@ -196,33 +202,33 @@ export function HolidaysPage() {
         </Card>
       )}
 
-      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add Holiday">
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title={t("holidaysPage.modal.title")}>
         <form onSubmit={addHoliday} className="space-y-4">
           <Input
             id="name"
             name="name"
-            label="Holiday Name"
-            placeholder="e.g. Diwali"
+            label={t("holidaysPage.modal.name")}
+            placeholder={t("holidaysPage.modal.namePlaceholder")}
             required
-            pattern=".*[A-Za-z].*"
-            title="Must contain at least one letter"
+            pattern=".*\p{L}.*"
+            title={t("holidaysPage.modal.nameTitle")}
           />
-          <Input id="date" name="date" label="Date" type="date" required />
+          <Input id="date" name="date" label={t("holidaysPage.modal.date")} type="date" required />
           <SelectField
             id="type"
             name="type"
-            label="Type"
+            label={t("holidaysPage.modal.type")}
             options={[
-              { value: "national", label: "National" },
-              { value: "regional", label: "Regional" },
-              { value: "optional", label: "Optional / Restricted" },
+              { value: "national", label: t("holidaysPage.types.national") },
+              { value: "regional", label: t("holidaysPage.types.regional") },
+              { value: "optional", label: t("holidaysPage.types.optional") },
             ]}
           />
           <div className="flex justify-end gap-3">
             <Button variant="outline" type="button" onClick={() => setShowAdd(false)}>
-              Cancel
+              {t("holidaysPage.actions.cancel")}
             </Button>
-            <Button type="submit">Add Holiday</Button>
+            <Button type="submit">{t("holidaysPage.actions.add")}</Button>
           </div>
         </form>
       </Modal>

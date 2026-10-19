@@ -26,6 +26,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Styling notes
@@ -40,12 +41,12 @@ import toast from "react-hot-toast";
 // ---------------------------------------------------------------------------
 
 const COMMON_SECTIONS = [
-  { code: "80C", label: "80C — PPF / ELSS / LIC / Principal" },
-  { code: "80CCD_1B", label: "80CCD(1B) — NPS additional" },
-  { code: "80D", label: "80D — Medical Insurance" },
-  { code: "80E", label: "80E — Education Loan Interest" },
-  { code: "80G", label: "80G — Donations" },
-  { code: "80TTA", label: "80TTA — Savings Interest" },
+  { code: "80C", labelKey: "taxCalculator.sections.80C" },
+  { code: "80CCD_1B", labelKey: "taxCalculator.sections.80CCD_1B" },
+  { code: "80D", labelKey: "taxCalculator.sections.80D" },
+  { code: "80E", labelKey: "taxCalculator.sections.80E" },
+  { code: "80G", labelKey: "taxCalculator.sections.80G" },
+  { code: "80TTA", labelKey: "taxCalculator.sections.80TTA" },
 ];
 
 interface DeclarationRow {
@@ -98,13 +99,15 @@ function initials(name?: string): string {
   return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || "?";
 }
 
-function formatJoinDate(iso: string): string {
+function formatJoinDate(iso: string, locale: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
 }
 
 export function TaxCalculatorPage() {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage || i18n.language;
   // -----------------------------------------------------------------------
   // Employee picker — a polished combobox: pill that opens a search panel.
   // Resolves the "long inline list eats the whole left column" problem from
@@ -237,7 +240,7 @@ export function TaxCalculatorPage() {
         setCompareResults({ newR: newR?.data || null, oldR: oldR?.data || null });
         setResult((inputs.regime === "new" ? newR : oldR)?.data || null);
       } catch (err: any) {
-        setSimError(err?.message || "Failed to compute tax. Please try again.");
+        setSimError(err?.message || t("taxCalculator.simulationFailed"));
       } finally {
         setComparing(false);
       }
@@ -246,8 +249,7 @@ export function TaxCalculatorPage() {
     setCompareResults(null);
     simulate.mutate(baseSimInput(inputs.regime) as any, {
       onSuccess: (res: any) => setResult(res?.data || null),
-      onError: (err: any) =>
-        setSimError(err?.message || "Failed to compute tax. Please try again."),
+      onError: (err: any) => setSimError(err?.message || t("taxCalculator.simulationFailed")),
     });
   };
 
@@ -322,12 +324,15 @@ export function TaxCalculatorPage() {
     if (!result)
       return [] as Array<{ label: string; value: number; bold?: boolean; neg?: boolean }>;
     const rows: Array<{ label: string; value: number; bold?: boolean; neg?: boolean }> = [
-      { label: "Gross Annual Income", value: Number(result.grossIncome || 0) },
+      {
+        label: t("taxCalculator.results.grossAnnualIncome"),
+        value: Number(result.grossIncome || 0),
+      },
     ];
     if (Array.isArray(result.exemptions)) {
       for (const ex of result.exemptions) {
         rows.push({
-          label: `Less: ${ex.description || ex.code}`,
+          label: t("taxCalculator.results.less", { item: ex.description || ex.code }),
           value: -Number(ex.amount || 0),
           neg: true,
         });
@@ -336,36 +341,41 @@ export function TaxCalculatorPage() {
     if (Array.isArray(result.deductions)) {
       for (const d of result.deductions) {
         rows.push({
-          label: `Less: ${d.section}${d.description ? ` (${d.description})` : ""}`,
+          label: t("taxCalculator.results.less", {
+            item: `${d.section}${d.description ? ` (${d.description})` : ""}`,
+          }),
           value: -Number(d.allowedAmount || 0),
           neg: true,
         });
       }
     }
     rows.push({
-      label: "Taxable Income",
+      label: t("taxCalculator.results.taxableIncome"),
       value: Number(result.taxableIncome || 0),
       bold: true,
     });
     rows.push({
-      label: "Tax on Income (post-rebate 87A)",
+      label: t("taxCalculator.results.taxOnIncome"),
       value: Number(result.taxOnIncome || 0),
     });
     if (Number(result.surcharge || 0) > 0) {
-      rows.push({ label: "Surcharge", value: Number(result.surcharge || 0) });
+      rows.push({
+        label: t("taxCalculator.results.surcharge"),
+        value: Number(result.surcharge || 0),
+      });
     }
     rows.push({
-      label: "Health & Education Cess (4%)",
+      label: t("taxCalculator.results.cess"),
       value: Number(result.healthAndEducationCess || 0),
     });
     return rows;
-  }, [result]);
+  }, [result, t]);
 
   // Client-side validation hints (no backend) — PAN format, 80C / NPS caps, HRA.
   const validations = useMemo(() => {
     const out: { level: "warn" | "info"; text: string }[] = [];
     if (inputs.pan && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(inputs.pan)) {
-      out.push({ level: "warn", text: "PAN format looks invalid — expected ABCDE1234F." });
+      out.push({ level: "warn", text: t("taxCalculator.validation.invalidPan") });
     }
     if (inputs.regime === "old") {
       const total80C =
@@ -374,20 +384,22 @@ export function TaxCalculatorPage() {
       if (total80C > 150000)
         out.push({
           level: "info",
-          text: `80C total is ₹${total80C.toLocaleString("en-IN")} — only ₹1,50,000 is deductible (cap).`,
+          text: t("taxCalculator.validation.section80CCap", {
+            amount: formatCurrency(total80C),
+          }),
         });
       const nps = inputs.declarations
         .filter((d) => d.section === "80CCD_1B")
         .reduce((s, d) => s + d.amount, 0);
-      if (nps > 50000) out.push({ level: "info", text: "80CCD(1B) NPS is capped at ₹50,000." });
+      if (nps > 50000) out.push({ level: "info", text: t("taxCalculator.validation.npsCap") });
       if (inputs.hraAnnual > 0 && inputs.rentPaidAnnual === 0)
         out.push({
           level: "info",
-          text: "HRA exemption needs rent paid — enter annual rent to claim it.",
+          text: t("taxCalculator.validation.hraNeedsRent"),
         });
     }
     return out;
-  }, [inputs]);
+  }, [inputs, t]);
 
   // Tax-saving suggestion (old regime) — unused 80C headroom × marginal rate.
   const savingSuggestion = useMemo(() => {
@@ -417,10 +429,7 @@ export function TaxCalculatorPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Tax Calculator"
-        description="What-if income tax projection — pick any employee and recompute with custom inputs"
-      />
+      <PageHeader title={t("taxCalculator.title")} description={t("taxCalculator.description")} />
 
       {/* ============================================================
            Step 1 — Employee combobox (always visible at the top)
@@ -428,7 +437,7 @@ export function TaxCalculatorPage() {
       <Card>
         <CardContent className="space-y-2 py-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-            Step 1 · Employee
+            {t("taxCalculator.steps.employee")}
           </p>
 
           <div ref={pickerRef} className="relative">
@@ -449,14 +458,15 @@ export function TaxCalculatorPage() {
                     <p className="truncate text-xs text-gray-500">
                       {selectedEmployee.employee_code || selectedEmployee.emp_code || "—"}
                       {" · "}
-                      CTC {formatCurrency(Number(selectedEmployee.ctc || 0))}
+                      {t("taxCalculator.employee.ctc")}{" "}
+                      {formatCurrency(Number(selectedEmployee.ctc || 0))}
                     </p>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-gray-500">
                   <Search className="h-4 w-4" />
-                  <span>Search and select an employee…</span>
+                  <span>{t("taxCalculator.employee.select")}</span>
                 </div>
               )}
               <ChevronDown
@@ -475,23 +485,25 @@ export function TaxCalculatorPage() {
                 {joiningDate && (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-gray-700">
                     <CalendarDays className="h-3 w-3" />
-                    Joined {formatJoinDate(joiningDate)}
+                    {t("taxCalculator.employee.joined", {
+                      date: formatJoinDate(joiningDate, locale),
+                    })}
                   </span>
                 )}
                 {financialYear && (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-gray-700">
-                    FY {financialYear}
+                    {t("taxCalculator.financialYearShort", { year: financialYear })}
                   </span>
                 )}
                 {monthsRemainingInFy > 0 && (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-gray-700">
-                    {monthsRemainingInFy} month{monthsRemainingInFy === 1 ? "" : "s"} left this FY
+                    {t("taxCalculator.employee.monthsLeft", { count: monthsRemainingInFy })}
                   </span>
                 )}
                 {isMidFyJoiner && (
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">
                     <AlertTriangle className="h-3 w-3" />
-                    Mid-FY joiner
+                    {t("taxCalculator.employee.midFyJoiner")}
                   </span>
                 )}
               </div>
@@ -504,7 +516,8 @@ export function TaxCalculatorPage() {
                   <input
                     type="text"
                     autoFocus
-                    placeholder="Search name, email, code…"
+                    placeholder={t("taxCalculator.employee.searchPlaceholder")}
+                    aria-label={t("taxCalculator.employee.searchPlaceholder")}
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     className="w-full bg-white py-2.5 pl-10 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
@@ -518,7 +531,7 @@ export function TaxCalculatorPage() {
                     </div>
                   ) : employees.length === 0 ? (
                     <p className="px-3 py-6 text-center text-sm text-gray-400">
-                      No employees match "{search}"
+                      {t("taxCalculator.employee.noMatches", { search })}
                     </p>
                   ) : (
                     <ul className="divide-y divide-gray-100">
@@ -540,7 +553,8 @@ export function TaxCalculatorPage() {
                                     {e.first_name} {e.last_name}
                                   </p>
                                   <p className="truncate text-xs text-gray-500">
-                                    {e.employee_code || e.emp_code || "—"} · CTC{" "}
+                                    {e.employee_code || e.emp_code || "—"} ·{" "}
+                                    {t("taxCalculator.employee.ctc")}{" "}
                                     {formatCurrency(Number(e.ctc || 0))}
                                   </p>
                                 </div>
@@ -570,11 +584,10 @@ export function TaxCalculatorPage() {
             <div className="bg-brand-50 text-brand-600 flex h-14 w-14 items-center justify-center rounded-full">
               <Calculator className="h-7 w-7" />
             </div>
-            <p className="text-base font-semibold text-gray-900">Pick an employee to begin</p>
-            <p className="max-w-md text-sm text-gray-500">
-              The calculator loads their current salary, regime, and approved declarations so you
-              can tweak any input and see the resulting monthly TDS.
+            <p className="text-base font-semibold text-gray-900">
+              {t("taxCalculator.empty.title")}
             </p>
+            <p className="max-w-md text-sm text-gray-500">{t("taxCalculator.empty.description")}</p>
           </CardContent>
         </Card>
       )}
@@ -588,14 +601,14 @@ export function TaxCalculatorPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
-                <CardTitle>Step 2 · Inputs</CardTitle>
+                <CardTitle>{t("taxCalculator.steps.inputs")}</CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={resetToSaved}
                   disabled={prefillLoading || !prefillRes?.data}
                 >
-                  <RefreshCw className="h-4 w-4" /> Reset to saved
+                  <RefreshCw className="h-4 w-4" /> {t("taxCalculator.inputs.reset")}
                 </Button>
               </div>
             </CardHeader>
@@ -603,17 +616,14 @@ export function TaxCalculatorPage() {
               {prefillLoading && (
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <Loader2 className="text-brand-600 h-4 w-4 animate-spin" />
-                  Loading saved values…
+                  {t("taxCalculator.inputs.loadingSaved")}
                 </div>
               )}
 
               {hasActiveSalary === false && !prefillLoading && (
                 <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
                   <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
-                  <span>
-                    No active salary structure assigned. All fields start at zero — enter figures
-                    manually to project tax.
-                  </span>
+                  <span>{t("taxCalculator.inputs.noSalary")}</span>
                 </div>
               )}
 
@@ -621,12 +631,12 @@ export function TaxCalculatorPage() {
                 <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
                   <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
                   <div>
-                    <p className="font-medium">Mid-FY joiner — capture Form 12B below</p>
+                    <p className="font-medium">{t("taxCalculator.inputs.midFyTitle")}</p>
                     <p className="mt-0.5 text-amber-800">
-                      This employee joined in the middle of FY {financialYear}. Without their prior
-                      employer's income + TDS, the engine will spread the full annual tax over only{" "}
-                      {monthsRemainingInFy} month{monthsRemainingInFy === 1 ? "" : "s"} and
-                      over-deduct.
+                      {t("taxCalculator.inputs.midFyDescription", {
+                        financialYear,
+                        count: monthsRemainingInFy,
+                      })}
                     </p>
                   </div>
                 </div>
@@ -635,7 +645,7 @@ export function TaxCalculatorPage() {
               {/* Regime toggle + compare mode */}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <span className={LABEL_CLS}>Regime</span>
+                  <span className={LABEL_CLS}>{t("taxCalculator.inputs.regime")}</span>
                   <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
                     {(["new", "old"] as const).map((r) => (
                       <button
@@ -648,7 +658,9 @@ export function TaxCalculatorPage() {
                             : "text-gray-600 hover:text-gray-900"
                         }`}
                       >
-                        {r === "new" ? "New Regime" : "Old Regime"}
+                        {r === "new"
+                          ? t("taxCalculator.regimes.new")
+                          : t("taxCalculator.regimes.old")}
                       </button>
                     ))}
                   </div>
@@ -663,13 +675,14 @@ export function TaxCalculatorPage() {
                     }}
                     className="text-brand-600 focus:ring-brand-500 h-4 w-4 rounded border-gray-300"
                   />
-                  Compare Old vs New
+                  {t("taxCalculator.inputs.compare")}
                 </label>
               </div>
 
               <div>
                 <span className={LABEL_CLS}>
-                  PAN <span className="text-gray-400">· 206AA flat 20% if blank</span>
+                  {t("taxCalculator.inputs.pan")}{" "}
+                  <span className="text-gray-400">· {t("taxCalculator.inputs.panHint")}</span>
                 </span>
                 <input
                   type="text"
@@ -683,22 +696,22 @@ export function TaxCalculatorPage() {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <NumberField
-                  label="Annual Gross"
+                  label={t("taxCalculator.inputs.annualGross")}
                   value={inputs.annualGross}
                   onChange={(v) => setInputs({ ...inputs, annualGross: v })}
                 />
                 <NumberField
-                  label="Annual Basic"
+                  label={t("taxCalculator.inputs.annualBasic")}
                   value={inputs.basicAnnual}
                   onChange={(v) => setInputs({ ...inputs, basicAnnual: v })}
                 />
                 <NumberField
-                  label="Annual HRA"
+                  label={t("taxCalculator.inputs.annualHra")}
                   value={inputs.hraAnnual}
                   onChange={(v) => setInputs({ ...inputs, hraAnnual: v })}
                 />
                 <NumberField
-                  label="Employee PF (annual)"
+                  label={t("taxCalculator.inputs.employeePfAnnual")}
                   value={inputs.employeePfAnnual}
                   onChange={(v) => setInputs({ ...inputs, employeePfAnnual: v })}
                 />
@@ -716,8 +729,12 @@ export function TaxCalculatorPage() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                    Prior Employer (Form 12B){" "}
-                    {financialYear && <span className="text-gray-400">· FY {financialYear}</span>}
+                    {t("taxCalculator.priorEmployer.title")}{" "}
+                    {financialYear && (
+                      <span className="text-gray-400">
+                        · {t("taxCalculator.financialYearShort", { year: financialYear })}
+                      </span>
+                    )}
                   </p>
                   <Button
                     variant="outline"
@@ -734,42 +751,42 @@ export function TaxCalculatorPage() {
                         },
                         {
                           onSuccess: () => {
-                            toast.success("Prior-employer TDS saved");
+                            toast.success(t("taxCalculator.priorEmployer.saved"));
                             runSimulation();
                           },
                           onError: (err: any) =>
-                            toast.error(err?.message || "Failed to save prior TDS"),
+                            toast.error(
+                              err?.message || t("taxCalculator.priorEmployer.saveFailed"),
+                            ),
                         },
                       )
                     }
                   >
-                    <Save className="h-3.5 w-3.5" /> Save to profile
+                    <Save className="h-3.5 w-3.5" /> {t("taxCalculator.priorEmployer.save")}
                   </Button>
                 </div>
                 <p className="text-xs text-gray-600">
-                  Income the employee earned + TDS deducted at their previous employer this FY.
-                  Saved values flow into the next payroll run so the engine doesn't re-collect this
-                  employer's share against the prior employer's withholding.
+                  {t("taxCalculator.priorEmployer.description")}
                 </p>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <NumberField
-                    label="Prior employer gross (this FY)"
+                    label={t("taxCalculator.priorEmployer.gross")}
                     value={inputs.priorEmployerGross}
                     onChange={(v) => setInputs({ ...inputs, priorEmployerGross: v })}
                   />
                   <NumberField
-                    label="Prior employer TDS"
+                    label={t("taxCalculator.priorEmployer.tds")}
                     value={inputs.priorEmployerTds}
                     onChange={(v) => setInputs({ ...inputs, priorEmployerTds: v })}
                   />
                 </div>
                 <label className="block">
-                  <span className={LABEL_CLS}>Source / notes (optional)</span>
+                  <span className={LABEL_CLS}>{t("taxCalculator.priorEmployer.source")}</span>
                   <input
                     type="text"
                     value={inputs.priorEmployerSource}
                     onChange={(e) => setInputs({ ...inputs, priorEmployerSource: e.target.value })}
-                    placeholder='e.g. "Form 12B uploaded 2026-09-01"'
+                    placeholder={t("taxCalculator.priorEmployer.sourcePlaceholder")}
                     className={INPUT_CLS}
                   />
                 </label>
@@ -778,11 +795,11 @@ export function TaxCalculatorPage() {
               {inputs.regime === "old" && (
                 <div className="space-y-4 rounded-lg border border-gray-100 bg-gray-50 p-4">
                   <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                    Old-regime extras
+                    {t("taxCalculator.oldRegime.title")}
                   </p>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <NumberField
-                      label="Annual Rent Paid"
+                      label={t("taxCalculator.oldRegime.annualRent")}
                       value={inputs.rentPaidAnnual}
                       onChange={(v) => setInputs({ ...inputs, rentPaidAnnual: v })}
                     />
@@ -794,23 +811,25 @@ export function TaxCalculatorPage() {
                         onChange={(e) => setInputs({ ...inputs, isMetroCity: e.target.checked })}
                         className="text-brand-600 focus:ring-brand-500 h-4 w-4 rounded border-gray-300"
                       />
-                      <span className="text-sm text-gray-700">Metro city (50% basic HRA cap)</span>
+                      <span className="text-sm text-gray-700">
+                        {t("taxCalculator.oldRegime.metro")}
+                      </span>
                     </label>
                   </div>
 
                   <div>
                     <div className="mb-2 flex items-center justify-between">
                       <span className="text-xs font-medium text-gray-600">
-                        Chapter VI-A Declarations
+                        {t("taxCalculator.oldRegime.declarations")}
                       </span>
                       <Button variant="ghost" size="sm" onClick={addDeclaration}>
-                        <Plus className="h-3.5 w-3.5" /> Add
+                        <Plus className="h-3.5 w-3.5" /> {t("taxCalculator.oldRegime.add")}
                       </Button>
                     </div>
                     <div className="space-y-2">
                       {inputs.declarations.length === 0 && (
                         <p className="text-xs text-gray-400">
-                          No declarations. Click "Add" to model 80C / 80D / 80CCD(1B) etc.
+                          {t("taxCalculator.oldRegime.noDeclarations")}
                         </p>
                       )}
                       {inputs.declarations.map((d, idx) => (
@@ -822,7 +841,7 @@ export function TaxCalculatorPage() {
                           >
                             {COMMON_SECTIONS.map((s) => (
                               <option key={s.code} value={s.code}>
-                                {s.label}
+                                {s.code} — {t(s.labelKey)}
                               </option>
                             ))}
                             {!COMMON_SECTIONS.some((s) => s.code === d.section) && (
@@ -847,7 +866,8 @@ export function TaxCalculatorPage() {
                             type="button"
                             onClick={() => removeDeclaration(idx)}
                             className="rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-red-600"
-                            title="Remove"
+                            title={t("taxCalculator.oldRegime.remove")}
+                            aria-label={t("taxCalculator.oldRegime.remove")}
                           >
                             <X className="h-4 w-4" />
                           </button>
@@ -861,10 +881,7 @@ export function TaxCalculatorPage() {
               {inputs.regime === "new" && (
                 <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
                   <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                  <span>
-                    New regime — only the ₹75,000 standard deduction applies. HRA, 80C, 80D and
-                    other Chapter VI-A deductions are not available.
-                  </span>
+                  <span>{t("taxCalculator.newRegimeInfo")}</span>
                 </div>
               )}
 
@@ -892,7 +909,10 @@ export function TaxCalculatorPage() {
                   loading={simulate.isPending || comparing}
                   disabled={!selectedId}
                 >
-                  <Calculator className="h-4 w-4" /> {compareMode ? "Compare Regimes" : "Calculate"}
+                  <Calculator className="h-4 w-4" />{" "}
+                  {compareMode
+                    ? t("taxCalculator.actions.compareRegimes")
+                    : t("taxCalculator.actions.calculate")}
                 </Button>
                 {simError && <span className="text-sm text-red-600">{simError}</span>}
               </div>
@@ -903,9 +923,11 @@ export function TaxCalculatorPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Step 3 · Tax Breakdown</CardTitle>
+                <CardTitle>{t("taxCalculator.steps.taxBreakdown")}</CardTitle>
                 <Badge variant={inputs.regime === "new" ? "approved" : "pending"}>
-                  {inputs.regime === "new" ? "New Regime" : "Old Regime"}
+                  {inputs.regime === "new"
+                    ? t("taxCalculator.regimes.new")
+                    : t("taxCalculator.regimes.old")}
                 </Badge>
               </div>
             </CardHeader>
@@ -915,15 +937,17 @@ export function TaxCalculatorPage() {
                   {simulate.isPending ? (
                     <>
                       <Loader2 className="text-brand-600 h-6 w-6 animate-spin" />
-                      <p className="text-sm text-gray-500">Calculating…</p>
+                      <p className="text-sm text-gray-500">
+                        {t("taxCalculator.results.calculating")}
+                      </p>
                     </>
                   ) : (
                     <>
                       <Calculator className="h-8 w-8 text-gray-400" />
                       <p className="text-sm text-gray-500">
                         {inputs.annualGross > 0
-                          ? "Click Calculate to project tax"
-                          : "Enter an Annual Gross to project tax"}
+                          ? t("taxCalculator.results.clickCalculate")
+                          : t("taxCalculator.results.enterAnnualGross")}
                       </p>
                     </>
                   )}
@@ -934,8 +958,8 @@ export function TaxCalculatorPage() {
                     <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
                       <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
                       <span>
-                        <strong>Section 206AA applied</strong> — PAN is missing, so a flat 20% of
-                        annual gross is being deducted regardless of regime / declarations.
+                        <strong>{t("taxCalculator.results.section206aaTitle")}</strong> —{" "}
+                        {t("taxCalculator.results.section206aaDetail")}
                       </span>
                     </div>
                   )}
@@ -946,13 +970,21 @@ export function TaxCalculatorPage() {
                       <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3">
                         <p className="text-sm font-semibold text-green-800">
                           {compareVerdict.saving === 0
-                            ? "Both regimes result in the same tax"
-                            : `${compareVerdict.best === "new" ? "New" : "Old"} Regime saves ${formatCurrency(compareVerdict.saving)}`}
+                            ? t("taxCalculator.results.sameTax")
+                            : t("taxCalculator.results.saves", {
+                                regime:
+                                  compareVerdict.best === "new"
+                                    ? t("taxCalculator.regimes.new")
+                                    : t("taxCalculator.regimes.old"),
+                                amount: formatCurrency(compareVerdict.saving),
+                              })}
                         </p>
                         <p className="mt-0.5 text-xs text-green-700">
-                          Recommended:{" "}
+                          {t("taxCalculator.results.recommended")}{" "}
                           <strong>
-                            {compareVerdict.best === "new" ? "New Regime" : "Old Regime"}
+                            {compareVerdict.best === "new"
+                              ? t("taxCalculator.regimes.new")
+                              : t("taxCalculator.regimes.old")}
                           </strong>
                         </p>
                       </div>
@@ -979,7 +1011,9 @@ export function TaxCalculatorPage() {
                             >
                               <div className="flex items-center justify-between">
                                 <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                  {r === "new" ? "New" : "Old"} Regime
+                                  {r === "new"
+                                    ? t("taxCalculator.regimes.new")
+                                    : t("taxCalculator.regimes.old")}
                                 </span>
                                 {isBest && <CheckCircle2 className="h-4 w-4 text-green-600" />}
                               </div>
@@ -987,14 +1021,15 @@ export function TaxCalculatorPage() {
                                 {formatCurrency(Number(res?.totalTax || 0))}
                               </p>
                               <p className="text-[11px] text-gray-500">
-                                Monthly TDS {formatCurrency(Number(res?.monthlyTds || 0))}
+                                {t("taxCalculator.results.monthlyTds")}{" "}
+                                {formatCurrency(Number(res?.monthlyTds || 0))}
                               </p>
                             </button>
                           );
                         })}
                       </div>
                       <p className="text-center text-[11px] text-gray-400">
-                        Tap a regime to see its full breakdown below
+                        {t("taxCalculator.results.tapRegime")}
                       </p>
                     </div>
                   )}
@@ -1024,7 +1059,9 @@ export function TaxCalculatorPage() {
 
                     {/* Hero — Total Annual Tax */}
                     <div className="bg-brand-50 mt-3 flex items-center justify-between rounded-lg px-4 py-3">
-                      <dt className="text-brand-700 text-sm font-semibold">Total Annual Tax</dt>
+                      <dt className="text-brand-700 text-sm font-semibold">
+                        {t("taxCalculator.results.totalAnnualTax")}
+                      </dt>
                       <dd className="text-brand-700 text-xl font-bold tabular-nums">
                         {formatCurrency(Number(result.totalTax || 0))}
                       </dd>
@@ -1032,14 +1069,17 @@ export function TaxCalculatorPage() {
                   </dl>
 
                   <div className="mt-5 grid grid-cols-1 gap-3 border-t border-gray-100 pt-4 sm:grid-cols-3">
-                    <SummaryStat label="TDS Paid YTD" value={Number(result.taxAlreadyPaid || 0)} />
                     <SummaryStat
-                      label="Remaining Tax"
+                      label={t("taxCalculator.results.tdsPaidYtd")}
+                      value={Number(result.taxAlreadyPaid || 0)}
+                    />
+                    <SummaryStat
+                      label={t("taxCalculator.results.remainingTax")}
                       value={Number(result.remainingTax || 0)}
                       accent="orange"
                     />
                     <SummaryStat
-                      label="Monthly TDS"
+                      label={t("taxCalculator.results.monthlyTds")}
                       value={Number(result.monthlyTds || 0)}
                       accent="brand"
                     />
@@ -1049,9 +1089,10 @@ export function TaxCalculatorPage() {
                     <div className="mt-4 flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800">
                       <TrendingUp className="mt-0.5 h-4 w-4 flex-shrink-0" />
                       <span>
-                        Invest <strong>{formatCurrency(savingSuggestion.headroom)}</strong> more
-                        under Section 80C to save approximately{" "}
-                        <strong>{formatCurrency(savingSuggestion.saving)}</strong> in tax.
+                        {t("taxCalculator.results.savingSuggestion", {
+                          investment: formatCurrency(savingSuggestion.headroom),
+                          saving: formatCurrency(savingSuggestion.saving),
+                        })}
                       </span>
                     </div>
                   )}

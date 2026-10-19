@@ -29,8 +29,23 @@ export async function initEmpCloudDB(): Promise<Knex> {
       user: dbConfig.user,
       password: dbConfig.password,
       database: dbConfig.name,
+      // Keep remote MySQL connections alive and let the pool discard idle
+      // sockets before the server does. Without this, a long-running local
+      // Payroll process can retain a dead connection and every subsequent
+      // login fails with PROTOCOL_CONNECTION_LOST until the API is restarted.
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0,
+      connectTimeout: 10_000,
     },
-    pool: { min: 2, max: 10 },
+    // Knex recommends min: 0 for MySQL. A non-zero minimum preserves idle
+    // connections indefinitely, including sockets closed by the DB server.
+    pool: {
+      min: 0,
+      max: 10,
+      idleTimeoutMillis: 60_000,
+      reapIntervalMillis: 1_000,
+      createRetryIntervalMillis: 200,
+    },
   });
 
   // Verify connection

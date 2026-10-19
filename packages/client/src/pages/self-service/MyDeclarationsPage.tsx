@@ -12,37 +12,17 @@ import { api, apiGet, apiPost } from "@/api/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Upload, FileCheck, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
-const SECTIONS = [
-  { value: "80C", label: "80C — PPF, ELSS, LIC, etc." },
-  { value: "80CCD_1B", label: "80CCD(1B) — NPS" },
-  { value: "80D", label: "80D — Medical Insurance" },
-  { value: "80E", label: "80E — Education Loan Interest" },
-  { value: "80G", label: "80G — Donations" },
-  { value: "80TTA", label: "80TTA — Savings Interest" },
-  { value: "HRA", label: "HRA — House Rent" },
-];
+const SECTIONS = ["80C", "80CCD_1B", "80D", "80E", "80G", "80TTA", "HRA"];
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB
 const ALLOWED_FILE_TYPES = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
 
-// Per-item validation — non-negative amount per bug #31
-const declarationItemSchema = z.object({
-  section: z.string().min(1, "Please select a section"),
-  description: z.string().trim().min(1, "Please fill this field"),
-  declaredAmount: z
-    .number({ invalid_type_error: "Please enter a valid amount" })
-    .nonnegative("Amount cannot be negative"),
-});
-
-// Wizard validation — non-negative amounts per bug #34
-const wizardAmountSchema = z
-  .number({ invalid_type_error: "Please enter a valid amount" })
-  .nonnegative("Amount cannot be negative");
-
 type FieldErrors = Partial<Record<"section" | "description" | "amount" | "proof", string>>;
 
 export function MyDeclarationsPage() {
+  const { t } = useTranslation();
   const [showAdd, setShowAdd] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -54,6 +34,24 @@ export function MyDeclarationsPage() {
   const rowProofInputRef = useRef<HTMLInputElement>(null);
   const pendingProofDeclIdRef = useRef<string | null>(null);
   const qc = useQueryClient();
+  const now = new Date();
+  const financialYearStart = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+  const financialYear = `${financialYearStart}-${financialYearStart + 1}`;
+  const financialYearLabel = `${financialYearStart}-${String(financialYearStart + 1).slice(-2)}`;
+
+  // Per-item validation — non-negative amount per bug #31
+  const declarationItemSchema = z.object({
+    section: z.string().min(1, t("myDeclarationsPage.validation.sectionRequired")),
+    description: z.string().trim().min(1, t("myDeclarationsPage.validation.fieldRequired")),
+    declaredAmount: z
+      .number({ invalid_type_error: t("myDeclarationsPage.validation.validAmount") })
+      .nonnegative(t("myDeclarationsPage.validation.nonnegativeAmount")),
+  });
+
+  // Wizard validation — non-negative amounts per bug #34
+  const wizardAmountSchema = z
+    .number({ invalid_type_error: t("myDeclarationsPage.validation.validAmount") })
+    .nonnegative(t("myDeclarationsPage.validation.nonnegativeAmount"));
 
   const { data: res, isLoading } = useQuery({
     queryKey: ["my-declarations"],
@@ -87,8 +85,8 @@ export function MyDeclarationsPage() {
   }
 
   function validateFile(file: File): string | null {
-    if (file.size > MAX_FILE_BYTES) return "File is larger than 5MB";
-    if (!ALLOWED_FILE_TYPES.includes(file.type)) return "Only PDF, JPG or PNG files are allowed";
+    if (file.size > MAX_FILE_BYTES) return t("myDeclarationsPage.validation.fileTooLarge");
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) return t("myDeclarationsPage.validation.fileType");
     return null;
   }
 
@@ -118,11 +116,12 @@ export function MyDeclarationsPage() {
       await api.post(`/uploads/declarations/${declarationId}/proof`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      toast.success("Proof uploaded");
+      toast.success(t("myDeclarationsPage.messages.proofUploaded"));
       await qc.invalidateQueries({ queryKey: ["my-declarations"] });
     } catch (err: any) {
       const resp = err?.response?.data?.error;
-      const msg = resp?.message || err?.message || "Failed to upload proof";
+      const msg =
+        resp?.message || err?.message || t("myDeclarationsPage.messages.proofUploadFailed");
       toast.error(msg);
     } finally {
       setUploadingProofId(null);
@@ -218,17 +217,11 @@ export function MyDeclarationsPage() {
     setSubmitting(true);
 
     try {
-      const now = new Date();
-      const fy =
-        now.getMonth() >= 3
-          ? `${now.getFullYear()}-${now.getFullYear() + 1}`
-          : `${now.getFullYear() - 1}-${now.getFullYear()}`;
-
       await apiPost("/self-service/tax/declarations", {
-        financialYear: fy,
+        financialYear,
         declarations: [payload],
       });
-      toast.success("Declaration submitted");
+      toast.success(t("myDeclarationsPage.messages.submitted"));
       resetAddForm();
       setShowAdd(false);
       qc.invalidateQueries({ queryKey: ["my-declarations"] });
@@ -242,7 +235,11 @@ export function MyDeclarationsPage() {
             .flat()
             .join(", ")
         : "";
-      const msg = detailMsgs || resp?.message || err?.message || "Failed to submit declaration";
+      const msg =
+        detailMsgs ||
+        resp?.message ||
+        err?.message ||
+        t("myDeclarationsPage.messages.submitFailed");
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -252,28 +249,24 @@ export function MyDeclarationsPage() {
   async function handleWizardSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const now = new Date();
-    const fy =
-      now.getMonth() >= 3
-        ? `${now.getFullYear()}-${now.getFullYear() + 1}`
-        : `${now.getFullYear() - 1}-${now.getFullYear()}`;
 
     const decs: { section: string; description: string; declaredAmount: number }[] = [];
     const wizardErrors: Record<string, string> = {};
 
-    for (const s of SECTIONS) {
-      const raw = fd.get(`wizard_${s.value}`);
+    for (const section of SECTIONS) {
+      const raw = fd.get(`wizard_${section}`);
       if (raw === null || raw === "") continue; // blank is allowed — skip
       const amt = Number(raw);
       const parsed = wizardAmountSchema.safeParse(amt);
       if (!parsed.success) {
-        wizardErrors[s.value] = parsed.error.issues[0]?.message || "Invalid amount";
+        wizardErrors[section] =
+          parsed.error.issues[0]?.message || t("myDeclarationsPage.validation.validAmount");
         continue;
       }
       if (amt > 0) {
         decs.push({
-          section: s.value,
-          description: s.label.split("—")[1]?.trim() || s.value,
+          section,
+          description: t("myDeclarationsPage.quick.defaultDescription", { section }),
           declaredAmount: amt,
         });
       }
@@ -285,17 +278,17 @@ export function MyDeclarationsPage() {
       return;
     }
     if (decs.length === 0) {
-      toast.error("Enter at least one amount");
+      toast.error(t("myDeclarationsPage.validation.oneAmount"));
       return;
     }
 
     setSubmitting(true);
     try {
       await apiPost("/self-service/tax/declarations", {
-        financialYear: fy,
+        financialYear,
         declarations: decs,
       });
-      toast.success(`${decs.length} declaration${decs.length === 1 ? "" : "s"} submitted`);
+      toast.success(t("myDeclarationsPage.messages.submittedCount", { count: decs.length }));
       setShowWizard(false);
       qc.invalidateQueries({ queryKey: ["my-declarations"] });
     } catch (err: any) {
@@ -306,7 +299,11 @@ export function MyDeclarationsPage() {
             .flat()
             .join(", ")
         : "";
-      const msg = detailMsgs || resp?.message || err?.message || "Failed to submit declarations";
+      const msg =
+        detailMsgs ||
+        resp?.message ||
+        err?.message ||
+        t("myDeclarationsPage.messages.submitAllFailed");
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -323,15 +320,15 @@ export function MyDeclarationsPage() {
         onChange={(e) => onRowProofSelected(e.target.files?.[0] || null)}
       />
       <PageHeader
-        title="Tax Declarations"
-        description="FY 2025-26 — Submit investment proofs and claims"
+        title={t("adminDeclarations.title")}
+        description={t("myDeclarationsPage.description", { financialYear: financialYearLabel })}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setShowWizard(true)}>
-              Quick Declare All
+              {t("myDeclarationsPage.actions.quickDeclare")}
             </Button>
             <Button size="sm" onClick={() => setShowAdd(true)}>
-              <Plus className="h-4 w-4" /> New Declaration
+              <Plus className="h-4 w-4" /> {t("myDeclarationsPage.actions.newDeclaration")}
             </Button>
           </div>
         }
@@ -340,19 +337,19 @@ export function MyDeclarationsPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
           <CardContent className="py-4">
-            <p className="text-sm text-gray-500">Total Declared</p>
+            <p className="text-sm text-gray-500">{t("myDeclarationsPage.stats.totalDeclared")}</p>
             <p className="text-xl font-bold text-gray-900">{formatCurrency(totalDeclared)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="py-4">
-            <p className="text-sm text-gray-500">Total Approved</p>
+            <p className="text-sm text-gray-500">{t("myDeclarationsPage.stats.totalApproved")}</p>
             <p className="text-xl font-bold text-green-600">{formatCurrency(totalApproved)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="py-4">
-            <p className="text-sm text-gray-500">Pending Approval</p>
+            <p className="text-sm text-gray-500">{t("myDeclarationsPage.stats.pendingApproval")}</p>
             <p className="text-xl font-bold text-orange-600">
               {formatCurrency(totalDeclared - totalApproved)}
             </p>
@@ -362,7 +359,7 @@ export function MyDeclarationsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Declarations</CardTitle>
+          <CardTitle>{t("myDeclarationsPage.declarations")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
@@ -370,19 +367,29 @@ export function MyDeclarationsPage() {
               <Loader2 className="text-brand-600 h-6 w-6 animate-spin" />
             </div>
           ) : declarations.length === 0 ? (
-            <div className="py-12 text-center text-gray-400">
-              No declarations yet. Click "New Declaration" to submit your first investment proof.
-            </div>
+            <div className="py-12 text-center text-gray-400">{t("myDeclarationsPage.empty")}</div>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-gray-50 text-left">
-                  <th className="px-6 py-3 font-medium text-gray-500">Section</th>
-                  <th className="px-6 py-3 font-medium text-gray-500">Description</th>
-                  <th className="px-6 py-3 font-medium text-gray-500">Declared</th>
-                  <th className="px-6 py-3 font-medium text-gray-500">Approved</th>
-                  <th className="px-6 py-3 font-medium text-gray-500">Proof</th>
-                  <th className="px-6 py-3 font-medium text-gray-500">Status</th>
+                  <th className="px-6 py-3 font-medium text-gray-500">
+                    {t("adminDeclarations.columns.section")}
+                  </th>
+                  <th className="px-6 py-3 font-medium text-gray-500">
+                    {t("adminDeclarations.columns.description")}
+                  </th>
+                  <th className="px-6 py-3 font-medium text-gray-500">
+                    {t("adminDeclarations.columns.declared")}
+                  </th>
+                  <th className="px-6 py-3 font-medium text-gray-500">
+                    {t("adminDeclarations.columns.approved")}
+                  </th>
+                  <th className="px-6 py-3 font-medium text-gray-500">
+                    {t("adminDeclarations.columns.proof")}
+                  </th>
+                  <th className="px-6 py-3 font-medium text-gray-500">
+                    {t("adminDeclarations.columns.status")}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -396,7 +403,10 @@ export function MyDeclarationsPage() {
                     </td>
                     <td className="px-6 py-3">
                       {d.proof_submitted ? (
-                        <FileCheck className="h-4 w-4 text-green-500" />
+                        <FileCheck
+                          className="h-4 w-4 text-green-500"
+                          aria-label={t("myDeclarationsPage.proof.submitted")}
+                        />
                       ) : (
                         <Button
                           variant="ghost"
@@ -404,12 +414,16 @@ export function MyDeclarationsPage() {
                           loading={uploadingProofId === d.id}
                           onClick={() => triggerRowProofUpload(d.id)}
                         >
-                          <Upload className="h-3 w-3" /> Upload
+                          <Upload className="h-3 w-3" /> {t("myDeclarationsPage.proof.upload")}
                         </Button>
                       )}
                     </td>
                     <td className="px-6 py-3">
-                      <Badge variant={d.approval_status}>{d.approval_status}</Badge>
+                      <Badge variant={d.approval_status}>
+                        {t(`adminDeclarations.statuses.${d.approval_status}`, {
+                          defaultValue: d.approval_status,
+                        })}
+                      </Badge>
                     </td>
                   </tr>
                 ))}
@@ -423,24 +437,24 @@ export function MyDeclarationsPage() {
       <Modal
         open={showWizard}
         onClose={closeWizard}
-        title="Quick Tax Declaration"
-        description="Declare all your investments in one go"
+        title={t("myDeclarationsPage.quick.title")}
+        description={t("myDeclarationsPage.quick.description")}
         className="max-w-2xl"
       >
         <form className="space-y-4" onSubmit={handleWizardSubmit}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {SECTIONS.map((s) => (
-              <div key={s.value} className="rounded-lg border border-gray-200 p-3">
+            {SECTIONS.map((section) => (
+              <div key={section} className="rounded-lg border border-gray-200 p-3">
                 <label
                   className="mb-1 block text-xs font-medium text-gray-500"
-                  htmlFor={`wizard_${s.value}`}
+                  htmlFor={`wizard_${section}`}
                 >
-                  {s.label}
+                  {t(`myDeclarationsPage.sections.${section}`)}
                 </label>
                 <input
-                  id={`wizard_${s.value}`}
+                  id={`wizard_${section}`}
                   type="number"
-                  name={`wizard_${s.value}`}
+                  name={`wizard_${section}`}
                   placeholder="0"
                   min="0"
                   step="1"
@@ -450,40 +464,46 @@ export function MyDeclarationsPage() {
             ))}
           </div>
           <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-            Tip: Under Section 80C you can claim up to ₹1,50,000 for PPF, ELSS, LIC, etc. NPS under
-            80CCD(1B) gives an additional ₹50,000 deduction.
+            {t("myDeclarationsPage.quick.tip")}
           </div>
           <div className="flex justify-end gap-3">
             <Button variant="outline" type="button" onClick={closeWizard}>
-              Cancel
+              {t("myDeclarationsPage.actions.cancel")}
             </Button>
             <Button type="submit" loading={submitting}>
-              Submit All Declarations
+              {t("myDeclarationsPage.actions.submitAll")}
             </Button>
           </div>
         </form>
       </Modal>
 
-      <Modal open={showAdd} onClose={closeAdd} title="New Declaration">
+      <Modal
+        open={showAdd}
+        onClose={closeAdd}
+        title={t("myDeclarationsPage.actions.newDeclaration")}
+      >
         <form className="space-y-4" onSubmit={handleSubmit} noValidate>
           <SelectField
             id="section"
             name="section"
-            label="Section"
-            options={SECTIONS}
+            label={t("adminDeclarations.columns.section")}
+            options={SECTIONS.map((section) => ({
+              value: section,
+              label: t(`myDeclarationsPage.sections.${section}`),
+            }))}
             error={fieldErrors.section}
           />
           <Input
             id="description"
             name="description"
-            label="Description"
-            placeholder="e.g. PPF Contribution"
+            label={t("adminDeclarations.columns.description")}
+            placeholder={t("myDeclarationsPage.form.descriptionPlaceholder")}
             error={fieldErrors.description}
           />
           <Input
             id="amount"
             name="amount"
-            label="Amount"
+            label={t("myDeclarationsPage.form.amount")}
             type="number"
             min="0"
             step="1"
@@ -492,12 +512,15 @@ export function MyDeclarationsPage() {
           />
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Proof Document <span className="text-xs font-normal text-gray-400">(optional)</span>
+              {t("myDeclarationsPage.form.proofDocument")}{" "}
+              <span className="text-xs font-normal text-gray-400">
+                ({t("myDeclarationsPage.form.optional")})
+              </span>
             </label>
             <div
               role="button"
               tabIndex={0}
-              aria-label="Upload proof document"
+              aria-label={t("myDeclarationsPage.form.uploadProof")}
               onClick={openFilePicker}
               onKeyDown={onDropzoneKeyDown}
               onDrop={onDrop}
@@ -518,13 +541,17 @@ export function MyDeclarationsPage() {
                   <>
                     <p className="mt-1 text-sm font-medium text-gray-700">{proofFile.name}</p>
                     <p className="text-xs text-gray-400">
-                      {(proofFile.size / 1024).toFixed(1)} KB — click to change
+                      {t("myDeclarationsPage.form.fileSelected", {
+                        size: (proofFile.size / 1024).toFixed(1),
+                      })}
                     </p>
                   </>
                 ) : (
                   <>
-                    <p className="mt-1 text-sm text-gray-500">Click to upload or drag and drop</p>
-                    <p className="text-xs text-gray-400">PDF, JPG up to 5MB</p>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {t("myDeclarationsPage.form.dropzone")}
+                    </p>
+                    <p className="text-xs text-gray-400">{t("myDeclarationsPage.form.fileHelp")}</p>
                   </>
                 )}
               </div>
@@ -542,10 +569,10 @@ export function MyDeclarationsPage() {
           </div>
           <div className="flex justify-end gap-3">
             <Button variant="outline" type="button" onClick={closeAdd}>
-              Cancel
+              {t("myDeclarationsPage.actions.cancel")}
             </Button>
             <Button type="submit" loading={submitting}>
-              Submit Declaration
+              {t("myDeclarationsPage.actions.submit")}
             </Button>
           </div>
         </form>

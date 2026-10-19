@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, CheckCircle2, AlertCircle, FileText, Users, CreditCard } from "lucide-react";
 import { getUser } from "@/api/auth";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 
 export interface Notification {
   id: string;
@@ -13,47 +15,50 @@ export interface Notification {
   link?: string;
 }
 
-export function getNotifications(): Notification[] {
+export function getNotifications(t: TFunction, language: string): Notification[] {
   const user = getUser();
   const isAdmin = user?.role === "hr_admin" || user?.role === "hr_manager";
   const now = new Date();
-  const month = now.toLocaleString("en-IN", { month: "long" });
+  const month = new Intl.DateTimeFormat(language, { month: "long" }).format(now);
+  const employeeCount = new Intl.NumberFormat(language).format(10);
 
   if (isAdmin) {
     return [
       {
         id: "1",
         icon: AlertCircle,
-        title: "TDS Filing Due",
-        description: `Form 24Q for Q4 FY 2025-26 is due soon`,
-        time: "Action needed",
+        title: t("notificationsPage.items.admin.tdsDue.title"),
+        description: t("notificationsPage.items.admin.tdsDue.description"),
+        time: t("notificationsPage.items.admin.tdsDue.time"),
         read: false,
         link: "/tax",
       },
       {
         id: "2",
         icon: CreditCard,
-        title: `${month} Payroll Pending`,
-        description: "Create and run this month's payroll",
-        time: "This month",
+        title: t("notificationsPage.items.admin.payrollPending.title", { month }),
+        description: t("notificationsPage.items.admin.payrollPending.description"),
+        time: t("notificationsPage.items.admin.payrollPending.time"),
         read: false,
         link: "/payroll/runs",
       },
       {
         id: "3",
         icon: CheckCircle2,
-        title: "Last Payroll Completed",
-        description: "All payslips generated and paid",
-        time: "Last month",
+        title: t("notificationsPage.items.admin.payrollCompleted.title"),
+        description: t("notificationsPage.items.admin.payrollCompleted.description"),
+        time: t("notificationsPage.items.admin.payrollCompleted.time"),
         read: true,
         link: "/payroll/runs",
       },
       {
         id: "4",
         icon: Users,
-        title: "10 Active Employees",
-        description: "All statutory registrations up to date",
-        time: "System",
+        title: t("notificationsPage.items.admin.activeEmployees.title", {
+          count: employeeCount,
+        }),
+        description: t("notificationsPage.items.admin.activeEmployees.description"),
+        time: t("notificationsPage.items.admin.activeEmployees.time"),
         read: true,
         link: "/employees",
       },
@@ -64,38 +69,44 @@ export function getNotifications(): Notification[] {
     {
       id: "1",
       icon: FileText,
-      title: "Payslip Available",
-      description: "Your latest payslip is ready to view",
-      time: "Recently",
+      title: t("notificationsPage.items.employee.payslipAvailable.title"),
+      description: t("notificationsPage.items.employee.payslipAvailable.description"),
+      time: t("notificationsPage.items.employee.payslipAvailable.time"),
       read: false,
       link: "/my/payslips",
     },
     {
       id: "2",
       icon: AlertCircle,
-      title: "Tax Declaration Reminder",
-      description: "Submit your investment proofs before deadline",
-      time: "This quarter",
+      title: t("notificationsPage.items.employee.taxReminder.title"),
+      description: t("notificationsPage.items.employee.taxReminder.description"),
+      time: t("notificationsPage.items.employee.taxReminder.time"),
       read: false,
       link: "/my/declarations",
     },
     {
       id: "3",
       icon: CheckCircle2,
-      title: "Salary Credited",
-      description: "Your salary has been credited to your bank account",
-      time: "Last month",
+      title: t("notificationsPage.items.employee.salaryCredited.title"),
+      description: t("notificationsPage.items.employee.salaryCredited.description"),
+      time: t("notificationsPage.items.employee.salaryCredited.time"),
       read: true,
     },
   ];
 }
 
 export function NotificationBell() {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState(getNotifications);
+  const [notifications, setNotifications] = useState(() => getNotifications(t, language));
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const unread = notifications.filter((n) => !n.read).length;
+
+  useEffect(() => {
+    setNotifications(getNotifications(t, language));
+  }, [language, t]);
 
   function markAllAsRead() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
@@ -113,6 +124,7 @@ export function NotificationBell() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
+        aria-label={t("notificationsPage.bellAria", { count: unread })}
         className="relative rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
       >
         <Bell className="h-5 w-5" />
@@ -126,13 +138,13 @@ export function NotificationBell() {
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-            <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+            <h3 className="text-sm font-semibold text-gray-900">{t("notificationsPage.title")}</h3>
             {unread > 0 && (
               <button
                 onClick={markAllAsRead}
                 className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-200"
               >
-                {unread} new — Mark read
+                {t("notificationsPage.newCount", { count: unread })}
               </button>
             )}
           </div>
@@ -179,7 +191,7 @@ export function NotificationBell() {
               }}
               className="text-brand-600 hover:bg-brand-50 w-full rounded-lg px-3 py-2 text-center text-xs font-medium"
             >
-              View all notifications
+              {t("notificationsPage.viewAll")}
             </button>
           </div>
         </div>

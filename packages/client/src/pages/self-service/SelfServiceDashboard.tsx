@@ -6,7 +6,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { formatCurrency, formatMonth } from "@/lib/utils";
+import { formatCurrency, htmlToPlainText, sanitizeRichHtml } from "@/lib/utils";
 import { useSelfDashboard } from "@/api/hooks";
 import { getUser } from "@/api/auth";
 import {
@@ -23,9 +23,11 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/api/client";
-import { formatDate, htmlToPlainText, sanitizeRichHtml } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 export function SelfServiceDashboard() {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
   const navigate = useNavigate();
   const { data: res, isLoading } = useSelfDashboard();
   const user = getUser();
@@ -51,31 +53,39 @@ export function SelfServiceDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Welcome, ${user?.firstName || emp?.first_name || "User"}!`}
-        description="Here's your payroll summary"
+        title={t("selfServiceDashboard.greeting", {
+          name: user?.firstName || emp?.first_name || t("selfServiceDashboard.userFallback"),
+        })}
+        description={t("selfServiceDashboard.description")}
       />
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Monthly CTC"
+          title={t("selfServiceDashboard.stats.monthlyCtc")}
           value={salary ? formatCurrency(Math.round(salary.ctc / 12)) : "—"}
           icon={Wallet}
         />
         <StatCard
-          title="Net Pay (Latest)"
+          title={t("selfServiceDashboard.stats.latestNetPay")}
           value={latestPayslip ? formatCurrency(latestPayslip.net_pay) : "—"}
           icon={IndianRupee}
         />
         <StatCard
-          title="Tax Regime"
-          value={taxInfo?.regime === "old" ? "Old Regime" : "New Regime"}
+          title={t("selfServiceDashboard.stats.taxRegime")}
+          value={
+            taxInfo?.regime === "old"
+              ? t("selfServiceDashboard.regimes.old")
+              : t("selfServiceDashboard.regimes.new")
+          }
           icon={FileText}
         />
         <StatCard
-          title="Days at Company"
+          title={t("selfServiceDashboard.stats.daysAtCompany")}
           value={
             emp
-              ? `${Math.floor((Date.now() - new Date(emp.date_of_joining).getTime()) / 86400000)}`
+              ? new Intl.NumberFormat(language).format(
+                  Math.floor((Date.now() - new Date(emp.date_of_joining).getTime()) / 86400000),
+                )
               : "—"
           }
           icon={Calendar}
@@ -87,34 +97,47 @@ export function SelfServiceDashboard() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>
-                Latest Payslip — {formatMonth(latestPayslip.month, latestPayslip.year)}
+                {t("selfServiceDashboard.latestPayslip", {
+                  period: new Intl.DateTimeFormat(language, {
+                    month: "long",
+                    year: "numeric",
+                  }).format(new Date(latestPayslip.year, latestPayslip.month - 1, 1)),
+                })}
               </CardTitle>
-              <Badge variant={latestPayslip.status}>{latestPayslip.status}</Badge>
+              <Badge variant={latestPayslip.status}>
+                {t(`payslipList.statuses.${latestPayslip.status}`, {
+                  defaultValue: latestPayslip.status,
+                })}
+              </Badge>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div>
-                <p className="text-sm text-gray-500">Gross Pay</p>
+                <p className="text-sm text-gray-500">
+                  {t("selfServiceDashboard.payslip.grossPay")}
+                </p>
                 <p className="text-lg font-semibold text-gray-900">
                   {formatCurrency(latestPayslip.gross_earnings)}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Deductions</p>
+                <p className="text-sm text-gray-500">
+                  {t("selfServiceDashboard.payslip.deductions")}
+                </p>
                 <p className="text-lg font-semibold text-red-600">
                   -{formatCurrency(latestPayslip.total_deductions)}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Net Pay</p>
+                <p className="text-sm text-gray-500">{t("selfServiceDashboard.payslip.netPay")}</p>
                 <p className="text-brand-700 text-lg font-bold">
                   {formatCurrency(latestPayslip.net_pay)}
                 </p>
               </div>
               <div className="flex items-end">
                 <Button variant="outline" size="sm" onClick={() => navigate("/my/payslips")}>
-                  View All <ArrowRight className="h-4 w-4" />
+                  {t("selfServiceDashboard.payslip.viewAll")} <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -124,11 +147,31 @@ export function SelfServiceDashboard() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[
-          { label: "View Salary Breakdown", to: "/my/salary", icon: Wallet },
-          { label: "Tax Computation", to: "/my/tax", icon: IndianRupee },
-          { label: "Submit Declarations", to: "/my/declarations", icon: FileText },
-          { label: "Reimbursements", to: "/my/reimbursements", icon: Receipt },
-          { label: "My Profile", to: "/my/profile", icon: User },
+          {
+            label: t("selfServiceDashboard.actions.salaryBreakdown"),
+            to: "/my/salary",
+            icon: Wallet,
+          },
+          {
+            label: t("selfServiceDashboard.actions.taxComputation"),
+            to: "/my/tax",
+            icon: IndianRupee,
+          },
+          {
+            label: t("selfServiceDashboard.actions.submitDeclarations"),
+            to: "/my/declarations",
+            icon: FileText,
+          },
+          {
+            label: t("selfServiceDashboard.actions.reimbursements"),
+            to: "/my/reimbursements",
+            icon: Receipt,
+          },
+          {
+            label: t("selfServiceDashboard.actions.profile"),
+            to: "/my/profile",
+            icon: User,
+          },
         ].map((link) => (
           <button
             key={link.to}
@@ -158,11 +201,19 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 function AnnouncementsWidget() {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
   const { data: res } = useQuery({
     queryKey: ["announcements-widget"],
     queryFn: () => apiGet<any>("/announcements", { limit: "5" }),
   });
   const [openAnn, setOpenAnn] = useState<any>(null);
+  const formatAnnouncementDate = (date: string) =>
+    new Intl.DateTimeFormat(language, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(new Date(date));
 
   const announcements = res?.data || [];
   if (announcements.length === 0) return null;
@@ -171,7 +222,7 @@ function AnnouncementsWidget() {
     <Card className="dark:border-gray-800 dark:bg-gray-900">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 dark:text-gray-100">
-          <Megaphone className="h-5 w-5" /> Company Announcements
+          <Megaphone className="h-5 w-5" /> {t("selfServiceDashboard.announcements.title")}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -198,7 +249,9 @@ function AnnouncementsWidget() {
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_COLORS[a.priority] || PRIORITY_COLORS.normal}`}
                 >
-                  {a.priority}
+                  {t(`selfServiceDashboard.announcements.priorities.${a.priority}`, {
+                    defaultValue: a.priority,
+                  })}
                 </span>
               </div>
               <p className="line-clamp-2 text-sm text-gray-600 dark:text-gray-300">
@@ -206,10 +259,11 @@ function AnnouncementsWidget() {
               </p>
               <div className="mt-1.5 flex items-center justify-between">
                 <p className="text-xs text-gray-400 dark:text-gray-500">
-                  {a.author_name} &middot; {formatDate(a.created_at)}
+                  {a.author_name} &middot; {formatAnnouncementDate(a.created_at)}
                 </p>
                 <span className="text-brand-600 dark:text-brand-400 inline-flex items-center gap-1 text-xs font-medium">
-                  Read more <ArrowRight className="h-3 w-3" />
+                  {t("selfServiceDashboard.announcements.readMore")}{" "}
+                  <ArrowRight className="h-3 w-3" />
                 </span>
               </div>
             </button>
@@ -222,9 +276,11 @@ function AnnouncementsWidget() {
       <Modal
         open={!!openAnn}
         onClose={() => setOpenAnn(null)}
-        title={openAnn?.title || "Announcement"}
+        title={openAnn?.title || t("selfServiceDashboard.announcements.fallbackTitle")}
         description={
-          openAnn ? `${openAnn.author_name} · ${formatDate(openAnn.created_at)}` : undefined
+          openAnn
+            ? `${openAnn.author_name} · ${formatAnnouncementDate(openAnn.created_at)}`
+            : undefined
         }
         className="max-w-2xl"
       >
@@ -235,7 +291,11 @@ function AnnouncementsWidget() {
                 PRIORITY_COLORS[openAnn.priority] || PRIORITY_COLORS.normal
               }`}
             >
-              {openAnn.priority} priority
+              {t("selfServiceDashboard.announcements.priorityLabel", {
+                priority: t(`selfServiceDashboard.announcements.priorities.${openAnn.priority}`, {
+                  defaultValue: openAnn.priority,
+                }),
+              })}
             </span>
             <div
               className="[&_a]:text-brand-600 text-sm leading-relaxed text-gray-700 dark:text-gray-200 [&_a]:underline [&_b]:font-semibold [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-bold [&_h2]:mb-2 [&_h2]:font-semibold [&_ol]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_strong]:font-semibold [&_ul]:mb-2 [&_ul]:list-disc [&_ul]:pl-5"

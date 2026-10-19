@@ -21,6 +21,7 @@ import {
   Layers,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 interface ComponentRow {
   name: string;
@@ -97,6 +98,7 @@ const PRESET_COMPONENTS: Array<{
 ];
 
 export function SalaryStructuresPage() {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [editingStructure, setEditingStructure] = useState<any>(null);
@@ -231,12 +233,12 @@ export function SalaryStructuresPage() {
       (c) => c.calculationType === "balance" && c.name && c.code,
     );
     if (balanceRows.length > 1) {
-      toast.error("Only one component can use Balance calculation.");
+      toast.error(t("salaryStructures.validation.singleBalance"));
       return;
     }
     const badBalance = balanceRows.find((c) => c.type !== "earning");
     if (badBalance) {
-      toast.error(`Balance calculation is only valid for earnings (${badBalance.code}).`);
+      toast.error(t("salaryStructures.validation.balanceEarning", { code: badBalance.code }));
       return;
     }
 
@@ -252,21 +254,21 @@ export function SalaryStructuresPage() {
       const val = Number(c.value);
       if (c.calculationType === "percentage") {
         if (!Number.isFinite(val) || val <= 0 || val > 100) {
-          toast.error(`${c.code}: percentage must be between 0 and 100.`);
+          toast.error(t("salaryStructures.validation.percentage", { code: c.code }));
           return;
         }
         if (!c.percentageOf) {
-          toast.error(`${c.code}: choose a "% Of" base (e.g. CTC, BASIC).`);
+          toast.error(t("salaryStructures.validation.percentageBase", { code: c.code }));
           return;
         }
       } else if (c.calculationType === "fixed" && c.type === "earning") {
         if (!Number.isFinite(val) || val <= 0) {
-          toast.error(`${c.code}: fixed earning amount must be greater than 0.`);
+          toast.error(t("salaryStructures.validation.fixedEarning", { code: c.code }));
           return;
         }
       } else if (c.calculationType === "per_night") {
         if (!Number.isFinite(val) || val <= 0) {
-          toast.error(`${c.code}: enter a ₹/night rate greater than 0.`);
+          toast.error(t("salaryStructures.validation.nightRate", { code: c.code }));
           return;
         }
       } else if (c.calculationType === "per_night_daily") {
@@ -274,26 +276,22 @@ export function SalaryStructuresPage() {
         // so a multiplier below 1 would mean paying LESS than normal for
         // night work (a negative allowance), which never makes sense.
         if (!Number.isFinite(val) || val < 1) {
-          toast.error(
-            `${c.code}: night multiplier must be at least 1 (1 = same as day pay, 2 = double).`,
-          );
+          toast.error(t("salaryStructures.validation.nightMultiplier", { code: c.code }));
           return;
         }
       } else if (c.calculationType === "per_night_pct") {
         if (!Number.isFinite(val) || val <= 0 || val > 100) {
-          toast.error(`${c.code}: enter a net-pay percentage between 0 and 100 (e.g. 10).`);
+          toast.error(t("salaryStructures.validation.netPercentage", { code: c.code }));
           return;
         }
       } else if (c.calculationType === "per_ot") {
         if (!Number.isFinite(val) || val <= 0) {
-          toast.error(`${c.code}: enter a ₹/OT-day rate greater than 0.`);
+          toast.error(t("salaryStructures.validation.overtimeRate", { code: c.code }));
           return;
         }
       } else if (c.calculationType === "per_ot_daily") {
         if (!Number.isFinite(val) || val < 1) {
-          toast.error(
-            `${c.code}: overtime multiplier must be at least 1 (1 = same as a normal day, 2 = double).`,
-          );
+          toast.error(t("salaryStructures.validation.overtimeMultiplier", { code: c.code }));
           return;
         }
       }
@@ -326,10 +324,10 @@ export function SalaryStructuresPage() {
     try {
       if (editingStructure) {
         await apiPut(`/salary-structures/${editingStructure.id}`, payload);
-        toast.success("Salary structure updated");
+        toast.success(t("salaryStructures.updated"));
       } else {
         await apiPost("/salary-structures", payload);
-        toast.success("Salary structure created");
+        toast.success(t("salaryStructures.created"));
       }
       closeModal();
       // #186 — also invalidate the per-structure components cache; the
@@ -341,7 +339,7 @@ export function SalaryStructuresPage() {
       qc.invalidateQueries({ queryKey: ["salary-structures"] });
       qc.invalidateQueries({ queryKey: ["structure-components"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to save");
+      toast.error(err.response?.data?.error?.message || t("salaryStructures.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -352,12 +350,12 @@ export function SalaryStructuresPage() {
     setDeleting(deleteTarget.id);
     try {
       await apiDelete(`/salary-structures/${deleteTarget.id}`);
-      toast.success("Salary structure deleted");
+      toast.success(t("salaryStructures.deleted"));
       qc.invalidateQueries({ queryKey: ["salary-structures"] });
       qc.invalidateQueries({ queryKey: ["structure-components"] });
       setDeleteTarget(null);
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to delete");
+      toast.error(err.response?.data?.error?.message || t("salaryStructures.deleteFailed"));
     } finally {
       setDeleting(null);
     }
@@ -366,13 +364,13 @@ export function SalaryStructuresPage() {
   async function handleDuplicate(ss: any) {
     try {
       await apiPost(`/salary-structures/${ss.id}/duplicate`, {
-        name: `${ss.name} (Copy)`,
+        name: t("salaryStructures.copyName", { name: ss.name }),
       });
-      toast.success("Structure duplicated");
+      toast.success(t("salaryStructures.duplicated"));
       qc.invalidateQueries({ queryKey: ["salary-structures"] });
       qc.invalidateQueries({ queryKey: ["structure-components"] });
     } catch (err: any) {
-      toast.error(err?.response?.data?.error?.message || "Failed to duplicate");
+      toast.error(err?.response?.data?.error?.message || t("salaryStructures.duplicateFailed"));
     }
   }
 
@@ -396,11 +394,11 @@ export function SalaryStructuresPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Salary Structures"
-        description={`${structures.length} structure${structures.length !== 1 ? "s" : ""} configured`}
+        title={t("salaryStructures.title")}
+        description={t("salaryStructures.configured", { count: structures.length })}
         actions={
           <Button size="sm" onClick={openCreate}>
-            <Plus className="h-4 w-4" /> New Structure
+            <Plus className="h-4 w-4" /> {t("salaryStructures.newStructure")}
           </Button>
         }
       />
@@ -410,9 +408,9 @@ export function SalaryStructuresPage() {
           <div className="rounded-full bg-gray-50 p-3">
             <Layers className="h-6 w-6 text-gray-300" />
           </div>
-          <p className="text-sm text-gray-500">No salary structures yet.</p>
+          <p className="text-sm text-gray-500">{t("salaryStructures.noStructures")}</p>
           <Button size="sm" variant="outline" onClick={openCreate}>
-            <Plus className="h-4 w-4" /> Create your first structure
+            <Plus className="h-4 w-4" /> {t("salaryStructures.createFirst")}
           </Button>
         </div>
       ) : (
@@ -436,7 +434,7 @@ export function SalaryStructuresPage() {
       <Modal
         open={showCreate}
         onClose={closeModal}
-        title={editingStructure ? "Edit Salary Structure" : "New Salary Structure"}
+        title={editingStructure ? t("salaryStructures.editTitle") : t("salaryStructures.newTitle")}
         className="max-w-3xl"
       >
         <form className="flex h-full min-h-0 flex-col" onSubmit={handleSave}>
@@ -445,16 +443,16 @@ export function SalaryStructuresPage() {
               <Input
                 id="name"
                 name="name"
-                label="Structure Name"
-                placeholder="e.g. Standard India CTC"
+                label={t("salaryStructures.structureName")}
+                placeholder={t("salaryStructures.structureNamePlaceholder")}
                 defaultValue={editingStructure?.name || ""}
                 required
               />
               <Input
                 id="description"
                 name="description"
-                label="Description"
-                placeholder="For full-time employees"
+                label={t("salaryStructures.description")}
+                placeholder={t("salaryStructures.descriptionPlaceholder")}
                 defaultValue={editingStructure?.description || ""}
               />
             </div>
@@ -467,13 +465,15 @@ export function SalaryStructuresPage() {
                   they don't collapse onto a single pixel. */}
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5">
-                  <h4 className="text-sm font-semibold text-gray-700">Components</h4>
+                  <h4 className="text-sm font-semibold text-gray-700">
+                    {t("salaryStructures.components")}
+                  </h4>
                   <button
                     type="button"
                     onClick={() => setShowNightHelp(true)}
                     className="rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-blue-600"
-                    aria-label="Night Allowance calculation help"
-                    title="How Night Allowance is calculated"
+                    aria-label={t("salaryStructures.nightHelpAria")}
+                    title={t("salaryStructures.nightHelpTitle")}
                   >
                     <Info className="h-4 w-4" />
                   </button>
@@ -481,7 +481,7 @@ export function SalaryStructuresPage() {
                 <div className="flex shrink-0 items-center gap-2">
                   {unusedPresets.length > 0 && (
                     <select
-                      aria-label="Add preset component"
+                      aria-label={t("salaryStructures.addPresetAria")}
                       className="focus:border-brand-500 focus:ring-brand-500 h-8 rounded-md border border-gray-300 px-2 text-xs focus:outline-none focus:ring-1"
                       value=""
                       onChange={(e) => {
@@ -490,16 +490,19 @@ export function SalaryStructuresPage() {
                         e.target.value = "";
                       }}
                     >
-                      <option value="">+ Add preset...</option>
+                      <option value="">{t("salaryStructures.addPreset")}</option>
                       {unusedPresets.map((p) => (
                         <option key={p.code} value={p.code}>
-                          {p.name} ({p.type})
+                          {t(`salaryStructures.presetNames.${p.code}`, {
+                            defaultValue: p.name,
+                          })}{" "}
+                          ({t(`salaryStructures.types.${p.type}`)})
                         </option>
                       ))}
                     </select>
                   )}
                   <Button type="button" variant="outline" size="sm" onClick={() => addComponent()}>
-                    <Plus className="h-3.5 w-3.5" /> Custom
+                    <Plus className="h-3.5 w-3.5" /> {t("salaryStructures.custom")}
                   </Button>
                 </div>
               </div>
@@ -507,12 +510,12 @@ export function SalaryStructuresPage() {
               <div className="overflow-hidden rounded-lg border border-gray-200">
                 {/* Header */}
                 <div className="grid grid-cols-[1fr_80px_100px_90px_120px_90px_36px] gap-2 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500">
-                  <span>Name</span>
-                  <span>Code</span>
-                  <span>Type</span>
-                  <span>Calc</span>
-                  <span>Value</span>
-                  <span>% Of</span>
+                  <span>{t("salaryStructures.columns.name")}</span>
+                  <span>{t("salaryStructures.columns.code")}</span>
+                  <span>{t("salaryStructures.columns.type")}</span>
+                  <span>{t("salaryStructures.columns.calc")}</span>
+                  <span>{t("salaryStructures.columns.value")}</span>
+                  <span>{t("salaryStructures.columns.percentOf")}</span>
                   <span></span>
                 </div>
 
@@ -525,7 +528,7 @@ export function SalaryStructuresPage() {
                     >
                       <input
                         className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-1"
-                        placeholder="Component name"
+                        placeholder={t("salaryStructures.componentName")}
                         value={c.name}
                         onChange={(e) => updateComponent(i, "name", e.target.value)}
                         required
@@ -542,9 +545,11 @@ export function SalaryStructuresPage() {
                         value={c.type}
                         onChange={(e) => updateComponent(i, "type", e.target.value)}
                       >
-                        <option value="earning">Earning</option>
-                        <option value="deduction">Deduction</option>
-                        <option value="reimbursement">Reimb.</option>
+                        <option value="earning">{t("salaryStructures.types.earning")}</option>
+                        <option value="deduction">{t("salaryStructures.types.deduction")}</option>
+                        <option value="reimbursement">
+                          {t("salaryStructures.types.reimbursementShort")}
+                        </option>
                       </select>
                       <select
                         className="focus:border-brand-500 focus:ring-brand-500 w-full rounded border border-gray-200 px-1 py-1.5 text-sm focus:outline-none focus:ring-1"
@@ -561,21 +566,31 @@ export function SalaryStructuresPage() {
                         c.calculationType === "per_night_daily" ||
                         c.calculationType === "per_night_pct" ? (
                           <>
-                            <option value="per_night">Per Night ₹</option>
-                            <option value="per_night_daily">× Day Pay</option>
-                            <option value="per_night_pct">% of Net Pay</option>
+                            <option value="per_night">
+                              {t("salaryStructures.calcs.perNight")}
+                            </option>
+                            <option value="per_night_daily">
+                              {t("salaryStructures.calcs.dayPay")}
+                            </option>
+                            <option value="per_night_pct">
+                              {t("salaryStructures.calcs.netPayPercent")}
+                            </option>
                           </>
                         ) : c.calculationType === "per_ot" ||
                           c.calculationType === "per_ot_daily" ? (
                           <>
-                            <option value="per_ot">Per OT day ₹</option>
-                            <option value="per_ot_daily">× Day Pay</option>
+                            <option value="per_ot">{t("salaryStructures.calcs.perOtDay")}</option>
+                            <option value="per_ot_daily">
+                              {t("salaryStructures.calcs.dayPay")}
+                            </option>
                           </>
                         ) : (
                           <>
                             <option value="percentage">%</option>
-                            <option value="fixed">Fixed</option>
-                            {c.type === "earning" && <option value="balance">Balance</option>}
+                            <option value="fixed">{t("salaryStructures.calcs.fixed")}</option>
+                            {c.type === "earning" && (
+                              <option value="balance">{t("salaryStructures.calcs.balance")}</option>
+                            )}
                           </>
                         )}
                       </select>
@@ -592,16 +607,16 @@ export function SalaryStructuresPage() {
                         value={c.calculationType === "balance" ? "" : c.value === 0 ? "" : c.value}
                         placeholder={
                           c.calculationType === "balance"
-                            ? "auto"
+                            ? t("salaryStructures.auto")
                             : c.calculationType === "per_night"
-                              ? "₹/night"
+                              ? t("salaryStructures.nightRatePlaceholder")
                               : c.calculationType === "per_ot"
-                                ? "₹/day"
+                                ? t("salaryStructures.dayRatePlaceholder")
                                 : c.calculationType === "per_night_pct"
-                                  ? "% e.g. 10"
+                                  ? t("salaryStructures.percentPlaceholder")
                                   : c.calculationType === "per_night_daily" ||
                                       c.calculationType === "per_ot_daily"
-                                    ? "e.g. 2"
+                                    ? t("salaryStructures.multiplierPlaceholder")
                                     : "0"
                         }
                         // #316 — pre-select the contents on focus so typing
@@ -628,7 +643,7 @@ export function SalaryStructuresPage() {
                         disabled={c.calculationType === "balance"}
                         title={
                           c.calculationType === "balance"
-                            ? "Auto-filled from CTC at assignment time"
+                            ? t("salaryStructures.autoTitle")
                             : undefined
                         }
                       />
@@ -645,10 +660,10 @@ export function SalaryStructuresPage() {
                           type="button"
                           onClick={() => setShowNightHelp(true)}
                           className="flex h-[34px] w-full items-center justify-center gap-1 rounded border border-blue-200 bg-blue-50 px-2 text-xs font-medium text-blue-700 hover:bg-blue-100"
-                          title="How Night Allowance / Overtime is calculated"
+                          title={t("salaryStructures.nightOvertimeHelp")}
                         >
                           <Info className="h-3.5 w-3.5" />
-                          Info
+                          {t("salaryStructures.info")}
                         </button>
                       ) : (
                         <input
@@ -677,16 +692,22 @@ export function SalaryStructuresPage() {
               {components.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
                   <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">
-                    {components.filter((c) => c.type === "earning").length} earnings
+                    {t("salaryStructures.counts.earning", {
+                      count: components.filter((c) => c.type === "earning").length,
+                    })}
                   </span>
                   {components.filter((c) => c.type === "deduction").length > 0 && (
                     <span className="rounded-full bg-rose-50 px-2 py-0.5 font-medium text-rose-700">
-                      {components.filter((c) => c.type === "deduction").length} deductions
+                      {t("salaryStructures.counts.deduction", {
+                        count: components.filter((c) => c.type === "deduction").length,
+                      })}
                     </span>
                   )}
                   {components.filter((c) => c.type === "reimbursement").length > 0 && (
                     <span className="rounded-full bg-sky-50 px-2 py-0.5 font-medium text-sky-700">
-                      {components.filter((c) => c.type === "reimbursement").length} reimbursements
+                      {t("salaryStructures.counts.reimbursement", {
+                        count: components.filter((c) => c.type === "reimbursement").length,
+                      })}
                     </span>
                   )}
                 </div>
@@ -695,20 +716,18 @@ export function SalaryStructuresPage() {
 
             {/* Info box */}
             <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-              <strong>Note:</strong> Statutory deductions (EPF, ESI, PT, TDS) are computed
-              automatically during payroll and do not need to be added here. Use "Deduction" type
-              for recurring non-statutory deductions like canteen fees or welfare fund. Use{" "}
-              <strong>Balance</strong> on one earning (typically Special Allowance) to absorb
-              whatever portion of CTC remains after the other components.
+              <strong>{t("salaryStructures.noteTitle")}</strong> {t("salaryStructures.noteText")}
             </div>
           </div>
 
           <div className="mt-4 flex shrink-0 justify-end gap-3 border-t border-gray-100 bg-white pt-4 dark:border-gray-800 dark:bg-gray-900">
             <Button variant="outline" type="button" onClick={closeModal}>
-              Cancel
+              {t("salaryStructures.cancel")}
             </Button>
             <Button type="submit" loading={saving}>
-              {editingStructure ? "Update Structure" : "Create Structure"}
+              {editingStructure
+                ? t("salaryStructures.updateStructure")
+                : t("salaryStructures.createStructure")}
             </Button>
           </div>
         </form>
@@ -720,54 +739,56 @@ export function SalaryStructuresPage() {
       <Modal
         open={showNightHelp}
         onClose={() => setShowNightHelp(false)}
-        title="Night Allowance & Overtime — calculation modes"
+        title={t("salaryStructures.help.title")}
         className="max-w-2xl"
       >
         <div className="space-y-4 px-1 py-2 text-sm text-gray-700">
-          <p>
-            Night Allowance is paid only for days the employee was on a shift flagged{" "}
-            <span className="font-mono text-xs">is_night_shift = 1</span> in attendance. LOP days
-            never contribute (they have no attendance row). Two modes:
-          </p>
+          <p>{t("salaryStructures.help.intro")}</p>
 
           <div className="rounded-md border border-gray-200">
             <div className="grid grid-cols-[90px_1fr_110px] gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-500">
-              <div>Mode + Value</div>
-              <div>Calculation</div>
-              <div className="text-right">Allowance added</div>
+              <div>{t("salaryStructures.help.modeValue")}</div>
+              <div>{t("salaryStructures.columns.calculation")}</div>
+              <div className="text-right">{t("salaryStructures.help.allowanceAdded")}</div>
             </div>
             <div className="divide-y divide-gray-100 text-xs">
               <div className="grid grid-cols-[90px_1fr_110px] gap-2 px-3 py-2">
                 <div>
-                  <span className="font-medium text-gray-800">Per Night</span> · value{" "}
-                  <span className="font-mono">250</span>
+                  <span className="font-medium text-gray-800">
+                    {t("salaryStructures.help.perNight")}
+                  </span>{" "}
+                  · {t("salaryStructures.columns.value")} <span className="font-mono">250</span>
                 </div>
                 <div className="font-mono">
-                  flat ₹250 × 22 nights
-                  <div className="text-gray-500">added on top of base</div>
+                  {t("salaryStructures.help.flatExample")}
+                  <div className="text-gray-500">{t("salaryStructures.help.addedOnBase")}</div>
                 </div>
                 <div className="text-right font-mono font-semibold text-gray-900">₹5,500</div>
               </div>
               <div className="grid grid-cols-[90px_1fr_110px] gap-2 px-3 py-2">
                 <div>
-                  <span className="font-medium text-gray-800">× Day Pay</span> · value{" "}
-                  <span className="font-mono">2</span>{" "}
-                  <span className="text-gray-500">(double)</span>
+                  <span className="font-medium text-gray-800">
+                    {t("salaryStructures.calcs.dayPay")}
+                  </span>{" "}
+                  · {t("salaryStructures.columns.value")} <span className="font-mono">2</span>{" "}
+                  <span className="text-gray-500">({t("salaryStructures.help.double")})</span>
                 </div>
                 <div className="font-mono">
-                  base 166,666 × (2 − 1)
-                  <div className="text-gray-500">→ total gross = base × 2 = 333,332</div>
+                  {t("salaryStructures.help.doubleFormula")}
+                  <div className="text-gray-500">{t("salaryStructures.help.doubleTotal")}</div>
                 </div>
                 <div className="text-right font-mono font-semibold text-gray-900">₹166,666</div>
               </div>
               <div className="grid grid-cols-[90px_1fr_110px] gap-2 px-3 py-2">
                 <div>
-                  <span className="font-medium text-gray-800">× Day Pay</span> · value{" "}
-                  <span className="font-mono">1.5</span>
+                  <span className="font-medium text-gray-800">
+                    {t("salaryStructures.calcs.dayPay")}
+                  </span>{" "}
+                  · {t("salaryStructures.columns.value")} <span className="font-mono">1.5</span>
                 </div>
                 <div className="font-mono">
-                  base 166,666 × (1.5 − 1)
-                  <div className="text-gray-500">→ total gross = base × 1.5 = 250,000</div>
+                  {t("salaryStructures.help.oneHalfFormula")}
+                  <div className="text-gray-500">{t("salaryStructures.help.oneHalfTotal")}</div>
                 </div>
                 <div className="text-right font-mono font-semibold text-gray-900">₹83,333</div>
               </div>
@@ -775,54 +796,32 @@ export function SalaryStructuresPage() {
           </div>
 
           <div className="rounded-md bg-blue-50 p-3 text-xs leading-relaxed text-blue-800">
-            <div className="mb-1 font-semibold">How each mode works:</div>
+            <div className="mb-1 font-semibold">{t("salaryStructures.help.howModesWork")}</div>
             <ul className="ml-4 list-disc space-y-0.5">
-              <li>
-                <span className="font-medium">Per Night ₹</span> — a flat rupee amount per night
-                worked, added on top of the normal salary.
-              </li>
-              <li>
-                <span className="font-medium">× Day Pay</span> — a night-shift employee's WHOLE
-                salary is paid at the multiple. With value 2, total gross = base × 2; the allowance
-                line is the top-up (base × 1). Requires at least one night worked in the month.
-              </li>
+              <li>{t("salaryStructures.help.perNightExplanation")}</li>
+              <li>{t("salaryStructures.help.dayPayExplanation")}</li>
             </ul>
-            <div className="mt-1 text-blue-700">
-              Example base monthly gross used above: ₹166,666.
-            </div>
+            <div className="mt-1 text-blue-700">{t("salaryStructures.help.exampleBase")}</div>
           </div>
 
           <div className="rounded-md bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-800">
-            <div className="mb-1 font-semibold">Overtime (week-off / holiday worked):</div>
+            <div className="mb-1 font-semibold">{t("salaryStructures.help.overtimeTitle")}</div>
             <ul className="ml-4 list-disc space-y-0.5">
-              <li>
-                Counts <span className="font-medium">OT days</span> = days the employee was present
-                on a week-off or holiday. The Attendance Grid auto-marks these{" "}
-                <span className="font-mono">WOT</span> / <span className="font-mono">HOT</span> — no
-                manual entry.
-              </li>
-              <li>
-                <span className="font-medium">Per OT day ₹</span> — flat rupees per OT day.
-              </li>
-              <li>
-                <span className="font-medium">× Day Pay</span> — multiplier × daily salary, per OT
-                day (additive, e.g. 2 = double the day's pay for each OT day). Unlike night, this is
-                per-day, not whole-salary.
-              </li>
+              <li>{t("salaryStructures.help.overtimeCount")}</li>
+              <li>{t("salaryStructures.help.perOtExplanation")}</li>
+              <li>{t("salaryStructures.help.otDayPayExplanation")}</li>
             </ul>
           </div>
 
           <div className="rounded-md bg-amber-50 p-3 text-xs leading-relaxed text-amber-800">
-            <span className="font-semibold">Notes.</span> The allowance is taxable income, so EPF
-            (statutorily capped) and TDS do <em>not</em> simply double — net pay rises by less than
-            the gross. A night counts only for days actually worked under a shift flagged as a night
-            shift (half-days = 0.5).
+            <span className="font-semibold">{t("salaryStructures.help.notesTitle")}</span>{" "}
+            {t("salaryStructures.help.notesText")}
           </div>
         </div>
 
         <div className="flex justify-end border-t border-gray-200 px-1 pt-3">
           <Button type="button" onClick={() => setShowNightHelp(false)}>
-            Got it
+            {t("salaryStructures.gotIt")}
           </Button>
         </div>
       </Modal>
@@ -831,10 +830,10 @@ export function SalaryStructuresPage() {
       <Modal
         open={!!deleteTarget}
         onClose={() => deleting == null && setDeleteTarget(null)}
-        title="Delete salary structure?"
+        title={t("salaryStructures.deleteTitle")}
         description={
           deleteTarget
-            ? `“${deleteTarget.name}” will be removed. Employees already assigned to it keep their salary, and their computed payslips are unaffected.`
+            ? t("salaryStructures.deleteDescription", { name: deleteTarget.name })
             : undefined
         }
         className="max-w-md"
@@ -845,14 +844,14 @@ export function SalaryStructuresPage() {
             onClick={() => setDeleteTarget(null)}
             disabled={deleting != null}
           >
-            Cancel
+            {t("salaryStructures.cancel")}
           </Button>
           <Button
             variant="danger"
             onClick={confirmDelete}
             loading={deleteTarget != null && deleting === deleteTarget.id}
           >
-            <Trash2 className="h-4 w-4" /> Delete
+            <Trash2 className="h-4 w-4" /> {t("salaryStructures.delete")}
           </Button>
         </div>
       </Modal>
@@ -885,6 +884,7 @@ function StructureCard({
   onDuplicate: (ss: any) => void;
   isDeleting: boolean;
 }) {
+  const { t, i18n } = useTranslation();
   const { data: compRes } = useQuery({
     queryKey: ["structure-components", ss.id],
     queryFn: () => apiGet<any>(`/salary-structures/${ss.id}/components`),
@@ -898,6 +898,15 @@ function StructureCard({
   const deductionCount = components.filter((c: any) => c.type === "deduction").length;
   // #362 — show reimbursement count when the structure has any.
   const reimbursementCount = components.filter((c: any) => c.type === "reimbursement").length;
+  const locale = i18n.resolvedLanguage || i18n.language || "en";
+  const structureName = ss.is_default
+    ? t("salaryStructures.defaultStructureName", { defaultValue: ss.name })
+    : ss.name;
+  const structureDescription = ss.is_default
+    ? t("salaryStructures.defaultStructureDescription", { defaultValue: ss.description })
+    : ss.description;
+  const componentName = (component: any) =>
+    t(`salaryStructures.presetNames.${component.code}`, { defaultValue: component.name });
 
   return (
     <Card className="overflow-hidden transition-shadow hover:shadow-md">
@@ -909,39 +918,47 @@ function StructureCard({
             </span>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <CardTitle className="truncate">{ss.name}</CardTitle>
+                <CardTitle className="truncate">{structureName}</CardTitle>
                 <Badge variant={ss.is_active ? "active" : "inactive"}>
-                  {ss.is_active ? "Active" : "Inactive"}
+                  {ss.is_active ? t("salaryStructures.active") : t("salaryStructures.inactive")}
                 </Badge>
                 {/* #162 — coerce tinyint(1) to boolean so a literal "0" never renders. */}
-                {!!ss.is_default && <Badge variant="approved">Default</Badge>}
+                {!!ss.is_default && (
+                  <Badge variant="approved">{t("salaryStructures.default")}</Badge>
+                )}
               </div>
-              {ss.description && (
-                <p className="mt-0.5 truncate text-sm text-gray-500">{ss.description}</p>
+              {structureDescription && (
+                <p className="mt-0.5 truncate text-sm text-gray-500">{structureDescription}</p>
               )}
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 {components.length === 0 ? (
-                  <span className="text-xs text-gray-400">No components</span>
+                  <span className="text-xs text-gray-400">
+                    {t("salaryStructures.noComponents")}
+                  </span>
                 ) : (
                   <>
                     {earningCount > 0 && (
                       <CountPill
                         n={earningCount}
-                        label={earningCount === 1 ? "earning" : "earnings"}
+                        label={t("salaryStructures.counts.earningLabel", {
+                          count: earningCount,
+                        })}
                         className="bg-emerald-50 text-emerald-700"
                       />
                     )}
                     {deductionCount > 0 && (
                       <CountPill
                         n={deductionCount}
-                        label={deductionCount === 1 ? "deduction" : "deductions"}
+                        label={t("salaryStructures.counts.deductionLabel", {
+                          count: deductionCount,
+                        })}
                         className="bg-rose-50 text-rose-700"
                       />
                     )}
                     {reimbursementCount > 0 && (
                       <CountPill
                         n={reimbursementCount}
-                        label="reimb."
+                        label={t("salaryStructures.types.reimbursementShort")}
                         className="bg-sky-50 text-sky-700"
                       />
                     )}
@@ -956,8 +973,8 @@ function StructureCard({
               variant="ghost"
               size="sm"
               onClick={() => onDuplicate(ss)}
-              title="Duplicate"
-              aria-label="Duplicate structure"
+              title={t("salaryStructures.duplicate")}
+              aria-label={t("salaryStructures.duplicateAria")}
             >
               <Copy className="h-3.5 w-3.5" />
             </Button>
@@ -967,8 +984,8 @@ function StructureCard({
                   variant="ghost"
                   size="sm"
                   onClick={() => onEdit(ss, components)}
-                  title="Edit"
-                  aria-label="Edit structure"
+                  title={t("salaryStructures.edit")}
+                  aria-label={t("salaryStructures.editAria")}
                 >
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
@@ -979,8 +996,8 @@ function StructureCard({
                     onClick={() => onDelete(ss)}
                     loading={isDeleting}
                     className="text-red-400 hover:text-red-600"
-                    title="Delete"
-                    aria-label="Delete structure"
+                    title={t("salaryStructures.delete")}
+                    aria-label={t("salaryStructures.deleteAria")}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -991,7 +1008,7 @@ function StructureCard({
               variant="ghost"
               size="sm"
               onClick={onToggle}
-              aria-label={expanded ? "Collapse" : "Expand"}
+              aria-label={expanded ? t("salaryStructures.collapse") : t("salaryStructures.expand")}
             >
               {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
@@ -1006,16 +1023,24 @@ function StructureCard({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-400">
-                    <th className="px-4 py-2.5 font-semibold">Component</th>
-                    <th className="px-4 py-2.5 font-semibold">Code</th>
-                    <th className="px-4 py-2.5 font-semibold">Type</th>
-                    <th className="px-4 py-2.5 font-semibold">Calculation</th>
+                    <th className="px-4 py-2.5 font-semibold">
+                      {t("salaryStructures.columns.component")}
+                    </th>
+                    <th className="px-4 py-2.5 font-semibold">
+                      {t("salaryStructures.columns.code")}
+                    </th>
+                    <th className="px-4 py-2.5 font-semibold">
+                      {t("salaryStructures.columns.type")}
+                    </th>
+                    <th className="px-4 py-2.5 font-semibold">
+                      {t("salaryStructures.columns.calculation")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {components.map((c: any) => (
                     <tr key={c.id} className="transition-colors hover:bg-gray-50/70">
-                      <td className="px-4 py-2.5 font-medium text-gray-900">{c.name}</td>
+                      <td className="px-4 py-2.5 font-medium text-gray-900">{componentName(c)}</td>
                       <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{c.code}</td>
                       <td className="px-4 py-2.5">
                         <Badge
@@ -1027,25 +1052,40 @@ function StructureCard({
                                 : "draft"
                           }
                         >
-                          {c.type}
+                          {t(`salaryStructures.types.${c.type}`, { defaultValue: c.type })}
                         </Badge>
                       </td>
                       <td className="px-4 py-2.5 tabular-nums text-gray-600">
                         {c.calculation_type === "percentage" && c.percentage_of
-                          ? `${c.value}% of ${c.percentage_of}`
+                          ? t("salaryStructures.calculationText.percentageOf", {
+                              value: c.value,
+                              base: c.percentage_of,
+                            })
                           : c.calculation_type === "fixed" && Number(c.value) > 0
-                            ? `Fixed ₹${Number(c.value).toLocaleString("en-IN")}`
+                            ? t("salaryStructures.calculationText.fixed", {
+                                value: Number(c.value).toLocaleString(locale),
+                              })
                             : c.calculation_type === "per_night"
-                              ? `₹${Number(c.value).toLocaleString("en-IN")} / night`
+                              ? t("salaryStructures.calculationText.perNight", {
+                                  value: Number(c.value).toLocaleString(locale),
+                                })
                               : c.calculation_type === "per_night_daily"
-                                ? `${Number(c.value)}× whole salary (night shift)`
+                                ? t("salaryStructures.calculationText.wholeSalaryNight", {
+                                    value: Number(c.value),
+                                  })
                                 : c.calculation_type === "per_night_pct"
-                                  ? `${Number(c.value)}% of net pay (night shift)`
+                                  ? t("salaryStructures.calculationText.netPayNight", {
+                                      value: Number(c.value),
+                                    })
                                   : c.calculation_type === "per_ot"
-                                    ? `₹${Number(c.value).toLocaleString("en-IN")} / OT day`
+                                    ? t("salaryStructures.calculationText.perOtDay", {
+                                        value: Number(c.value).toLocaleString(locale),
+                                      })
                                     : c.calculation_type === "per_ot_daily"
-                                      ? `${Number(c.value)}× day pay / OT day`
-                                      : "Balancing"}
+                                      ? t("salaryStructures.calculationText.dayPayOt", {
+                                          value: Number(c.value),
+                                        })
+                                      : t("salaryStructures.calculationText.balancing")}
                       </td>
                     </tr>
                   ))}
@@ -1053,13 +1093,12 @@ function StructureCard({
               </table>
             </div>
           ) : (
-            <p className="text-sm text-gray-400">No components defined</p>
+            <p className="text-sm text-gray-400">{t("salaryStructures.noComponentsDefined")}</p>
           )}
 
           {/* Statutory note */}
           <div className="mt-4 rounded bg-gray-50 p-3 text-xs text-gray-500 dark:bg-gray-800">
-            EPF, ESI, Professional Tax, and TDS are computed automatically during payroll — they are
-            not part of the salary structure.
+            {t("salaryStructures.statutoryNote")}
           </div>
         </CardContent>
       )}

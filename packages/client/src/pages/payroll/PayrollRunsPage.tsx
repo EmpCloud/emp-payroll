@@ -9,25 +9,11 @@ import { Modal } from "@/components/ui/Modal";
 import { SelectField } from "@/components/ui/SelectField";
 import { Input } from "@/components/ui/Input";
 import { StatCard } from "@/components/ui/StatCard";
-import { formatCurrency, formatMonth, cn } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import { usePayrollRuns, useCreatePayrollRun } from "@/api/hooks";
 import { Plus, Loader2, Play, Wallet, CheckCircle2, Clock } from "lucide-react";
 import toast from "react-hot-toast";
-
-const MONTHS = [
-  { value: "1", label: "January" },
-  { value: "2", label: "February" },
-  { value: "3", label: "March" },
-  { value: "4", label: "April" },
-  { value: "5", label: "May" },
-  { value: "6", label: "June" },
-  { value: "7", label: "July" },
-  { value: "8", label: "August" },
-  { value: "9", label: "September" },
-  { value: "10", label: "October" },
-  { value: "11", label: "November" },
-  { value: "12", label: "December" },
-];
+import { useTranslation } from "react-i18next";
 
 // A cancelled run keeps its computed totals in the DB for audit purposes,
 // but those numbers are misleading in the list view — the run never paid out
@@ -42,59 +28,8 @@ function moneyCell(row: any, value: any) {
   return Number(value) ? formatCurrency(value) : "—";
 }
 
-const columns = [
-  {
-    key: "period",
-    header: "Period",
-    render: (row: any) => (
-      <span className="font-medium text-gray-900">
-        {/* #334 — Fall back to the server-stamped `name` ("May 2026 Payroll")
-            when month/year are missing, instead of rendering "Invalid Date"
-            from the formatMonth call. */}
-        {row.month && row.year ? formatMonth(row.month, row.year) : row.name || "—"}
-      </span>
-    ),
-  },
-  {
-    key: "employee_count",
-    header: "Employees",
-    className: "text-right",
-    render: (row: any) => (
-      <span className="tabular-nums">{isCancelled(row) ? "—" : row.employee_count || 0}</span>
-    ),
-  },
-  {
-    key: "total_gross",
-    header: "Gross Pay",
-    className: "text-right",
-    render: (row: any) => <span className="tabular-nums">{moneyCell(row, row.total_gross)}</span>,
-  },
-  {
-    key: "total_deductions",
-    header: "Deductions",
-    className: "text-right",
-    render: (row: any) => (
-      <span className="tabular-nums text-rose-600">{moneyCell(row, row.total_deductions)}</span>
-    ),
-  },
-  {
-    key: "total_net",
-    header: "Net Pay",
-    className: "text-right",
-    render: (row: any) => (
-      <span className="font-semibold tabular-nums text-gray-900">
-        {moneyCell(row, row.total_net)}
-      </span>
-    ),
-  },
-  {
-    key: "status",
-    header: "Status",
-    render: (row: any) => <Badge variant={row.status}>{row.status}</Badge>,
-  },
-];
-
 export function PayrollRunsPage() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { data: res, isLoading } = usePayrollRuns();
@@ -104,6 +39,71 @@ export function PayrollRunsPage() {
 
   const runs = res?.data?.data || [];
   const now = new Date();
+  const locale = i18n.resolvedLanguage || i18n.language || "en";
+  const formatPayrollMonth = (month: number, year: number) =>
+    new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(
+      new Date(year, month - 1),
+    );
+  const monthOptions = Array.from({ length: 12 }, (_, index) => ({
+    value: String(index + 1),
+    label: new Intl.DateTimeFormat(locale, { month: "long" }).format(new Date(2026, index, 1)),
+  }));
+  const columns = [
+    {
+      key: "period",
+      header: t("payrollRuns.columns.period"),
+      render: (row: any) => (
+        <span className="font-medium text-gray-900">
+          {row.month && row.year
+            ? formatPayrollMonth(Number(row.month), Number(row.year))
+            : row.name || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "employee_count",
+      header: t("payrollRuns.columns.employees"),
+      className: "text-right",
+      render: (row: any) => (
+        <span className="tabular-nums">{isCancelled(row) ? "—" : row.employee_count || 0}</span>
+      ),
+    },
+    {
+      key: "total_gross",
+      header: t("payrollRuns.columns.grossPay"),
+      className: "text-right",
+      render: (row: any) => <span className="tabular-nums">{moneyCell(row, row.total_gross)}</span>,
+    },
+    {
+      key: "total_deductions",
+      header: t("payrollRuns.columns.deductions"),
+      className: "text-right",
+      render: (row: any) => (
+        <span className="tabular-nums text-rose-600">{moneyCell(row, row.total_deductions)}</span>
+      ),
+    },
+    {
+      key: "total_net",
+      header: t("payrollRuns.columns.netPay"),
+      className: "text-right",
+      render: (row: any) => (
+        <span className="font-semibold tabular-nums text-gray-900">
+          {moneyCell(row, row.total_net)}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: t("payrollRuns.columns.status"),
+      render: (row: any) => (
+        <Badge variant={row.status}>
+          {t(`payrollRuns.statuses.${String(row.status).toLowerCase()}`, {
+            defaultValue: String(row.status),
+          })}
+        </Badge>
+      ),
+    },
+  ];
 
   // Derived summary + status filter (presentation-only).
   const sortedRuns = [...runs].sort(
@@ -115,7 +115,7 @@ export function PayrollRunsPage() {
   const latestRun = sortedRuns.find((r: any) => !isCancelled(r) && Number(r.total_net));
   const latestMonth =
     latestRun && latestRun.month && latestRun.year
-      ? formatMonth(latestRun.month, latestRun.year)
+      ? formatPayrollMonth(Number(latestRun.month), Number(latestRun.year))
       : undefined;
   const statusCount = (s: string) =>
     runs.filter((r: any) => String(r.status).toLowerCase() === s).length;
@@ -125,11 +125,11 @@ export function PayrollRunsPage() {
     0,
   );
   const filterOptions = [
-    { key: "all", label: "All", count: runs.length },
+    { key: "all", label: t("payrollRuns.statuses.all"), count: runs.length },
     ...["draft", "processing", "computed", "approved", "paid", "cancelled"]
       .map((s) => ({
         key: s,
-        label: s.charAt(0).toUpperCase() + s.slice(1),
+        label: t(`payrollRuns.statuses.${s}`),
         count: statusCount(s),
       }))
       .filter((o) => o.count > 0),
@@ -152,11 +152,11 @@ export function PayrollRunsPage() {
     // `null` in JSON, which the server rejects with a 400 that the user may
     // miss (#22 "submit appears to succeed").
     if (!Number.isInteger(month) || month < 1 || month > 12) {
-      toast.error("Please select a valid month");
+      toast.error(t("payrollRuns.validation.month"));
       return;
     }
     if (!Number.isInteger(year) || year < 2020 || year > 2100) {
-      toast.error("Please enter a valid year (2020–2100)");
+      toast.error(t("payrollRuns.validation.year"));
       return;
     }
     // #1655 — Reject future-period runs client-side too, so the user gets
@@ -164,11 +164,11 @@ export function PayrollRunsPage() {
     const requested = year * 12 + (month - 1);
     const current = now.getFullYear() * 12 + now.getMonth();
     if (requested > current) {
-      toast.error("Cannot create a payroll run for a future period");
+      toast.error(t("payrollRuns.validation.futurePeriod"));
       return;
     }
     if (!payDate) {
-      toast.error("Please choose a pay date");
+      toast.error(t("payrollRuns.validation.payDate"));
       return;
     }
 
@@ -178,7 +178,7 @@ export function PayrollRunsPage() {
       // invalidates the query, but we await it here so the list is fresh
       // before the user lands back on this page via the Back button.
       await qc.invalidateQueries({ queryKey: ["payroll-runs"] });
-      toast.success("Payroll run created");
+      toast.success(t("payrollRuns.created"));
       setShowCreate(false);
       if (result?.data?.id) {
         navigate(`/payroll/runs/${result.data.id}`);
@@ -187,9 +187,7 @@ export function PayrollRunsPage() {
         // than silently claiming success.
         // eslint-disable-next-line no-console
         console.error("createPayrollRun: server returned no run id", result);
-        toast.error(
-          "Payroll run submitted but the server did not return an id. Refresh the list to verify.",
-        );
+        toast.error(t("payrollRuns.missingReturnedId"));
       }
     } catch (err: any) {
       // Log full error to aid debugging silent server-side failures (#22).
@@ -203,8 +201,8 @@ export function PayrollRunsPage() {
         : "";
       toast.error(
         detailsMsg
-          ? `${serverErr?.message || "Failed to create payroll run"} — ${detailsMsg}`
-          : serverErr?.message || "Failed to create payroll run",
+          ? `${serverErr?.message || t("payrollRuns.createFailed")} — ${detailsMsg}`
+          : serverErr?.message || t("payrollRuns.createFailed"),
       );
     }
   }
@@ -212,11 +210,11 @@ export function PayrollRunsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Payroll Runs"
-        description="Monthly payroll processing"
+        title={t("payrollRuns.title")}
+        description={t("payrollRuns.description")}
         actions={
           <Button size="sm" onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4" /> Run Payroll
+            <Plus className="h-4 w-4" /> {t("payrollRuns.runPayroll")}
           </Button>
         }
       />
@@ -230,9 +228,9 @@ export function PayrollRunsPage() {
           <div className="rounded-full bg-gray-50 p-3">
             <Play className="h-6 w-6 text-gray-300" />
           </div>
-          <p className="text-sm text-gray-500">No payroll runs yet.</p>
+          <p className="text-sm text-gray-500">{t("payrollRuns.noRuns")}</p>
           <Button size="sm" variant="outline" onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4" /> Run your first payroll
+            <Plus className="h-4 w-4" /> {t("payrollRuns.runFirst")}
           </Button>
         </div>
       ) : (
@@ -240,29 +238,29 @@ export function PayrollRunsPage() {
           {/* Summary */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              title="Total Runs"
+              title={t("payrollRuns.totalRuns")}
               value={String(runs.length)}
-              subtitle="All periods"
+              subtitle={t("payrollRuns.allPeriods")}
               icon={Play}
             />
             <StatCard
-              title="Latest Net Pay"
+              title={t("payrollRuns.latestNetPay")}
               value={latestRun ? formatCurrency(latestRun.total_net) : "—"}
-              subtitle={latestMonth || "No computed runs"}
+              subtitle={latestMonth || t("payrollRuns.noComputedRuns")}
               icon={Wallet}
               accentClassName="bg-emerald-50 text-emerald-600"
             />
             <StatCard
-              title="Paid"
+              title={t("payrollRuns.statuses.paid")}
               value={String(paidCount)}
-              subtitle="Marked paid"
+              subtitle={t("payrollRuns.markedPaid")}
               icon={CheckCircle2}
               accentClassName="bg-sky-50 text-sky-600"
             />
             <StatCard
-              title="In Progress"
+              title={t("payrollRuns.inProgress")}
               value={String(inProgressCount)}
-              subtitle="Draft · computed · approved"
+              subtitle={t("payrollRuns.inProgressSubtitle")}
               icon={Clock}
               accentClassName="bg-amber-50 text-amber-600"
             />
@@ -272,7 +270,7 @@ export function PayrollRunsPage() {
           <div
             className="flex flex-wrap items-center gap-2"
             role="group"
-            aria-label="Filter runs by status"
+            aria-label={t("payrollRuns.filterAria")}
           >
             {filterOptions.map((o) => (
               <button
@@ -302,12 +300,12 @@ export function PayrollRunsPage() {
               // message). Surface a real toast so HR knows the row was
               // somehow malformed instead of getting a confusing 404.
               if (!row?.id) {
-                toast.error("This payroll run is missing an id — please refresh the list.");
+                toast.error(t("payrollRuns.missingId"));
                 return;
               }
               navigate(`/payroll/runs/${row.id}`);
             }}
-            emptyMessage="No runs match this filter."
+            emptyMessage={t("payrollRuns.noMatches")}
           />
         </>
       )}
@@ -315,31 +313,28 @@ export function PayrollRunsPage() {
       <Modal
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        title="New Payroll Run"
-        description="Create a new monthly payroll run"
+        title={t("payrollRuns.newTitle")}
+        description={t("payrollRuns.newDescription")}
       >
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
             <span className="bg-brand-50 text-brand-600 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
               <Play className="h-[18px] w-[18px]" />
             </span>
-            <p className="text-xs text-gray-500">
-              Creates a draft run and computes gross, deductions, and net for every active employee
-              in the selected month. You can review and approve it before marking it paid.
-            </p>
+            <p className="text-xs text-gray-500">{t("payrollRuns.createInfo")}</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <SelectField
               id="month"
               name="month"
-              label="Month"
+              label={t("payrollRuns.month")}
               defaultValue={String(now.getMonth() + 1)}
-              options={MONTHS}
+              options={monthOptions}
             />
             <Input
               id="year"
               name="year"
-              label="Year"
+              label={t("payrollRuns.year")}
               type="number"
               min={2020}
               max={now.getFullYear()}
@@ -350,17 +345,17 @@ export function PayrollRunsPage() {
           <Input
             id="pay_date"
             name="pay_date"
-            label="Pay Date"
+            label={t("payrollRuns.payDate")}
             type="date"
             defaultValue={`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-28`}
             required
           />
           <div className="flex justify-end gap-3">
             <Button variant="outline" type="button" onClick={() => setShowCreate(false)}>
-              Cancel
+              {t("payrollRuns.cancel")}
             </Button>
             <Button type="submit" loading={createMutation.isPending}>
-              <Play className="h-4 w-4" /> Create Run
+              <Play className="h-4 w-4" /> {t("payrollRuns.createRun")}
             </Button>
           </div>
         </form>

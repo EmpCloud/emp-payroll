@@ -21,6 +21,7 @@ import {
   Send,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 const STATUS_BADGE: Record<string, "active" | "draft" | "inactive"> = {
   pending: "draft",
@@ -31,6 +32,7 @@ const STATUS_BADGE: Record<string, "active" | "draft" | "inactive"> = {
 };
 
 export function EarnedWagePage() {
+  const { t, i18n } = useTranslation();
   // #171 — Stat cards used to call setTab("requests") against a tab state
   // that never changed anything because the Requests table was already the
   // only content rendered. Replace with a statusFilter so clicking e.g.
@@ -63,7 +65,7 @@ export function EarnedWagePage() {
   // and they know where to look for the data.
   const showAllAndScrollWithToast = () => {
     showAllAndScroll();
-    toast.success("Showing all requests below", { id: "ewa-show-all" });
+    toast.success(t("earnedWagePage.messages.showingAll"), { id: "ewa-show-all" });
   };
 
   // --- Data ---
@@ -104,7 +106,7 @@ export function EarnedWagePage() {
         amount: Number(fd.get("amount")),
         reason: fd.get("reason") || undefined,
       });
-      toast.success("Advance request submitted");
+      toast.success(t("earnedWagePage.messages.requestSubmitted"));
       setShowRequest(false);
       // #340 — After submitting an advance request, refetch the requests list,
       // dashboard stats, and available balance, then auto-scope the table to
@@ -118,7 +120,7 @@ export function EarnedWagePage() {
       ]);
       filterAndScroll("pending");
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to submit request");
+      toast.error(err.response?.data?.error?.message || t("earnedWagePage.messages.submitFailed"));
     } finally {
       setSaving(false);
     }
@@ -127,23 +129,23 @@ export function EarnedWagePage() {
   async function handleApprove(id: string) {
     try {
       await apiPost(`/earned-wage/requests/${id}/approve`);
-      toast.success("Request approved");
+      toast.success(t("earnedWagePage.messages.requestApproved"));
       qc.invalidateQueries({ queryKey: ["ewa-requests"] });
       qc.invalidateQueries({ queryKey: ["ewa-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to approve");
+      toast.error(err.response?.data?.error?.message || t("earnedWagePage.messages.approveFailed"));
     }
   }
 
   async function handleReject(id: string) {
-    const reason = prompt("Rejection reason (optional):");
+    const reason = prompt(t("earnedWagePage.messages.rejectionReason"));
     try {
       await apiPost(`/earned-wage/requests/${id}/reject`, { reason });
-      toast.success("Request rejected");
+      toast.success(t("earnedWagePage.messages.requestRejected"));
       qc.invalidateQueries({ queryKey: ["ewa-requests"] });
       qc.invalidateQueries({ queryKey: ["ewa-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to reject");
+      toast.error(err.response?.data?.error?.message || t("earnedWagePage.messages.rejectFailed"));
     }
   }
 
@@ -163,11 +165,13 @@ export function EarnedWagePage() {
         requiresManagerApproval: fd.get("requiresManagerApproval") === "on",
         cooldownDays: Number(fd.get("cooldownDays") || 7),
       });
-      toast.success("Settings saved");
+      toast.success(t("earnedWagePage.messages.settingsSaved"));
       setShowSettings(false);
       qc.invalidateQueries({ queryKey: ["ewa-settings"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to save settings");
+      toast.error(
+        err.response?.data?.error?.message || t("earnedWagePage.messages.settingsSaveFailed"),
+      );
     } finally {
       setSaving(false);
     }
@@ -177,7 +181,7 @@ export function EarnedWagePage() {
   const columns = [
     {
       key: "employee_name",
-      header: "Employee",
+      header: t("earnedWagePage.columns.employee"),
       render: (r: any) => (
         <div>
           <span className="font-medium text-gray-900">{r.employee_name}</span>
@@ -187,27 +191,36 @@ export function EarnedWagePage() {
     },
     {
       key: "amount",
-      header: "Amount",
+      header: t("earnedWagePage.columns.amount"),
       render: (r: any) => <span className="font-semibold">{formatCurrency(Number(r.amount))}</span>,
     },
     {
       key: "fee_amount",
-      header: "Fee",
+      header: t("earnedWagePage.columns.fee"),
       render: (r: any) => formatCurrency(Number(r.fee_amount || 0)),
     },
     {
       key: "status",
-      header: "Status",
-      render: (r: any) => <Badge variant={STATUS_BADGE[r.status] || "draft"}>{r.status}</Badge>,
+      header: t("earnedWagePage.columns.status"),
+      render: (r: any) => (
+        <Badge variant={STATUS_BADGE[r.status] || "draft"}>
+          {t(`earnedWagePage.status.${String(r.status).toLowerCase()}`, {
+            defaultValue: r.status,
+          })}
+        </Badge>
+      ),
     },
     {
       key: "requested_at",
-      header: "Requested",
-      render: (r: any) => (r.requested_at ? new Date(r.requested_at).toLocaleDateString() : "-"),
+      header: t("earnedWagePage.columns.requested"),
+      render: (r: any) =>
+        r.requested_at
+          ? new Date(r.requested_at).toLocaleDateString(i18n.resolvedLanguage || i18n.language)
+          : "-",
     },
     {
       key: "reason",
-      header: "Reason",
+      header: t("earnedWagePage.columns.reason"),
       render: (r: any) => (
         <span className="max-w-[200px] truncate text-sm text-gray-500">{r.reason || "-"}</span>
       ),
@@ -219,10 +232,12 @@ export function EarnedWagePage() {
         r.status === "pending" ? (
           <div className="flex gap-1">
             <Button variant="ghost" size="sm" onClick={() => handleApprove(r.id)}>
-              <CheckCircle className="mr-1 h-4 w-4 text-green-600" /> Approve
+              <CheckCircle className="mr-1 h-4 w-4 text-green-600" />
+              {t("earnedWagePage.actions.approve")}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => handleReject(r.id)}>
-              <XCircle className="mr-1 h-4 w-4 text-red-600" /> Reject
+              <XCircle className="mr-1 h-4 w-4 text-red-600" />
+              {t("earnedWagePage.actions.reject")}
             </Button>
           </div>
         ) : null,
@@ -232,15 +247,15 @@ export function EarnedWagePage() {
   return (
     <div>
       <PageHeader
-        title="Earned Wage Access"
-        description="On-demand pay - allow employees to access earned wages before payday"
+        title={t("earnedWagePage.title")}
+        description={t("earnedWagePage.description")}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setShowSettings(true)}>
-              <Settings className="mr-2 h-4 w-4" /> Settings
+              <Settings className="mr-2 h-4 w-4" /> {t("earnedWagePage.actions.settings")}
             </Button>
             <Button onClick={() => setShowRequest(true)}>
-              <Send className="mr-2 h-4 w-4" /> Request Advance
+              <Send className="mr-2 h-4 w-4" /> {t("earnedWagePage.actions.requestAdvance")}
             </Button>
           </div>
         }
@@ -250,25 +265,25 @@ export function EarnedWagePage() {
           status (or clears the filter for Total / Avg). */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Pending Requests"
+          title={t("earnedWagePage.stats.pendingRequests")}
           value={stats.totalPending || 0}
           icon={Clock}
           onClick={() => filterAndScroll("pending")}
         />
         <StatCard
-          title="Total Disbursed"
+          title={t("earnedWagePage.stats.totalDisbursed")}
           value={formatCurrency(stats.totalDisbursedAmount || 0)}
           icon={DollarSign}
           onClick={() => filterAndScroll("disbursed")}
         />
         <StatCard
-          title="Avg Request"
+          title={t("earnedWagePage.stats.avgRequest")}
           value={formatCurrency(stats.avgRequestAmount || 0)}
           icon={HandCoins}
           onClick={showAllAndScroll}
         />
         <StatCard
-          title="Total Requests"
+          title={t("earnedWagePage.stats.totalRequests")}
           value={stats.totalRequests || 0}
           icon={CheckCircle}
           onClick={showAllAndScrollWithToast}
@@ -278,14 +293,16 @@ export function EarnedWagePage() {
       {statusFilter !== "all" && (
         <div className="mb-4 flex items-center gap-2 text-sm text-gray-500">
           <span>
-            Showing <strong className="text-gray-900">{statusFilter}</strong> requests
+            {t("earnedWagePage.filter.showing")}{" "}
+            <strong className="text-gray-900">{t(`earnedWagePage.status.${statusFilter}`)}</strong>{" "}
+            {t("earnedWagePage.filter.requests")}
           </span>
           <button
             type="button"
             onClick={() => setStatusFilter("all")}
             className="text-brand-600 hover:underline"
           >
-            Clear filter
+            {t("earnedWagePage.filter.clear")}
           </button>
         </div>
       )}
@@ -296,22 +313,29 @@ export function EarnedWagePage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Your Available Balance</p>
+                <p className="text-sm text-gray-500">{t("earnedWagePage.balance.title")}</p>
                 <p className="text-2xl font-bold text-green-600">
                   {formatCurrency(availability.available)}
                 </p>
                 <p className="mt-1 text-xs text-gray-400">
-                  Earned so far: {formatCurrency(availability.earnedSoFar || 0)} | Already
-                  withdrawn: {formatCurrency(availability.alreadyWithdrawn || 0)} | Day{" "}
-                  {availability.daysWorked}/{availability.daysInMonth}
+                  {t("earnedWagePage.balance.details", {
+                    earned: formatCurrency(availability.earnedSoFar || 0),
+                    withdrawn: formatCurrency(availability.alreadyWithdrawn || 0),
+                    day: availability.daysWorked,
+                    days: availability.daysInMonth,
+                  })}
                 </p>
               </div>
               <div className="text-right">
                 <Badge variant={settings.is_enabled ? "active" : "inactive"}>
-                  {settings.is_enabled ? "Enabled" : "Disabled"}
+                  {settings.is_enabled
+                    ? t("earnedWagePage.status.enabled")
+                    : t("earnedWagePage.status.disabled")}
                 </Badge>
                 <p className="mt-1 text-xs text-gray-400">
-                  Max {settings.max_percentage || 50}% of earned salary
+                  {t("earnedWagePage.balance.maxPercentage", {
+                    value: settings.max_percentage || 50,
+                  })}
                 </p>
               </div>
             </div>
@@ -328,7 +352,11 @@ export function EarnedWagePage() {
                 <Loader2 className="text-brand-600 h-6 w-6 animate-spin" />
               </div>
             ) : (
-              <DataTable columns={columns} data={requests} emptyMessage="No advance requests yet" />
+              <DataTable
+                columns={columns}
+                data={requests}
+                emptyMessage={t("earnedWagePage.emptyRequests")}
+              />
             )}
           </CardContent>
         </Card>
@@ -338,7 +366,7 @@ export function EarnedWagePage() {
       <Modal
         open={showRequest}
         onClose={() => setShowRequest(false)}
-        title="Request Salary Advance"
+        title={t("earnedWagePage.requestModal.title")}
       >
         <form onSubmit={handleRequest} className="space-y-4">
           {/* #93 — When availability.available is 0 (no salary configured,
@@ -353,14 +381,21 @@ export function EarnedWagePage() {
                 : "bg-amber-50 text-amber-800"
             }`}
           >
-            <p className="font-medium">Available: {formatCurrency(availability.available || 0)}</p>
+            <p className="font-medium">
+              {t("earnedWagePage.requestModal.available", {
+                amount: formatCurrency(availability.available || 0),
+              })}
+            </p>
             <p className="text-xs opacity-80">
-              Monthly salary: {formatCurrency(availability.monthlySalary || 0)} | Day{" "}
-              {availability.daysWorked}/{availability.daysInMonth}
+              {t("earnedWagePage.requestModal.salaryDetails", {
+                salary: formatCurrency(availability.monthlySalary || 0),
+                day: availability.daysWorked,
+                days: availability.daysInMonth,
+              })}
             </p>
             {(availability.available || 0) <= 0 && (
               <p className="mt-1 text-xs font-medium">
-                No advance available yet. Check your salary configuration or cooldown period.
+                {t("earnedWagePage.requestModal.unavailable")}
               </p>
             )}
           </div>
@@ -372,26 +407,26 @@ export function EarnedWagePage() {
               there's nothing available, and rely on server-side validation
               as the authoritative block. */}
           <Input
-            label="Amount"
+            label={t("earnedWagePage.requestModal.amount")}
             name="amount"
             type="number"
             required
             min={1}
             {...(Number(availability.available) > 0 ? { max: availability.available } : {})}
-            placeholder="Enter amount"
+            placeholder={t("earnedWagePage.requestModal.amountPlaceholder")}
           />
           <Input
-            label="Reason (optional)"
+            label={t("earnedWagePage.requestModal.reason")}
             name="reason"
-            placeholder="Why do you need this advance?"
+            placeholder={t("earnedWagePage.requestModal.reasonPlaceholder")}
           />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setShowRequest(false)}>
-              Cancel
+              {t("earnedWagePage.requestModal.cancel")}
             </Button>
             <Button type="submit" disabled={saving || (availability.available || 0) <= 0}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Submit Request
+              {t("earnedWagePage.requestModal.submit")}
             </Button>
           </div>
         </form>
@@ -401,7 +436,7 @@ export function EarnedWagePage() {
       <Modal
         open={showSettings}
         onClose={() => setShowSettings(false)}
-        title="Earned Wage Access Settings"
+        title={t("earnedWagePage.settingsModal.title")}
       >
         <form onSubmit={handleSaveSettings} className="space-y-4">
           <label className="flex items-center gap-2">
@@ -411,11 +446,11 @@ export function EarnedWagePage() {
               defaultChecked={settings.is_enabled}
               className="h-4 w-4 rounded border-gray-300"
             />
-            <span className="text-sm font-medium">Enable Earned Wage Access</span>
+            <span className="text-sm font-medium">{t("earnedWagePage.settingsModal.enable")}</span>
           </label>
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Max % of Earned Salary"
+              label={t("earnedWagePage.settingsModal.maxPercentage")}
               name="maxPercentage"
               type="number"
               defaultValue={settings.max_percentage || 50}
@@ -423,7 +458,7 @@ export function EarnedWagePage() {
               max={100}
             />
             <Input
-              label="Cooldown Days"
+              label={t("earnedWagePage.settingsModal.cooldownDays")}
               name="cooldownDays"
               type="number"
               defaultValue={settings.cooldown_days || 7}
@@ -435,7 +470,7 @@ export function EarnedWagePage() {
               backspace. In edit mode we still pre-fill with stored values. */}
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Min Amount"
+              label={t("earnedWagePage.settingsModal.minAmount")}
               name="minAmount"
               type="number"
               defaultValue={settings.min_amount ?? ""}
@@ -443,7 +478,7 @@ export function EarnedWagePage() {
               placeholder="0"
             />
             <Input
-              label="Max Amount (0 = no limit)"
+              label={t("earnedWagePage.settingsModal.maxAmount")}
               name="maxAmount"
               type="number"
               defaultValue={settings.max_amount ?? ""}
@@ -453,7 +488,7 @@ export function EarnedWagePage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Fee %"
+              label={t("earnedWagePage.settingsModal.feePercentage")}
               name="feePercentage"
               type="number"
               step="0.01"
@@ -462,7 +497,7 @@ export function EarnedWagePage() {
               placeholder="0"
             />
             <Input
-              label="Flat Fee"
+              label={t("earnedWagePage.settingsModal.flatFee")}
               name="feeFlat"
               type="number"
               defaultValue={settings.fee_flat ?? ""}
@@ -471,7 +506,7 @@ export function EarnedWagePage() {
             />
           </div>
           <Input
-            label="Auto-approve Below (0 = disabled)"
+            label={t("earnedWagePage.settingsModal.autoApproveBelow")}
             name="autoApproveBelow"
             type="number"
             defaultValue={settings.auto_approve_below ?? ""}
@@ -485,15 +520,17 @@ export function EarnedWagePage() {
               defaultChecked={settings.requires_manager_approval !== false}
               className="h-4 w-4 rounded border-gray-300"
             />
-            <span className="text-sm font-medium">Requires Manager Approval</span>
+            <span className="text-sm font-medium">
+              {t("earnedWagePage.settingsModal.requiresApproval")}
+            </span>
           </label>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setShowSettings(false)}>
-              Cancel
+              {t("earnedWagePage.settingsModal.cancel")}
             </Button>
             <Button type="submit" disabled={saving}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Save Settings
+              {t("earnedWagePage.settingsModal.save")}
             </Button>
           </div>
         </form>

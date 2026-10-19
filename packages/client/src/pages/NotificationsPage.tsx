@@ -1,15 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { getNotifications, type Notification } from "@/components/ui/NotificationBell";
+import { useTranslation } from "react-i18next";
 
 type Filter = "all" | "unread";
 
 export function NotificationsPage() {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
   const navigate = useNavigate();
-  const [items, setItems] = useState<Notification[]>(() => getNotifications());
+  const [items, setItems] = useState<Notification[]>(() => getNotifications(t, language));
   const [filter, setFilter] = useState<Filter>("all");
 
   const visible = useMemo(
@@ -18,6 +21,10 @@ export function NotificationsPage() {
   );
 
   const unreadCount = items.filter((n) => !n.read).length;
+
+  useEffect(() => {
+    setItems(getNotifications(t, language));
+  }, [language, t]);
 
   function markOneAsRead(id: string) {
     setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
@@ -35,12 +42,12 @@ export function NotificationsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Notifications"
-        description="All your recent alerts and updates in one place"
+        title={t("notificationsPage.title")}
+        description={t("notificationsPage.description")}
         actions={
           unreadCount > 0 ? (
             <Button variant="outline" size="sm" onClick={markAllAsRead}>
-              <Check className="h-4 w-4" /> Mark all as read
+              <Check className="h-4 w-4" /> {t("notificationsPage.markAllRead")}
             </Button>
           ) : null
         }
@@ -56,7 +63,7 @@ export function NotificationsPage() {
               : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
         >
-          All ({items.length})
+          {t("notificationsPage.tabs.all", { count: items.length })}
         </button>
         <button
           onClick={() => setFilter("unread")}
@@ -66,7 +73,7 @@ export function NotificationsPage() {
               : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
         >
-          Unread ({unreadCount})
+          {t("notificationsPage.tabs.unread", { count: unreadCount })}
         </button>
       </div>
 
@@ -74,12 +81,14 @@ export function NotificationsPage() {
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-white px-6 py-16 text-center">
           <Bell className="h-10 w-10 text-gray-300" />
           <h3 className="mt-3 text-sm font-medium text-gray-900">
-            {filter === "unread" ? "No unread notifications" : "No notifications"}
+            {filter === "unread"
+              ? t("notificationsPage.empty.noUnread")
+              : t("notificationsPage.empty.none")}
           </h3>
           <p className="mt-1 text-sm text-gray-500">
             {filter === "unread"
-              ? "You're all caught up!"
-              : "You'll see updates here as they come in."}
+              ? t("notificationsPage.empty.caughtUp")
+              : t("notificationsPage.empty.updatesHere")}
           </p>
         </div>
       ) : (

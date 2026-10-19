@@ -25,6 +25,7 @@ import {
   Building2,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   BarChart,
   Bar,
@@ -41,24 +42,12 @@ import {
 const COLORS = ["#6366F1", "#818CF8", "#A5B4FC", "#C7D2FE", "#E0E7FF", "#EEF2FF"];
 const GROSS_COLOR = "#6366F1";
 const NET_COLOR = "#C7D2FE";
-const MONTHS = [
-  "",
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
 export function DashboardPage() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const locale = i18n.resolvedLanguage || i18n.language || "en";
+  const monthName = (month: number) =>
+    new Intl.DateTimeFormat(locale, { month: "short" }).format(new Date(2026, month - 1, 1));
   const { data: empRes, isLoading: empLoading } = useEmployees({ limit: 1000 });
   const { data: runsRes, isLoading: runsLoading } = usePayrollRuns();
 
@@ -98,7 +87,8 @@ export function DashboardPage() {
   // "Unassigned" bucket instead.
   const deptMap: Record<string, number> = {};
   for (const emp of employees) {
-    const dept = emp.department && String(emp.department).trim() ? emp.department : "Unassigned";
+    const dept =
+      emp.department && String(emp.department).trim() ? emp.department : t("common.unassigned");
     deptMap[dept] = (deptMap[dept] || 0) + 1;
   }
   const departmentHeadcount = Object.entries(deptMap).map(([department, count]) => ({
@@ -129,7 +119,7 @@ export function DashboardPage() {
     .slice(0, 6)
     .reverse()
     .map((r: any) => ({
-      month: `${MONTHS[r.month]} ${r.year}`,
+      month: `${monthName(Number(r.month))} ${r.year}`,
       gross: Number(r.total_gross),
       net: Number(r.total_net),
     }));
@@ -142,19 +132,27 @@ export function DashboardPage() {
     tLen >= 2 ? pctDelta(trendData[tLen - 1].gross, trendData[tLen - 2].gross) : null;
   const netDelta = tLen >= 2 ? pctDelta(trendData[tLen - 1].net, trendData[tLen - 2].net) : null;
   const asTrend = (d: number | null) =>
-    d == null ? undefined : { value: `${Math.abs(d).toFixed(1)}% MoM`, positive: d >= 0 };
+    d == null
+      ? undefined
+      : {
+          value: t("dashboard.monthOverMonth", { value: Math.abs(d).toFixed(1) }),
+          positive: d >= 0,
+        };
 
   const now = new Date();
-  const currentMonth = `${MONTHS[now.getMonth() + 1]} ${now.getFullYear()}`;
+  const currentMonth = new Intl.DateTimeFormat(locale, {
+    month: "short",
+    year: "numeric",
+  }).format(now);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Payroll Dashboard"
-        description={`Overview for ${currentMonth}`}
+        title={t("dashboard.title")}
+        description={t("dashboard.overviewFor", { period: currentMonth })}
         actions={
           <Button onClick={() => navigate("/payroll/runs")}>
-            Run Payroll <ArrowRight className="h-4 w-4" />
+            {t("dashboard.runPayroll")} <ArrowRight className="h-4 w-4" />
           </Button>
         }
       />
@@ -166,31 +164,31 @@ export function DashboardPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {[
           {
-            label: "Add Employee",
+            label: t("dashboard.addEmployee"),
             icon: UserPlus,
             path: "/employees/new",
             chip: "bg-emerald-50 text-emerald-600",
           },
           {
-            label: "View Reports",
+            label: t("dashboard.viewReports"),
             icon: TrendingUp,
             path: "/reports",
             chip: "bg-amber-50 text-amber-600",
           },
           {
-            label: "Payslips",
+            label: t("sidebar.items.payslips"),
             icon: CreditCard,
             path: "/payslips",
             chip: "bg-purple-50 text-purple-600",
           },
           {
-            label: "Attendance",
+            label: t("sidebar.items.attendance"),
             icon: Clock,
             path: "/attendance",
             chip: "bg-sky-50 text-sky-600",
           },
           {
-            label: "Settings",
+            label: t("sidebar.items.settings"),
             icon: Settings,
             path: "/settings",
             chip: "bg-gray-100 text-gray-600",
@@ -223,20 +221,24 @@ export function DashboardPage() {
         <Link
           to="/employees?status=active"
           className="focus-visible:ring-brand-500 rounded-xl focus:outline-none focus-visible:ring-2"
-          aria-label="View active employees"
+          aria-label={t("dashboard.viewActiveEmployees")}
         >
           <StatCard
-            title="Active Employees"
+            title={t("dashboard.activeEmployees")}
             value={String(totalEmployees)}
-            subtitle={`${totalEmployees} total`}
+            subtitle={t("dashboard.totalEmployees", { count: totalEmployees })}
             icon={Users}
             className="h-full cursor-pointer"
           />
         </Link>
         <StatCard
-          title="Last Payroll (Gross)"
+          title={t("dashboard.lastPayrollGross")}
           value={lastRun ? formatCurrency(lastRun.total_gross) : "—"}
-          subtitle={lastRun ? `${MONTHS[lastRun.month]} ${lastRun.year}` : "No payroll yet"}
+          subtitle={
+            lastRun
+              ? `${monthName(Number(lastRun.month))} ${lastRun.year}`
+              : t("dashboard.noPayrollYet")
+          }
           icon={Wallet}
           accentClassName="bg-emerald-50 text-emerald-600"
           trend={asTrend(grossDelta)}
@@ -244,9 +246,13 @@ export function DashboardPage() {
           className="h-full"
         />
         <StatCard
-          title="Last Payroll (Net)"
+          title={t("dashboard.lastPayrollNet")}
           value={lastRun ? formatCurrency(lastRun.total_net) : "—"}
-          subtitle={lastRun ? `${MONTHS[lastRun.month]} ${lastRun.year}` : "No payroll yet"}
+          subtitle={
+            lastRun
+              ? `${monthName(Number(lastRun.month))} ${lastRun.year}`
+              : t("dashboard.noPayrollYet")
+          }
           icon={TrendingUp}
           accentClassName="bg-sky-50 text-sky-600"
           trend={asTrend(netDelta)}
@@ -257,12 +263,9 @@ export function DashboardPage() {
             breakdown. Link to the latest run's detail page where the per-
             component deduction split (PF / ESI / PT / TDS) is rendered. */}
         {lastRun ? (
-          <Link
-            to={`/payroll/runs/${lastRun.id}`}
-            aria-label="View total deductions breakdown for the latest payroll run"
-          >
+          <Link to={`/payroll/runs/${lastRun.id}`} aria-label={t("dashboard.viewDeductions")}>
             <StatCard
-              title="Total Deductions"
+              title={t("dashboard.totalDeductions")}
               value={formatCurrency(lastRun.total_deductions)}
               subtitle="PF + ESI + PT + TDS"
               icon={AlertCircle}
@@ -272,7 +275,7 @@ export function DashboardPage() {
           </Link>
         ) : (
           <StatCard
-            title="Total Deductions"
+            title={t("dashboard.totalDeductions")}
             value="—"
             subtitle="PF + ESI + PT + TDS"
             icon={AlertCircle}
@@ -287,18 +290,16 @@ export function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader className="flex items-center justify-between gap-4">
             <div>
-              <CardTitle>Monthly Payroll Trend</CardTitle>
+              <CardTitle>{t("dashboard.monthlyTrend")}</CardTitle>
               <p className="mt-0.5 text-sm text-gray-500">
                 {trendData.length > 0
-                  ? `Gross vs net over the last ${trendData.length} ${
-                      trendData.length === 1 ? "month" : "months"
-                    }`
-                  : "Gross vs net payroll cost"}
+                  ? t("dashboard.trendPeriods", { count: trendData.length })
+                  : t("dashboard.trendFallback")}
               </p>
             </div>
             <div className="hidden items-center gap-4 sm:flex">
-              <LegendDot color={GROSS_COLOR} label="Gross" />
-              <LegendDot color={NET_COLOR} label="Net" />
+              <LegendDot color={GROSS_COLOR} label={t("dashboard.gross")} />
+              <LegendDot color={NET_COLOR} label={t("dashboard.net")} />
             </div>
           </CardHeader>
           <CardContent>
@@ -342,14 +343,14 @@ export function DashboardPage() {
                     />
                     <Bar
                       dataKey="gross"
-                      name="Gross"
+                      name={t("dashboard.gross")}
                       fill="url(#grossGrad)"
                       radius={[6, 6, 0, 0]}
                       maxBarSize={46}
                     />
                     <Bar
                       dataKey="net"
-                      name="Net"
+                      name={t("dashboard.net")}
                       fill="url(#netGrad)"
                       radius={[6, 6, 0, 0]}
                       maxBarSize={46}
@@ -361,9 +362,7 @@ export function DashboardPage() {
                   <div className="rounded-full bg-gray-50 p-3">
                     <TrendingUp className="h-6 w-6 text-gray-300" />
                   </div>
-                  <p className="text-sm text-gray-400">
-                    No payroll data yet. Run your first payroll to see trends.
-                  </p>
+                  <p className="text-sm text-gray-400">{t("dashboard.noTrend")}</p>
                 </div>
               )}
             </div>
@@ -373,7 +372,7 @@ export function DashboardPage() {
         {/* Department headcount */}
         <Card>
           <CardHeader>
-            <CardTitle>Headcount by Department</CardTitle>
+            <CardTitle>{t("dashboard.headcountByDepartment")}</CardTitle>
           </CardHeader>
           <CardContent>
             {sortedDept.length > 0 ? (
@@ -403,7 +402,10 @@ export function DashboardPage() {
                       </Pie>
                       <Tooltip
                         cursor={false}
-                        formatter={(value: number, name: string) => [`${value} employees`, name]}
+                        formatter={(value: number, name: string) => [
+                          t("common.employee", { count: value }),
+                          name,
+                        ]}
                         contentStyle={{
                           borderRadius: 8,
                           border: "1px solid rgb(229 231 235)",
@@ -416,7 +418,9 @@ export function DashboardPage() {
                   {/* Center total — the donut hole doubles as a KPI. */}
                   <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-2xl font-bold text-gray-900">{totalHeadcount}</span>
-                    <span className="text-xs font-medium text-gray-400">Employees</span>
+                    <span className="text-xs font-medium text-gray-400">
+                      {t("common.employees")}
+                    </span>
                   </div>
                 </div>
                 <ul className="mt-5 space-y-2.5">
@@ -443,7 +447,7 @@ export function DashboardPage() {
                   })}
                   {sortedDept.length > 6 && (
                     <li className="pt-0.5 text-xs text-gray-400">
-                      +{sortedDept.length - 6} more departments
+                      {t("dashboard.moreDepartments", { count: sortedDept.length - 6 })}
                     </li>
                   )}
                 </ul>
@@ -453,7 +457,7 @@ export function DashboardPage() {
                 <div className="rounded-full bg-gray-50 p-3">
                   <Building2 className="h-6 w-6 text-gray-300" />
                 </div>
-                <p className="text-sm text-gray-400">No employees to chart yet.</p>
+                <p className="text-sm text-gray-400">{t("dashboard.noEmployeesToChart")}</p>
               </div>
             )}
           </CardContent>
@@ -468,7 +472,8 @@ export function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              Compliance Status {lastRun ? `— ${MONTHS[lastRun.month]} ${lastRun.year}` : ""}
+              {t("dashboard.complianceStatus")}{" "}
+              {lastRun ? `— ${monthName(Number(lastRun.month))} ${lastRun.year}` : ""}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -481,10 +486,10 @@ export function DashboardPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {(
                 [
-                  { label: "Provident Fund", filed: true },
+                  { label: t("dashboard.providentFund"), filed: true },
                   { label: "ESI", filed: true },
-                  { label: "Professional Tax", filed: true },
-                  { label: "TDS (Form 24Q)", filed: false },
+                  { label: t("dashboard.professionalTax"), filed: true },
+                  { label: t("dashboard.tdsForm"), filed: false },
                 ] as const
               ).map((item) => (
                 <div
@@ -505,7 +510,7 @@ export function DashboardPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-gray-900">{item.label}</p>
                     <Badge variant={item.filed ? "approved" : "pending"}>
-                      {item.filed ? "Filed" : "Pending"}
+                      {item.filed ? t("dashboard.filed") : t("dashboard.pending")}
                     </Badge>
                   </div>
                 </div>
@@ -561,6 +566,7 @@ const ACTIVITY_ICONS: Record<string, any> = {
 };
 
 function RecentActivity() {
+  const { t, i18n } = useTranslation();
   const user = getUser();
   const { data: res } = useQuery({
     queryKey: ["activity", user?.orgId],
@@ -579,20 +585,21 @@ function RecentActivity() {
   // empty state so users know there's simply nothing to display yet
   // rather than seeing demo data dressed up as production.
   const ACTION_LABELS: Record<string, string> = {
-    "payroll_run.created": "Payroll run created",
-    "payroll_run.computed": "Payroll computed",
-    "payroll_run.approved": "Payroll approved",
-    "payroll_run.paid": "Payroll marked paid",
-    "payroll_run.cancelled": "Payroll cancelled",
-    "payroll_run.reverted_to_draft": "Payroll reverted to draft",
-    "payroll_run.rerun": "Payroll re-run",
-    "payroll_run.deleted": "Payroll run deleted",
+    "payroll_run.created": t("dashboard.actions.created"),
+    "payroll_run.computed": t("dashboard.actions.computed"),
+    "payroll_run.approved": t("dashboard.actions.approved"),
+    "payroll_run.paid": t("dashboard.actions.paid"),
+    "payroll_run.cancelled": t("dashboard.actions.cancelled"),
+    "payroll_run.reverted_to_draft": t("dashboard.actions.reverted"),
+    "payroll_run.rerun": t("dashboard.actions.rerun"),
+    "payroll_run.deleted": t("dashboard.actions.deleted"),
   };
   const items = activities.map((a: any) => ({
     icon: ACTIVITY_ICONS[a.action] || Clock,
-    text: ACTION_LABELS[a.action] || String(a.action || "Activity").replace(/\./g, " → "),
+    text:
+      ACTION_LABELS[a.action] || String(a.action || t("dashboard.activity")).replace(/\./g, " → "),
     time: a.created_at
-      ? new Date(a.created_at).toLocaleString("en-IN", {
+      ? new Date(a.created_at).toLocaleString(i18n.resolvedLanguage || i18n.language || "en", {
           month: "short",
           day: "numeric",
           hour: "2-digit",
@@ -605,7 +612,7 @@ function RecentActivity() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" /> Recent Activity
+          <Clock className="h-5 w-5" /> {t("dashboard.recentActivity")}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -614,7 +621,7 @@ function RecentActivity() {
             <div className="rounded-full bg-gray-50 p-3">
               <Clock className="h-6 w-6 text-gray-300" />
             </div>
-            <p className="text-sm text-gray-400">No recent activity yet.</p>
+            <p className="text-sm text-gray-400">{t("dashboard.noRecentActivity")}</p>
           </div>
         ) : (
           <ul className="-my-1">

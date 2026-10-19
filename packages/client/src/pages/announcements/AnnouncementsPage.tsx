@@ -5,7 +5,8 @@ import { apiGet } from "@/api/client";
 import { useQuery } from "@tanstack/react-query";
 import { getUser } from "@/api/auth";
 import { Megaphone, Pin, Loader2, Clock, ExternalLink } from "lucide-react";
-import { formatDate, sanitizeRichHtml } from "@/lib/utils";
+import { sanitizeRichHtml } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 const priorityColors: Record<string, string> = {
   low: "bg-gray-100 text-gray-700",
@@ -29,6 +30,8 @@ const categoryColors: Record<string, string> = {
 const EMPCLOUD_ANNOUNCEMENTS_URL = "https://app.empcloud.com/announcements";
 
 export function AnnouncementsPage() {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
   const user = getUser();
   const isAdmin =
     user?.role === "hr_admin" || user?.role === "hr_manager" || user?.role === "super_admin";
@@ -39,6 +42,12 @@ export function AnnouncementsPage() {
   });
 
   const announcements = res?.data || [];
+  const formatAnnouncementDate = (date: string) =>
+    new Intl.DateTimeFormat(language, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(new Date(date));
 
   if (isLoading) {
     return (
@@ -51,8 +60,8 @@ export function AnnouncementsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Announcements"
-        description="Company-wide notices, posted from EmpCloud"
+        title={t("announcementsPage.title")}
+        description={t("announcementsPage.description")}
         actions={
           isAdmin ? (
             <a
@@ -61,7 +70,7 @@ export function AnnouncementsPage() {
               rel="noopener noreferrer"
               className="bg-brand-600 hover:bg-brand-700 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white"
             >
-              Manage in EmpCloud <ExternalLink className="h-4 w-4" />
+              {t("announcementsPage.manageInEmpCloud")} <ExternalLink className="h-4 w-4" />
             </a>
           ) : undefined
         }
@@ -71,7 +80,7 @@ export function AnnouncementsPage() {
         <Card>
           <CardContent className="py-16 text-center">
             <Megaphone className="mx-auto h-12 w-12 text-gray-300" />
-            <p className="mt-4 text-gray-500">No announcements yet</p>
+            <p className="mt-4 text-gray-500">{t("announcementsPage.empty")}</p>
             {isAdmin && (
               <a
                 href={EMPCLOUD_ANNOUNCEMENTS_URL}
@@ -79,7 +88,7 @@ export function AnnouncementsPage() {
                 rel="noopener noreferrer"
                 className="text-brand-600 mt-2 inline-flex items-center gap-1 text-sm hover:underline"
               >
-                Post one from EmpCloud <ExternalLink className="h-3.5 w-3.5" />
+                {t("announcementsPage.postFromEmpCloud")} <ExternalLink className="h-3.5 w-3.5" />
               </a>
             )}
           </CardContent>
@@ -94,19 +103,30 @@ export function AnnouncementsPage() {
                     {/* #297 — `is_pinned` arrives as MySQL TINYINT (0/1);
                         bare `a.is_pinned && <Pin/>` renders the literal "0"
                         on every unpinned card. Coerce to boolean. */}
-                    {!!a.is_pinned && <Pin className="text-brand-600 h-4 w-4" />}
+                    {!!a.is_pinned && (
+                      <Pin
+                        className="text-brand-600 h-4 w-4"
+                        aria-label={t("announcementsPage.pinned")}
+                      />
+                    )}
                     <h3 className="text-lg font-semibold text-gray-900">{a.title}</h3>
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${priorityColors[a.priority] || priorityColors.normal}`}
                     >
-                      {a.priority}
+                      {t(`announcementsPage.priorities.${a.priority}`, {
+                        defaultValue: a.priority,
+                      })}
                     </span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${categoryColors[a.category] || categoryColors.general}`}
                     >
-                      {a.category}
+                      {t(`announcementsPage.categories.${a.category}`, {
+                        defaultValue: a.category,
+                      })}
                     </span>
-                    {!a.is_active && <Badge variant="inactive">Archived</Badge>}
+                    {!a.is_active && (
+                      <Badge variant="inactive">{t("announcementsPage.archived")}</Badge>
+                    )}
                   </div>
                   {/* Rich content from the EmpCloud editor — render sanitized so
                       it shows formatted (line breaks, bold, lists) instead of
@@ -117,12 +137,18 @@ export function AnnouncementsPage() {
                     dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(a.content) }}
                   />
                   <div className="mt-3 flex items-center gap-4 text-xs text-gray-400">
-                    <span>By {a.author_name || "Unknown"}</span>
-                    <span>{formatDate(a.created_at)}</span>
+                    <span>
+                      {t("announcementsPage.byAuthor", {
+                        author: a.author_name || t("announcementsPage.unknownAuthor"),
+                      })}
+                    </span>
+                    <span>{formatAnnouncementDate(a.created_at)}</span>
                     {a.expires_at && (
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        Expires {formatDate(a.expires_at)}
+                        {t("announcementsPage.expires", {
+                          date: formatAnnouncementDate(a.expires_at),
+                        })}
                       </span>
                     )}
                   </div>

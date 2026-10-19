@@ -10,6 +10,7 @@ import { apiGet, apiPost } from "@/api/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Loader2, Eye, Check, DollarSign } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 const STATUS_BADGE: Record<string, "active" | "draft" | "inactive"> = {
   draft: "draft",
@@ -19,22 +20,11 @@ const STATUS_BADGE: Record<string, "active" | "draft" | "inactive"> = {
   cancelled: "inactive",
 };
 
-const MONTHS = [
-  { value: "1", label: "January" },
-  { value: "2", label: "February" },
-  { value: "3", label: "March" },
-  { value: "4", label: "April" },
-  { value: "5", label: "May" },
-  { value: "6", label: "June" },
-  { value: "7", label: "July" },
-  { value: "8", label: "August" },
-  { value: "9", label: "September" },
-  { value: "10", label: "October" },
-  { value: "11", label: "November" },
-  { value: "12", label: "December" },
-];
+const MONTH_NUMBERS = Array.from({ length: 12 }, (_, index) => index + 1);
 
 export function GlobalPayrollRunsPage() {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
   const qc = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [showDetail, setShowDetail] = useState<string | null>(null);
@@ -77,6 +67,17 @@ export function GlobalPayrollRunsPage() {
   const countries = countriesRes?.data || [];
   const runs = runsRes?.data || [];
   const runDetail = detailRes?.data;
+  const monthOptions = MONTH_NUMBERS.map((monthNumber) => ({
+    value: String(monthNumber),
+    label: new Intl.DateTimeFormat(language, { month: "long" }).format(
+      new Date(2020, monthNumber - 1, 1),
+    ),
+  }));
+  const formatAmount = (value: number | string) => (Number(value) / 100).toLocaleString(language);
+  const formatPeriod = (periodMonth: number, periodYear: number) =>
+    new Intl.DateTimeFormat(language, { month: "long", year: "numeric" }).format(
+      new Date(periodYear, periodMonth - 1, 1),
+    );
 
   // Country IDs where we have at least one active employee. Originally
   // narrowed to EOR/direct-hire only (#154), but that excluded countries
@@ -103,7 +104,7 @@ export function GlobalPayrollRunsPage() {
 
   const handleCreate = async () => {
     if (!countryId) {
-      toast.error("Please select a country");
+      toast.error(t("globalPayrollRuns.messages.selectCountry"));
       return;
     }
     setSaving(true);
@@ -113,11 +114,11 @@ export function GlobalPayrollRunsPage() {
         month: Number(month),
         year: Number(year),
       });
-      toast.success("Payroll run created");
+      toast.success(t("payrollRuns.created"));
       setShowCreate(false);
       qc.invalidateQueries({ queryKey: ["global-payroll-runs"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to create run");
+      toast.error(err.response?.data?.error?.message || t("payrollRuns.createFailed"));
     } finally {
       setSaving(false);
     }
@@ -126,92 +127,100 @@ export function GlobalPayrollRunsPage() {
   const handleApprove = async (runId: string) => {
     try {
       await apiPost(`/global/payroll-runs/${runId}/approve`);
-      toast.success("Payroll run approved");
+      toast.success(t("globalPayrollRuns.messages.approved"));
       qc.invalidateQueries({ queryKey: ["global-payroll-runs"] });
       qc.invalidateQueries({ queryKey: ["global-payroll-run", runId] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to approve");
+      toast.error(
+        err.response?.data?.error?.message || t("globalPayrollRuns.messages.approveFailed"),
+      );
     }
   };
 
   const handleMarkPaid = async (runId: string) => {
     try {
       await apiPost(`/global/payroll-runs/${runId}/paid`);
-      toast.success("Payroll run marked as paid");
+      toast.success(t("globalPayrollRuns.messages.markedPaid"));
       qc.invalidateQueries({ queryKey: ["global-payroll-runs"] });
       qc.invalidateQueries({ queryKey: ["global-payroll-run", runId] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to mark paid");
+      toast.error(
+        err.response?.data?.error?.message || t("globalPayrollRuns.messages.markPaidFailed"),
+      );
     }
   };
 
   const columns = [
     {
       key: "country",
-      header: "Country",
+      header: t("globalPayrollRuns.columns.country"),
       render: (row: any) => <span className="font-medium">{row.country_name}</span>,
     },
     {
       key: "period",
-      header: "Period",
-      render: (row: any) =>
-        `${MONTHS.find((m) => m.value === String(row.period_month))?.label || row.period_month} ${row.period_year}`,
+      header: t("globalPayrollRuns.columns.period"),
+      render: (row: any) => formatPeriod(row.period_month, row.period_year),
     },
     {
       key: "status",
-      header: "Status",
+      header: t("globalPayrollRuns.columns.status"),
       render: (row: any) => (
         <Badge variant={STATUS_BADGE[row.status] || "draft"}>
-          {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+          {t(`payrollRuns.statuses.${row.status}`, { defaultValue: row.status })}
         </Badge>
       ),
     },
     {
       key: "total_gross",
-      header: "Gross",
+      header: t("globalPayrollRuns.columns.gross"),
       render: (row: any) => (
         <span className="font-mono text-sm">
-          {row.currency_symbol || row.currency} {(Number(row.total_gross) / 100).toLocaleString()}
+          {row.currency_symbol || row.currency} {formatAmount(row.total_gross)}
         </span>
       ),
     },
     {
       key: "total_net",
-      header: "Net",
+      header: t("globalPayrollRuns.columns.net"),
       render: (row: any) => (
         <span className="font-mono text-sm text-green-600">
-          {row.currency_symbol || row.currency} {(Number(row.total_net) / 100).toLocaleString()}
+          {row.currency_symbol || row.currency} {formatAmount(row.total_net)}
         </span>
       ),
     },
     {
       key: "total_employer_cost",
-      header: "Employer Cost",
+      header: t("globalPayrollRuns.columns.employerCost"),
       render: (row: any) => (
         <span className="font-mono text-sm text-red-600">
-          {row.currency_symbol || row.currency}{" "}
-          {(Number(row.total_employer_cost) / 100).toLocaleString()}
+          {row.currency_symbol || row.currency} {formatAmount(row.total_employer_cost)}
         </span>
       ),
     },
     {
       key: "actions",
-      header: "Actions",
+      header: t("globalPayrollRuns.columns.actions"),
       render: (row: any) => (
         <div className="flex gap-1">
-          <Button size="sm" variant="outline" onClick={() => setShowDetail(row.id)}>
+          <Button
+            size="sm"
+            variant="outline"
+            aria-label={t("globalPayrollRuns.actions.view")}
+            title={t("globalPayrollRuns.actions.view")}
+            onClick={() => setShowDetail(row.id)}
+          >
             <Eye className="h-3 w-3" />
           </Button>
           {row.status === "draft" && (
             <Button size="sm" variant="outline" onClick={() => handleApprove(row.id)}>
               <Check className="mr-1 h-3 w-3" />
-              Approve
+              {t("globalPayrollRuns.actions.approve")}
             </Button>
           )}
           {row.status === "approved" && (
             <Button size="sm" variant="outline" onClick={() => handleMarkPaid(row.id)}>
               <DollarSign className="mr-1 h-3 w-3" />
-              Paid
+              {t("globalPayrollRuns.actions.markPaid")}
             </Button>
           )}
         </div>
@@ -222,12 +231,12 @@ export function GlobalPayrollRunsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Global Payroll Runs"
-        description="Run payroll per country per month, review, approve, and mark paid"
+        title={t("globalPayrollRuns.title")}
+        description={t("globalPayrollRuns.description")}
         actions={
           <Button onClick={() => setShowCreate(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Create Run
+            {t("payrollRuns.createRun")}
           </Button>
         }
       />
@@ -237,12 +246,13 @@ export function GlobalPayrollRunsPage() {
         <CardContent className="flex items-center gap-3 p-4">
           <SelectField
             className="w-40"
+            aria-label={t("globalPayrollRuns.statusFilter")}
             options={[
-              { value: "", label: "All Statuses" },
-              { value: "draft", label: "Draft" },
-              { value: "approved", label: "Approved" },
-              { value: "paid", label: "Paid" },
-              { value: "cancelled", label: "Cancelled" },
+              { value: "", label: t("globalPayrollRuns.allStatuses") },
+              { value: "draft", label: t("payrollRuns.statuses.draft") },
+              { value: "approved", label: t("payrollRuns.statuses.approved") },
+              { value: "paid", label: t("payrollRuns.statuses.paid") },
+              { value: "cancelled", label: t("payrollRuns.statuses.cancelled") },
             ]}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -255,18 +265,14 @@ export function GlobalPayrollRunsPage() {
           <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
         </div>
       ) : (
-        <DataTable
-          columns={columns}
-          data={runs}
-          emptyMessage="No payroll runs yet. Create your first global payroll run."
-        />
+        <DataTable columns={columns} data={runs} emptyMessage={t("globalPayrollRuns.empty")} />
       )}
 
       {/* Create Run Modal */}
       <Modal
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        title="Create Global Payroll Run"
+        title={t("globalPayrollRuns.createModal.title")}
       >
         <div className="space-y-4">
           {/* #118/#154 — When there are no *payable* countries (i.e. none
@@ -274,14 +280,14 @@ export function GlobalPayrollRunsPage() {
               empty with an explanatory label so users don't submit into
               "no employees in <country>" errors. */}
           <SelectField
-            label="Country *"
+            label={t("globalPayrollRuns.createModal.country")}
             options={[
               {
                 value: "",
                 label:
                   countryOptions.length > 0
-                    ? "Select a country..."
-                    : "No countries with active EOR/direct-hire employees",
+                    ? t("globalPayrollRuns.createModal.selectCountry")
+                    : t("globalPayrollRuns.createModal.noCountries"),
               },
               ...countryOptions,
             ]}
@@ -291,29 +297,28 @@ export function GlobalPayrollRunsPage() {
           />
           <div className="grid grid-cols-2 gap-4">
             <SelectField
-              label="Month"
-              options={MONTHS}
+              label={t("payrollRuns.month")}
+              options={monthOptions}
               value={month}
               onChange={(e) => setMonth(e.target.value)}
             />
             <SelectField
-              label="Year"
+              label={t("payrollRuns.year")}
               options={yearOptions}
               value={year}
               onChange={(e) => setYear(e.target.value)}
             />
           </div>
           <p className="text-xs text-gray-500">
-            This will auto-calculate deductions for all active EOR and direct-hire employees in the
-            selected country.
+            {t("globalPayrollRuns.createModal.calculationNotice")}
           </p>
           <div className="flex justify-end gap-3 pt-4">
             <Button variant="outline" onClick={() => setShowCreate(false)}>
-              Cancel
+              {t("payrollRuns.cancel")}
             </Button>
             <Button onClick={handleCreate} disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Run
+              {t("payrollRuns.createRun")}
             </Button>
           </div>
         </div>
@@ -323,7 +328,9 @@ export function GlobalPayrollRunsPage() {
       <Modal
         open={!!showDetail}
         onClose={() => setShowDetail(null)}
-        title={`Payroll Run - ${runDetail?.country_name || ""}`}
+        title={t("globalPayrollRuns.detailModal.title", {
+          country: runDetail?.country_name || "",
+        })}
       >
         {detailLoading ? (
           <div className="flex h-32 items-center justify-center">
@@ -333,30 +340,29 @@ export function GlobalPayrollRunsPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-4 gap-4 text-center">
               <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
-                <p className="text-xs text-gray-500">Gross</p>
+                <p className="text-xs text-gray-500">{t("globalPayrollRuns.columns.gross")}</p>
                 <p className="text-sm font-bold">
-                  {runDetail.currency_symbol}{" "}
-                  {(Number(runDetail.total_gross) / 100).toLocaleString()}
+                  {runDetail.currency_symbol} {formatAmount(runDetail.total_gross)}
                 </p>
               </div>
               <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
-                <p className="text-xs text-gray-500">Deductions</p>
+                <p className="text-xs text-gray-500">{t("globalPayrollRuns.columns.deductions")}</p>
                 <p className="text-sm font-bold text-orange-600">
-                  {runDetail.currency_symbol}{" "}
-                  {(Number(runDetail.total_deductions) / 100).toLocaleString()}
+                  {runDetail.currency_symbol} {formatAmount(runDetail.total_deductions)}
                 </p>
               </div>
               <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
-                <p className="text-xs text-gray-500">Net Pay</p>
+                <p className="text-xs text-gray-500">{t("globalPayrollRuns.detailModal.netPay")}</p>
                 <p className="text-sm font-bold text-green-600">
-                  {runDetail.currency_symbol} {(Number(runDetail.total_net) / 100).toLocaleString()}
+                  {runDetail.currency_symbol} {formatAmount(runDetail.total_net)}
                 </p>
               </div>
               <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
-                <p className="text-xs text-gray-500">Employer Cost</p>
+                <p className="text-xs text-gray-500">
+                  {t("globalPayrollRuns.columns.employerCost")}
+                </p>
                 <p className="text-sm font-bold text-red-600">
-                  {runDetail.currency_symbol}{" "}
-                  {(Number(runDetail.total_employer_cost) / 100).toLocaleString()}
+                  {runDetail.currency_symbol} {formatAmount(runDetail.total_employer_cost)}
                 </p>
               </div>
             </div>
@@ -365,13 +371,27 @@ export function GlobalPayrollRunsPage() {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="pb-2 font-medium text-gray-500">Employee</th>
-                    <th className="pb-2 text-right font-medium text-gray-500">Gross</th>
-                    <th className="pb-2 text-right font-medium text-gray-500">Tax</th>
-                    <th className="pb-2 text-right font-medium text-gray-500">SS (Emp)</th>
-                    <th className="pb-2 text-right font-medium text-gray-500">Pension (Emp)</th>
-                    <th className="pb-2 text-right font-medium text-gray-500">Net</th>
-                    <th className="pb-2 text-right font-medium text-gray-500">Employer Cost</th>
+                    <th className="pb-2 font-medium text-gray-500">
+                      {t("globalPayrollRuns.detailModal.employee")}
+                    </th>
+                    <th className="pb-2 text-right font-medium text-gray-500">
+                      {t("globalPayrollRuns.columns.gross")}
+                    </th>
+                    <th className="pb-2 text-right font-medium text-gray-500">
+                      {t("globalPayrollRuns.detailModal.tax")}
+                    </th>
+                    <th className="pb-2 text-right font-medium text-gray-500">
+                      {t("globalPayrollRuns.detailModal.socialSecurityEmployee")}
+                    </th>
+                    <th className="pb-2 text-right font-medium text-gray-500">
+                      {t("globalPayrollRuns.detailModal.pensionEmployee")}
+                    </th>
+                    <th className="pb-2 text-right font-medium text-gray-500">
+                      {t("globalPayrollRuns.columns.net")}
+                    </th>
+                    <th className="pb-2 text-right font-medium text-gray-500">
+                      {t("globalPayrollRuns.columns.employerCost")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -382,22 +402,22 @@ export function GlobalPayrollRunsPage() {
                         <p className="text-gray-400">{item.employee_email}</p>
                       </td>
                       <td className="py-2 text-right font-mono">
-                        {(Number(item.gross_salary) / 100).toLocaleString()}
+                        {formatAmount(item.gross_salary)}
                       </td>
                       <td className="py-2 text-right font-mono text-orange-600">
-                        {(Number(item.tax_amount) / 100).toLocaleString()}
+                        {formatAmount(item.tax_amount)}
                       </td>
                       <td className="py-2 text-right font-mono">
-                        {(Number(item.social_security_employee) / 100).toLocaleString()}
+                        {formatAmount(item.social_security_employee)}
                       </td>
                       <td className="py-2 text-right font-mono">
-                        {(Number(item.pension_employee) / 100).toLocaleString()}
+                        {formatAmount(item.pension_employee)}
                       </td>
                       <td className="py-2 text-right font-mono text-green-600">
-                        {(Number(item.net_salary) / 100).toLocaleString()}
+                        {formatAmount(item.net_salary)}
                       </td>
                       <td className="py-2 text-right font-mono font-bold text-red-600">
-                        {(Number(item.total_employer_cost) / 100).toLocaleString()}
+                        {formatAmount(item.total_employer_cost)}
                       </td>
                     </tr>
                   ))}
@@ -415,7 +435,7 @@ export function GlobalPayrollRunsPage() {
                   }}
                 >
                   <Check className="mr-1 h-3 w-3" />
-                  Approve
+                  {t("globalPayrollRuns.actions.approve")}
                 </Button>
               )}
               {runDetail.status === "approved" && (
@@ -427,7 +447,7 @@ export function GlobalPayrollRunsPage() {
                   }}
                 >
                   <DollarSign className="mr-1 h-3 w-3" />
-                  Mark Paid
+                  {t("globalPayrollRuns.actions.markPaid")}
                 </Button>
               )}
             </div>

@@ -19,6 +19,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 interface Declaration {
   id: string;
@@ -47,6 +48,7 @@ function currentFY(): string {
 const PAGE_SIZE = 25;
 
 export function AdminDeclarationsPage() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const fy = currentFY();
 
@@ -133,14 +135,16 @@ export function AdminDeclarationsPage() {
       qc.invalidateQueries({ queryKey: ["pending-declarations", fy] });
       const n = Number(res?.data?.approved ?? 0);
       if (n === 0) {
-        toast("No pending declarations to approve.", { icon: "ℹ️" });
+        toast(t("adminDeclarations.toasts.noPending"), { icon: "ℹ️" });
       } else {
-        toast.success(`Approved ${n} declaration${n === 1 ? "" : "s"}.`);
+        toast.success(t("adminDeclarations.toasts.approvedCount", { count: n }));
       }
     },
     onError: (err: any) => {
       const msg =
-        err?.response?.data?.error?.message || err?.message || "Failed to approve declarations";
+        err?.response?.data?.error?.message ||
+        err?.message ||
+        t("adminDeclarations.toasts.approveAllFailed");
       toast.error(msg);
     },
   });
@@ -152,14 +156,16 @@ export function AdminDeclarationsPage() {
       qc.invalidateQueries({ queryKey: ["admin-declarations", selectedEmpId, fy] });
       qc.invalidateQueries({ queryKey: ["pending-declarations", fy] });
       if (res?.data?.alreadyApproved) {
-        toast("Already approved.", { icon: "ℹ️" });
+        toast(t("adminDeclarations.toasts.alreadyApproved"), { icon: "ℹ️" });
       } else {
-        toast.success("Declaration approved.");
+        toast.success(t("adminDeclarations.toasts.approvedOne"));
       }
     },
     onError: (err: any) => {
       const msg =
-        err?.response?.data?.error?.message || err?.message || "Failed to approve declaration";
+        err?.response?.data?.error?.message ||
+        err?.message ||
+        t("adminDeclarations.toasts.approveOneFailed");
       toast.error(msg);
     },
   });
@@ -167,8 +173,8 @@ export function AdminDeclarationsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Tax Declarations"
-        description={`Review investment declarations submitted by employees for ${fy}.`}
+        title={t("adminDeclarations.title")}
+        description={t("adminDeclarations.description", { financialYear: fy })}
       />
 
       {/* #398 — Pending across all employees. Lets the admin spot who has
@@ -177,11 +183,13 @@ export function AdminDeclarationsPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
-            <CardTitle>Pending Approvals</CardTitle>
+            <CardTitle>{t("adminDeclarations.pending.title")}</CardTitle>
             {totalPendingDecls > 0 && (
               <Badge variant="pending">
-                {totalPendingDecls} pending · {pendingEmployees.length} employee
-                {pendingEmployees.length === 1 ? "" : "s"}
+                {t("adminDeclarations.pending.badge", {
+                  pending: totalPendingDecls,
+                  count: pendingEmployees.length,
+                })}
               </Badge>
             )}
           </div>
@@ -189,12 +197,12 @@ export function AdminDeclarationsPage() {
         <CardContent>
           {pendingLoading ? (
             <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-400">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading pending declarations…
+              <Loader2 className="h-4 w-4 animate-spin" /> {t("adminDeclarations.pending.loading")}
             </div>
           ) : pendingEmployees.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-8 text-sm text-gray-400">
               <FileCheck className="h-8 w-8" />
-              <p>No declarations awaiting approval for {fy}. You're all caught up.</p>
+              <p>{t("adminDeclarations.pending.empty", { financialYear: fy })}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -216,7 +224,9 @@ export function AdminDeclarationsPage() {
                       <p className="truncate text-sm font-medium text-gray-900">{emp.name}</p>
                       <p className="truncate text-xs text-gray-400">
                         {emp.empCode ? `${emp.empCode} · ` : ""}
-                        {formatCurrency(Number(emp.totalDeclared || 0))} declared
+                        {t("adminDeclarations.pending.declaredAmount", {
+                          amount: formatCurrency(Number(emp.totalDeclared || 0)),
+                        })}
                       </p>
                     </div>
                     <Badge variant="pending">{emp.pendingCount}</Badge>
@@ -232,7 +242,7 @@ export function AdminDeclarationsPage() {
         {/* Employee picker */}
         <Card>
           <CardHeader>
-            <CardTitle>Employees</CardTitle>
+            <CardTitle>{t("adminDeclarations.employees.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -241,7 +251,7 @@ export function AdminDeclarationsPage() {
                 <Input
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Name, email, or code"
+                  placeholder={t("adminDeclarations.filters.searchPlaceholder")}
                   className="pl-9"
                 />
               </div>
@@ -249,9 +259,9 @@ export function AdminDeclarationsPage() {
                 value={departmentId}
                 onChange={(e) => setDepartmentId(e.target.value)}
                 className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                aria-label="Filter by department"
+                aria-label={t("adminDeclarations.filters.filterDepartment")}
               >
-                <option value="">All departments</option>
+                <option value="">{t("adminDeclarations.filters.allDepartments")}</option>
                 {departments.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}
@@ -262,9 +272,9 @@ export function AdminDeclarationsPage() {
                 value={locationId}
                 onChange={(e) => setLocationId(e.target.value)}
                 className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                aria-label="Filter by location"
+                aria-label={t("adminDeclarations.filters.filterLocation")}
               >
-                <option value="">All locations</option>
+                <option value="">{t("adminDeclarations.filters.allLocations")}</option>
                 {locations.map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.name}
@@ -282,7 +292,7 @@ export function AdminDeclarationsPage() {
                   }}
                   className="text-xs text-gray-500 underline hover:text-gray-700"
                 >
-                  Clear filters
+                  {t("adminDeclarations.filters.clear")}
                 </button>
               )}
             </div>
@@ -290,10 +300,13 @@ export function AdminDeclarationsPage() {
             <div className="mt-4 max-h-[480px] space-y-1 overflow-y-auto">
               {empLoading ? (
                 <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-400">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+                  <Loader2 className="h-4 w-4 animate-spin" />{" "}
+                  {t("adminDeclarations.employees.loading")}
                 </div>
               ) : employees.length === 0 ? (
-                <p className="py-6 text-center text-sm text-gray-400">No matching employees.</p>
+                <p className="py-6 text-center text-sm text-gray-400">
+                  {t("adminDeclarations.employees.noMatches")}
+                </p>
               ) : (
                 employees.map((e) => {
                   const id = String(e.empcloud_user_id ?? e.id);
@@ -329,7 +342,10 @@ export function AdminDeclarationsPage() {
 
             <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-3 text-xs text-gray-500 dark:border-gray-700">
               <span>
-                {employees.length} of {total}
+                {t("adminDeclarations.employees.shownOf", {
+                  shown: employees.length,
+                  total,
+                })}
               </span>
               <div className="flex items-center gap-2">
                 <Button
@@ -337,7 +353,7 @@ export function AdminDeclarationsPage() {
                   size="sm"
                   disabled={isFetching || page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  aria-label="Previous page"
+                  aria-label={t("pagination.previousPage")}
                 >
                   <ChevronLeft className="h-3.5 w-3.5" />
                 </Button>
@@ -349,7 +365,7 @@ export function AdminDeclarationsPage() {
                   size="sm"
                   disabled={isFetching || page >= totalPages}
                   onClick={() => setPage((p) => p + 1)}
-                  aria-label="Next page"
+                  aria-label={t("pagination.nextPage")}
                 >
                   <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
@@ -368,7 +384,7 @@ export function AdminDeclarationsPage() {
                     ? `${selectedEmp.first_name} ${selectedEmp.last_name}`
                     : selectedInfo
                       ? selectedInfo.name
-                      : "Pick an employee"}
+                      : t("adminDeclarations.declarations.pickEmployee")}
                 </CardTitle>
                 {(selectedEmp || selectedInfo) && (
                   <p className="mt-1 text-xs text-gray-500">
@@ -384,11 +400,15 @@ export function AdminDeclarationsPage() {
                 >
                   {approveAll.isPending ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" /> Approving…
+                      <Loader2 className="h-4 w-4 animate-spin" />{" "}
+                      {t("adminDeclarations.declarations.approving")}
                     </>
                   ) : (
                     <>
-                      <FileCheck className="h-4 w-4" /> Approve {pendingCount} pending
+                      <FileCheck className="h-4 w-4" />{" "}
+                      {t("adminDeclarations.declarations.approvePending", {
+                        count: pendingCount,
+                      })}
                     </>
                   )}
                 </Button>
@@ -399,33 +419,36 @@ export function AdminDeclarationsPage() {
             {!selectedEmpId ? (
               <div className="flex flex-col items-center justify-center gap-3 py-12 text-sm text-gray-400">
                 <ClipboardList className="h-10 w-10" />
-                <p>Select an employee from the list to view their tax declarations.</p>
+                <p>{t("adminDeclarations.declarations.selectPrompt")}</p>
               </div>
             ) : declLoading ? (
               <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-400">
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading declarations…
+                <Loader2 className="h-4 w-4 animate-spin" />{" "}
+                {t("adminDeclarations.declarations.loading")}
               </div>
             ) : declarations.length === 0 ? (
               <p className="py-12 text-center text-sm text-gray-400">
-                No declarations submitted for {fy}.
+                {t("adminDeclarations.declarations.empty", { financialYear: fy })}
               </p>
             ) : (
               <div className="space-y-3">
                 <div className="grid grid-cols-3 gap-3 text-sm">
                   <div className="rounded-lg bg-gray-50 p-3">
-                    <p className="text-xs text-gray-500">Declared</p>
+                    <p className="text-xs text-gray-500">{t("adminDeclarations.stats.declared")}</p>
                     <p className="mt-1 text-lg font-semibold text-gray-900">
                       {formatCurrency(totalDeclared)}
                     </p>
                   </div>
                   <div className="rounded-lg bg-green-50 p-3">
-                    <p className="text-xs text-green-700">Approved</p>
+                    <p className="text-xs text-green-700">
+                      {t("adminDeclarations.stats.approved")}
+                    </p>
                     <p className="mt-1 text-lg font-semibold text-green-900">
                       {formatCurrency(totalApproved)}
                     </p>
                   </div>
                   <div className="rounded-lg bg-amber-50 p-3">
-                    <p className="text-xs text-amber-700">Pending</p>
+                    <p className="text-xs text-amber-700">{t("adminDeclarations.stats.pending")}</p>
                     <p className="mt-1 text-lg font-semibold text-amber-900">{pendingCount}</p>
                   </div>
                 </div>
@@ -434,13 +457,27 @@ export function AdminDeclarationsPage() {
                   <table className="min-w-full text-sm">
                     <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                       <tr>
-                        <th className="px-4 py-3 text-left">Section</th>
-                        <th className="px-4 py-3 text-left">Description</th>
-                        <th className="px-4 py-3 text-right">Declared</th>
-                        <th className="px-4 py-3 text-right">Approved</th>
-                        <th className="px-4 py-3 text-left">Status</th>
-                        <th className="px-4 py-3 text-left">Proof</th>
-                        <th className="px-4 py-3 text-right">Action</th>
+                        <th className="px-4 py-3 text-left">
+                          {t("adminDeclarations.columns.section")}
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          {t("adminDeclarations.columns.description")}
+                        </th>
+                        <th className="px-4 py-3 text-right">
+                          {t("adminDeclarations.columns.declared")}
+                        </th>
+                        <th className="px-4 py-3 text-right">
+                          {t("adminDeclarations.columns.approved")}
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          {t("adminDeclarations.columns.status")}
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          {t("adminDeclarations.columns.proof")}
+                        </th>
+                        <th className="px-4 py-3 text-right">
+                          {t("adminDeclarations.columns.action")}
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -462,7 +499,9 @@ export function AdminDeclarationsPage() {
                             </td>
                             <td className="px-4 py-3">
                               <Badge variant={statusBadgeVariant(d.approval_status)}>
-                                {d.approval_status}
+                                {t(`adminDeclarations.statuses.${d.approval_status}`, {
+                                  defaultValue: d.approval_status,
+                                })}
                               </Badge>
                             </td>
                             <td className="px-4 py-3">
@@ -473,7 +512,8 @@ export function AdminDeclarationsPage() {
                                   rel="noreferrer"
                                   className="text-brand-600 hover:text-brand-700 inline-flex items-center gap-1 text-xs"
                                 >
-                                  View <ExternalLink className="h-3 w-3" />
+                                  {t("adminDeclarations.proof.view")}{" "}
+                                  <ExternalLink className="h-3 w-3" />
                                 </a>
                               ) : (
                                 <span className="text-xs text-gray-400">—</span>
@@ -492,7 +532,7 @@ export function AdminDeclarationsPage() {
                                   ) : (
                                     <FileCheck className="h-3 w-3" />
                                   )}
-                                  Approve
+                                  {t("adminDeclarations.actions.approve")}
                                 </Button>
                               ) : (
                                 <span className="text-xs text-gray-400">—</span>

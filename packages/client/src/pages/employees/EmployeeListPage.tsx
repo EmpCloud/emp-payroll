@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -19,6 +20,7 @@ import { BulkSalaryCSVModal } from "@/components/ui/BulkSalaryCSVModal";
 const PAGE_SIZE = 20;
 
 export function EmployeeListPage() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
@@ -77,10 +79,17 @@ export function EmployeeListPage() {
   async function handleBankReqAction(reqId: string, action: "approve" | "reject") {
     try {
       await apiPost(`/employees/bank-update-requests/${reqId}/${action}`, {});
-      toast.success(action === "approve" ? "Bank details updated" : "Request rejected");
+      toast.success(
+        action === "approve" ? t("employeeList.bankUpdated") : t("employeeList.requestRejected"),
+      );
       qc.invalidateQueries({ queryKey: ["bank-update-requests"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || `Failed to ${action}`);
+      toast.error(
+        err.response?.data?.error?.message ||
+          t("employeeList.actionFailed", {
+            action: t(`employeeList.${action}`),
+          }),
+      );
     }
   }
 
@@ -91,6 +100,9 @@ export function EmployeeListPage() {
       render: (row: any) => (
         <input
           type="checkbox"
+          aria-label={t("employeeList.selectEmployee", {
+            name: `${row.first_name} ${row.last_name}`,
+          })}
           checked={selectedIds.has(String(row.id))}
           onChange={(e) => {
             const next = new Set(selectedIds);
@@ -104,7 +116,7 @@ export function EmployeeListPage() {
     },
     {
       key: "name",
-      header: "Employee",
+      header: t("employeeList.columns.employee"),
       render: (row: any) => (
         <div className="flex items-center gap-3">
           <Avatar name={`${row.first_name} ${row.last_name}`} size="sm" />
@@ -119,7 +131,7 @@ export function EmployeeListPage() {
     },
     {
       key: "designation",
-      header: "Designation",
+      header: t("employeeList.columns.designation"),
       render: (row: any) => (
         <div>
           <p className="text-gray-900">{row.designation}</p>
@@ -129,28 +141,32 @@ export function EmployeeListPage() {
     },
     {
       key: "email",
-      header: "Email",
+      header: t("employeeList.columns.email"),
       render: (row: any) => <span className="text-gray-600">{row.email}</span>,
     },
     {
       key: "location",
-      header: "Location",
+      header: t("employeeList.columns.location"),
       render: (row: any) => (
         <span className="text-gray-600">{row.location || row.location_name || "—"}</span>
       ),
     },
     {
       key: "date_of_joining",
-      header: "Joined",
+      header: t("employeeList.columns.joined"),
       render: (row: any) =>
-        row.date_of_joining ? new Date(row.date_of_joining).toLocaleDateString("en-IN") : "—",
+        row.date_of_joining
+          ? new Intl.DateTimeFormat(i18n.resolvedLanguage || i18n.language).format(
+              new Date(row.date_of_joining),
+            )
+          : "—",
     },
     {
       key: "status",
-      header: "Status",
+      header: t("employeeList.columns.status"),
       render: (row: any) => (
         <Badge variant={row.is_active ? "active" : "inactive"}>
-          {row.is_active ? "Active" : "Inactive"}
+          {row.is_active ? t("employeeList.statuses.active") : t("employeeList.statuses.inactive")}
         </Badge>
       ),
     },
@@ -161,9 +177,11 @@ export function EmployeeListPage() {
     .map((e: any) => `${e.first_name} ${e.last_name}`);
 
   const description = isLoading
-    ? "Loading..."
-    : `${employees.length} of ${total} employee${total === 1 ? "" : "s"}` +
-      (statusFilter ? ` · ${statusFilter}` : "");
+    ? t("employeeList.loading")
+    : t("employeeList.summary", { count: total, visible: employees.length, total }) +
+      (statusFilter
+        ? ` · ${t(`employeeList.statuses.${statusFilter}`, { defaultValue: statusFilter })}`
+        : "");
 
   return (
     <ErrorBoundary>
@@ -174,7 +192,7 @@ export function EmployeeListPage() {
             <div className="mb-3 flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-amber-600" />
               <h3 className="font-semibold text-amber-800 dark:text-amber-200">
-                Pending Bank Update Requests ({pendingBankReqs.length})
+                {t("employeeList.pendingBankRequests", { count: pendingBankReqs.length })}
               </h3>
             </div>
             <div className="space-y-2">
@@ -188,8 +206,11 @@ export function EmployeeListPage() {
                     <span className="ml-2 text-gray-500">{r.emp_code}</span>
                     <span className="mx-2 text-gray-300">|</span>
                     <span className="text-gray-600">
-                      {r.requested_details?.bankName} — A/C {r.requested_details?.accountNumber} —
-                      IFSC {r.requested_details?.ifscCode}
+                      {t("employeeList.bankDetails", {
+                        bank: r.requested_details?.bankName,
+                        accountNumber: r.requested_details?.accountNumber,
+                        ifscCode: r.requested_details?.ifscCode,
+                      })}
                     </span>
                     {r.reason && <span className="ml-2 text-xs text-gray-400">({r.reason})</span>}
                   </div>
@@ -200,7 +221,7 @@ export function EmployeeListPage() {
                       onClick={() => handleBankReqAction(r.id, "approve")}
                       className="text-green-600 hover:text-green-700"
                     >
-                      <Check className="h-3.5 w-3.5" /> Approve
+                      <Check className="h-3.5 w-3.5" /> {t("employeeList.approve")}
                     </Button>
                     <Button
                       size="sm"
@@ -208,7 +229,7 @@ export function EmployeeListPage() {
                       onClick={() => handleBankReqAction(r.id, "reject")}
                       className="text-red-500 hover:text-red-600"
                     >
-                      <X className="h-3.5 w-3.5" /> Reject
+                      <X className="h-3.5 w-3.5" /> {t("employeeList.reject")}
                     </Button>
                   </div>
                 </div>
@@ -218,7 +239,7 @@ export function EmployeeListPage() {
         )}
 
         <PageHeader
-          title="Employees"
+          title={t("employeeList.title")}
           description={description}
           actions={
             <>
@@ -234,40 +255,40 @@ export function EmployeeListPage() {
                     a.download = "employees.csv";
                     a.click();
                     URL.revokeObjectURL(url);
-                    toast.success("Exported employees CSV");
+                    toast.success(t("employeeList.exportSuccess"));
                   } catch {
-                    toast.error("Export failed");
+                    toast.error(t("employeeList.exportFailed"));
                   }
                 }}
               >
-                <Download className="h-4 w-4" /> Export
+                <Download className="h-4 w-4" /> {t("employeeList.export")}
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => navigate("/employees/import")}
-                title="Import new employees from a CSV file"
+                title={t("employeeList.importTitle")}
               >
-                <Upload className="h-4 w-4" /> Import
+                <Upload className="h-4 w-4" /> {t("employeeList.import")}
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setShowBulkUpdate(true)}
-                title="Bulk update existing employees from a CSV file"
+                title={t("employeeList.bulkUpdateTitle")}
               >
-                <Upload className="h-4 w-4" /> Bulk Update
+                <Upload className="h-4 w-4" /> {t("employeeList.bulkUpdate")}
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setShowBulkSalaryCSV(true)}
-                title="Bulk update salary from CSV file"
+                title={t("employeeList.bulkSalaryTitle")}
               >
-                <Upload className="h-4 w-4" /> Bulk Salary
+                <Upload className="h-4 w-4" /> {t("employeeList.bulkSalary")}
               </Button>
               <Button size="sm" onClick={() => navigate("/employees/new")}>
-                <Plus className="h-4 w-4" /> Add Employee
+                <Plus className="h-4 w-4" /> {t("employeeList.addEmployee")}
               </Button>
             </>
           }
@@ -279,7 +300,7 @@ export function EmployeeListPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by name, email, code, or designation..."
+              placeholder={t("employeeList.searchPlaceholder")}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
@@ -289,9 +310,9 @@ export function EmployeeListPage() {
             value={departmentId}
             onChange={(e) => setDepartmentId(e.target.value)}
             className="focus:border-brand-500 focus:ring-brand-500 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-            aria-label="Filter by department"
+            aria-label={t("employeeList.filterDepartment")}
           >
-            <option value="">All departments</option>
+            <option value="">{t("employeeList.allDepartments")}</option>
             {departments.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.name}
@@ -302,9 +323,9 @@ export function EmployeeListPage() {
             value={locationId}
             onChange={(e) => setLocationId(e.target.value)}
             className="focus:border-brand-500 focus:ring-brand-500 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-            aria-label="Filter by location"
+            aria-label={t("employeeList.filterLocation")}
           >
-            <option value="">All locations</option>
+            <option value="">{t("employeeList.allLocations")}</option>
             {locations.map((l) => (
               <option key={l.id} value={l.id}>
                 {l.name}
@@ -324,7 +345,7 @@ export function EmployeeListPage() {
             }}
             className="text-xs text-gray-500 underline hover:text-gray-700"
           >
-            Clear filters
+            {t("employeeList.clearFilters")}
           </button>
         )}
 
@@ -332,16 +353,16 @@ export function EmployeeListPage() {
         {selectedIds.size > 0 && (
           <div className="flex items-center gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3">
             <span className="text-sm font-medium text-indigo-700">
-              {selectedIds.size} employee(s) selected
+              {t("employeeList.selected", { count: selectedIds.size })}
             </span>
             <Button size="sm" onClick={() => setShowBulkSalary(true)}>
-              Update Salary
+              {t("employeeList.updateSalary")}
             </Button>
             <button
               className="ml-auto text-xs text-gray-500 hover:text-gray-700"
               onClick={() => setSelectedIds(new Set())}
             >
-              Clear
+              {t("employeeList.clear")}
             </button>
           </div>
         )}

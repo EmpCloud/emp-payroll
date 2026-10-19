@@ -1,0 +1,2460 @@
+{
+  "language": { "change": "Sprache ändern", "menuLabel": "Sprache auswählen" },
+  "common": {
+    "appName": "EMP Payroll",
+    "user": "Benutzer",
+    "employees": "Mitarbeiter",
+    "employee_one": "{{count}} Mitarbeiter",
+    "employee_other": "{{count}} Mitarbeiter",
+    "unassigned": "Nicht zugewiesen",
+    "noResults": "Keine Ergebnisse gefunden"
+  },
+  "employeeList": {
+    "title": "Mitarbeiter",
+    "loading": "Wird geladen...",
+    "summary": "{{visible}} von {{total}} Mitarbeitern",
+    "summary_one": "{{visible}} von {{total}} Mitarbeiter",
+    "summary_other": "{{visible}} von {{total}} Mitarbeitern",
+    "pendingBankRequests": "Ausstehende Anträge auf Bankdatenänderung ({{count}})",
+    "bankDetails": "{{bank}} — Konto {{accountNumber}} — IFSC {{ifscCode}}",
+    "approve": "Genehmigen",
+    "reject": "Ablehnen",
+    "bankUpdated": "Bankdaten aktualisiert",
+    "requestRejected": "Antrag abgelehnt",
+    "actionFailed": "Aktion fehlgeschlagen: {{action}}",
+    "selectEmployee": "{{name}} auswählen",
+    "export": "Exportieren",
+    "exportSuccess": "Mitarbeiter-CSV exportiert",
+    "exportFailed": "Export fehlgeschlagen",
+    "import": "Importieren",
+    "importTitle": "Neue Mitarbeiter aus einer CSV-Datei importieren",
+    "bulkUpdate": "Sammelaktualisierung",
+    "bulkUpdateTitle": "Bestehende Mitarbeiter aus einer CSV-Datei aktualisieren",
+    "bulkSalary": "Sammelgehalt",
+    "bulkSalaryTitle": "Gehälter aus einer CSV-Datei aktualisieren",
+    "addEmployee": "Mitarbeiter hinzufügen",
+    "searchPlaceholder": "Nach Name, E-Mail, Code oder Position suchen...",
+    "filterDepartment": "Nach Abteilung filtern",
+    "allDepartments": "Alle Abteilungen",
+    "filterLocation": "Nach Standort filtern",
+    "allLocations": "Alle Standorte",
+    "clearFilters": "Filter löschen",
+    "selected": "{{count}} Mitarbeiter ausgewählt",
+    "selected_one": "{{count}} Mitarbeiter ausgewählt",
+    "selected_other": "{{count}} Mitarbeiter ausgewählt",
+    "updateSalary": "Gehalt aktualisieren",
+    "clear": "Löschen",
+    "columns": {
+      "employee": "Mitarbeiter",
+      "designation": "Position",
+      "email": "E-Mail",
+      "location": "Standort",
+      "joined": "Eintritt",
+      "status": "Status"
+    },
+    "statuses": { "active": "Aktiv", "inactive": "Inaktiv" }
+  },
+  "orgChart": {
+    "title": "Organigramm",
+    "description": "Berichtsstruktur — zum Verschieben ziehen, zum Zoomen scrollen oder aufziehen",
+    "organization": "Organisation",
+    "noEmployees": "Noch keine Mitarbeiter für das Organigramm vorhanden.",
+    "people": "Personen",
+    "managers": "Führungskräfte",
+    "departments": "Abteilungen",
+    "personCount": "{{count}} Personen",
+    "personCount_one": "{{count}} Person",
+    "personCount_other": "{{count}} Personen",
+    "collapse": "Einklappen",
+    "expand": "Ausklappen",
+    "expandReports": "{{count}} Mitarbeitende anzeigen",
+    "viewAll": "Alle {{label}} anzeigen",
+    "searchPlaceholder": "Personen, Positionen oder Abteilungen suchen…",
+    "searchAria": "Im Organigramm suchen",
+    "clearSearch": "Suche löschen",
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern",
+    "fitToScreen": "An Bildschirm anpassen",
+    "fullscreen": "Vollbild",
+    "hint": "Zum Verschieben ziehen · zum Zoomen scrollen · auf Touchgeräten aufziehen",
+    "allPeopleTitle": "Alle Personen ({{count}})",
+    "managersTitle": "Führungskräfte ({{count}})",
+    "departmentsTitle": "Abteilungen ({{count}})",
+    "filterDepartments": "Abteilungen filtern…",
+    "filterPeople": "Personen filtern…",
+    "noMatches": "Keine Treffer.",
+    "reportCount": "{{count}} Mitarbeitende",
+    "reportCount_one": "{{count}} Mitarbeiter",
+    "reportCount_other": "{{count}} Mitarbeitende"
+  },
+  "departmentsPage": {
+    "title": "Abteilungen",
+    "departmentCount": "{{count}} Abteilungen",
+    "departmentCount_one": "{{count}} Abteilung",
+    "departmentCount_other": "{{count}} Abteilungen",
+    "employeeCount": "{{count}} Mitarbeiter",
+    "employeeCount_one": "{{count}} Mitarbeiter",
+    "employeeCount_other": "{{count}} Mitarbeiter",
+    "fromEmpCloud": "aus EmpCloud",
+    "addDepartment": "Abteilung hinzufügen",
+    "noDepartments": "Noch keine Abteilungen vorhanden.",
+    "addFirst": "Erste Abteilung hinzufügen",
+    "searchPlaceholder": "Abteilungen suchen…",
+    "searchAria": "Abteilungen suchen",
+    "noSearchMatches": "Keine Abteilung entspricht „{{query}}“.",
+    "nameRequired": "Der Abteilungsname ist erforderlich",
+    "added": "Abteilung hinzugefügt",
+    "addFailed": "Abteilung konnte nicht hinzugefügt werden",
+    "removed": "Abteilung entfernt",
+    "removeFailed": "Abteilung konnte nicht entfernt werden",
+    "addDescription": "Wird mit EmpCloud synchronisiert und kann anschließend in Mitarbeiterprofilen, im Organigramm und in Berichten ausgewählt werden.",
+    "uniqueNamesHelp": "Namen müssen innerhalb Ihrer Organisation eindeutig sein. Eine Abteilung kann später entfernt werden, ohne vorhandene Abrechnungsdaten zu beeinträchtigen.",
+    "departmentName": "Abteilungsname",
+    "namePlaceholder": "z. B. Entwicklung",
+    "cancel": "Abbrechen",
+    "removeTitle": "Abteilung entfernen?",
+    "removeDescription": "„{{name}}“ wird aus Ihrer Organisation entfernt.",
+    "deleteWarning": "Derzeit sind {{count}} Mitarbeiter dieser Abteilung zugeordnet. Ihre Datensätze bleiben erhalten, die Abteilung wird jedoch bis zur Neuzuweisung nicht angezeigt.",
+    "deleteWarning_one": "Derzeit ist {{count}} Mitarbeiter dieser Abteilung zugeordnet. Der Datensatz bleibt erhalten, die Abteilung wird jedoch bis zur Neuzuweisung nicht angezeigt.",
+    "deleteWarning_other": "Derzeit sind {{count}} Mitarbeiter dieser Abteilung zugeordnet. Ihre Datensätze bleiben erhalten, die Abteilung wird jedoch bis zur Neuzuweisung nicht angezeigt.",
+    "remove": "Entfernen",
+    "removeAria": "{{name}} entfernen",
+    "noMembers": "Noch keine Mitglieder",
+    "created": "Erstellt am {{date}}"
+  },
+  "attendancePage": {
+    "title": "Anwesenheit",
+    "summary": "Anwesenheitsübersicht für {{period}}",
+    "markAllPresent": "Alle als anwesend markieren",
+    "markAttendance": "Anwesenheit erfassen",
+    "previousMonth": "Vorheriger Monat",
+    "nextMonth": "Nächster Monat",
+    "searchPlaceholder": "Nach Name oder Personalnummer suchen...",
+    "filterDepartment": "Nach Abteilung filtern",
+    "allDepartments": "Alle Abteilungen",
+    "filterLocation": "Nach Standort filtern",
+    "allLocations": "Alle Standorte",
+    "clearFilters": "Filter löschen",
+    "employeesShown": "{{visible}} von {{total}} Mitarbeitern",
+    "employeesShown_one": "{{visible}} von {{total}} Mitarbeiter",
+    "employeesShown_other": "{{visible}} von {{total}} Mitarbeitern",
+    "totalPresentDays": "Anwesenheitstage gesamt",
+    "totalAbsentDays": "Fehltage gesamt",
+    "lopDays": "Unbezahlte Tage",
+    "overtimeHours": "Überstunden",
+    "hoursValue": "{{count}} Std.",
+    "lopValue": "{{count}} unbezahlt",
+    "employeeFallback": "Mitarbeiter Nr. {{id}}",
+    "columns": {
+      "employee": "Mitarbeiter",
+      "workingDays": "Arbeitstage",
+      "present": "Anwesend",
+      "absent": "Abwesend",
+      "lopDays": "Unbezahlte Tage",
+      "overtimeHours": "Überstunden"
+    },
+    "markAllDescription": "Markiert alle Mitarbeiter für den gewählten Monat als anwesend.",
+    "markSingleDescription": "Erfasst die Anwesenheit eines einzelnen Mitarbeiters.",
+    "month": "Monat",
+    "year": "Jahr",
+    "workingDaysInMonth": "Arbeitstage im Monat",
+    "workingDays": "Arbeitstage",
+    "presentDays": "Anwesenheitstage",
+    "absentDays": "Fehltage",
+    "employee": "Mitarbeiter",
+    "selectEmployee": "Mitarbeiter auswählen",
+    "cancel": "Abbrechen",
+    "saveAttendance": "Anwesenheit speichern",
+    "overwriteExisting": "Vorhandene Einträge für diesen Monat überschreiben",
+    "overwriteAllHelp": "Standardmäßig deaktiviert, damit eigene Zeiterfassungen erhalten bleiben. Aktivieren Sie dies, um bereits erfasste Tage durch anwesend zu ersetzen.",
+    "overwriteSingleHelp": "Standardmäßig bleiben bereits in EmpCloud erfasste Tage erhalten. Aktivieren Sie dies, um sie durch die obigen Werte zu ersetzen.",
+    "markAllHelp": "Alle {{count}} aktiven Mitarbeiter werden für {{days}} Tage in {{period}} als anwesend markiert. Einzelne Einträge können anschließend bearbeitet werden.",
+    "workingDaysInvalid": "Die Arbeitstage müssen eine ganze Zahl zwischen 1 und 31 sein",
+    "presentDaysInvalid": "Die Anwesenheitstage müssen zwischen 0 und der Zahl der Arbeitstage liegen",
+    "selectEmployeeRequired": "Bitte wählen Sie einen Mitarbeiter aus",
+    "noPayrollEmployees": "Keine Mitarbeiter in der Abrechnung gefunden. Fügen Sie zuerst EmpCloud-Benutzer zur Abrechnung hinzu (Einstellungen > Mitarbeiter).",
+    "bulkSyncFailed": "Für {{employeeCount}} Mitarbeiter lokal erfasst, aber die EmpCloud-Synchronisierung ist für {{failureCount}} fehlgeschlagen. Das Dashboard zeigt die Änderung möglicherweise noch nicht.",
+    "nothingChangedAll": "Jeder Arbeitstag in {{period}} ist bereits in EmpCloud erfasst ({{preserved}} beibehalten), daher wurde nichts geändert. Aktivieren Sie Überschreiben, um sie zu ersetzen.",
+    "markedAllOverwrite": "{{count}} Mitarbeiter für {{period}} als anwesend markiert (vorhandene Tage überschrieben).",
+    "markedAllSuccess": "{{count}} Mitarbeiter für {{period}} erfasst — {{inserted}} neue EmpCloud-Zeilen hinzugefügt{{preservedText}}.",
+    "singleSyncFailed": "Lokal erfasst, aber die EmpCloud-Synchronisierung ist fehlgeschlagen ({{error}}). Das Dashboard zeigt dies möglicherweise erst, wenn EmpCloud wieder erreichbar ist.",
+    "unknownError": "unbekannter Fehler",
+    "nothingChangedSingle": "Für diesen Mitarbeiter sind in {{period}} bereits {{preserved}} Anwesenheitseinträge vorhanden. Es wurde nichts geändert. Aktivieren Sie Überschreiben und speichern Sie erneut.",
+    "singleOverwriteSuccess": "Anwesenheit für {{period}} aktualisiert ({{count}} Tage gesetzt).",
+    "singleSuccess": "Anwesenheit für {{period}} erfasst — {{inserted}} neue EmpCloud-Zeilen hinzugefügt{{preservedText}}.",
+    "preservedSuffix": ", {{count}} vorhandene Zeilen beibehalten",
+    "markFailed": "Anwesenheit konnte nicht erfasst werden"
+  },
+  "payrollAnalytics": {
+    "title": "Gehaltsabrechnungsanalyse",
+    "description": "Kostentrends, Vergleiche und Einblicke",
+    "notice": "Die folgenden Zahlen beziehen sich auf die Mitarbeitenden, die in jedem Abrechnungslauf enthalten sind. Bei der Berechnung übersprungene Mitarbeitende (keine aktive Gehaltsstruktur, Einstellung nach dem Abrechnungszeitraum oder Austritt davor) werden nicht gezählt. Daher können sich Mitarbeiterzahl und Durchschnittswerte pro Person unabhängig von der tatsächlichen Einstellungstätigkeit zwischen den Monaten verändern.",
+    "noRuns": "noch keine Abrechnungsläufe",
+    "employeeSource": "{{count}} Mitarbeitende · {{source}}",
+    "headcountSuppressed": "Mitarbeiterzahl um mehr als 25 % verändert — Vergleich ausgeblendet",
+    "vsPrevious": "gegenüber dem Vormonat · {{source}}",
+    "ofGrossPay": "des Bruttogehalts · {{source}}",
+    "avgNetPayPerEmployee": "Durchschn. Nettogehalt / Person",
+    "grossPayChange": "Änderung des Bruttogehalts",
+    "netPayChange": "Änderung des Nettogehalts",
+    "deductionRate": "Abzugssatz",
+    "payrollCostTrend": "Trend der Abrechnungskosten",
+    "costBreakdownLatest": "Kostenaufschlüsselung (aktuell)",
+    "headcountTrend": "Trend der Mitarbeiterzahl",
+    "monthComparison": "Monatsvergleich",
+    "totalEmployerCost": "Gesamte Arbeitgeberkosten (Brutto + Beiträge)",
+    "needCompletedRun": "Für die Analyse ist mindestens ein abgeschlossener Abrechnungslauf erforderlich",
+    "noData": "Noch keine Daten",
+    "series": {
+      "gross": "Brutto",
+      "net": "Netto",
+      "deductions": "Abzüge",
+      "netPay": "Nettogehalt",
+      "employerContributions": "Arbeitgeberbeiträge",
+      "employerCost": "Arbeitgeberkosten",
+      "amount": "Betrag",
+      "employees": "Mitarbeitende"
+    },
+    "columns": {
+      "period": "Zeitraum",
+      "employees": "Mitarbeitende",
+      "grossPay": "Bruttogehalt",
+      "deductions": "Abzüge",
+      "netPay": "Nettogehalt",
+      "avgPerEmployee": "Durchschn./Person",
+      "grossPercent": "Brutto %",
+      "netPercent": "Netto %"
+    },
+    "statuses": { "paid": "Bezahlt", "computed": "Berechnet", "approved": "Genehmigt" }
+  },
+  "reimbursementsPage": {
+    "title": "Erstattungen",
+    "claimsShown": "{{visible}} von {{total}} Anträgen",
+    "fileForEmployee": "Für Mitarbeitende erfassen",
+    "searchPlaceholder": "Nach Name, Personalnummer oder Position suchen...",
+    "filterDepartment": "Nach Abteilung filtern",
+    "allDepartments": "Alle Abteilungen",
+    "filterLocation": "Nach Standort filtern",
+    "allLocations": "Alle Standorte",
+    "clearFilters": "Filter löschen",
+    "noClaims": "Keine Erstattungsanträge gefunden",
+    "forEmployee": "Für {{name}}",
+    "statuses": {
+      "pending": "Ausstehend",
+      "approved": "Genehmigt",
+      "rejected": "Abgelehnt",
+      "paid": "Bezahlt"
+    },
+    "filters": { "all": "Alle" },
+    "cards": {
+      "totalClaims": "Anträge gesamt",
+      "viewAll": "Alle Erstattungsanträge anzeigen",
+      "viewPending": "Ausstehende Erstattungsanträge anzeigen",
+      "viewApproved": "Genehmigte Erstattungsanträge anzeigen",
+      "viewRejected": "Abgelehnte Erstattungsanträge anzeigen",
+      "viewPaid": "Bezahlte Erstattungsanträge anzeigen"
+    },
+    "columns": {
+      "employee": "Mitarbeitende",
+      "category": "Kategorie",
+      "description": "Beschreibung",
+      "amount": "Betrag",
+      "date": "Datum",
+      "status": "Status"
+    },
+    "actions": {
+      "approve": "Genehmigen",
+      "reject": "Ablehnen",
+      "awaitingPayroll": "Wartet auf Abrechnung",
+      "awaitingPayrollTitle": "Wird im nächsten Abrechnungslauf bezahlt",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "cancel": "Abbrechen"
+    },
+    "fields": {
+      "category": "Kategorie",
+      "amount": "Betrag",
+      "expenseDate": "Ausgabedatum",
+      "description": "Beschreibung",
+      "month": "Monat",
+      "year": "Jahr"
+    },
+    "fileModal": {
+      "title": "Erstattung für Mitarbeitende erfassen",
+      "description": "Reichen Sie einen Antrag im Namen eines Mitarbeitenden ein. Er wird in dessen Erstattungsliste als ausstehend angezeigt.",
+      "searchEmployee": "Mitarbeitende suchen",
+      "employeePlaceholder": "Name, Personalnummer oder E-Mail (mind. 2 Zeichen)",
+      "searching": "Suche...",
+      "typeMore": "Geben Sie mindestens 2 Zeichen ein.",
+      "noEmployees": "Keine passenden Mitarbeitenden.",
+      "change": "Ändern",
+      "categoryPlaceholder": "Reise, Verpflegung, Internet...",
+      "descriptionPlaceholder": "Wofür war die Ausgabe?",
+      "submit": "Antrag erfassen"
+    },
+    "deleteModal": {
+      "title": "Erstattung löschen?",
+      "paidTitle": "Dieser Antrag wurde bereits bezahlt.",
+      "paidWarning": "Beim Löschen wird nur der Eintrag aus der Erstattungsliste entfernt. Die Zahlung wird nicht zurückgebucht und die Position nicht von der Abrechnung entfernt. Löschen Sie zum Stornieren stattdessen den Abrechnungslauf; der Antrag wird automatisch wieder genehmigt.",
+      "warning": "Der Antrag wird dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden."
+    },
+    "editModal": { "title": "Erstattung bearbeiten", "save": "Änderungen speichern" },
+    "payModal": {
+      "title": "Erstattung als bezahlt markieren",
+      "description": "Erfassen Sie den Abrechnungszeitraum, in dem dieser Antrag ausgezahlt wurde. Der Status wechselt von genehmigt zu bezahlt.",
+      "confirm": "Zahlung bestätigen"
+    },
+    "validation": {
+      "categoryRequired": "Kategorie ist erforderlich",
+      "descriptionRequired": "Beschreibung ist erforderlich",
+      "validAmount": "Geben Sie einen gültigen Betrag ein",
+      "expenseDateRequired": "Ausgabedatum ist erforderlich",
+      "pickEmployee": "Wählen Sie zuerst einen Mitarbeitenden"
+    },
+    "messages": {
+      "approved": "Antrag genehmigt",
+      "rejected": "Antrag abgelehnt",
+      "failed": "Aktion fehlgeschlagen",
+      "updated": "Antrag aktualisiert",
+      "updateFailed": "Antrag konnte nicht aktualisiert werden",
+      "deleted": "Antrag gelöscht",
+      "deleteFailed": "Antrag konnte nicht gelöscht werden",
+      "filed": "Antrag für Mitarbeitenden erfasst",
+      "fileFailed": "Antrag konnte nicht erfasst werden",
+      "markedPaid": "Antrag als bezahlt markiert",
+      "markPaidFailed": "Antrag konnte nicht als bezahlt markiert werden"
+    }
+  },
+  "loansPage": {
+    "title": "Darlehen und Vorschüsse",
+    "recordsShown": "{{visible}} von {{total}} Darlehens- und Vorschussdatensätzen",
+    "addAdvance": "Vorschuss hinzufügen",
+    "addLoan": "Darlehen hinzufügen",
+    "searchPlaceholder": "Nach Name, Personalnummer oder Position suchen...",
+    "filterDepartment": "Nach Abteilung filtern",
+    "allDepartments": "Alle Abteilungen",
+    "filterLocation": "Nach Standort filtern",
+    "allLocations": "Alle Standorte",
+    "clearFilters": "Filter löschen",
+    "noRecords": "Keine Darlehen oder Vorschüsse gefunden",
+    "cards": {
+      "active": "Aktive Darlehen und Vorschüsse",
+      "outstanding": "Offener Betrag",
+      "monthlyDeductions": "Monatliche Abzüge",
+      "totalAcrossAll": "Gesamtsumme",
+      "completed": "Abgeschlossen"
+    },
+    "filters": { "all": "Alle" },
+    "statuses": { "active": "Aktiv", "completed": "Abgeschlossen", "cancelled": "Storniert" },
+    "types": {
+      "loan": "Darlehen",
+      "salary_advance": "Gehaltsvorschuss",
+      "emergency": "Notfallvorschuss"
+    },
+    "columns": {
+      "employee": "Mitarbeitende",
+      "type": "Typ",
+      "description": "Beschreibung",
+      "principal": "Kapital",
+      "outstanding": "Offen",
+      "deduction": "Abzug",
+      "progress": "Fortschritt",
+      "status": "Status"
+    },
+    "deduction": {
+      "customDefault": "Benutzerdefiniert (Standard {{amount}})",
+      "oneTime": "Einmalig"
+    },
+    "progress": { "recovered": "Eingezogen", "pendingRecovery": "Einzug ausstehend" },
+    "actions": {
+      "recordEmiPayment": "Ratenzahlung erfassen",
+      "recordAdvanceRecovery": "Vorschusseinzug erfassen",
+      "pay": "Zahlen",
+      "recover": "Einziehen",
+      "edit": "Darlehen oder Vorschuss bearbeiten",
+      "delete": "Löschen",
+      "cancel": "Abbrechen",
+      "saveChanges": "Änderungen speichern"
+    },
+    "fields": {
+      "employee": "Mitarbeitende",
+      "description": "Beschreibung",
+      "amount": "Betrag (₹)",
+      "tenure": "Laufzeit (Monate)",
+      "interestRate": "Zinssatz (%)",
+      "startDate": "Startdatum",
+      "customMonthlyEmi": "Benutzerdefinierte Monatsrate (₹) — optional",
+      "notes": "Notizen (optional)",
+      "advanceType": "Vorschussart",
+      "reason": "Grund",
+      "advanceAmount": "Vorschussbetrag (₹)",
+      "recoveryDate": "Einzugsdatum"
+    },
+    "form": {
+      "noEmployee": "Keine Mitarbeitenden vorhanden",
+      "descriptionPlaceholder": "z. B. medizinischer Notfall",
+      "customEmiPlaceholder": "Leer lassen, um die laufzeitbasierte Rate zu verwenden",
+      "customEmiHelpCreate": "Überschreibt den monatlichen Abzug. Die letzte Rate gleicht den Restbetrag automatisch aus.",
+      "customEmiHelpEdit": "Überschreibt den monatlichen Abzug. Die letzte Rate gleicht den Restbetrag automatisch aus. Leeren Sie das Feld für die laufzeitbasierte Rate.",
+      "notesPlaceholder": "Zusätzliche Notizen",
+      "paidInstallmentsNotice": "{{count}} Rate(n) bereits bezahlt — der offene Betrag wird neu berechnet, bereits zurückgezahlte Beträge bleiben erhalten."
+    },
+    "advanceModal": {
+      "description": "Fügen Sie einen einmaligen Gehaltsvorschuss hinzu. Der Gesamtbetrag wird in einem Abrechnungszeitraum eingezogen."
+    },
+    "editModal": { "loanTitle": "Darlehen bearbeiten", "advanceTitle": "Vorschuss bearbeiten" },
+    "deleteModal": {
+      "title": "Darlehen oder Vorschuss löschen?",
+      "outstandingTitle": "{{amount}} sind noch offen.",
+      "outstandingWarning": "Das Löschen beendet zukünftige Abzüge. Bereits auf früheren Abrechnungen abgezogene Beträge bleiben unverändert. Dies kann nicht rückgängig gemacht werden.",
+      "warning": "Der Datensatz wird dauerhaft gelöscht. Bereits abgezogene Beträge bleiben unverändert. Dies kann nicht rückgängig gemacht werden."
+    },
+    "validation": {
+      "amountNonNegative": "Der Betrag muss null oder größer sein",
+      "tenureMinimum": "Die Laufzeit muss mindestens 1 Monat betragen",
+      "interestNonNegative": "Der Zinssatz muss null oder größer sein",
+      "customEmiPositive": "Die benutzerdefinierte Monatsrate muss größer als null sein",
+      "customEmiMaximum": "Die benutzerdefinierte Monatsrate darf den Darlehensbetrag nicht überschreiten"
+    },
+    "messages": {
+      "advanceCreated": "Vorschuss erstellt",
+      "loanCreated": "Darlehen erstellt",
+      "failed": "Aktion fehlgeschlagen",
+      "paymentRecorded": "Zahlung erfasst",
+      "advanceUpdated": "Vorschuss aktualisiert",
+      "loanUpdated": "Darlehen aktualisiert",
+      "updateFailed": "Darlehen oder Vorschuss konnte nicht aktualisiert werden",
+      "deleted": "Darlehen oder Vorschuss gelöscht",
+      "deleteFailed": "Darlehen oder Vorschuss konnte nicht gelöscht werden"
+    }
+  },
+  "roles": {
+    "super_admin": "Superadmin",
+    "org_admin": "Organisationsadmin",
+    "admin": "Admin",
+    "hr_admin": "HR-Admin",
+    "hr_manager": "HR-Manager",
+    "manager": "Manager",
+    "employee": "Mitarbeiter"
+  },
+  "header": {
+    "openMenu": "Navigationsmenü öffnen",
+    "searchEmployees": "Mitarbeiter suchen... (Ctrl+K)"
+  },
+  "sidebar": {
+    "collapse": "Seitenleiste einklappen",
+    "expand": "Seitenleiste ausklappen",
+    "search": "Menü durchsuchen…",
+    "clearSearch": "Suche löschen",
+    "noMatches": "Keine Treffer für „{{query}}“",
+    "pressToSearch": "/ drücken, um zu suchen",
+    "logout": "Abmelden",
+    "sections": {
+      "overview": "Übersicht",
+      "people": "Mitarbeiter",
+      "payroll": "Entgeltabrechnung",
+      "compliance": "Compliance",
+      "payBenefits": "Vergütung und Benefits",
+      "workplace": "Arbeitsplatz",
+      "globalPayroll": "Globale Abrechnung",
+      "admin": "Verwaltung",
+      "selfService": "Self-Service"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "employees": "Mitarbeiter",
+      "orgChart": "Organigramm",
+      "departments": "Abteilungen",
+      "attendance": "Anwesenheit",
+      "structures": "Strukturen",
+      "payrollRuns": "Abrechnungsläufe",
+      "analytics": "Analysen",
+      "payslips": "Gehaltsabrechnungen",
+      "tax": "Steuern",
+      "taxCalculator": "Steuerrechner",
+      "taxDeclarations": "Steuererklärungen",
+      "reimbursements": "Erstattungen",
+      "loans": "Darlehen",
+      "benefits": "Benefits",
+      "benchmarks": "Benchmarks",
+      "payEquity": "Entgeltgleichheit",
+      "totalRewards": "Gesamtvergütung",
+      "earnedWageAccess": "Zugriff auf verdienten Lohn",
+      "insurance": "Versicherung",
+      "holidays": "Feiertage",
+      "announcements": "Ankündigungen",
+      "globalDashboard": "Globales Dashboard",
+      "globalEmployees": "Globale Mitarbeiter",
+      "contractorInvoices": "Auftragnehmerrechnungen",
+      "countryCompliance": "Länder-Compliance",
+      "glAccounting": "Hauptbuch / Buchhaltung",
+      "reports": "Berichte",
+      "auditLog": "Auditprotokoll",
+      "system": "System",
+      "settings": "Einstellungen",
+      "myDashboard": "Mein Dashboard",
+      "myPayslips": "Meine Abrechnungen",
+      "mySalary": "Mein Gehalt",
+      "myTax": "Meine Steuern",
+      "declarations": "Erklärungen",
+      "myClaims": "Meine Anträge",
+      "myProfile": "Mein Profil"
+    }
+  },
+  "dashboard": {
+    "title": "Payroll-Dashboard",
+    "overviewFor": "Übersicht für {{period}}",
+    "runPayroll": "Abrechnung starten",
+    "addEmployee": "Mitarbeiter hinzufügen",
+    "viewReports": "Berichte anzeigen",
+    "activeEmployees": "Aktive Mitarbeiter",
+    "viewActiveEmployees": "Aktive Mitarbeiter anzeigen",
+    "totalEmployees": "{{count}} insgesamt",
+    "lastPayrollGross": "Letzte Abrechnung (Brutto)",
+    "lastPayrollNet": "Letzte Abrechnung (Netto)",
+    "noPayrollYet": "Noch keine Abrechnung",
+    "totalDeductions": "Gesamtabzüge",
+    "viewDeductions": "Aufschlüsselung der Gesamtabzüge für die letzte Abrechnung anzeigen",
+    "monthOverMonth": "{{value}} % zum Vormonat",
+    "monthlyTrend": "Monatlicher Abrechnungstrend",
+    "trendPeriods_one": "Brutto und Netto im letzten Monat",
+    "trendPeriods_other": "Brutto und Netto der letzten {{count}} Monate",
+    "trendFallback": "Brutto- und Nettolohnkosten",
+    "gross": "Brutto",
+    "net": "Netto",
+    "noTrend": "Noch keine Abrechnungsdaten. Starten Sie die erste Abrechnung.",
+    "headcountByDepartment": "Mitarbeiterzahl nach Abteilung",
+    "moreDepartments": "+{{count}} weitere Abteilungen",
+    "noEmployeesToChart": "Noch keine Mitarbeiter für das Diagramm.",
+    "complianceStatus": "Compliance-Status",
+    "providentFund": "Vorsorgefonds",
+    "professionalTax": "Berufssteuer",
+    "tdsForm": "TDS (Formular 24Q)",
+    "filed": "Eingereicht",
+    "pending": "Ausstehend",
+    "recentActivity": "Letzte Aktivitäten",
+    "noRecentActivity": "Noch keine aktuellen Aktivitäten.",
+    "activity": "Aktivität",
+    "actions": {
+      "created": "Abrechnungslauf erstellt",
+      "computed": "Abrechnung berechnet",
+      "approved": "Abrechnung genehmigt",
+      "paid": "Abrechnung als bezahlt markiert",
+      "cancelled": "Abrechnung storniert",
+      "reverted": "Abrechnung auf Entwurf zurückgesetzt",
+      "rerun": "Abrechnung erneut ausgeführt",
+      "deleted": "Abrechnungslauf gelöscht"
+    }
+  },
+  "breadcrumbs": {
+    "home": "Startseite",
+    "addNew": "Neu hinzufügen",
+    "salaryStructures": "Gehaltsstrukturen",
+    "myPortal": "Mein Portal",
+    "salary": "Gehalt",
+    "profile": "Profil",
+    "setup": "Einrichtung"
+  },
+  "selfService": {
+    "employeePortal": "Mitarbeiterportal",
+    "adminPanel": "Adminbereich",
+    "profile": "Profil"
+  },
+  "myProfile": {
+    "title": "Mein Profil",
+    "notFound": "Profil nicht gefunden",
+    "notAvailable": "Nicht verfügbar",
+    "cancel": "Abbrechen",
+    "requestUpdate": "Änderung beantragen",
+    "pendingBankRequest": "Eine Änderung der Bankdaten wartet auf die Genehmigung durch die Administration.",
+    "status": { "active": "Aktiv", "inactive": "Inaktiv" },
+    "taxRegime": { "new": "Neues Steuersystem", "old": "Altes Steuersystem" },
+    "sections": {
+      "personalDetails": "Persönliche Daten",
+      "employment": "Beschäftigung",
+      "bankDetails": "Bankverbindung",
+      "statutoryDetails": "Gesetzliche Angaben",
+      "security": "Sicherheit"
+    },
+    "fields": {
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "dateOfBirth": "Geburtsdatum",
+      "gender": "Geschlecht",
+      "employeeCode": "Mitarbeiternummer",
+      "department": "Abteilung",
+      "designation": "Position",
+      "employmentType": "Beschäftigungsart",
+      "dateOfJoining": "Eintrittsdatum",
+      "bank": "Bank",
+      "accountNumber": "Kontonummer",
+      "ifsc": "IFSC",
+      "pan": "PAN",
+      "uan": "UAN",
+      "pfNumber": "PF-Nummer",
+      "password": "Passwort"
+    },
+    "values": {
+      "gender": {
+        "female": "Weiblich",
+        "male": "Männlich",
+        "non_binary": "Nichtbinär",
+        "other": "Andere"
+      },
+      "employmentTypes": {
+        "full_time": "Vollzeit",
+        "part_time": "Teilzeit",
+        "contract": "Vertrag",
+        "intern": "Praktikum",
+        "consultant": "Beratung"
+      }
+    },
+    "security": {
+      "changePasswordHelp": "Kontopasswort ändern",
+      "changePassword": "Passwort ändern"
+    },
+    "bankModal": {
+      "title": "Änderung der Bankdaten beantragen",
+      "reviewNotice": "Die Personalabteilung oder Administration prüft den Antrag, bevor die Änderungen wirksam werden.",
+      "newBankName": "Neuer Bankname",
+      "bankPlaceholder": "z. B. HDFC Bank",
+      "newAccountNumber": "Neue Kontonummer",
+      "accountPlaceholder": "z. B. 1234567890",
+      "newIfscCode": "Neuer IFSC-Code",
+      "ifscPlaceholder": "z. B. HDFC0001234",
+      "ifscValidation": "Der IFSC muss 11 Zeichen enthalten: 4 Buchstaben + '0' + 6 Buchstaben/Ziffern (z. B. HDFC0001234).",
+      "accountType": "Kontotyp",
+      "accountTypes": { "savings": "Sparkonto", "current": "Girokonto", "salary": "Gehaltskonto" },
+      "reason": "Änderungsgrund",
+      "reasonPlaceholder": "z. B. Wechsel zu einer neuen Bank",
+      "submit": "Antrag senden",
+      "success": "Änderung der Bankdaten zur Genehmigung eingereicht",
+      "failure": "Antrag konnte nicht gesendet werden"
+    },
+    "passwordModal": {
+      "title": "Passwort ändern",
+      "currentPassword": "Aktuelles Passwort",
+      "newPassword": "Neues Passwort",
+      "confirmNewPassword": "Neues Passwort bestätigen",
+      "mismatch": "Die Passwörter stimmen nicht überein",
+      "success": "Passwort geändert",
+      "failure": "Passwort konnte nicht geändert werden",
+      "submit": "Passwort ändern"
+    }
+  },
+  "totalRewardsPage": {
+    "title": "Gesamtvergütungsnachweise",
+    "description": "Umfassende Vergütungs- und Leistungsnachweise für Mitarbeitende erstellen",
+    "printPdf": "Drucken / PDF",
+    "selectEmployee": "Mitarbeiter auswählen",
+    "chooseEmployee": "Mitarbeiter auswählen…",
+    "searchEmployee": "Nach Name, Position oder Nummer suchen…",
+    "noEmployeeMatches": "Keine passenden Mitarbeiter gefunden",
+    "employeesAvailable_one": "{{count}} Mitarbeiter verfügbar",
+    "employeesAvailable_other": "{{count}} Mitarbeiter verfügbar",
+    "unnamedEmployee": "Unbenannter Mitarbeiter",
+    "totalRewardsValue": "Gesamtwert der Vergütung",
+    "financialYear": "GJ {{year}}",
+    "directCompensation": "Direktvergütung",
+    "benefitsValue": "Wert der Zusatzleistungen",
+    "ytdNetPay": "Nettolohn seit Jahresbeginn",
+    "reimbursements": "Erstattungen",
+    "salaryBreakdown": "Gehaltsaufschlüsselung",
+    "perMonth": "/Monat",
+    "annualCtc": "Jährliche CTC",
+    "benefitsEnrollment": "Zusatzleistungen",
+    "noBenefits": "Keine Zusatzleistungen",
+    "perYear": "/Jahr",
+    "totalEmployerContribution": "Gesamter Arbeitgeberbeitrag",
+    "ytdEarnings": "Jahresverdienst bis heute",
+    "monthsProcessed_one": "{{count}} Monat verarbeitet",
+    "monthsProcessed_other": "{{count}} Monate verarbeitet",
+    "grossEarnings": "Bruttoverdienst",
+    "totalDeductions": "Gesamtabzüge",
+    "netPay": "Nettolohn",
+    "taxPaid": "Gezahlte Steuer",
+    "activeLoans": "Aktive Darlehen",
+    "outstanding": "Ausstehend",
+    "emi": "Rate",
+    "selectPrompt": "Mitarbeiter auswählen, um den Gesamtvergütungsnachweis zu erstellen",
+    "components": { "basic": "Grundgehalt", "hra": "Wohnkostenzuschuss", "sa": "Sonderzulage" },
+    "benefitTypes": {
+      "health": "Gesundheit",
+      "life": "Leben",
+      "dental": "Zahn",
+      "vision": "Sehhilfe",
+      "accident": "Unfall"
+    },
+    "coverageTypes": {
+      "employee": "Mitarbeiter",
+      "employee_spouse": "Mitarbeiter + Partner",
+      "family": "Familie",
+      "parents": "Eltern"
+    },
+    "loanTypes": {
+      "personal_loan": "Privatdarlehen",
+      "salary_advance": "Gehaltsvorschuss",
+      "home_loan": "Immobiliendarlehen",
+      "car_loan": "Autokredit",
+      "education_loan": "Bildungskredit"
+    }
+  },
+  "benefitsPage": {
+    "title": "Leistungsverwaltung",
+    "description": "Leistungspläne und Mitarbeiteranmeldungen verwalten",
+    "enrollEmployee": "Mitarbeiter anmelden",
+    "newPlan": "Neuer Plan",
+    "stats": {
+      "activePlans": "Aktive Pläne",
+      "enrolled": "Angemeldet",
+      "pending": "Ausstehend",
+      "monthlyEmployerCost": "Monatliche Arbeitgeberkosten"
+    },
+    "tabs": {
+      "plans": "Pläne ({{count}})",
+      "enrollments": "Anmeldungen ({{count}})",
+      "pending": "Ausstehend ({{count}})"
+    },
+    "columns": {
+      "planName": "Planname",
+      "type": "Typ",
+      "provider": "Anbieter",
+      "premium": "Beitrag",
+      "employerShare": "Arbeitgeberanteil",
+      "status": "Status",
+      "employee": "Mitarbeiter",
+      "plan": "Plan",
+      "coverage": "Deckung",
+      "employeeShare": "Mitarbeiteranteil"
+    },
+    "empty": {
+      "plans": "Noch keine Leistungspläne erstellt",
+      "enrollments": "Noch keine Anmeldungen",
+      "pending": "Keine ausstehenden Anmeldungen"
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "enrolled": "Angemeldet",
+      "pending": "Ausstehend",
+      "cancelled": "Storniert"
+    },
+    "actions": {
+      "edit": "Bearbeiten",
+      "deactivate": "Deaktivieren",
+      "cancel": "Stornieren"
+    },
+    "planTypes": {
+      "health": "Gesundheit",
+      "dental": "Zahnzusatz",
+      "vision": "Sehhilfe",
+      "life": "Lebensversicherung",
+      "disability": "Berufsunfähigkeit",
+      "retirement": "Altersvorsorge"
+    },
+    "coverageTypes": {
+      "individual": "Einzelperson",
+      "family": "Familie",
+      "individual_plus_spouse": "Einzelperson + Ehepartner"
+    },
+    "fallbackUser": "Benutzer Nr. {{id}}",
+    "messages": {
+      "invalidEnrollmentDates": "Das Enddatum darf nicht vor dem Startdatum liegen",
+      "planUpdated": "Leistungsplan aktualisiert",
+      "planCreated": "Leistungsplan erstellt",
+      "savePlanFailed": "Plan konnte nicht gespeichert werden",
+      "deactivateConfirm": "Diesen Leistungsplan deaktivieren? Bestehende Anmeldungen bleiben unverändert.",
+      "planDeactivated": "Leistungsplan deaktiviert",
+      "deactivateFailed": "Plan konnte nicht deaktiviert werden",
+      "employeeEnrolled": "Mitarbeiter im Leistungsplan angemeldet",
+      "enrollFailed": "Anmeldung fehlgeschlagen",
+      "enrollmentCancelled": "Anmeldung storniert",
+      "actionFailed": "Aktion fehlgeschlagen"
+    },
+    "planModal": {
+      "editTitle": "Leistungsplan bearbeiten",
+      "createTitle": "Leistungsplan erstellen",
+      "planName": "Planname",
+      "type": "Typ",
+      "provider": "Anbieter",
+      "description": "Beschreibung",
+      "monthlyPremium": "Monatlicher Beitrag",
+      "employerContribution": "Arbeitgeberbeitrag",
+      "enrollmentStart": "Anmeldebeginn",
+      "enrollmentEnd": "Anmeldeende",
+      "cancel": "Abbrechen",
+      "updatePlan": "Plan aktualisieren",
+      "createPlan": "Plan erstellen"
+    },
+    "enrollModal": {
+      "title": "Mitarbeiter für Leistungsplan anmelden",
+      "employee": "Mitarbeiter",
+      "benefitPlan": "Leistungsplan",
+      "coverageType": "Deckungsart",
+      "startDate": "Startdatum",
+      "employeePremiumShare": "Beitragsanteil des Mitarbeiters",
+      "employerPremiumShare": "Beitragsanteil des Arbeitgebers",
+      "cancel": "Abbrechen",
+      "submit": "Anmelden"
+    }
+  },
+  "benchmarksPage": {
+    "title": "Vergütungs-Benchmarking",
+    "description": "Mitarbeitervergütung mit Marktdaten vergleichen",
+    "addBenchmark": "Benchmark hinzufügen",
+    "stats": {
+      "benchmarks": "Benchmarks",
+      "avgCompaRatio": "Ø Compa-Ratio",
+      "belowMarket": "Unter Markt",
+      "aboveMarket": "Über Markt"
+    },
+    "tabs": {
+      "marketBenchmarks": "Markt-Benchmarks ({{count}})",
+      "compaRatioReport": "Compa-Ratio-Bericht",
+      "belowMarket": "Unter Markt ({{count}})",
+      "aboveMarket": "Über Markt ({{count}})"
+    },
+    "columns": {
+      "jobTitle": "Stellenbezeichnung",
+      "department": "Abteilung",
+      "location": "Standort",
+      "p50Median": "P50 (Median)",
+      "source": "Quelle",
+      "effective": "Gültig ab",
+      "employee": "Mitarbeiter",
+      "marketP50": "Markt-P50",
+      "compaRatio": "Compa-Ratio",
+      "position": "Position"
+    },
+    "empty": {
+      "benchmarks": "Noch keine Benchmarks hinzugefügt",
+      "employees": "Keine Mitarbeiterdaten verfügbar",
+      "belowMarket": "Keine Mitarbeiter unter Marktniveau",
+      "aboveMarket": "Keine Mitarbeiter über Marktniveau"
+    },
+    "summary": {
+      "employeesTotal": "Mitarbeiter insgesamt",
+      "matchedToBenchmarks": "Benchmarks zugeordnet",
+      "withoutBenchmarkData": "ohne Benchmark-Daten"
+    },
+    "labels": {
+      "noBenchmark": "Kein Benchmark",
+      "notAvailable": "k. A.",
+      "noData": "Keine Daten",
+      "below": "Darunter",
+      "above": "Darüber",
+      "atMarket": "Auf Marktniveau"
+    },
+    "actions": {
+      "edit": "Bearbeiten",
+      "delete": "Löschen"
+    },
+    "messages": {
+      "validPercentiles": "Bitte gültige Beträge für P25, P50 und P75 eingeben",
+      "nonNegative": "Perzentilwerte dürfen nicht negativ sein",
+      "ordered": "Perzentile müssen geordnet sein: P25 ≤ P50 ≤ P75",
+      "updated": "Benchmark aktualisiert",
+      "created": "Benchmark erstellt",
+      "deleted": "Benchmark gelöscht",
+      "failed": "Aktion fehlgeschlagen"
+    },
+    "modal": {
+      "editTitle": "Vergütungs-Benchmark bearbeiten",
+      "addTitle": "Vergütungs-Benchmark hinzufügen",
+      "jobTitle": "Stellenbezeichnung",
+      "jobTitlePlaceholder": "z. B. Softwareentwickler",
+      "department": "Abteilung",
+      "selectDepartment": "Abteilung auswählen...",
+      "noDepartments": "Keine Abteilungen konfiguriert",
+      "location": "Standort",
+      "locationPlaceholder": "z. B. Bangalore",
+      "p25Annual": "P25 (jährlich)",
+      "p50Annual": "P50-Median (jährlich)",
+      "p75Annual": "P75 (jährlich)",
+      "p25Placeholder": "z. B. 800000",
+      "p50Placeholder": "z. B. 1200000",
+      "p75Placeholder": "z. B. 1800000",
+      "source": "Quelle",
+      "sourcePlaceholder": "z. B. Glassdoor 2026",
+      "effectiveDate": "Gültigkeitsdatum",
+      "cancel": "Abbrechen",
+      "updateBenchmark": "Benchmark aktualisieren",
+      "saveBenchmark": "Benchmark speichern"
+    }
+  },
+  "payEquityPage": {
+    "title": "Analyse der Entgeltgleichheit",
+    "description": "Vergütungsfairness nach Geschlecht, Abteilung und Rolle analysieren",
+    "stats": {
+      "employeesAnalyzed": "Analysierte Mitarbeiter",
+      "medianSalary": "Medianvergütung",
+      "meanPayGap": "Mittlere Entgeltlücke",
+      "medianPayGap": "Mediane Entgeltlücke"
+    },
+    "tabs": {
+      "overview": "Analyseübersicht",
+      "compliance": "Compliance-Bericht"
+    },
+    "gender": {
+      "title": "Analyse der geschlechtsspezifischen Entgeltlücke",
+      "maleEmployees": "Männliche Mitarbeiter",
+      "femaleEmployees": "Weibliche Mitarbeiter",
+      "maleMeanSalary": "Durchschnittsgehalt Männer",
+      "femaleMeanSalary": "Durchschnittsgehalt Frauen",
+      "menPaidMore": "Männer werden im Durchschnitt höher bezahlt",
+      "womenPaidMore": "Frauen werden im Durchschnitt höher bezahlt",
+      "noGap": "Keine Lücke erkannt"
+    },
+    "department": {
+      "title": "Abteilungsanalyse",
+      "department": "Abteilung",
+      "employees": "Mitarbeiter",
+      "meanSalary": "Durchschnittsgehalt",
+      "median": "Median",
+      "min": "Min.",
+      "max": "Max.",
+      "spread": "Spanne"
+    },
+    "role": {
+      "title": "Rollen-/Positionsanalyse",
+      "designation": "Position",
+      "count": "Anzahl",
+      "mean": "Mittelwert",
+      "median": "Median"
+    },
+    "compliance": {
+      "title": "Compliance-Bericht",
+      "generated": "Erstellt",
+      "findings": "Ergebnisse",
+      "recommendations": "Empfehlungen",
+      "notAvailable": "k. A."
+    },
+    "complianceMessages": {
+      "significantMean": "Signifikante mittlere Entgeltlücke erkannt: {{value}} % ({{group}})",
+      "significantMedian": "Signifikante mediane Entgeltlücke erkannt: {{value}} %",
+      "menPaidMore": "Männer werden höher bezahlt",
+      "womenPaidMore": "Frauen werden höher bezahlt",
+      "highVariance": "Hohe Gehaltsabweichung in der Abteilung „{{department}}“ (VK: {{value}} %)",
+      "acceptableGap": "Die Entgeltlücke liegt im akzeptablen Bereich (bis 5 %)",
+      "noConcerns": "Keine wesentlichen Bedenken zur Entgeltgleichheit festgestellt",
+      "reviewDepartment": "Gehaltsbänder der Abteilung „{{department}}“ zur Sicherung interner Gleichheit überprüfen",
+      "reviewCompensation": "Vergütung für Rollen mit signifikanten Lücken detailliert überprüfen",
+      "continueMonitoring": "Entgeltgleichheit weiterhin vierteljährlich überwachen"
+    }
+  },
+  "earnedWagePage": {
+    "title": "Zugriff auf verdienten Lohn",
+    "description": "Lohn auf Abruf — Mitarbeiter können vor dem Zahltag auf verdienten Lohn zugreifen",
+    "actions": {
+      "approve": "Genehmigen",
+      "reject": "Ablehnen",
+      "settings": "Einstellungen",
+      "requestAdvance": "Vorschuss beantragen"
+    },
+    "stats": {
+      "pendingRequests": "Ausstehende Anträge",
+      "totalDisbursed": "Gesamtauszahlung",
+      "avgRequest": "Ø Antrag",
+      "totalRequests": "Anträge insgesamt"
+    },
+    "filter": {
+      "showing": "Angezeigt werden",
+      "requests": "Anträge",
+      "clear": "Filter löschen"
+    },
+    "balance": {
+      "title": "Ihr verfügbarer Betrag",
+      "details": "Bisher verdient: {{earned}} | Bereits abgehoben: {{withdrawn}} | Tag {{day}}/{{days}}",
+      "maxPercentage": "Max. {{value}} % des verdienten Lohns"
+    },
+    "status": {
+      "pending": "Ausstehend",
+      "approved": "Genehmigt",
+      "disbursed": "Ausgezahlt",
+      "rejected": "Abgelehnt",
+      "repaid": "Zurückgezahlt",
+      "enabled": "Aktiviert",
+      "disabled": "Deaktiviert"
+    },
+    "columns": {
+      "employee": "Mitarbeiter",
+      "amount": "Betrag",
+      "fee": "Gebühr",
+      "status": "Status",
+      "requested": "Beantragt",
+      "reason": "Grund"
+    },
+    "emptyRequests": "Noch keine Vorschussanträge",
+    "messages": {
+      "showingAll": "Alle Anträge werden unten angezeigt",
+      "requestSubmitted": "Vorschussantrag eingereicht",
+      "submitFailed": "Antrag konnte nicht eingereicht werden",
+      "requestApproved": "Antrag genehmigt",
+      "approveFailed": "Genehmigung fehlgeschlagen",
+      "rejectionReason": "Ablehnungsgrund (optional):",
+      "requestRejected": "Antrag abgelehnt",
+      "rejectFailed": "Ablehnung fehlgeschlagen",
+      "settingsSaved": "Einstellungen gespeichert",
+      "settingsSaveFailed": "Einstellungen konnten nicht gespeichert werden"
+    },
+    "requestModal": {
+      "title": "Gehaltsvorschuss beantragen",
+      "available": "Verfügbar: {{amount}}",
+      "salaryDetails": "Monatsgehalt: {{salary}} | Tag {{day}}/{{days}}",
+      "unavailable": "Derzeit ist kein Vorschuss verfügbar. Prüfen Sie die Gehaltskonfiguration oder die Wartezeit.",
+      "amount": "Betrag",
+      "amountPlaceholder": "Betrag eingeben",
+      "reason": "Grund (optional)",
+      "reasonPlaceholder": "Warum benötigen Sie diesen Vorschuss?",
+      "cancel": "Abbrechen",
+      "submit": "Antrag senden"
+    },
+    "settingsModal": {
+      "title": "Einstellungen für Lohnzugriff",
+      "enable": "Zugriff auf verdienten Lohn aktivieren",
+      "maxPercentage": "Max. % des verdienten Lohns",
+      "cooldownDays": "Wartezeit in Tagen",
+      "minAmount": "Mindestbetrag",
+      "maxAmount": "Höchstbetrag (0 = kein Limit)",
+      "feePercentage": "Gebühr %",
+      "flatFee": "Pauschalgebühr",
+      "autoApproveBelow": "Automatisch genehmigen unter (0 = deaktiviert)",
+      "requiresApproval": "Genehmigung durch Führungskraft erforderlich",
+      "cancel": "Abbrechen",
+      "save": "Einstellungen speichern"
+    }
+  },
+  "insurancePage": {
+    "title": "Versicherungsverwaltung",
+    "description": "Gruppenversicherungen, Anmeldungen und Ansprüche verwalten",
+    "actions": {
+      "edit": "Bearbeiten",
+      "deactivate": "Deaktivieren",
+      "cancel": "Stornieren",
+      "settle": "Abrechnen",
+      "approve": "Genehmigen",
+      "reject": "Ablehnen",
+      "submitClaim": "Anspruch einreichen",
+      "enrollEmployee": "Mitarbeiter anmelden",
+      "newPolicy": "Neue Police"
+    },
+    "stats": {
+      "activePolicies": "Aktive Policen",
+      "activeEnrollments": "Aktive Anmeldungen",
+      "pendingClaims": "Ausstehende Ansprüche",
+      "totalApproved": "Genehmigter Gesamtbetrag"
+    },
+    "tabs": {
+      "policies": "Policen ({{count}})",
+      "enrollments": "Anmeldungen ({{count}})",
+      "claims": "Ansprüche ({{count}})"
+    },
+    "empty": {
+      "policies": "Noch keine Versicherungspolicen erstellt",
+      "enrollments": "Noch keine Anmeldungen",
+      "claims": "Noch keine Ansprüche eingereicht"
+    },
+    "columns": {
+      "policyName": "Policenname",
+      "number": "Nummer",
+      "provider": "Anbieter",
+      "type": "Typ",
+      "coverage": "Deckung",
+      "premiumPerEmployee": "Prämie/Mitarbeiter",
+      "status": "Status",
+      "employee": "Mitarbeiter",
+      "policy": "Police",
+      "sumInsured": "Versicherungssumme",
+      "premiumShare": "Prämienanteil",
+      "nominee": "Begünstigter",
+      "claimNumber": "Anspruch Nr.",
+      "claimed": "Beantragt",
+      "approved": "Genehmigt",
+      "submitted": "Eingereicht"
+    },
+    "policyTypes": {
+      "group_health": "Gruppenkrankenversicherung",
+      "group_life": "Gruppenlebensversicherung",
+      "disability": "Invalidität",
+      "accidental": "Unfall",
+      "travel": "Reise"
+    },
+    "claimTypes": {
+      "hospitalization": "Krankenhausaufenthalt",
+      "outpatient": "Ambulant",
+      "dental": "Zahn",
+      "vision": "Sehhilfe",
+      "life": "Leben",
+      "disability": "Invalidität",
+      "accidental": "Unfall",
+      "travel": "Reise",
+      "group_health": "Gruppenkrankenversicherung",
+      "group_life": "Gruppenlebensversicherung"
+    },
+    "status": {
+      "active": "Aktiv",
+      "expired": "Abgelaufen",
+      "cancelled": "Storniert",
+      "submitted": "Eingereicht",
+      "under_review": "In Prüfung",
+      "approved": "Genehmigt",
+      "rejected": "Abgelehnt",
+      "settled": "Abgerechnet",
+      "inactive": "Inaktiv",
+      "claimed": "Beansprucht"
+    },
+    "messages": {
+      "invalidEndDate": "Das Enddatum der Police darf nicht vor dem Startdatum liegen",
+      "renewalInPast": "Das Verlängerungsdatum darf nicht in der Vergangenheit liegen",
+      "invalidRenewalDate": "Das Verlängerungsdatum muss am oder nach dem Enddatum der Police liegen",
+      "invalidPolicyNumber": "Die Policennummer darf nicht mit einem Minuszeichen beginnen",
+      "policyUpdated": "Versicherungspolice aktualisiert",
+      "policyCreated": "Versicherungspolice erstellt",
+      "saveFailed": "Police konnte nicht gespeichert werden",
+      "deactivateConfirm": "Diese Versicherungspolice deaktivieren? Bestehende Anmeldungen bleiben unverändert.",
+      "policyDeactivated": "Versicherungspolice deaktiviert",
+      "deactivateFailed": "Police konnte nicht deaktiviert werden",
+      "employeeEnrolled": "Mitarbeiter zur Versicherung angemeldet",
+      "enrollFailed": "Anmeldung fehlgeschlagen",
+      "claimSubmitted": "Anspruch eingereicht",
+      "claimSubmitFailed": "Anspruch konnte nicht eingereicht werden",
+      "approvedAmountPrompt": "Genehmigter Betrag (leer lassen für den vollen Betrag):",
+      "claimApproved": "Anspruch genehmigt",
+      "actionFailed": "Aktion fehlgeschlagen",
+      "rejectionReason": "Ablehnungsgrund:",
+      "claimRejected": "Anspruch abgelehnt",
+      "claimSettled": "Anspruch abgerechnet",
+      "enrollmentCancelled": "Anmeldung storniert"
+    },
+    "policyModal": {
+      "editTitle": "Versicherungspolice bearbeiten",
+      "createTitle": "Versicherungspolice erstellen",
+      "policyName": "Policenname",
+      "policyNumber": "Policennummer",
+      "policyNumberPlaceholder": "z. B. POL-2024-001",
+      "provider": "Anbieter",
+      "type": "Typ",
+      "totalPremium": "Gesamtprämie",
+      "premiumPerEmployee": "Prämie / Mitarbeiter",
+      "coverageAmount": "Deckungsbetrag",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "renewalDate": "Verlängerungsdatum",
+      "terms": "Bedingungen",
+      "cancel": "Abbrechen",
+      "updatePolicy": "Police aktualisieren",
+      "createPolicy": "Police erstellen"
+    },
+    "enrollModal": {
+      "title": "Mitarbeiter zur Versicherung anmelden",
+      "employee": "Mitarbeiter",
+      "policy": "Versicherungspolice",
+      "sumInsured": "Versicherungssumme",
+      "premiumShare": "Prämienanteil des Mitarbeiters",
+      "nomineeName": "Name des Begünstigten",
+      "nomineeRelationship": "Beziehung zum Begünstigten",
+      "relationshipPlaceholder": "z. B. Ehepartner, Elternteil",
+      "cancel": "Abbrechen",
+      "submit": "Anmelden"
+    },
+    "claimModal": {
+      "title": "Versicherungsanspruch einreichen",
+      "policy": "Versicherungspolice",
+      "claimType": "Anspruchsart",
+      "amountClaimed": "Beanspruchter Betrag",
+      "description": "Beschreibung",
+      "descriptionPlaceholder": "Anspruch beschreiben",
+      "notes": "Notizen",
+      "cancel": "Abbrechen",
+      "submit": "Anspruch einreichen"
+    }
+  },
+  "countryCompliancePage": {
+    "title": "Länder-Compliance",
+    "description": "Arbeitsgesetze, Steuersätze und gesetzliche Anforderungen nach Land durchsuchen",
+    "filters": {
+      "searchPlaceholder": "Länder suchen...",
+      "configuredOnly": "Nur meine konfigurierten Länder ({{count}})"
+    },
+    "regions": {
+      "all": "Alle Regionen",
+      "asia": "Asien",
+      "europe": "Europa",
+      "americas": "Amerika",
+      "africa": "Afrika",
+      "oceania": "Ozeanien",
+      "middle_east": "Naher Osten"
+    },
+    "metrics": {
+      "maxHours": "Max. Wochenarbeitszeit",
+      "annualLeave": "Jahresurlaub",
+      "publicHolidays": "Feiertage",
+      "noticePeriod": "Kündigungsfrist",
+      "probation": "Probezeit",
+      "payFrequency": "Zahlungsfrequenz"
+    },
+    "units": {
+      "hours": "{{value}} Std.",
+      "days": "{{value}} Tage",
+      "months": "{{value}} Monate"
+    },
+    "payFrequencies": {
+      "monthly": "Monatlich",
+      "biweekly": "Zweiwöchentlich",
+      "weekly": "Wöchentlich",
+      "annual": "Jährlich"
+    },
+    "benefits": {
+      "title": "Gesetzliche Leistungen",
+      "socialSecurity": "Sozialversicherung",
+      "pension": "Rente",
+      "healthInsurance": "Krankenversicherung",
+      "required": "Erforderlich",
+      "notRequired": "Nicht erforderlich"
+    },
+    "ratesTitle": "Steuer- und Sozialversicherungssätze",
+    "additional": {
+      "title": "Zusätzliche Informationen",
+      "taxYearStart": "Beginn des Steuerjahres",
+      "minimumWage": "Mindestlohn (monatlich)",
+      "notSet": "Nicht festgelegt / Variiert",
+      "countryCode": "Ländercode",
+      "region": "Region"
+    },
+    "empty": {
+      "title": "Wählen Sie ein Land aus, um Compliance-Details anzuzeigen",
+      "description": "Arbeitsgesetze, Steuersätze und gesetzliche Anforderungen durchsuchen"
+    },
+    "complianceKeys": {
+      "income_tax": "Einkommensteuer",
+      "solidarity_surcharge": "Solidaritätszuschlag",
+      "health_insurance_employer": "Krankenversicherung Arbeitgeber",
+      "health_insurance_employee": "Krankenversicherung Arbeitnehmer",
+      "pension_employer": "Rente Arbeitgeber",
+      "pension_employee": "Rente Arbeitnehmer",
+      "unemployment_employer": "Arbeitslosenversicherung Arbeitgeber",
+      "unemployment_employee": "Arbeitslosenversicherung Arbeitnehmer",
+      "care_insurance_employer": "Pflegeversicherung Arbeitgeber",
+      "care_insurance_employee": "Pflegeversicherung Arbeitnehmer",
+      "employer_social_charges": "Sozialabgaben Arbeitgeber",
+      "employee_social_charges": "Sozialabgaben Arbeitnehmer",
+      "social_security_rate": "Sozialversicherungssatz",
+      "social_security_cap": "Beitragsbemessungsgrenze",
+      "federal_tax": "Bundessteuer",
+      "state_tax": "Landessteuer",
+      "epf_employer": "EPF Arbeitgeber",
+      "epf_employee": "EPF Arbeitnehmer",
+      "esi_employer": "ESI Arbeitgeber",
+      "esi_employee": "ESI Arbeitnehmer"
+    }
+  },
+  "glAccountingPage": {
+    "title": "Hauptbuch / Buchhaltung",
+    "description": "Lohnbestandteile Hauptbuchkonten zuordnen und Journalbuchungen erstellen",
+    "actions": {
+      "generateJournal": "Journal erstellen",
+      "addMapping": "Zuordnung hinzufügen",
+      "deleteMapping": "Zuordnung löschen",
+      "cancel": "Abbrechen",
+      "saveMapping": "Zuordnung speichern",
+      "generate": "Erstellen"
+    },
+    "stats": {
+      "mappings": "Hauptbuchzuordnungen",
+      "journals": "Journalbuchungen",
+      "exported": "Exportiert"
+    },
+    "tabs": {
+      "mappings": "Hauptbuchzuordnungen",
+      "journals": "Journalbuchungen",
+      "exported": "Exportiert"
+    },
+    "mappingTable": {
+      "payComponent": "Entgeltbestandteil",
+      "accountCode": "Sachkontocode",
+      "accountName": "Sachkontoname",
+      "description": "Beschreibung"
+    },
+    "journalTable": {
+      "date": "Datum",
+      "payrollRun": "Abrechnungslauf",
+      "totalDebit": "Soll gesamt",
+      "totalCredit": "Haben gesamt",
+      "status": "Status",
+      "export": "Export"
+    },
+    "statuses": {
+      "draft": "Entwurf",
+      "posted": "Gebucht",
+      "exported": "Exportiert"
+    },
+    "empty": {
+      "mappings": "Keine Hauptbuchzuordnungen konfiguriert",
+      "journals": "Keine Journalbuchungen erstellt",
+      "exported": "Noch keine Journalbuchungen exportiert"
+    },
+    "mappingModal": {
+      "title": "Hauptbuchzuordnung hinzufügen",
+      "payComponentCode": "Code des Entgeltbestandteils",
+      "payComponentPlaceholder": "z. B. BASIC, HRA, EPF, TDS",
+      "accountCode": "Sachkontocode",
+      "accountCodePlaceholder": "z. B. 4001",
+      "accountName": "Sachkontoname",
+      "accountNamePlaceholder": "z. B. Gehaltsaufwand",
+      "description": "Beschreibung"
+    },
+    "journalModal": {
+      "title": "Journalbuchung erstellen",
+      "payrollRun": "Abrechnungslauf",
+      "selectRun": "Abrechnungslauf auswählen...",
+      "help": "Dadurch werden Journalbuchungen aus dem ausgewählten Abrechnungslauf anhand Ihrer konfigurierten Hauptbuchzuordnungen erstellt."
+    },
+    "validation": {
+      "accountCode": "Der Sachkontocode muss eine positive Zahl ohne Minuszeichen, Buchstaben oder Leerzeichen sein"
+    },
+    "messages": {
+      "mappingCreated": "Hauptbuchzuordnung erstellt",
+      "journalGenerated": "Journalbuchung erstellt",
+      "mappingDeleted": "Zuordnung gelöscht",
+      "failed": "Aktion fehlgeschlagen"
+    },
+    "exports": {
+      "tallyTitle": "Nach Tally exportieren",
+      "quickbooksTitle": "Nach QuickBooks exportieren",
+      "zohoTitle": "Nach Zoho exportieren"
+    }
+  },
+  "globalEmployeesPage": {
+    "title": "Globale Mitarbeiter",
+    "description": "EOR-, Auftragnehmer- und direkt angestellte Mitarbeiter weltweit verwalten",
+    "actions": {
+      "addEmployee": "Mitarbeiter hinzufügen",
+      "editEmployee": "Mitarbeiter bearbeiten",
+      "terminateEmployee": "Mitarbeiter kündigen",
+      "alreadyTerminated": "Mitarbeiter bereits gekündigt",
+      "cancel": "Abbrechen",
+      "saveChanges": "Änderungen speichern"
+    },
+    "filters": {
+      "searchPlaceholder": "Nach Name, E-Mail oder Land suchen...",
+      "allCountries": "Alle Länder",
+      "allTypes": "Alle Typen",
+      "allStatuses": "Alle Status"
+    },
+    "employmentTypes": {
+      "eor": "EOR",
+      "contractor": "Auftragnehmer",
+      "direct_hire": "Direkteinstellung"
+    },
+    "contractTypes": {
+      "fullTime": "Vollzeit",
+      "partTime": "Teilzeit",
+      "fixedTerm": "Befristet"
+    },
+    "statuses": {
+      "active": "Aktiv",
+      "onboarding": "Onboarding",
+      "offboarding": "Offboarding",
+      "terminated": "Gekündigt"
+    },
+    "salaryFrequencies": {
+      "monthly": "Monatlich",
+      "biweekly": "Zweiwöchentlich",
+      "weekly": "Wöchentlich",
+      "annual": "Jährlich"
+    },
+    "salaryFrequencyShort": {
+      "monthly": "Mon.",
+      "biweekly": "2 Wo.",
+      "weekly": "Wo.",
+      "annual": "Jahr"
+    },
+    "table": {
+      "name": "Name",
+      "country": "Land",
+      "type": "Typ",
+      "status": "Status",
+      "salary": "Gehalt",
+      "jobTitle": "Berufsbezeichnung",
+      "startDate": "Startdatum",
+      "actions": "Aktionen"
+    },
+    "empty": "Keine globalen Mitarbeiter gefunden. Klicken Sie auf „Mitarbeiter hinzufügen“, um Ihr erstes internationales Teammitglied einzustellen.",
+    "modal": {
+      "addTitle": "Globalen Mitarbeiter hinzufügen",
+      "editTitle": "Globalen Mitarbeiter bearbeiten",
+      "firstName": "Vorname *",
+      "lastName": "Nachname *",
+      "email": "E-Mail *",
+      "country": "Land *",
+      "employmentType": "Beschäftigungsart *",
+      "contractType": "Vertragsart",
+      "jobTitle": "Berufsbezeichnung *",
+      "department": "Abteilung",
+      "selectDepartment": "Abteilung auswählen...",
+      "noDepartments": "Noch keine Abteilungen konfiguriert — fügen Sie unter Einstellungen > Abteilungen welche hinzu",
+      "startDate": "Startdatum *",
+      "salaryAmount": "Gehaltsbetrag * (in der Hauptwährungseinheit)",
+      "payFrequency": "Zahlungsfrequenz",
+      "bankingTax": "Bank- und Steuerdaten (optional)",
+      "taxId": "Steuer-ID",
+      "bankName": "Bankname",
+      "bankNamePlaceholder": "z. B. HDFC Bank",
+      "bankAccount": "Bankkontonummer",
+      "bankAccountPlaceholder": "z. B. 12345678901234",
+      "bankRouting": "Bankleitzahl / IFSC",
+      "bankRoutingPlaceholder": "z. B. HDFC0001234"
+    },
+    "validation": {
+      "required": "Bitte füllen Sie alle Pflichtfelder aus"
+    },
+    "messages": {
+      "added": "Globaler Mitarbeiter hinzugefügt",
+      "updated": "Globaler Mitarbeiter aktualisiert",
+      "addFailed": "Mitarbeiter konnte nicht hinzugefügt werden",
+      "updateFailed": "Mitarbeiter konnte nicht aktualisiert werden",
+      "terminatePrompt": "{{name}} kündigen? Geben Sie einen Grund ein (erforderlich):",
+      "terminated": "Mitarbeiter gekündigt",
+      "terminateFailed": "Mitarbeiter konnte nicht gekündigt werden"
+    }
+  },
+  "contractorInvoicesPage": {
+    "title": "Auftragnehmerrechnungen",
+    "description": "Auftragnehmerrechnungen verwalten und bezahlen",
+    "actions": {
+      "submitInvoice": "Rechnung einreichen",
+      "approve": "Genehmigen",
+      "reject": "Ablehnen",
+      "markPaid": "Als bezahlt markieren",
+      "cancel": "Abbrechen"
+    },
+    "filters": {
+      "allStatuses": "Alle Status"
+    },
+    "statuses": {
+      "pending": "Ausstehend",
+      "approved": "Genehmigt",
+      "paid": "Bezahlt",
+      "rejected": "Abgelehnt"
+    },
+    "table": {
+      "invoiceNumber": "Rechnungsnr.",
+      "contractor": "Auftragnehmer",
+      "period": "Zeitraum",
+      "amount": "Betrag",
+      "status": "Status",
+      "submitted": "Eingereicht",
+      "actions": "Aktionen"
+    },
+    "empty": "Noch keine Auftragnehmerrechnungen vorhanden.",
+    "modal": {
+      "title": "Auftragnehmerrechnung einreichen",
+      "contractorLabel": "Auftragnehmer *",
+      "selectContractor": "Auftragnehmer auswählen...",
+      "noContractors": "Noch keine Auftragnehmer — fügen Sie einen unter „Globale Mitarbeiter“ hinzu",
+      "amountLabel": "Betrag",
+      "amountUnitHint": "Hauptwährungseinheit",
+      "periodStart": "Zeitraum von *",
+      "periodEnd": "Zeitraum bis *",
+      "description": "Beschreibung"
+    },
+    "validation": {
+      "required": "Bitte füllen Sie alle Pflichtfelder aus",
+      "positiveAmount": "Der Betrag muss eine positive Zahl sein",
+      "invalidPeriod": "Das Enddatum muss am oder nach dem Startdatum liegen"
+    },
+    "messages": {
+      "submitted": "Rechnung eingereicht",
+      "submitFailed": "Rechnung konnte nicht eingereicht werden",
+      "approved": "Rechnung genehmigt",
+      "approveFailed": "Rechnung konnte nicht genehmigt werden",
+      "rejectConfirm": "Diese Rechnung ablehnen?",
+      "rejected": "Rechnung abgelehnt",
+      "rejectFailed": "Rechnung konnte nicht abgelehnt werden",
+      "paid": "Rechnung als bezahlt markiert",
+      "paidFailed": "Rechnung konnte nicht als bezahlt markiert werden"
+    }
+  },
+  "globalPayrollDashboard": {
+    "title": "Globale Gehaltsabrechnung",
+    "description": "Verwalten Sie Ihre weltweite Belegschaft über Länder, Währungen und Compliance-Anforderungen hinweg",
+    "stats": {
+      "activeEmployees": "Aktive Mitarbeiter",
+      "countries": "Länder",
+      "eorWorkers": "EOR-Mitarbeiter",
+      "contractors": "Auftragnehmer",
+      "complianceScore": "Compliance-Bewertung",
+      "pendingInvoices": "Ausstehende Rechnungen",
+      "onboarding": "Onboarding"
+    },
+    "compliance": {
+      "good": "Gut",
+      "needsAttention": "Handlungsbedarf"
+    },
+    "employeesByCountry": {
+      "title": "Mitarbeiter nach Land",
+      "empty": "Noch keine Mitarbeiter vorhanden. Fügen Sie Ihren ersten globalen Mitarbeiter hinzu."
+    },
+    "costByCurrency": {
+      "title": "Monatliche Kosten nach Währung",
+      "empty": "Noch keine aktiven Abrechnungskosten vorhanden."
+    },
+    "costAnalysis": {
+      "title": "Kostenanalyse nach Land",
+      "columns": {
+        "country": "Land",
+        "employees": "Mitarbeiter",
+        "averageSalary": "Durchschn. Gehalt",
+        "totalGross": "Gesamtbrutto",
+        "employerCost": "Arbeitgeberkosten",
+        "netPay": "Nettogehalt"
+      }
+    }
+  },
+  "globalPayrollRuns": {
+    "title": "Globale Abrechnungsläufe",
+    "description": "Gehaltsabrechnung monatlich pro Land durchführen, prüfen, genehmigen und als bezahlt markieren",
+    "statusFilter": "Abrechnungsläufe nach Status filtern",
+    "allStatuses": "Alle Statuswerte",
+    "empty": "Noch keine Abrechnungsläufe vorhanden. Erstellen Sie Ihren ersten globalen Abrechnungslauf.",
+    "columns": {
+      "country": "Land",
+      "period": "Zeitraum",
+      "status": "Status",
+      "gross": "Brutto",
+      "net": "Netto",
+      "deductions": "Abzüge",
+      "employerCost": "Arbeitgeberkosten",
+      "actions": "Aktionen"
+    },
+    "actions": {
+      "view": "Abrechnungslauf anzeigen",
+      "approve": "Genehmigen",
+      "markPaid": "Als bezahlt markieren"
+    },
+    "createModal": {
+      "title": "Globalen Abrechnungslauf erstellen",
+      "country": "Land *",
+      "selectCountry": "Land auswählen...",
+      "noCountries": "Keine Länder mit aktiven EOR- oder direkt angestellten Mitarbeitern",
+      "calculationNotice": "Dadurch werden die Abzüge für alle aktiven EOR- und direkt angestellten Mitarbeiter im ausgewählten Land automatisch berechnet."
+    },
+    "detailModal": {
+      "title": "Abrechnungslauf — {{country}}",
+      "netPay": "Nettogehalt",
+      "employee": "Mitarbeiter",
+      "tax": "Steuer",
+      "socialSecurityEmployee": "Sozialversicherung (AN)",
+      "pensionEmployee": "Rente (AN)"
+    },
+    "messages": {
+      "selectCountry": "Bitte wählen Sie ein Land aus",
+      "approved": "Abrechnungslauf genehmigt",
+      "approveFailed": "Abrechnungslauf konnte nicht genehmigt werden",
+      "markedPaid": "Abrechnungslauf als bezahlt markiert",
+      "markPaidFailed": "Abrechnungslauf konnte nicht als bezahlt markiert werden"
+    }
+  },
+  "announcementsPage": {
+    "title": "Mitteilungen",
+    "description": "Unternehmensweite Hinweise aus EmpCloud",
+    "manageInEmpCloud": "In EmpCloud verwalten",
+    "empty": "Noch keine Mitteilungen vorhanden",
+    "postFromEmpCloud": "In EmpCloud veröffentlichen",
+    "pinned": "Angeheftet",
+    "archived": "Archiviert",
+    "byAuthor": "Von {{author}}",
+    "unknownAuthor": "Unbekannt",
+    "expires": "Läuft am {{date}} ab",
+    "priorities": {
+      "low": "Niedrig",
+      "normal": "Normal",
+      "high": "Hoch",
+      "urgent": "Dringend"
+    },
+    "categories": {
+      "general": "Allgemein",
+      "hr": "Personal",
+      "policy": "Richtlinie",
+      "event": "Veranstaltung",
+      "holiday": "Feiertag",
+      "maintenance": "Wartung"
+    }
+  },
+  "notificationsPage": {
+    "title": "Benachrichtigungen",
+    "description": "Alle aktuellen Hinweise und Aktualisierungen an einem Ort",
+    "markAllRead": "Alle als gelesen markieren",
+    "bellAria": "Benachrichtigungen, {{count}} ungelesen",
+    "newCount": "{{count}} neu — Als gelesen markieren",
+    "viewAll": "Alle Benachrichtigungen anzeigen",
+    "tabs": {
+      "all": "Alle ({{count}})",
+      "unread": "Ungelesen ({{count}})"
+    },
+    "empty": {
+      "noUnread": "Keine ungelesenen Benachrichtigungen",
+      "none": "Keine Benachrichtigungen",
+      "caughtUp": "Sie sind auf dem neuesten Stand!",
+      "updatesHere": "Neue Aktualisierungen werden hier angezeigt."
+    },
+    "items": {
+      "admin": {
+        "tdsDue": {
+          "title": "TDS-Einreichung fällig",
+          "description": "Formular 24Q für Q4 des GJ 2025–26 ist bald fällig",
+          "time": "Handlungsbedarf"
+        },
+        "payrollPending": {
+          "title": "Abrechnung für {{month}} ausstehend",
+          "description": "Abrechnung für diesen Monat erstellen und ausführen",
+          "time": "Diesen Monat"
+        },
+        "payrollCompleted": {
+          "title": "Letzte Abrechnung abgeschlossen",
+          "description": "Alle Gehaltsabrechnungen wurden erstellt und bezahlt",
+          "time": "Letzten Monat"
+        },
+        "activeEmployees": {
+          "title": "{{count}} aktive Mitarbeiter",
+          "description": "Alle gesetzlichen Registrierungen sind aktuell",
+          "time": "System"
+        }
+      },
+      "employee": {
+        "payslipAvailable": {
+          "title": "Gehaltsabrechnung verfügbar",
+          "description": "Ihre neueste Gehaltsabrechnung kann angezeigt werden",
+          "time": "Kürzlich"
+        },
+        "taxReminder": {
+          "title": "Erinnerung an die Steuererklärung",
+          "description": "Reichen Sie Ihre Investitionsnachweise vor Ablauf der Frist ein",
+          "time": "Dieses Quartal"
+        },
+        "salaryCredited": {
+          "title": "Gehalt gutgeschrieben",
+          "description": "Ihr Gehalt wurde Ihrem Bankkonto gutgeschrieben",
+          "time": "Letzten Monat"
+        }
+      }
+    }
+  },
+  "selfServiceDashboard": {
+    "greeting": "Willkommen, {{name}}!",
+    "userFallback": "Benutzer",
+    "description": "Hier ist Ihre Gehaltsübersicht",
+    "stats": {
+      "monthlyCtc": "Monatlicher CTC",
+      "latestNetPay": "Nettogehalt (zuletzt)",
+      "taxRegime": "Steuermodell",
+      "daysAtCompany": "Tage im Unternehmen"
+    },
+    "regimes": {
+      "old": "Altes Steuermodell",
+      "new": "Neues Steuermodell"
+    },
+    "latestPayslip": "Neueste Gehaltsabrechnung — {{period}}",
+    "payslip": {
+      "grossPay": "Bruttogehalt",
+      "deductions": "Abzüge",
+      "netPay": "Nettogehalt",
+      "viewAll": "Alle anzeigen"
+    },
+    "actions": {
+      "salaryBreakdown": "Gehaltsaufteilung anzeigen",
+      "taxComputation": "Steuerberechnung",
+      "submitDeclarations": "Erklärungen einreichen",
+      "reimbursements": "Erstattungen",
+      "profile": "Mein Profil"
+    },
+    "announcements": {
+      "title": "Unternehmensmitteilungen",
+      "readMore": "Weiterlesen",
+      "fallbackTitle": "Mitteilung",
+      "priorityLabel": "Priorität: {{priority}}",
+      "priorities": {
+        "low": "niedrig",
+        "normal": "normal",
+        "high": "hoch",
+        "urgent": "dringend"
+      }
+    }
+  },
+  "myPayslipsPage": {
+    "title": "Meine Gehaltsabrechnungen",
+    "description": "Gehaltsabrechnungen ansehen und herunterladen",
+    "financialYear": "GJ {{start}}-{{end}}",
+    "financialYearFilter": "Nach Geschäftsjahr filtern",
+    "empty": "Noch keine Gehaltsabrechnungen verfügbar",
+    "gross": "Brutto",
+    "net": "Netto",
+    "actions": {
+      "hide": "Ausblenden",
+      "details": "Details",
+      "downloadPdf": "PDF herunterladen",
+      "dispute": "Gehaltsabrechnung beanstanden"
+    },
+    "earnings": "Bezüge",
+    "totalEarnings": "Gesamtbezüge",
+    "deductions": "Abzüge",
+    "totalDeductions": "Gesamtabzüge",
+    "components": {
+      "EPF": "Arbeitnehmer-Vorsorgefonds",
+      "PF": "Vorsorgefonds",
+      "PF_EE": "Arbeitnehmerbeitrag zum Vorsorgefonds",
+      "ESI": "Arbeitnehmerversicherung",
+      "PT": "Berufssteuer",
+      "TDS": "Einkommensteuer (TDS)",
+      "INCOME_TAX": "Einkommensteuer",
+      "LOP": "Lohnabzug wegen Fehlzeit"
+    },
+    "dispute": {
+      "title": "Gehaltsabrechnung beanstanden",
+      "reasonRequired": "Bitte geben Sie einen Grund an",
+      "success": "Die Beanstandung wurde eingereicht. Die Personalabteilung prüft sie.",
+      "failed": "Beanstandung konnte nicht eingereicht werden",
+      "description": "Wenn Sie einen Fehler in dieser Gehaltsabrechnung vermuten, beschreiben Sie das Problem. Die Personalabteilung wird es prüfen und antworten.",
+      "placeholder": "Problem beschreiben (z. B. falscher Abzug oder fehlende Zulage)",
+      "cancel": "Abbrechen",
+      "submit": "Beanstandung einreichen"
+    }
+  },
+  "mySalaryPage": {
+    "title": "Mein Gehalt",
+    "description": "Aufschlüsselung Ihres CTC und Ihrer Gehaltsstruktur",
+    "unavailable": "Keine Gehaltsinformationen verfügbar",
+    "annualSummary": "Jahresübersicht",
+    "annualCtcConfigured": "Jährlicher CTC (konfiguriert)",
+    "annualGrossComponents": "Jährliches Brutto aus Komponenten",
+    "roundingNotice": "Kleine Abweichungen zwischen dem konfigurierten CTC und der Summe der Komponenten sind normal: Monatliche Beträge werden vor der Hochrechnung auf ganze Rupien gerundet.",
+    "grossSalaryAnnual": "Bruttojahresgehalt",
+    "monthlyComponent": "{{component}} (monatlich)",
+    "monthlyBreakdown": "Monatliche Gehaltsaufteilung",
+    "salaryComponents": "Gehaltsbestandteile",
+    "effectiveFrom": "Gültig ab {{date}}",
+    "columns": {
+      "component": "Bestandteil",
+      "monthly": "Monatlich",
+      "annual": "Jährlich"
+    },
+    "components": {
+      "BASIC": "Grundgehalt",
+      "HRA": "HRA",
+      "SA": "Sonderzulage"
+    }
+  },
+  "myTaxPage": {
+    "title": "Meine Steuern",
+    "description": "Steuerberechnung für das Geschäftsjahr {{financialYear}}",
+    "form16": "Formular 16",
+    "stats": {
+      "annualIncome": "Jahreseinkommen",
+      "taxableIncome": "Steuerpflichtiges Einkommen",
+      "estimatedTax": "Geschätzte Steuer",
+      "tdsDeductedYtd": "Bisher abgezogene TDS"
+    },
+    "computationTitle": "Steuerberechnung",
+    "regimes": {
+      "new": "Neue Regelung",
+      "old": "Alte Regelung"
+    },
+    "rows": {
+      "grossAnnualIncome": "Bruttojahreseinkommen",
+      "standardDeduction": "Abzüglich: Standardabzug",
+      "chapterDeductions": "Abzüglich: Abzüge nach Kapitel VI-A",
+      "taxableIncome": "Steuerpflichtiges Einkommen",
+      "taxOnIncome": "Einkommensteuer",
+      "cess": "Gesundheits- und Bildungsabgabe (4 %)",
+      "totalLiability": "Gesamte Steuerschuld",
+      "monthlyTds": "Monatliche TDS"
+    },
+    "tracker": {
+      "title": "TDS-Abzugsübersicht",
+      "totalTax": "Gesamtsteuer des Geschäftsjahres",
+      "tdsDeductedYtd": "Bisher abgezogene TDS",
+      "remaining": "Verbleibend",
+      "progress": "Fortschritt",
+      "monthlyMessage": "Monatlich werden <strong>{{amount}}</strong> TDS von Ihrem Gehalt abgezogen."
+    }
+  },
+  "myDeclarationsPage": {
+    "description": "Geschäftsjahr {{financialYear}} — Investitionsnachweise und Anträge einreichen",
+    "actions": {
+      "quickDeclare": "Alles schnell erklären",
+      "newDeclaration": "Neue Erklärung",
+      "cancel": "Abbrechen",
+      "submitAll": "Alle Erklärungen einreichen",
+      "submit": "Erklärung einreichen"
+    },
+    "stats": {
+      "totalDeclared": "Insgesamt erklärt",
+      "totalApproved": "Insgesamt genehmigt",
+      "pendingApproval": "Genehmigung ausstehend"
+    },
+    "declarations": "Erklärungen",
+    "empty": "Noch keine Erklärungen. Wählen Sie Neue Erklärung, um Ihren ersten Investitionsnachweis einzureichen.",
+    "proof": {
+      "submitted": "Nachweis eingereicht",
+      "upload": "Hochladen"
+    },
+    "quick": {
+      "title": "Schnelle Steuererklärung",
+      "description": "Alle Investitionen auf einmal erklären",
+      "tip": "Tipp: Nach Abschnitt 80C können Sie bis zu ₹1,50,000 für PPF, ELSS, LIC usw. geltend machen. NPS nach 80CCD(1B) ermöglicht einen zusätzlichen Abzug von ₹50,000.",
+      "defaultDescription": "Steuererklärung nach Abschnitt {{section}}"
+    },
+    "sections": {
+      "80C": "80C — PPF, ELSS, LIC usw.",
+      "80CCD_1B": "80CCD(1B) — NPS",
+      "80D": "80D — Krankenversicherung",
+      "80E": "80E — Zinsen für Bildungsdarlehen",
+      "80G": "80G — Spenden",
+      "80TTA": "80TTA — Sparzinsen",
+      "HRA": "HRA — Wohnungsmiete"
+    },
+    "validation": {
+      "sectionRequired": "Bitte wählen Sie einen Abschnitt",
+      "fieldRequired": "Bitte füllen Sie dieses Feld aus",
+      "validAmount": "Bitte geben Sie einen gültigen Betrag ein",
+      "nonnegativeAmount": "Der Betrag darf nicht negativ sein",
+      "fileTooLarge": "Die Datei ist größer als 5 MB",
+      "fileType": "Nur PDF-, JPG- oder PNG-Dateien sind zulässig",
+      "oneAmount": "Geben Sie mindestens einen Betrag ein"
+    },
+    "messages": {
+      "proofUploaded": "Nachweis hochgeladen",
+      "proofUploadFailed": "Nachweis konnte nicht hochgeladen werden",
+      "submitted": "Erklärung eingereicht",
+      "submitFailed": "Erklärung konnte nicht eingereicht werden",
+      "submittedCount_one": "{{count}} Erklärung eingereicht",
+      "submittedCount_other": "{{count}} Erklärungen eingereicht",
+      "submitAllFailed": "Erklärungen konnten nicht eingereicht werden"
+    },
+    "form": {
+      "descriptionPlaceholder": "z. B. PPF-Beitrag",
+      "amount": "Betrag",
+      "proofDocument": "Nachweisdokument",
+      "optional": "optional",
+      "uploadProof": "Nachweisdokument hochladen",
+      "fileSelected": "{{size}} KB — zum Ändern auswählen",
+      "dropzone": "Zum Hochladen auswählen oder hierher ziehen",
+      "fileHelp": "PDF, JPG oder PNG bis 5 MB"
+    }
+  },
+  "myReimbursementsPage": {
+    "title": "Meine Erstattungen",
+    "description": "Ausgaben einreichen und verfolgen",
+    "newClaim": "Neuer Antrag",
+    "stats": {
+      "total": "Anträge insgesamt",
+      "pending": "Ausstehend",
+      "approvedPaid": "Genehmigt / bezahlt"
+    },
+    "empty": {
+      "title": "Keine Erstattungsanträge",
+      "description": "Wählen Sie Neuer Antrag, um eine Ausgabe einzureichen"
+    },
+    "columns": {
+      "category": "Kategorie",
+      "description": "Beschreibung",
+      "amount": "Betrag",
+      "date": "Datum",
+      "status": "Status"
+    },
+    "categories": {
+      "medical": "Medizinisch",
+      "travel": "Reise",
+      "food": "Essen und Verpflegung",
+      "equipment": "Ausstattung",
+      "internet": "Internet / Telefon",
+      "books": "Bücher und Weiterbildung",
+      "other": "Sonstiges"
+    },
+    "status": {
+      "pending": "Ausstehend",
+      "approved": "Genehmigt",
+      "paid": "Bezahlt",
+      "rejected": "Abgelehnt"
+    },
+    "messages": {
+      "invalidAmount": "Der Betrag muss null oder positiv sein",
+      "submitted": "Antrag zur Genehmigung eingereicht",
+      "failed": "Antrag konnte nicht eingereicht werden"
+    },
+    "modal": {
+      "title": "Ausgabenantrag einreichen",
+      "category": "Kategorie",
+      "description": "Beschreibung",
+      "descriptionPlaceholder": "z. B. Taxi zum Kundentermin",
+      "amount": "Betrag (₹)",
+      "expenseDate": "Ausgabedatum",
+      "cancel": "Abbrechen",
+      "submit": "Antrag einreichen"
+    }
+  },
+  "holidaysPage": {
+    "title": "Feiertagskalender",
+    "configured_one": "{{year}} — {{count}} Feiertag konfiguriert",
+    "configured_other": "{{year}} — {{count}} Feiertage konfiguriert",
+    "noHolidays": "Keine Feiertage",
+    "upcoming": "Bevorstehende Feiertage",
+    "past": "Vergangene Feiertage",
+    "actions": {
+      "add": "Feiertag hinzufügen",
+      "remove": "Feiertag entfernen",
+      "cancel": "Abbrechen"
+    },
+    "columns": {
+      "holiday": "Feiertag",
+      "date": "Datum",
+      "day": "Tag",
+      "type": "Typ"
+    },
+    "types": {
+      "national": "National",
+      "regional": "Regional",
+      "optional": "Optional / eingeschränkt"
+    },
+    "messages": {
+      "nameRequired": "Der Name des Feiertags ist erforderlich",
+      "nameLetter": "Der Name des Feiertags muss mindestens einen Buchstaben enthalten",
+      "added": "Feiertag hinzugefügt",
+      "addFailed": "Feiertag konnte nicht hinzugefügt werden",
+      "removed": "Feiertag entfernt",
+      "removeFailed": "Feiertag konnte nicht entfernt werden"
+    },
+    "modal": {
+      "title": "Feiertag hinzufügen",
+      "name": "Name des Feiertags",
+      "namePlaceholder": "z. B. Diwali",
+      "nameTitle": "Muss mindestens einen Buchstaben enthalten",
+      "date": "Datum",
+      "type": "Typ"
+    }
+  },
+  "payrollRuns": {
+    "title": "Abrechnungsläufe",
+    "description": "Monatliche Entgeltabrechnung",
+    "runPayroll": "Abrechnung starten",
+    "noRuns": "Noch keine Abrechnungsläufe.",
+    "runFirst": "Erste Abrechnung starten",
+    "totalRuns": "Läufe insgesamt",
+    "allPeriods": "Alle Zeiträume",
+    "latestNetPay": "Letzte Nettozahlung",
+    "noComputedRuns": "Keine berechneten Läufe",
+    "markedPaid": "Als bezahlt markiert",
+    "inProgress": "In Bearbeitung",
+    "inProgressSubtitle": "Entwurf · berechnet · genehmigt",
+    "filterAria": "Läufe nach Status filtern",
+    "noMatches": "Keine Läufe entsprechen diesem Filter.",
+    "newTitle": "Neuer Abrechnungslauf",
+    "newDescription": "Neuen monatlichen Abrechnungslauf erstellen",
+    "createInfo": "Erstellt einen Entwurf und berechnet Brutto, Abzüge und Netto für alle aktiven Mitarbeiter im ausgewählten Monat. Sie können ihn vor der Markierung als bezahlt prüfen und genehmigen.",
+    "month": "Monat",
+    "year": "Jahr",
+    "payDate": "Zahltag",
+    "cancel": "Abbrechen",
+    "createRun": "Lauf erstellen",
+    "created": "Abrechnungslauf erstellt",
+    "missingReturnedId": "Der Lauf wurde übermittelt, aber der Server hat keine ID zurückgegeben. Aktualisieren Sie die Liste zur Prüfung.",
+    "createFailed": "Abrechnungslauf konnte nicht erstellt werden",
+    "missingId": "Diesem Abrechnungslauf fehlt eine ID — aktualisieren Sie die Liste.",
+    "columns": {
+      "period": "Zeitraum",
+      "employees": "Mitarbeiter",
+      "grossPay": "Bruttolohn",
+      "deductions": "Abzüge",
+      "netPay": "Nettolohn",
+      "status": "Status"
+    },
+    "statuses": {
+      "all": "Alle",
+      "draft": "Entwurf",
+      "processing": "In Verarbeitung",
+      "computed": "Berechnet",
+      "approved": "Genehmigt",
+      "paid": "Bezahlt",
+      "cancelled": "Storniert"
+    },
+    "validation": {
+      "month": "Wählen Sie einen gültigen Monat",
+      "year": "Geben Sie ein gültiges Jahr ein (2020–2100)",
+      "futurePeriod": "Für einen zukünftigen Zeitraum kann kein Abrechnungslauf erstellt werden",
+      "payDate": "Wählen Sie einen Zahltag"
+    }
+  },
+  "pagination": {
+    "range": "{{start}}–{{end}} von {{total}}",
+    "pageOf": "Seite {{page}} von {{totalPages}}",
+    "previous": "Zurück",
+    "previousPage": "Vorherige Seite",
+    "next": "Weiter",
+    "nextPage": "Nächste Seite"
+  },
+  "adminDeclarations": {
+    "title": "Steuererklärungen",
+    "description": "Prüfen Sie die von Mitarbeitern eingereichten Anlageerklärungen für {{financialYear}}.",
+    "pending": {
+      "title": "Ausstehende Genehmigungen",
+      "badge": "{{pending}} ausstehend · {{count}} Mitarbeiter",
+      "badge_one": "{{pending}} ausstehend · {{count}} Mitarbeiter",
+      "badge_other": "{{pending}} ausstehend · {{count}} Mitarbeiter",
+      "loading": "Ausstehende Erklärungen werden geladen…",
+      "empty": "Für {{financialYear}} warten keine Erklärungen auf Genehmigung. Alles ist erledigt.",
+      "declaredAmount": "{{amount}} erklärt"
+    },
+    "employees": {
+      "title": "Mitarbeiter",
+      "loading": "Wird geladen…",
+      "noMatches": "Keine passenden Mitarbeiter.",
+      "shownOf": "{{shown}} von {{total}}"
+    },
+    "filters": {
+      "searchPlaceholder": "Name, E-Mail oder Code",
+      "filterDepartment": "Nach Abteilung filtern",
+      "allDepartments": "Alle Abteilungen",
+      "filterLocation": "Nach Standort filtern",
+      "allLocations": "Alle Standorte",
+      "clear": "Filter löschen"
+    },
+    "declarations": {
+      "pickEmployee": "Mitarbeiter auswählen",
+      "approving": "Wird genehmigt…",
+      "approvePending": "{{count}} ausstehende Erklärungen genehmigen",
+      "approvePending_one": "{{count}} ausstehende Erklärung genehmigen",
+      "approvePending_other": "{{count}} ausstehende Erklärungen genehmigen",
+      "selectPrompt": "Wählen Sie einen Mitarbeiter aus der Liste, um seine Steuererklärungen anzuzeigen.",
+      "loading": "Erklärungen werden geladen…",
+      "empty": "Für {{financialYear}} wurden keine Erklärungen eingereicht."
+    },
+    "stats": {
+      "declared": "Erklärt",
+      "approved": "Genehmigt",
+      "pending": "Ausstehend"
+    },
+    "columns": {
+      "section": "Abschnitt",
+      "description": "Beschreibung",
+      "declared": "Erklärt",
+      "approved": "Genehmigt",
+      "status": "Status",
+      "proof": "Nachweis",
+      "action": "Aktion"
+    },
+    "statuses": {
+      "pending": "Ausstehend",
+      "approved": "Genehmigt",
+      "rejected": "Abgelehnt"
+    },
+    "proof": {
+      "view": "Anzeigen"
+    },
+    "actions": {
+      "approve": "Genehmigen"
+    },
+    "toasts": {
+      "noPending": "Keine ausstehenden Erklärungen zu genehmigen.",
+      "approvedCount": "{{count}} Erklärungen genehmigt.",
+      "approvedCount_one": "{{count}} Erklärung genehmigt.",
+      "approvedCount_other": "{{count}} Erklärungen genehmigt.",
+      "approveAllFailed": "Erklärungen konnten nicht genehmigt werden",
+      "alreadyApproved": "Bereits genehmigt.",
+      "approvedOne": "Erklärung genehmigt.",
+      "approveOneFailed": "Erklärung konnte nicht genehmigt werden"
+    }
+  },
+  "taxCalculator": {
+    "title": "Steuerrechner",
+    "description": "Was-wäre-wenn-Projektion der Einkommensteuer — Mitarbeiter auswählen und mit eigenen Werten neu berechnen",
+    "financialYearShort": "Geschäftsjahr {{year}}",
+    "simulationFailed": "Die Steuer konnte nicht berechnet werden. Bitte erneut versuchen.",
+    "newRegimeInfo": "Neues Steuermodell — es gilt nur der Standardabzug von ₹75.000. HRA, 80C, 80D und andere Abzüge nach Kapitel VI-A sind nicht verfügbar.",
+    "steps": {
+      "employee": "Schritt 1 · Mitarbeiter",
+      "inputs": "Schritt 2 · Eingaben",
+      "taxBreakdown": "Schritt 3 · Steueraufschlüsselung"
+    },
+    "regimes": {
+      "new": "Neues Steuermodell",
+      "old": "Altes Steuermodell"
+    },
+    "employee": {
+      "ctc": "CTC",
+      "select": "Mitarbeiter suchen und auswählen…",
+      "joined": "Eintritt am {{date}}",
+      "monthsLeft": "Noch {{count}} Monate in diesem Geschäftsjahr",
+      "monthsLeft_one": "Noch {{count}} Monat in diesem Geschäftsjahr",
+      "monthsLeft_other": "Noch {{count}} Monate in diesem Geschäftsjahr",
+      "midFyJoiner": "Eintritt im laufenden Geschäftsjahr",
+      "searchPlaceholder": "Nach Name, E-Mail oder Code suchen…",
+      "noMatches": "Keine Mitarbeiter entsprechen „{{search}}“"
+    },
+    "empty": {
+      "title": "Wählen Sie zunächst einen Mitarbeiter aus",
+      "description": "Der Rechner lädt das aktuelle Gehalt, das Steuermodell und genehmigte Erklärungen. Sie können jeden Wert ändern und die daraus resultierende monatliche TDS sehen."
+    },
+    "inputs": {
+      "reset": "Gespeicherte Werte wiederherstellen",
+      "loadingSaved": "Gespeicherte Werte werden geladen…",
+      "noSalary": "Keine aktive Gehaltsstruktur zugewiesen. Alle Felder beginnen bei null — geben Sie die Werte manuell ein, um die Steuer zu berechnen.",
+      "midFyTitle": "Eintritt im laufenden Geschäftsjahr — Formular 12B unten erfassen",
+      "midFyDescription": "Dieser Mitarbeiter ist im Geschäftsjahr {{financialYear}} eingetreten. Ohne Einkommen und TDS des vorherigen Arbeitgebers verteilt das System die gesamte Jahressteuer auf nur {{count}} Monate und zieht zu viel ab.",
+      "midFyDescription_one": "Dieser Mitarbeiter ist im Geschäftsjahr {{financialYear}} eingetreten. Ohne Einkommen und TDS des vorherigen Arbeitgebers wendet das System die gesamte Jahressteuer auf nur {{count}} Monat an und zieht zu viel ab.",
+      "midFyDescription_other": "Dieser Mitarbeiter ist im Geschäftsjahr {{financialYear}} eingetreten. Ohne Einkommen und TDS des vorherigen Arbeitgebers verteilt das System die gesamte Jahressteuer auf nur {{count}} Monate und zieht zu viel ab.",
+      "regime": "Steuermodell",
+      "compare": "Altes und neues Modell vergleichen",
+      "pan": "PAN",
+      "panHint": "20 % Pauschalsatz nach 206AA, wenn leer",
+      "annualGross": "Jährliches Brutto",
+      "annualBasic": "Jährliches Grundgehalt",
+      "annualHra": "Jährliche HRA",
+      "employeePfAnnual": "PF des Mitarbeiters (jährlich)"
+    },
+    "priorEmployer": {
+      "title": "Vorheriger Arbeitgeber (Formular 12B)",
+      "save": "Im Profil speichern",
+      "saved": "TDS des vorherigen Arbeitgebers gespeichert",
+      "saveFailed": "Vorherige TDS konnte nicht gespeichert werden",
+      "description": "Einkommen und TDS beim vorherigen Arbeitgeber in diesem Geschäftsjahr. Gespeicherte Werte fließen in die nächste Abrechnung ein und verhindern einen doppelten Einbehalt.",
+      "gross": "Brutto beim vorherigen Arbeitgeber (dieses Geschäftsjahr)",
+      "tds": "TDS des vorherigen Arbeitgebers",
+      "source": "Quelle / Notizen (optional)",
+      "sourcePlaceholder": "z. B. „Formular 12B am 01.09.2026 hochgeladen“"
+    },
+    "oldRegime": {
+      "title": "Zusatzangaben für das alte Steuermodell",
+      "annualRent": "Gezahlte Jahresmiete",
+      "metro": "Metropole (HRA-Obergrenze 50 % des Grundgehalts)",
+      "declarations": "Erklärungen nach Kapitel VI-A",
+      "add": "Hinzufügen",
+      "noDeclarations": "Keine Erklärungen. Klicken Sie auf „Hinzufügen“, um 80C, 80D, 80CCD(1B) usw. zu simulieren.",
+      "remove": "Entfernen"
+    },
+    "actions": {
+      "compareRegimes": "Steuermodelle vergleichen",
+      "calculate": "Berechnen"
+    },
+    "validation": {
+      "invalidPan": "Das PAN-Format scheint ungültig — erwartet wird ABCDE1234F.",
+      "section80CCap": "Der 80C-Gesamtbetrag beträgt {{amount}} — nur ₹1,50,000 sind abzugsfähig (Obergrenze).",
+      "npsCap": "80CCD(1B) NPS ist auf ₹50.000 begrenzt.",
+      "hraNeedsRent": "Für die HRA-Befreiung ist gezahlte Miete erforderlich — geben Sie die Jahresmiete ein."
+    },
+    "results": {
+      "calculating": "Berechnung läuft…",
+      "clickCalculate": "Klicken Sie auf Berechnen, um die Steuer zu projizieren",
+      "enterAnnualGross": "Geben Sie das jährliche Brutto ein, um die Steuer zu projizieren",
+      "section206aaTitle": "Abschnitt 206AA angewendet",
+      "section206aaDetail": "Die PAN fehlt, daher werden unabhängig vom Steuermodell oder den Erklärungen pauschal 20 % des Jahresbruttos einbehalten.",
+      "sameTax": "Beide Steuermodelle ergeben dieselbe Steuer",
+      "saves": "{{regime}} spart {{amount}}",
+      "recommended": "Empfohlen:",
+      "monthlyTds": "Monatliche TDS",
+      "tapRegime": "Wählen Sie ein Steuermodell für die vollständige Aufschlüsselung",
+      "grossAnnualIncome": "Jährliches Bruttoeinkommen",
+      "less": "Abzüglich: {{item}}",
+      "taxableIncome": "Zu versteuerndes Einkommen",
+      "taxOnIncome": "Einkommensteuer (nach Nachlass 87A)",
+      "surcharge": "Zuschlag",
+      "cess": "Gesundheits- und Bildungsabgabe (4 %)",
+      "totalAnnualTax": "Gesamte Jahressteuer",
+      "tdsPaidYtd": "Im laufenden Jahr gezahlte TDS",
+      "remainingTax": "Verbleibende Steuer",
+      "savingSuggestion": "Investieren Sie weitere {{investment}} gemäß Abschnitt 80C, um ungefähr {{saving}} Steuern zu sparen."
+    },
+    "sections": {
+      "80C": "PPF / ELSS / LIC / Tilgung",
+      "80CCD_1B": "Zusätzliches NPS",
+      "80D": "Krankenversicherung",
+      "80E": "Zinsen für Bildungsdarlehen",
+      "80G": "Spenden",
+      "80TTA": "Sparzinsen"
+    }
+  },
+  "taxOverview": {
+    "title": "Steuerübersicht",
+    "financialYear": "Geschäftsjahr {{start}}-{{end}}",
+    "description": "Einkommensteuerübersicht für {{fy}}",
+    "missingPanCount": "{{count}} Mitarbeiter auf dieser Seite ohne gültige PAN",
+    "missingPanCount_one": "{{count}} Mitarbeiter auf dieser Seite ohne gültige PAN",
+    "missingPanCount_other": "{{count}} Mitarbeiter auf dieser Seite ohne gültige PAN",
+    "missingPanDetail": "Die TDS dieser Mitarbeiter wird gemäß Abschnitt 206AA pauschal mit 20 % einbehalten. Bitten Sie die Mitarbeiter, ihre PAN im Profil zu aktualisieren, damit die regulären Steuersätze gelten.",
+    "summaryTitle": "Steuerübersicht der Mitarbeiter",
+    "regimeSuffix": "{{regime}}es Steuermodell",
+    "noSalaryStructure": "Keine Gehaltsstruktur zugewiesen",
+    "empty": "Keine Mitarbeiter gefunden.",
+    "stats": {
+      "totalEmployees": "Mitarbeiter insgesamt",
+      "estimatedTaxPage": "Geschätzte Steuer (Seite)",
+      "tdsDeductedYtdPage": "Einbehaltene TDS im laufenden Jahr (Seite)",
+      "pageOf": "Seite {{page}} von {{totalPages}}",
+      "newRegimePage": "Neues Steuermodell (Seite)",
+      "optedIn": "Mitarbeiter angemeldet"
+    },
+    "filters": {
+      "searchPlaceholder": "Nach Name, E-Mail, Code oder Position suchen…",
+      "filterDepartment": "Nach Abteilung filtern",
+      "allDepartments": "Alle Abteilungen",
+      "filterLocation": "Nach Standort filtern",
+      "allLocations": "Alle Standorte",
+      "clear": "Filter löschen"
+    },
+    "columns": {
+      "employee": "Mitarbeiter",
+      "regime": "Steuermodell",
+      "estimatedTax": "Geschätzte Steuer",
+      "tdsDeductedYtd": "Einbehaltene TDS im laufenden Jahr"
+    },
+    "pan": {
+      "label": "PAN",
+      "invalidTitle": "Keine gültige PAN — TDS wird gemäß Abschnitt 206AA pauschal mit 20 % einbehalten.",
+      "missing": "Keine PAN"
+    },
+    "regimes": {
+      "new": "Neu",
+      "old": "Alt"
+    }
+  },
+  "payslipList": {
+    "title": "Gehaltsabrechnungen",
+    "count": "{{count}} Gehaltsabrechnungen",
+    "count_one": "{{count}} Gehaltsabrechnung",
+    "count_other": "{{count}} Gehaltsabrechnungen",
+    "loading": "Wird geladen…",
+    "firstOf": "Die ersten {{loaded}} von {{total}} Abrechnungen — Filter weiter eingrenzen",
+    "filteredOf": "{{filtered}} von {{total}} Abrechnungen",
+    "exportAll": "Alle exportieren",
+    "exportSuccess": "Abrechnungs-CSV exportiert",
+    "exportFailed": "Export fehlgeschlagen",
+    "emptyTitle": "Keine Abrechnungen für diese Auswahl.",
+    "emptyHint": "Versuchen Sie einen anderen Monat oder ein anderes Jahr.",
+    "cappedNotice": "Die ersten {{loaded}} von {{total}} Abrechnungen werden angezeigt — die Summen beziehen sich auf diese Ansicht. Filtern Sie nach Monat, Jahr oder Abteilung, um genaue Werte zu erhalten.",
+    "excludedTotals": "Die Summen schließen {{count}} beanstandete oder stornierte Abrechnungen aus.",
+    "excludedTotals_one": "Die Summen schließen {{count}} beanstandete oder stornierte Abrechnung aus.",
+    "excludedTotals_other": "Die Summen schließen {{count}} beanstandete oder stornierte Abrechnungen aus.",
+    "emptyFiltered": "Keine Abrechnung entspricht Ihren Filtern.",
+    "filters": {
+      "search": "Suchen",
+      "searchPlaceholder": "Name oder Code…",
+      "department": "Abteilung",
+      "allDepartments": "Alle Abteilungen",
+      "location": "Standort",
+      "allLocations": "Alle Standorte",
+      "month": "Monat",
+      "allMonths": "Alle Monate",
+      "year": "Jahr",
+      "allYears": "Alle Jahre"
+    },
+    "stats": {
+      "payslips": "Abrechnungen",
+      "inView": "in der Ansicht",
+      "of": "von {{count}}",
+      "gross": "Brutto",
+      "grossEarnings": "Bruttoverdienst",
+      "deductions": "Abzüge",
+      "totalDeductions": "Gesamtabzüge",
+      "netPay": "Nettoentgelt",
+      "takeHome": "Auszahlungsbetrag"
+    },
+    "columns": {
+      "employee": "Mitarbeiter",
+      "period": "Zeitraum",
+      "days": "Tage",
+      "gross": "Brutto",
+      "deductions": "Abzüge",
+      "netPay": "Nettoentgelt",
+      "status": "Status"
+    },
+    "statuses": {
+      "draft": "Entwurf",
+      "generated": "Erstellt",
+      "sent": "Gesendet",
+      "viewed": "Angesehen",
+      "paid": "Bezahlt",
+      "disputed": "Beanstandet",
+      "resolved": "Geklärt",
+      "cancelled": "Storniert",
+      "pending": "Ausstehend",
+      "rejected": "Abgelehnt"
+    },
+    "actions": {
+      "view": "Anzeigen",
+      "downloadPdf": "PDF herunterladen"
+    },
+    "modal": {
+      "fallbackTitle": "Gehaltsabrechnung",
+      "lopNotice": "{{paid}} von {{total}} Tagen bezahlt — {{lop}} LOP-Tage abgezogen",
+      "earnings": "Verdienst",
+      "grossPay": "Bruttoentgelt",
+      "deductions": "Abzüge",
+      "totalDeductions": "Gesamtabzüge",
+      "netPay": "Nettoentgelt",
+      "printSavePdf": "PDF drucken / speichern",
+      "close": "Schließen"
+    }
+  },
+  "salaryStructures": {
+    "title": "Gehaltsstrukturen",
+    "configured": "{{count}} Strukturen konfiguriert",
+    "configured_one": "{{count}} Struktur konfiguriert",
+    "configured_other": "{{count}} Strukturen konfiguriert",
+    "newStructure": "Neue Struktur",
+    "noStructures": "Noch keine Gehaltsstrukturen.",
+    "createFirst": "Erste Struktur erstellen",
+    "editTitle": "Gehaltsstruktur bearbeiten",
+    "newTitle": "Neue Gehaltsstruktur",
+    "structureName": "Strukturname",
+    "structureNamePlaceholder": "z. B. Standard-CTC Indien",
+    "description": "Beschreibung",
+    "descriptionPlaceholder": "Für Vollzeitmitarbeiter",
+    "components": "Komponenten",
+    "nightHelpAria": "Hilfe zur Nachtzulagenberechnung",
+    "nightHelpTitle": "Berechnung der Nachtzulage",
+    "nightOvertimeHelp": "Berechnung von Nachtzulage und Überstunden",
+    "addPresetAria": "Vordefinierte Komponente hinzufügen",
+    "addPreset": "+ Vorlage hinzufügen…",
+    "custom": "Benutzerdefiniert",
+    "componentName": "Komponentenname",
+    "auto": "automatisch",
+    "nightRatePlaceholder": "₹/Nacht",
+    "dayRatePlaceholder": "₹/Tag",
+    "percentPlaceholder": "% z. B. 10",
+    "multiplierPlaceholder": "z. B. 2",
+    "autoTitle": "Wird bei der Zuweisung automatisch aus CTC gefüllt",
+    "info": "Info",
+    "noteTitle": "Hinweis:",
+    "noteText": "Gesetzliche Abzüge (EPF, ESI, PT, TDS) werden automatisch berechnet. Verwenden Sie Abzug für wiederkehrende nicht gesetzliche Abzüge und Saldo bei einem Verdienst, um den verbleibenden CTC aufzunehmen.",
+    "cancel": "Abbrechen",
+    "updateStructure": "Struktur aktualisieren",
+    "createStructure": "Struktur erstellen",
+    "gotIt": "Verstanden",
+    "deleteTitle": "Gehaltsstruktur löschen?",
+    "deleteDescription": "„{{name}}“ wird entfernt. Bereits zugewiesene Mitarbeiter behalten ihr Gehalt; berechnete Abrechnungen bleiben unverändert.",
+    "delete": "Löschen",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "default": "Standard",
+    "defaultStructureName": "Standard-CTC-Struktur",
+    "defaultStructureDescription": "Standard-Gehaltsstruktur mit Basis-, HRA-, SA-, PF- und ESI-Komponenten",
+    "noComponents": "Keine Komponenten",
+    "noComponentsDefined": "Keine Komponenten definiert",
+    "duplicate": "Duplizieren",
+    "duplicateAria": "Struktur duplizieren",
+    "edit": "Bearbeiten",
+    "editAria": "Struktur bearbeiten",
+    "deleteAria": "Struktur löschen",
+    "collapse": "Einklappen",
+    "expand": "Ausklappen",
+    "statutoryNote": "EPF, ESI, Berufssteuer und TDS werden während der Abrechnung automatisch berechnet — sie gehören nicht zur Gehaltsstruktur.",
+    "created": "Gehaltsstruktur erstellt",
+    "updated": "Gehaltsstruktur aktualisiert",
+    "deleted": "Gehaltsstruktur gelöscht",
+    "duplicated": "Struktur dupliziert",
+    "saveFailed": "Speichern fehlgeschlagen",
+    "deleteFailed": "Löschen fehlgeschlagen",
+    "duplicateFailed": "Duplizieren fehlgeschlagen",
+    "copyName": "{{name}} (Kopie)",
+    "columns": {
+      "name": "Name",
+      "code": "Code",
+      "type": "Typ",
+      "calc": "Berechnung",
+      "value": "Wert",
+      "percentOf": "% von",
+      "component": "Komponente",
+      "calculation": "Berechnung"
+    },
+    "types": {
+      "earning": "Verdienst",
+      "deduction": "Abzug",
+      "reimbursement": "Erstattung",
+      "reimbursementShort": "Erstatt."
+    },
+    "counts": {
+      "earning": "{{count}} Verdienste",
+      "earning_one": "{{count}} Verdienst",
+      "earning_other": "{{count}} Verdienste",
+      "deduction": "{{count}} Abzüge",
+      "deduction_one": "{{count}} Abzug",
+      "deduction_other": "{{count}} Abzüge",
+      "reimbursement": "{{count}} Erstattungen",
+      "reimbursement_one": "{{count}} Erstattung",
+      "reimbursement_other": "{{count}} Erstattungen",
+      "earningLabel": "Verdienste",
+      "earningLabel_one": "Verdienst",
+      "earningLabel_other": "Verdienste",
+      "deductionLabel": "Abzüge",
+      "deductionLabel_one": "Abzug",
+      "deductionLabel_other": "Abzüge"
+    },
+    "calcs": {
+      "perNight": "Pro Nacht ₹",
+      "dayPay": "× Tageslohn",
+      "netPayPercent": "% vom Netto",
+      "perOtDay": "Pro Überstundentag ₹",
+      "fixed": "Fest",
+      "balance": "Saldo"
+    },
+    "calculationText": {
+      "percentageOf": "{{value}} % von {{base}}",
+      "fixed": "Fest ₹{{value}}",
+      "perNight": "₹{{value}} / Nacht",
+      "wholeSalaryNight": "{{value}}× Gesamtgehalt (Nachtschicht)",
+      "netPayNight": "{{value}} % vom Netto (Nachtschicht)",
+      "perOtDay": "₹{{value}} / Überstundentag",
+      "dayPayOt": "{{value}}× Tageslohn / Überstundentag",
+      "balancing": "Ausgleich"
+    },
+    "presetNames": {
+      "BASIC": "Grundgehalt",
+      "HRA": "Wohnungszulage",
+      "SA": "Sonderzulage",
+      "CA": "Fahrtkostenzulage",
+      "MA": "Medizinische Zulage",
+      "LTA": "Reisezulage",
+      "BONUS": "Leistungsbonus",
+      "NIGHT_ALLOW": "Nachtzulage",
+      "OVERTIME": "Überstunden",
+      "CANTEEN": "Kantinenabzug",
+      "WELFARE": "Sozialfonds",
+      "ADV_REC": "Vorschussrückzahlung"
+    },
+    "validation": {
+      "singleBalance": "Nur eine Komponente darf die Saldo-Berechnung verwenden.",
+      "balanceEarning": "Saldo ist nur für Verdienste gültig ({{code}}).",
+      "percentage": "{{code}}: Der Prozentsatz muss zwischen 0 und 100 liegen.",
+      "percentageBase": "{{code}}: Wählen Sie eine %-von-Basis (z. B. CTC, BASIC).",
+      "fixedEarning": "{{code}}: Der feste Verdienst muss größer als 0 sein.",
+      "nightRate": "{{code}}: Geben Sie einen Nachtbetrag größer als 0 ein.",
+      "nightMultiplier": "{{code}}: Der Nachtmultiplikator muss mindestens 1 sein.",
+      "netPercentage": "{{code}}: Geben Sie einen Nettoprozentsatz zwischen 0 und 100 ein.",
+      "overtimeRate": "{{code}}: Geben Sie einen Überstundenbetrag größer als 0 ein.",
+      "overtimeMultiplier": "{{code}}: Der Überstundenmultiplikator muss mindestens 1 sein."
+    },
+    "help": {
+      "title": "Nachtzulage & Überstunden — Berechnungsarten",
+      "intro": "Die Nachtzulage wird nur für Tage mit einer als is_night_shift = 1 markierten Schicht gezahlt. LOP-Tage zählen nicht.",
+      "modeValue": "Modus + Wert",
+      "allowanceAdded": "Zusätzliche Zulage",
+      "perNight": "Pro Nacht",
+      "flatExample": "fest ₹250 × 22 Nächte",
+      "addedOnBase": "zusätzlich zum Grundbetrag",
+      "double": "doppelt",
+      "doubleFormula": "Basis 166.666 × (2 − 1)",
+      "doubleTotal": "→ Gesamtbrutto = Basis × 2 = 333.332",
+      "oneHalfFormula": "Basis 166.666 × (1,5 − 1)",
+      "oneHalfTotal": "→ Gesamtbrutto = Basis × 1,5 = 250.000",
+      "howModesWork": "Funktionsweise der Modi:",
+      "perNightExplanation": "Pro Nacht ₹ — fester Betrag je gearbeiteter Nacht zusätzlich zum normalen Gehalt.",
+      "dayPayExplanation": "× Tageslohn — das gesamte Gehalt eines Nachtschichtmitarbeiters wird mit dem Faktor bezahlt. Mindestens eine Nacht ist erforderlich.",
+      "exampleBase": "Verwendetes monatliches Grundbrutto: ₹166.666.",
+      "overtimeTitle": "Überstunden (Ruhetag/Feiertag gearbeitet):",
+      "overtimeCount": "Überstundentage sind Anwesenheitstage an Ruhetagen oder Feiertagen und werden automatisch als WOT/HOT markiert.",
+      "perOtExplanation": "Pro Überstundentag ₹ — fester Betrag je Überstundentag.",
+      "otDayPayExplanation": "× Tageslohn — Faktor mal Tagesgehalt für jeden Überstundentag.",
+      "notesTitle": "Hinweise.",
+      "notesText": "Die Zulage ist steuerpflichtig; EPF und TDS verdoppeln sich daher nicht einfach. Eine Nacht zählt nur bei tatsächlicher Nachtarbeit (halber Tag = 0,5)."
+    }
+  }
+}

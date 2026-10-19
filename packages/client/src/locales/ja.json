@@ -1,0 +1,2453 @@
+{
+  "language": { "change": "言語を変更", "menuLabel": "言語を選択" },
+  "common": {
+    "appName": "EMP Payroll",
+    "user": "ユーザー",
+    "employees": "従業員",
+    "employee_one": "従業員{{count}}名",
+    "employee_other": "従業員{{count}}名",
+    "unassigned": "未割り当て",
+    "noResults": "結果が見つかりません"
+  },
+  "employeeList": {
+    "title": "従業員",
+    "loading": "読み込み中...",
+    "summary": "全{{total}}名中{{visible}}名",
+    "summary_one": "全{{total}}名中{{visible}}名",
+    "summary_other": "全{{total}}名中{{visible}}名",
+    "pendingBankRequests": "保留中の銀行情報更新申請（{{count}}件）",
+    "bankDetails": "{{bank}} — 口座 {{accountNumber}} — IFSC {{ifscCode}}",
+    "approve": "承認",
+    "reject": "却下",
+    "bankUpdated": "銀行情報を更新しました",
+    "requestRejected": "申請を却下しました",
+    "actionFailed": "操作に失敗しました：{{action}}",
+    "selectEmployee": "{{name}}を選択",
+    "export": "エクスポート",
+    "exportSuccess": "従業員CSVをエクスポートしました",
+    "exportFailed": "エクスポートに失敗しました",
+    "import": "インポート",
+    "importTitle": "CSVファイルから新しい従業員をインポート",
+    "bulkUpdate": "一括更新",
+    "bulkUpdateTitle": "CSVファイルから既存の従業員を一括更新",
+    "bulkSalary": "給与一括更新",
+    "bulkSalaryTitle": "CSVファイルから給与を一括更新",
+    "addEmployee": "従業員を追加",
+    "searchPlaceholder": "氏名、メール、コード、役職で検索...",
+    "filterDepartment": "部署で絞り込む",
+    "allDepartments": "すべての部署",
+    "filterLocation": "勤務地で絞り込む",
+    "allLocations": "すべての勤務地",
+    "clearFilters": "フィルターをクリア",
+    "selected": "{{count}}名を選択中",
+    "selected_one": "{{count}}名を選択中",
+    "selected_other": "{{count}}名を選択中",
+    "updateSalary": "給与を更新",
+    "clear": "クリア",
+    "columns": {
+      "employee": "従業員",
+      "designation": "役職",
+      "email": "メール",
+      "location": "勤務地",
+      "joined": "入社日",
+      "status": "ステータス"
+    },
+    "statuses": { "active": "在籍", "inactive": "退職" }
+  },
+  "orgChart": {
+    "title": "組織図",
+    "description": "報告体制 — ドラッグで移動、スクロールまたはピンチで拡大・縮小",
+    "organization": "組織",
+    "noEmployees": "組織図に表示する従業員がまだいません。",
+    "people": "従業員",
+    "managers": "管理職",
+    "departments": "部署",
+    "personCount": "{{count}}名",
+    "personCount_one": "{{count}}名",
+    "personCount_other": "{{count}}名",
+    "collapse": "折りたたむ",
+    "expand": "展開",
+    "expandReports": "部下{{count}}名を表示",
+    "viewAll": "{{label}}をすべて表示",
+    "searchPlaceholder": "氏名、役職、部署を検索…",
+    "searchAria": "組織図を検索",
+    "clearSearch": "検索をクリア",
+    "zoomIn": "拡大",
+    "zoomOut": "縮小",
+    "fitToScreen": "画面に合わせる",
+    "fullscreen": "全画面表示",
+    "hint": "ドラッグで移動 · スクロールで拡大・縮小 · タッチ操作ではピンチ",
+    "allPeopleTitle": "全従業員（{{count}}名）",
+    "managersTitle": "管理職（{{count}}名）",
+    "departmentsTitle": "部署（{{count}}）",
+    "filterDepartments": "部署を絞り込む…",
+    "filterPeople": "従業員を絞り込む…",
+    "noMatches": "一致する項目はありません。",
+    "reportCount": "部下{{count}}名",
+    "reportCount_one": "部下{{count}}名",
+    "reportCount_other": "部下{{count}}名"
+  },
+  "departmentsPage": {
+    "title": "部署",
+    "departmentCount": "{{count}}部署",
+    "departmentCount_one": "{{count}}部署",
+    "departmentCount_other": "{{count}}部署",
+    "employeeCount": "従業員{{count}}名",
+    "employeeCount_one": "従業員{{count}}名",
+    "employeeCount_other": "従業員{{count}}名",
+    "fromEmpCloud": "EmpCloudから",
+    "addDepartment": "部署を追加",
+    "noDepartments": "部署はまだありません。",
+    "addFirst": "最初の部署を追加",
+    "searchPlaceholder": "部署を検索…",
+    "searchAria": "部署を検索",
+    "noSearchMatches": "「{{query}}」に一致する部署はありません。",
+    "nameRequired": "部署名は必須です",
+    "added": "部署を追加しました",
+    "addFailed": "部署を追加できませんでした",
+    "removed": "部署を削除しました",
+    "removeFailed": "部署を削除できませんでした",
+    "addDescription": "EmpCloudと同期され、従業員プロフィール、組織図、レポートで選択できるようになります。",
+    "uniqueNamesHelp": "組織内で一意の名前を使用してください。既存の給与記録に影響を与えず、後から部署を削除できます。",
+    "departmentName": "部署名",
+    "namePlaceholder": "例：エンジニアリング",
+    "cancel": "キャンセル",
+    "removeTitle": "部署を削除しますか？",
+    "removeDescription": "「{{name}}」を組織から削除します。",
+    "deleteWarning": "現在この部署には{{count}}名の従業員がいます。記録は保持されますが、再割り当てされるまで部署なしと表示されます。",
+    "deleteWarning_one": "現在この部署には{{count}}名の従業員がいます。記録は保持されますが、再割り当てされるまで部署なしと表示されます。",
+    "deleteWarning_other": "現在この部署には{{count}}名の従業員がいます。記録は保持されますが、再割り当てされるまで部署なしと表示されます。",
+    "remove": "削除",
+    "removeAria": "{{name}}を削除",
+    "noMembers": "メンバーはまだいません",
+    "created": "{{date}}に作成"
+  },
+  "attendancePage": {
+    "title": "勤怠",
+    "summary": "{{period}}の勤怠概要",
+    "markAllPresent": "全員を出勤にする",
+    "markAttendance": "勤怠を登録",
+    "previousMonth": "前月",
+    "nextMonth": "翌月",
+    "searchPlaceholder": "氏名またはコードで検索...",
+    "filterDepartment": "部署で絞り込む",
+    "allDepartments": "すべての部署",
+    "filterLocation": "勤務地で絞り込む",
+    "allLocations": "すべての勤務地",
+    "clearFilters": "フィルターをクリア",
+    "employeesShown": "全{{total}}名中{{visible}}名",
+    "employeesShown_one": "全{{total}}名中{{visible}}名",
+    "employeesShown_other": "全{{total}}名中{{visible}}名",
+    "totalPresentDays": "総出勤日数",
+    "totalAbsentDays": "総欠勤日数",
+    "lopDays": "無給日数",
+    "overtimeHours": "残業時間",
+    "hoursValue": "{{count}}時間",
+    "lopValue": "無給{{count}}日",
+    "employeeFallback": "従業員 #{{id}}",
+    "columns": {
+      "employee": "従業員",
+      "workingDays": "所定労働日数",
+      "present": "出勤",
+      "absent": "欠勤",
+      "lopDays": "無給日数",
+      "overtimeHours": "残業時間"
+    },
+    "markAllDescription": "選択した月について全従業員を出勤として登録します。",
+    "markSingleDescription": "従業員1名の勤怠を登録します。",
+    "month": "月",
+    "year": "年",
+    "workingDaysInMonth": "月の所定労働日数",
+    "workingDays": "所定労働日数",
+    "presentDays": "出勤日数",
+    "absentDays": "欠勤日数",
+    "employee": "従業員",
+    "selectEmployee": "従業員を選択",
+    "cancel": "キャンセル",
+    "saveAttendance": "勤怠を保存",
+    "overwriteExisting": "この月の既存レコードを上書きする",
+    "overwriteAllHelp": "従業員自身の打刻を保持するため、初期状態ではオフです。登録済みの日を出勤に置き換える場合に選択してください。",
+    "overwriteSingleHelp": "EmpCloudに登録済みの日は初期状態で保持されます。上記の値に置き換える場合に選択してください。",
+    "markAllHelp": "{{period}}について、アクティブな従業員{{count}}名を{{days}}日間出勤として登録します。後から個別に編集できます。",
+    "workingDaysInvalid": "所定労働日数には1から31の整数を入力してください",
+    "presentDaysInvalid": "出勤日数は0から所定労働日数までの値にしてください",
+    "selectEmployeeRequired": "従業員を選択してください",
+    "noPayrollEmployees": "給与計算に従業員が見つかりません。先にEmpCloudユーザーを給与計算へ追加してください（設定 > 従業員）。",
+    "bulkSyncFailed": "{{employeeCount}}名をローカルに登録しましたが、{{failureCount}}名のEmpCloud同期に失敗しました。ダッシュボードにはまだ反映されない場合があります。",
+    "nothingChangedAll": "{{period}}の全勤務日はすでにEmpCloudに登録されています（{{preserved}}件を保持）。変更はありません。置き換えるには上書きを選択してください。",
+    "markedAllOverwrite": "{{period}}について{{count}}名を出勤として登録しました（既存の日を上書きしました）。",
+    "markedAllSuccess": "{{period}}について{{count}}名を登録しました — EmpCloudに{{inserted}}行を追加しました{{preservedText}}。",
+    "singleSyncFailed": "ローカルには登録しましたが、EmpCloud同期に失敗しました（{{error}}）。EmpCloudが利用可能になるまでダッシュボードに反映されない場合があります。",
+    "unknownError": "不明なエラー",
+    "nothingChangedSingle": "この従業員の{{period}}の勤怠はすでに{{preserved}}件あります。変更はありません。上書きを選択して再度保存してください。",
+    "singleOverwriteSuccess": "{{period}}の勤怠を更新しました（{{count}}日を設定）。",
+    "singleSuccess": "{{period}}の勤怠を登録しました — EmpCloudに{{inserted}}行を追加しました{{preservedText}}。",
+    "preservedSuffix": "、既存の{{count}}行を保持しました",
+    "markFailed": "勤怠を登録できませんでした"
+  },
+  "payrollAnalytics": {
+    "title": "給与分析",
+    "description": "コスト推移、比較、インサイト",
+    "notice": "以下の数値は、各給与計算に含まれる従業員を反映しています。計算時に除外された従業員（有効な給与体系がない、支給期間後に入社した、または期間前に退職した従業員）は集計されません。そのため、実際の採用状況とは関係なく、月ごとの従業員数や1人当たり平均が変動する場合があります。",
+    "noRuns": "給与計算はまだありません",
+    "employeeSource": "{{count}}人 · {{source}}",
+    "headcountSuppressed": "従業員数が25%以上変動したため、比較を非表示にしました",
+    "vsPrevious": "前月比 · {{source}}",
+    "ofGrossPay": "総支給額に対する割合 · {{source}}",
+    "avgNetPayPerEmployee": "従業員1人当たり平均手取り額",
+    "grossPayChange": "総支給額の変化",
+    "netPayChange": "手取り額の変化",
+    "deductionRate": "控除率",
+    "payrollCostTrend": "給与コスト推移",
+    "costBreakdownLatest": "コスト内訳（最新）",
+    "headcountTrend": "従業員数の推移",
+    "monthComparison": "前月比較",
+    "totalEmployerCost": "雇用主の総コスト（総支給額 + 負担金）",
+    "needCompletedRun": "分析を表示するには、完了した給与計算が1件以上必要です",
+    "noData": "データはまだありません",
+    "series": {
+      "gross": "総支給額",
+      "net": "手取り額",
+      "deductions": "控除",
+      "netPay": "手取り額",
+      "employerContributions": "雇用主負担金",
+      "employerCost": "雇用主コスト",
+      "amount": "金額",
+      "employees": "従業員"
+    },
+    "columns": {
+      "period": "期間",
+      "employees": "従業員",
+      "grossPay": "総支給額",
+      "deductions": "控除",
+      "netPay": "手取り額",
+      "avgPerEmployee": "1人当たり平均",
+      "grossPercent": "総支給額 %",
+      "netPercent": "手取り額 %"
+    },
+    "statuses": { "paid": "支払済み", "computed": "計算済み", "approved": "承認済み" }
+  },
+  "reimbursementsPage": {
+    "title": "経費精算",
+    "claimsShown": "{{total}}件中{{visible}}件",
+    "fileForEmployee": "従業員に代わって申請",
+    "searchPlaceholder": "従業員名、コード、役職で検索...",
+    "filterDepartment": "部署で絞り込む",
+    "allDepartments": "すべての部署",
+    "filterLocation": "勤務地で絞り込む",
+    "allLocations": "すべての勤務地",
+    "clearFilters": "フィルターをクリア",
+    "noClaims": "経費精算申請が見つかりません",
+    "forEmployee": "{{name}} の申請",
+    "statuses": {
+      "pending": "保留中",
+      "approved": "承認済み",
+      "rejected": "却下",
+      "paid": "支払済み"
+    },
+    "filters": { "all": "すべて" },
+    "cards": {
+      "totalClaims": "申請総数",
+      "viewAll": "すべての経費精算申請を表示",
+      "viewPending": "保留中の申請を表示",
+      "viewApproved": "承認済みの申請を表示",
+      "viewRejected": "却下された申請を表示",
+      "viewPaid": "支払済みの申請を表示"
+    },
+    "columns": {
+      "employee": "従業員",
+      "category": "カテゴリー",
+      "description": "説明",
+      "amount": "金額",
+      "date": "日付",
+      "status": "ステータス"
+    },
+    "actions": {
+      "approve": "承認",
+      "reject": "却下",
+      "awaitingPayroll": "給与計算待ち",
+      "awaitingPayrollTitle": "次回の給与計算で支払われます",
+      "edit": "編集",
+      "delete": "削除",
+      "cancel": "キャンセル"
+    },
+    "fields": {
+      "category": "カテゴリー",
+      "amount": "金額",
+      "expenseDate": "経費発生日",
+      "description": "説明",
+      "month": "月",
+      "year": "年"
+    },
+    "fileModal": {
+      "title": "従業員の経費精算を申請",
+      "description": "従業員に代わって申請します。従業員の経費精算一覧には保留中として表示されます。",
+      "searchEmployee": "従業員を検索",
+      "employeePlaceholder": "氏名、従業員コード、メール（2文字以上）",
+      "searching": "検索中...",
+      "typeMore": "2文字以上入力して検索してください。",
+      "noEmployees": "一致する従業員はいません。",
+      "change": "変更",
+      "categoryPlaceholder": "交通費、食費、通信費...",
+      "descriptionPlaceholder": "何のための経費ですか？",
+      "submit": "申請を登録"
+    },
+    "deleteModal": {
+      "title": "経費精算を削除しますか？",
+      "paidTitle": "この申請は支払済みです。",
+      "paidWarning": "削除しても経費精算一覧の行だけが削除され、従業員への返金や給与明細の項目削除は行われません。支払いを取り消すには給与計算を削除してください。申請は自動的に承認済みに戻ります。",
+      "warning": "申請は完全に削除されます。この操作は元に戻せません。"
+    },
+    "editModal": { "title": "経費精算を編集", "save": "変更を保存" },
+    "payModal": {
+      "title": "経費精算を支払済みにする",
+      "description": "この申請を支払った給与期間を記録します。ステータスは承認済みから支払済みに変わります。",
+      "confirm": "支払いを確定"
+    },
+    "validation": {
+      "categoryRequired": "カテゴリーは必須です",
+      "descriptionRequired": "説明は必須です",
+      "validAmount": "有効な金額を入力してください",
+      "expenseDateRequired": "経費発生日は必須です",
+      "pickEmployee": "先に従業員を選択してください"
+    },
+    "messages": {
+      "approved": "申請を承認しました",
+      "rejected": "申請を却下しました",
+      "failed": "操作に失敗しました",
+      "updated": "申請を更新しました",
+      "updateFailed": "申請を更新できませんでした",
+      "deleted": "申請を削除しました",
+      "deleteFailed": "申請を削除できませんでした",
+      "filed": "従業員の申請を登録しました",
+      "fileFailed": "申請を登録できませんでした",
+      "markedPaid": "申請を支払済みにしました",
+      "markPaidFailed": "申請を支払済みにできませんでした"
+    }
+  },
+  "loansPage": {
+    "title": "ローンと前払い",
+    "recordsShown": "全{{total}}件中{{visible}}件",
+    "addAdvance": "前払いを追加",
+    "addLoan": "ローンを追加",
+    "searchPlaceholder": "従業員名、コード、役職で検索...",
+    "filterDepartment": "部署で絞り込む",
+    "allDepartments": "すべての部署",
+    "filterLocation": "勤務地で絞り込む",
+    "allLocations": "すべての勤務地",
+    "clearFilters": "フィルターをクリア",
+    "noRecords": "ローンまたは前払いが見つかりません",
+    "cards": {
+      "active": "有効なローンと前払い",
+      "outstanding": "未返済額",
+      "monthlyDeductions": "月次控除",
+      "totalAcrossAll": "全件合計",
+      "completed": "完了"
+    },
+    "filters": { "all": "すべて" },
+    "statuses": { "active": "有効", "completed": "完了", "cancelled": "キャンセル" },
+    "types": { "loan": "ローン", "salary_advance": "給与前払い", "emergency": "緊急前払い" },
+    "columns": {
+      "employee": "従業員",
+      "type": "種類",
+      "description": "説明",
+      "principal": "元金",
+      "outstanding": "未返済",
+      "deduction": "控除",
+      "progress": "進捗",
+      "status": "ステータス"
+    },
+    "deduction": { "customDefault": "カスタム（標準 {{amount}}）", "oneTime": "一括" },
+    "progress": { "recovered": "回収済み", "pendingRecovery": "回収待ち" },
+    "actions": {
+      "recordEmiPayment": "分割払いを記録",
+      "recordAdvanceRecovery": "前払い回収を記録",
+      "pay": "支払う",
+      "recover": "回収",
+      "edit": "ローンまたは前払いを編集",
+      "delete": "削除",
+      "cancel": "キャンセル",
+      "saveChanges": "変更を保存"
+    },
+    "fields": {
+      "employee": "従業員",
+      "description": "説明",
+      "amount": "金額 (₹)",
+      "tenure": "期間（月）",
+      "interestRate": "金利 (%)",
+      "startDate": "開始日",
+      "customMonthlyEmi": "カスタム月次返済額 (₹) — 任意",
+      "notes": "メモ（任意）",
+      "advanceType": "前払いの種類",
+      "reason": "理由",
+      "advanceAmount": "前払い額 (₹)",
+      "recoveryDate": "回収日"
+    },
+    "form": {
+      "noEmployee": "従業員がいません",
+      "descriptionPlaceholder": "例：医療上の緊急事態",
+      "customEmiPlaceholder": "期間に基づく返済額を使用する場合は空欄",
+      "customEmiHelpCreate": "月次控除額を上書きします。最終回で残額が自動的に精算されます。",
+      "customEmiHelpEdit": "月次控除額を上書きします。最終回で残額が自動的に精算されます。空欄にすると期間に基づく返済額に戻ります。",
+      "notesPlaceholder": "追加メモ",
+      "paidInstallmentsNotice": "{{count}}回分は支払済みです。返済済み額を維持したまま、新しい金額から未返済額を再計算します。"
+    },
+    "advanceModal": {
+      "description": "一括の給与前払いを追加します。全額が1回の給与期間で回収されます。"
+    },
+    "editModal": { "loanTitle": "ローンを編集", "advanceTitle": "前払いを編集" },
+    "deleteModal": {
+      "title": "ローンまたは前払いを削除しますか？",
+      "outstandingTitle": "未返済額は {{amount}} です。",
+      "outstandingWarning": "削除すると今後の控除が停止します。過去の給与明細で控除済みの金額は変わりません。この操作は元に戻せません。",
+      "warning": "記録は完全に削除されます。過去に控除済みの金額は変わりません。この操作は元に戻せません。"
+    },
+    "validation": {
+      "amountNonNegative": "金額は0以上である必要があります",
+      "tenureMinimum": "期間は1か月以上である必要があります",
+      "interestNonNegative": "金利は0以上である必要があります",
+      "customEmiPositive": "カスタム月次返済額は0より大きい必要があります",
+      "customEmiMaximum": "カスタム月次返済額はローン金額を超えることができません"
+    },
+    "messages": {
+      "advanceCreated": "前払いを作成しました",
+      "loanCreated": "ローンを作成しました",
+      "failed": "操作に失敗しました",
+      "paymentRecorded": "支払いを記録しました",
+      "advanceUpdated": "前払いを更新しました",
+      "loanUpdated": "ローンを更新しました",
+      "updateFailed": "ローンまたは前払いを更新できませんでした",
+      "deleted": "ローンまたは前払いを削除しました",
+      "deleteFailed": "ローンまたは前払いを削除できませんでした"
+    }
+  },
+  "roles": {
+    "super_admin": "スーパー管理者",
+    "org_admin": "組織管理者",
+    "admin": "管理者",
+    "hr_admin": "人事管理者",
+    "hr_manager": "人事マネージャー",
+    "manager": "マネージャー",
+    "employee": "従業員"
+  },
+  "header": {
+    "openMenu": "ナビゲーションメニューを開く",
+    "searchEmployees": "従業員を検索... (Ctrl+K)"
+  },
+  "sidebar": {
+    "collapse": "サイドバーを折りたたむ",
+    "expand": "サイドバーを展開",
+    "search": "メニューを検索…",
+    "clearSearch": "検索をクリア",
+    "noMatches": "「{{query}}」に一致する項目はありません",
+    "pressToSearch": "/ を押して検索",
+    "logout": "ログアウト",
+    "sections": {
+      "overview": "概要",
+      "people": "人材",
+      "payroll": "給与",
+      "compliance": "コンプライアンス",
+      "payBenefits": "給与と福利厚生",
+      "workplace": "職場",
+      "globalPayroll": "グローバル給与",
+      "admin": "管理",
+      "selfService": "セルフサービス"
+    },
+    "items": {
+      "dashboard": "ダッシュボード",
+      "employees": "従業員",
+      "orgChart": "組織図",
+      "departments": "部門",
+      "attendance": "勤怠",
+      "structures": "給与体系",
+      "payrollRuns": "給与処理",
+      "analytics": "分析",
+      "payslips": "給与明細",
+      "tax": "税金",
+      "taxCalculator": "税額計算",
+      "taxDeclarations": "税務申告",
+      "reimbursements": "経費精算",
+      "loans": "貸付",
+      "benefits": "福利厚生",
+      "benchmarks": "ベンチマーク",
+      "payEquity": "賃金公平性",
+      "totalRewards": "総報酬",
+      "earnedWageAccess": "既得賃金アクセス",
+      "insurance": "保険",
+      "holidays": "休日",
+      "announcements": "お知らせ",
+      "globalDashboard": "グローバルダッシュボード",
+      "globalEmployees": "海外従業員",
+      "contractorInvoices": "契約者請求書",
+      "countryCompliance": "国別コンプライアンス",
+      "glAccounting": "総勘定元帳 / 会計",
+      "reports": "レポート",
+      "auditLog": "監査ログ",
+      "system": "システム",
+      "settings": "設定",
+      "myDashboard": "マイダッシュボード",
+      "myPayslips": "給与明細",
+      "mySalary": "給与",
+      "myTax": "税金",
+      "declarations": "申告",
+      "myClaims": "申請",
+      "myProfile": "プロフィール"
+    }
+  },
+  "dashboard": {
+    "title": "給与ダッシュボード",
+    "overviewFor": "{{period}}の概要",
+    "runPayroll": "給与処理を実行",
+    "addEmployee": "従業員を追加",
+    "viewReports": "レポートを表示",
+    "activeEmployees": "在籍従業員",
+    "viewActiveEmployees": "在籍従業員を表示",
+    "totalEmployees": "合計{{count}}名",
+    "lastPayrollGross": "直近給与（総額）",
+    "lastPayrollNet": "直近給与（手取り）",
+    "noPayrollYet": "給与処理はまだありません",
+    "totalDeductions": "控除合計",
+    "viewDeductions": "最新の給与処理の控除合計内訳を表示",
+    "monthOverMonth": "前月比{{value}}%",
+    "monthlyTrend": "月次給与推移",
+    "trendPeriods_one": "直近1か月の総額と手取り",
+    "trendPeriods_other": "直近{{count}}か月の総額と手取り",
+    "trendFallback": "給与総額と手取り額",
+    "gross": "総額",
+    "net": "手取り",
+    "noTrend": "給与データがありません。最初の給与処理を実行してください。",
+    "headcountByDepartment": "部門別人数",
+    "moreDepartments": "ほか{{count}}部門",
+    "noEmployeesToChart": "表示する従業員がいません。",
+    "complianceStatus": "コンプライアンス状況",
+    "providentFund": "積立基金",
+    "professionalTax": "職業税",
+    "tdsForm": "TDS（フォーム24Q）",
+    "filed": "提出済み",
+    "pending": "保留中",
+    "recentActivity": "最近のアクティビティ",
+    "noRecentActivity": "最近のアクティビティはありません。",
+    "activity": "アクティビティ",
+    "actions": {
+      "created": "給与処理を作成しました",
+      "computed": "給与を計算しました",
+      "approved": "給与を承認しました",
+      "paid": "給与を支払済みにしました",
+      "cancelled": "給与をキャンセルしました",
+      "reverted": "給与を下書きに戻しました",
+      "rerun": "給与を再計算しました",
+      "deleted": "給与処理を削除しました"
+    }
+  },
+  "breadcrumbs": {
+    "home": "ホーム",
+    "addNew": "新規追加",
+    "salaryStructures": "給与体系",
+    "myPortal": "マイポータル",
+    "salary": "給与",
+    "profile": "プロフィール",
+    "setup": "設定"
+  },
+  "selfService": {
+    "employeePortal": "従業員ポータル",
+    "adminPanel": "管理パネル",
+    "profile": "プロフィール"
+  },
+  "myProfile": {
+    "title": "マイプロフィール",
+    "notFound": "プロフィールが見つかりません",
+    "notAvailable": "利用不可",
+    "cancel": "キャンセル",
+    "requestUpdate": "更新を申請",
+    "pendingBankRequest": "銀行情報の更新申請は管理者の承認待ちです。",
+    "status": { "active": "有効", "inactive": "無効" },
+    "taxRegime": { "new": "新税制", "old": "旧税制" },
+    "sections": {
+      "personalDetails": "個人情報",
+      "employment": "雇用情報",
+      "bankDetails": "銀行情報",
+      "statutoryDetails": "法定情報",
+      "security": "セキュリティ"
+    },
+    "fields": {
+      "email": "メール",
+      "phone": "電話",
+      "dateOfBirth": "生年月日",
+      "gender": "性別",
+      "employeeCode": "従業員コード",
+      "department": "部門",
+      "designation": "役職",
+      "employmentType": "雇用形態",
+      "dateOfJoining": "入社日",
+      "bank": "銀行",
+      "accountNumber": "口座番号",
+      "ifsc": "IFSC",
+      "pan": "PAN",
+      "uan": "UAN",
+      "pfNumber": "PF番号",
+      "password": "パスワード"
+    },
+    "values": {
+      "gender": {
+        "female": "女性",
+        "male": "男性",
+        "non_binary": "ノンバイナリー",
+        "other": "その他"
+      },
+      "employmentTypes": {
+        "full_time": "正社員",
+        "part_time": "パートタイム",
+        "contract": "契約",
+        "intern": "インターン",
+        "consultant": "コンサルタント"
+      }
+    },
+    "security": {
+      "changePasswordHelp": "アカウントのパスワードを変更します",
+      "changePassword": "パスワードを変更"
+    },
+    "bankModal": {
+      "title": "銀行情報の更新を申請",
+      "reviewNotice": "変更が反映される前に人事または管理者が申請を確認します。",
+      "newBankName": "新しい銀行名",
+      "bankPlaceholder": "例：HDFC Bank",
+      "newAccountNumber": "新しい口座番号",
+      "accountPlaceholder": "例：1234567890",
+      "newIfscCode": "新しいIFSCコード",
+      "ifscPlaceholder": "例：HDFC0001234",
+      "ifscValidation": "IFSCは11文字（英字4文字 + '0' + 英数字6文字）で入力してください（例：HDFC0001234）。",
+      "accountType": "口座種別",
+      "accountTypes": { "savings": "普通預金", "current": "当座預金", "salary": "給与口座" },
+      "reason": "変更理由",
+      "reasonPlaceholder": "例：新しい銀行へ変更",
+      "submit": "申請を送信",
+      "success": "銀行情報の更新申請を承認待ちとして送信しました",
+      "failure": "申請を送信できませんでした"
+    },
+    "passwordModal": {
+      "title": "パスワードを変更",
+      "currentPassword": "現在のパスワード",
+      "newPassword": "新しいパスワード",
+      "confirmNewPassword": "新しいパスワードを確認",
+      "mismatch": "パスワードが一致しません",
+      "success": "パスワードを変更しました",
+      "failure": "パスワードを変更できませんでした",
+      "submit": "パスワードを変更"
+    }
+  },
+  "totalRewardsPage": {
+    "title": "総報酬明細",
+    "description": "従業員の報酬と福利厚生をまとめた明細を作成します",
+    "printPdf": "印刷 / PDF",
+    "selectEmployee": "従業員を選択",
+    "chooseEmployee": "従業員を選択…",
+    "searchEmployee": "名前、役職、コードで検索…",
+    "noEmployeeMatches": "検索に一致する従業員はいません",
+    "employeesAvailable_one": "{{count}}名の従業員が利用可能",
+    "employeesAvailable_other": "{{count}}名の従業員が利用可能",
+    "unnamedEmployee": "名前のない従業員",
+    "totalRewardsValue": "総報酬額",
+    "financialYear": "会計年度 {{year}}",
+    "directCompensation": "直接報酬",
+    "benefitsValue": "福利厚生額",
+    "ytdNetPay": "年初来手取り額",
+    "reimbursements": "経費精算",
+    "salaryBreakdown": "給与内訳",
+    "perMonth": "/月",
+    "annualCtc": "年間CTC",
+    "benefitsEnrollment": "福利厚生加入",
+    "noBenefits": "加入中の福利厚生はありません",
+    "perYear": "/年",
+    "totalEmployerContribution": "会社負担額合計",
+    "ytdEarnings": "年初来収入",
+    "monthsProcessed_one": "{{count}}か月処理済み",
+    "monthsProcessed_other": "{{count}}か月処理済み",
+    "grossEarnings": "総支給額",
+    "totalDeductions": "控除合計",
+    "netPay": "手取り額",
+    "taxPaid": "納税額",
+    "activeLoans": "返済中のローン",
+    "outstanding": "残高",
+    "emi": "月額返済",
+    "selectPrompt": "従業員を選択して総報酬明細を作成してください",
+    "components": { "basic": "基本給", "hra": "住宅手当", "sa": "特別手当" },
+    "benefitTypes": {
+      "health": "医療",
+      "life": "生命",
+      "dental": "歯科",
+      "vision": "眼科",
+      "accident": "傷害"
+    },
+    "coverageTypes": {
+      "employee": "本人",
+      "employee_spouse": "本人 + 配偶者",
+      "family": "家族",
+      "parents": "両親"
+    },
+    "loanTypes": {
+      "personal_loan": "個人ローン",
+      "salary_advance": "給与前払い",
+      "home_loan": "住宅ローン",
+      "car_loan": "自動車ローン",
+      "education_loan": "教育ローン"
+    }
+  },
+  "benefitsPage": {
+    "title": "福利厚生管理",
+    "description": "福利厚生プランと従業員の加入を管理します",
+    "enrollEmployee": "従業員を加入",
+    "newPlan": "新しいプラン",
+    "stats": {
+      "activePlans": "有効なプラン",
+      "enrolled": "加入済み",
+      "pending": "保留中",
+      "monthlyEmployerCost": "月間会社負担額"
+    },
+    "tabs": {
+      "plans": "プラン ({{count}})",
+      "enrollments": "加入 ({{count}})",
+      "pending": "保留中 ({{count}})"
+    },
+    "columns": {
+      "planName": "プラン名",
+      "type": "種類",
+      "provider": "提供会社",
+      "premium": "保険料",
+      "employerShare": "会社負担",
+      "status": "ステータス",
+      "employee": "従業員",
+      "plan": "プラン",
+      "coverage": "補償範囲",
+      "employeeShare": "従業員負担"
+    },
+    "empty": {
+      "plans": "福利厚生プランはまだ作成されていません",
+      "enrollments": "加入データはまだありません",
+      "pending": "保留中の加入はありません"
+    },
+    "status": {
+      "active": "有効",
+      "inactive": "無効",
+      "enrolled": "加入済み",
+      "pending": "保留中",
+      "cancelled": "キャンセル済み"
+    },
+    "actions": {
+      "edit": "編集",
+      "deactivate": "無効化",
+      "cancel": "キャンセル"
+    },
+    "planTypes": {
+      "health": "健康保険",
+      "dental": "歯科",
+      "vision": "視力",
+      "life": "生命保険",
+      "disability": "障害保険",
+      "retirement": "退職年金"
+    },
+    "coverageTypes": {
+      "individual": "本人",
+      "family": "家族",
+      "individual_plus_spouse": "本人 + 配偶者"
+    },
+    "fallbackUser": "ユーザー #{{id}}",
+    "messages": {
+      "invalidEnrollmentDates": "加入終了日は開始日より前に設定できません",
+      "planUpdated": "福利厚生プランを更新しました",
+      "planCreated": "福利厚生プランを作成しました",
+      "savePlanFailed": "プランを保存できませんでした",
+      "deactivateConfirm": "この福利厚生プランを無効にしますか？既存の加入には影響しません。",
+      "planDeactivated": "福利厚生プランを無効にしました",
+      "deactivateFailed": "プランを無効にできませんでした",
+      "employeeEnrolled": "従業員を福利厚生プランに加入させました",
+      "enrollFailed": "加入処理に失敗しました",
+      "enrollmentCancelled": "加入をキャンセルしました",
+      "actionFailed": "操作に失敗しました"
+    },
+    "planModal": {
+      "editTitle": "福利厚生プランを編集",
+      "createTitle": "福利厚生プランを作成",
+      "planName": "プラン名",
+      "type": "種類",
+      "provider": "提供会社",
+      "description": "説明",
+      "monthlyPremium": "月額保険料",
+      "employerContribution": "会社負担額",
+      "enrollmentStart": "加入開始",
+      "enrollmentEnd": "加入終了",
+      "cancel": "キャンセル",
+      "updatePlan": "プランを更新",
+      "createPlan": "プランを作成"
+    },
+    "enrollModal": {
+      "title": "従業員を福利厚生プランに加入",
+      "employee": "従業員",
+      "benefitPlan": "福利厚生プラン",
+      "coverageType": "補償タイプ",
+      "startDate": "開始日",
+      "employeePremiumShare": "従業員の保険料負担",
+      "employerPremiumShare": "会社の保険料負担",
+      "cancel": "キャンセル",
+      "submit": "加入"
+    }
+  },
+  "benchmarksPage": {
+    "title": "報酬ベンチマーキング",
+    "description": "従業員の報酬を市場データと比較します",
+    "addBenchmark": "ベンチマークを追加",
+    "stats": {
+      "benchmarks": "ベンチマーク",
+      "avgCompaRatio": "平均コンパレシオ",
+      "belowMarket": "市場水準未満",
+      "aboveMarket": "市場水準超過"
+    },
+    "tabs": {
+      "marketBenchmarks": "市場ベンチマーク ({{count}})",
+      "compaRatioReport": "コンパレシオレポート",
+      "belowMarket": "市場水準未満 ({{count}})",
+      "aboveMarket": "市場水準超過 ({{count}})"
+    },
+    "columns": {
+      "jobTitle": "役職名",
+      "department": "部門",
+      "location": "勤務地",
+      "p50Median": "P50（中央値）",
+      "source": "情報源",
+      "effective": "発効日",
+      "employee": "従業員",
+      "marketP50": "市場P50",
+      "compaRatio": "コンパレシオ",
+      "position": "市場ポジション"
+    },
+    "empty": {
+      "benchmarks": "ベンチマークはまだ追加されていません",
+      "employees": "従業員データがありません",
+      "belowMarket": "市場水準未満の従業員はいません",
+      "aboveMarket": "市場水準を超える従業員はいません"
+    },
+    "summary": {
+      "employeesTotal": "人の従業員",
+      "matchedToBenchmarks": "人がベンチマークに一致",
+      "withoutBenchmarkData": "人にベンチマークデータなし"
+    },
+    "labels": {
+      "noBenchmark": "ベンチマークなし",
+      "notAvailable": "該当なし",
+      "noData": "データなし",
+      "below": "未満",
+      "above": "超過",
+      "atMarket": "市場水準"
+    },
+    "actions": {
+      "edit": "編集",
+      "delete": "削除"
+    },
+    "messages": {
+      "validPercentiles": "有効なP25、P50、P75の金額を入力してください",
+      "nonNegative": "パーセンタイル値を負の数にはできません",
+      "ordered": "パーセンタイルは P25 ≤ P50 ≤ P75 の順にしてください",
+      "updated": "ベンチマークを更新しました",
+      "created": "ベンチマークを作成しました",
+      "deleted": "ベンチマークを削除しました",
+      "failed": "操作に失敗しました"
+    },
+    "modal": {
+      "editTitle": "報酬ベンチマークを編集",
+      "addTitle": "報酬ベンチマークを追加",
+      "jobTitle": "役職名",
+      "jobTitlePlaceholder": "例：ソフトウェアエンジニア",
+      "department": "部門",
+      "selectDepartment": "部門を選択...",
+      "noDepartments": "部門が設定されていません",
+      "location": "勤務地",
+      "locationPlaceholder": "例：バンガロール",
+      "p25Annual": "P25（年額）",
+      "p50Annual": "P50中央値（年額）",
+      "p75Annual": "P75（年額）",
+      "p25Placeholder": "例：800000",
+      "p50Placeholder": "例：1200000",
+      "p75Placeholder": "例：1800000",
+      "source": "情報源",
+      "sourcePlaceholder": "例：Glassdoor 2026",
+      "effectiveDate": "発効日",
+      "cancel": "キャンセル",
+      "updateBenchmark": "ベンチマークを更新",
+      "saveBenchmark": "ベンチマークを保存"
+    }
+  },
+  "payEquityPage": {
+    "title": "賃金公平性分析",
+    "description": "性別、部門、役割ごとの報酬の公平性を分析します",
+    "stats": {
+      "employeesAnalyzed": "分析対象従業員",
+      "medianSalary": "給与中央値",
+      "meanPayGap": "平均賃金格差",
+      "medianPayGap": "賃金格差中央値"
+    },
+    "tabs": {
+      "overview": "分析概要",
+      "compliance": "コンプライアンスレポート"
+    },
+    "gender": {
+      "title": "男女間賃金格差分析",
+      "maleEmployees": "男性従業員",
+      "femaleEmployees": "女性従業員",
+      "maleMeanSalary": "男性の平均給与",
+      "femaleMeanSalary": "女性の平均給与",
+      "menPaidMore": "男性の平均給与が高くなっています",
+      "womenPaidMore": "女性の平均給与が高くなっています",
+      "noGap": "格差は検出されませんでした"
+    },
+    "department": {
+      "title": "部門分析",
+      "department": "部門",
+      "employees": "従業員",
+      "meanSalary": "平均給与",
+      "median": "中央値",
+      "min": "最小",
+      "max": "最大",
+      "spread": "範囲"
+    },
+    "role": {
+      "title": "役割 / 役職分析",
+      "designation": "役職",
+      "count": "人数",
+      "mean": "平均",
+      "median": "中央値"
+    },
+    "compliance": {
+      "title": "コンプライアンスレポート",
+      "generated": "生成日",
+      "findings": "所見",
+      "recommendations": "推奨事項",
+      "notAvailable": "該当なし"
+    },
+    "complianceMessages": {
+      "significantMean": "重大な平均賃金格差を検出：{{value}}%（{{group}}）",
+      "significantMedian": "重大な賃金格差中央値を検出：{{value}}%",
+      "menPaidMore": "男性の給与が高い",
+      "womenPaidMore": "女性の給与が高い",
+      "highVariance": "部門「{{department}}」で給与のばらつきが大きくなっています（CV：{{value}}%）",
+      "acceptableGap": "賃金格差は許容範囲内です（5%以内）",
+      "noConcerns": "賃金公平性に関する重大な懸念は検出されませんでした",
+      "reviewDepartment": "内部公平性を確保するため、部門「{{department}}」の給与帯を見直してください",
+      "reviewCompensation": "重大な格差がある役割の報酬を詳細に見直してください",
+      "continueMonitoring": "四半期ごとの賃金公平性の監視を継続してください"
+    }
+  },
+  "earnedWagePage": {
+    "title": "既得賃金アクセス",
+    "description": "オンデマンド給与 — 給料日前に既得賃金へアクセスできます",
+    "actions": {
+      "approve": "承認",
+      "reject": "却下",
+      "settings": "設定",
+      "requestAdvance": "前払いを申請"
+    },
+    "stats": {
+      "pendingRequests": "保留中の申請",
+      "totalDisbursed": "支給総額",
+      "avgRequest": "平均申請額",
+      "totalRequests": "申請総数"
+    },
+    "filter": {
+      "showing": "表示中：",
+      "requests": "の申請",
+      "clear": "フィルターを解除"
+    },
+    "balance": {
+      "title": "利用可能残高",
+      "details": "現在までの既得額：{{earned}} | 引出済み：{{withdrawn}} | {{day}}/{{days}}日目",
+      "maxPercentage": "既得給与の最大{{value}}%"
+    },
+    "status": {
+      "pending": "保留中",
+      "approved": "承認済み",
+      "disbursed": "支給済み",
+      "rejected": "却下済み",
+      "repaid": "返済済み",
+      "enabled": "有効",
+      "disabled": "無効"
+    },
+    "columns": {
+      "employee": "従業員",
+      "amount": "金額",
+      "fee": "手数料",
+      "status": "ステータス",
+      "requested": "申請日",
+      "reason": "理由"
+    },
+    "emptyRequests": "前払い申請はまだありません",
+    "messages": {
+      "showingAll": "すべての申請を下に表示しています",
+      "requestSubmitted": "前払い申請を送信しました",
+      "submitFailed": "申請を送信できませんでした",
+      "requestApproved": "申請を承認しました",
+      "approveFailed": "承認できませんでした",
+      "rejectionReason": "却下理由（任意）：",
+      "requestRejected": "申請を却下しました",
+      "rejectFailed": "却下できませんでした",
+      "settingsSaved": "設定を保存しました",
+      "settingsSaveFailed": "設定を保存できませんでした"
+    },
+    "requestModal": {
+      "title": "給与前払いを申請",
+      "available": "利用可能：{{amount}}",
+      "salaryDetails": "月給：{{salary}} | {{day}}/{{days}}日目",
+      "unavailable": "現在利用可能な前払いはありません。給与設定または待機期間を確認してください。",
+      "amount": "金額",
+      "amountPlaceholder": "金額を入力",
+      "reason": "理由（任意）",
+      "reasonPlaceholder": "前払いが必要な理由を入力してください",
+      "cancel": "キャンセル",
+      "submit": "申請を送信"
+    },
+    "settingsModal": {
+      "title": "既得賃金アクセス設定",
+      "enable": "既得賃金アクセスを有効にする",
+      "maxPercentage": "既得給与の最大割合（%）",
+      "cooldownDays": "待機日数",
+      "minAmount": "最低金額",
+      "maxAmount": "最高金額（0 = 上限なし）",
+      "feePercentage": "手数料（%）",
+      "flatFee": "固定手数料",
+      "autoApproveBelow": "この金額未満を自動承認（0 = 無効）",
+      "requiresApproval": "上司の承認が必要",
+      "cancel": "キャンセル",
+      "save": "設定を保存"
+    }
+  },
+  "insurancePage": {
+    "title": "保険管理",
+    "description": "団体保険、加入、請求を管理します",
+    "actions": {
+      "edit": "編集",
+      "deactivate": "無効化",
+      "cancel": "キャンセル",
+      "settle": "精算",
+      "approve": "承認",
+      "reject": "却下",
+      "submitClaim": "請求を申請",
+      "enrollEmployee": "従業員を加入",
+      "newPolicy": "新しい保険"
+    },
+    "stats": {
+      "activePolicies": "有効な保険",
+      "activeEnrollments": "有効な加入",
+      "pendingClaims": "保留中の請求",
+      "totalApproved": "承認総額"
+    },
+    "tabs": {
+      "policies": "保険 ({{count}})",
+      "enrollments": "加入 ({{count}})",
+      "claims": "請求 ({{count}})"
+    },
+    "empty": {
+      "policies": "保険はまだ作成されていません",
+      "enrollments": "加入データはまだありません",
+      "claims": "請求はまだ申請されていません"
+    },
+    "columns": {
+      "policyName": "保険名",
+      "number": "番号",
+      "provider": "保険会社",
+      "type": "種類",
+      "coverage": "補償額",
+      "premiumPerEmployee": "従業員あたり保険料",
+      "status": "ステータス",
+      "employee": "従業員",
+      "policy": "保険",
+      "sumInsured": "保険金額",
+      "premiumShare": "保険料負担",
+      "nominee": "受取人",
+      "claimNumber": "請求番号",
+      "claimed": "請求額",
+      "approved": "承認額",
+      "submitted": "申請日"
+    },
+    "policyTypes": {
+      "group_health": "団体医療",
+      "group_life": "団体生命",
+      "disability": "障害",
+      "accidental": "傷害",
+      "travel": "旅行"
+    },
+    "claimTypes": {
+      "hospitalization": "入院",
+      "outpatient": "外来",
+      "dental": "歯科",
+      "vision": "視力",
+      "life": "生命",
+      "disability": "障害",
+      "accidental": "傷害",
+      "travel": "旅行",
+      "group_health": "団体医療",
+      "group_life": "団体生命"
+    },
+    "status": {
+      "active": "有効",
+      "expired": "期限切れ",
+      "cancelled": "キャンセル済み",
+      "submitted": "申請済み",
+      "under_review": "審査中",
+      "approved": "承認済み",
+      "rejected": "却下済み",
+      "settled": "精算済み",
+      "inactive": "無効",
+      "claimed": "請求済み"
+    },
+    "messages": {
+      "invalidEndDate": "保険の終了日を開始日より前に設定できません",
+      "renewalInPast": "更新日を過去の日付にはできません",
+      "invalidRenewalDate": "更新日は保険終了日以降に設定してください",
+      "invalidPolicyNumber": "保険番号をマイナス記号で始めることはできません",
+      "policyUpdated": "保険を更新しました",
+      "policyCreated": "保険を作成しました",
+      "saveFailed": "保険を保存できませんでした",
+      "deactivateConfirm": "この保険を無効にしますか？既存の加入には影響しません。",
+      "policyDeactivated": "保険を無効にしました",
+      "deactivateFailed": "保険を無効にできませんでした",
+      "employeeEnrolled": "従業員を保険に加入させました",
+      "enrollFailed": "加入処理に失敗しました",
+      "claimSubmitted": "請求を申請しました",
+      "claimSubmitFailed": "請求を申請できませんでした",
+      "approvedAmountPrompt": "承認額（全額の場合は空欄）：",
+      "claimApproved": "請求を承認しました",
+      "actionFailed": "操作に失敗しました",
+      "rejectionReason": "却下理由：",
+      "claimRejected": "請求を却下しました",
+      "claimSettled": "請求を精算しました",
+      "enrollmentCancelled": "加入をキャンセルしました"
+    },
+    "policyModal": {
+      "editTitle": "保険を編集",
+      "createTitle": "保険を作成",
+      "policyName": "保険名",
+      "policyNumber": "保険番号",
+      "policyNumberPlaceholder": "例：POL-2024-001",
+      "provider": "保険会社",
+      "type": "種類",
+      "totalPremium": "保険料総額",
+      "premiumPerEmployee": "従業員あたり保険料",
+      "coverageAmount": "補償額",
+      "startDate": "開始日",
+      "endDate": "終了日",
+      "renewalDate": "更新日",
+      "terms": "規約",
+      "cancel": "キャンセル",
+      "updatePolicy": "保険を更新",
+      "createPolicy": "保険を作成"
+    },
+    "enrollModal": {
+      "title": "従業員を保険に加入",
+      "employee": "従業員",
+      "policy": "保険",
+      "sumInsured": "保険金額",
+      "premiumShare": "従業員の保険料負担",
+      "nomineeName": "受取人名",
+      "nomineeRelationship": "受取人との関係",
+      "relationshipPlaceholder": "例：配偶者、親",
+      "cancel": "キャンセル",
+      "submit": "加入"
+    },
+    "claimModal": {
+      "title": "保険請求を申請",
+      "policy": "保険",
+      "claimType": "請求種別",
+      "amountClaimed": "請求額",
+      "description": "説明",
+      "descriptionPlaceholder": "請求内容を説明してください",
+      "notes": "メモ",
+      "cancel": "キャンセル",
+      "submit": "請求を申請"
+    }
+  },
+  "countryCompliancePage": {
+    "title": "国別コンプライアンス",
+    "description": "国別の労働法、税率、法定要件を確認します",
+    "filters": {
+      "searchPlaceholder": "国を検索...",
+      "configuredOnly": "設定済みの国のみ ({{count}})"
+    },
+    "regions": {
+      "all": "すべての地域",
+      "asia": "アジア",
+      "europe": "ヨーロッパ",
+      "americas": "南北アメリカ",
+      "africa": "アフリカ",
+      "oceania": "オセアニア",
+      "middle_east": "中東"
+    },
+    "metrics": {
+      "maxHours": "週の最大労働時間",
+      "annualLeave": "年次休暇",
+      "publicHolidays": "祝日",
+      "noticePeriod": "通知期間",
+      "probation": "試用期間",
+      "payFrequency": "給与支払頻度"
+    },
+    "units": {
+      "hours": "{{value}}時間",
+      "days": "{{value}}日",
+      "months": "{{value}}か月"
+    },
+    "payFrequencies": {
+      "monthly": "月払い",
+      "biweekly": "隔週払い",
+      "weekly": "週払い",
+      "annual": "年払い"
+    },
+    "benefits": {
+      "title": "法定福利厚生",
+      "socialSecurity": "社会保障",
+      "pension": "年金",
+      "healthInsurance": "健康保険",
+      "required": "必須",
+      "notRequired": "不要"
+    },
+    "ratesTitle": "税・社会保障料率",
+    "additional": {
+      "title": "追加情報",
+      "taxYearStart": "課税年度開始",
+      "minimumWage": "最低賃金（月額）",
+      "notSet": "未設定 / 変動",
+      "countryCode": "国コード",
+      "region": "地域"
+    },
+    "empty": {
+      "title": "国を選択してコンプライアンス詳細を表示",
+      "description": "労働法、税率、法定要件を確認します"
+    },
+    "complianceKeys": {
+      "income_tax": "所得税",
+      "solidarity_surcharge": "連帯付加税",
+      "health_insurance_employer": "雇用主健康保険",
+      "health_insurance_employee": "従業員健康保険",
+      "pension_employer": "雇用主年金",
+      "pension_employee": "従業員年金",
+      "unemployment_employer": "雇用主失業保険",
+      "unemployment_employee": "従業員失業保険",
+      "care_insurance_employer": "雇用主介護保険",
+      "care_insurance_employee": "従業員介護保険",
+      "employer_social_charges": "雇用主社会保険料",
+      "employee_social_charges": "従業員社会保険料",
+      "social_security_rate": "社会保障料率",
+      "social_security_cap": "社会保障上限",
+      "federal_tax": "連邦税",
+      "state_tax": "州税",
+      "epf_employer": "雇用主EPF",
+      "epf_employee": "従業員EPF",
+      "esi_employer": "雇用主ESI",
+      "esi_employee": "従業員ESI"
+    }
+  },
+  "glAccountingPage": {
+    "title": "総勘定元帳 / 会計",
+    "description": "給与項目を総勘定元帳の勘定科目に紐付け、仕訳を作成します",
+    "actions": {
+      "generateJournal": "仕訳を作成",
+      "addMapping": "マッピングを追加",
+      "deleteMapping": "マッピングを削除",
+      "cancel": "キャンセル",
+      "saveMapping": "マッピングを保存",
+      "generate": "作成"
+    },
+    "stats": {
+      "mappings": "総勘定元帳マッピング",
+      "journals": "仕訳",
+      "exported": "エクスポート済み"
+    },
+    "tabs": {
+      "mappings": "総勘定元帳マッピング",
+      "journals": "仕訳",
+      "exported": "エクスポート済み"
+    },
+    "mappingTable": {
+      "payComponent": "給与項目",
+      "accountCode": "勘定科目コード",
+      "accountName": "勘定科目名",
+      "description": "説明"
+    },
+    "journalTable": {
+      "date": "日付",
+      "payrollRun": "給与計算",
+      "totalDebit": "借方合計",
+      "totalCredit": "貸方合計",
+      "status": "ステータス",
+      "export": "エクスポート"
+    },
+    "statuses": {
+      "draft": "下書き",
+      "posted": "転記済み",
+      "exported": "エクスポート済み"
+    },
+    "empty": {
+      "mappings": "総勘定元帳マッピングが設定されていません",
+      "journals": "仕訳はまだ作成されていません",
+      "exported": "エクスポートされた仕訳はまだありません"
+    },
+    "mappingModal": {
+      "title": "総勘定元帳マッピングを追加",
+      "payComponentCode": "給与項目コード",
+      "payComponentPlaceholder": "例：BASIC, HRA, EPF, TDS",
+      "accountCode": "勘定科目コード",
+      "accountCodePlaceholder": "例：4001",
+      "accountName": "勘定科目名",
+      "accountNamePlaceholder": "例：給与費用",
+      "description": "説明"
+    },
+    "journalModal": {
+      "title": "仕訳を作成",
+      "payrollRun": "給与計算",
+      "selectRun": "給与計算を選択...",
+      "help": "設定済みの総勘定元帳マッピングを使用して、選択した給与計算から仕訳を作成します。"
+    },
+    "validation": {
+      "accountCode": "勘定科目コードは、負号、文字、空白を含まない正の数にしてください"
+    },
+    "messages": {
+      "mappingCreated": "総勘定元帳マッピングを作成しました",
+      "journalGenerated": "仕訳を作成しました",
+      "mappingDeleted": "マッピングを削除しました",
+      "failed": "操作に失敗しました"
+    },
+    "exports": {
+      "tallyTitle": "Tallyへエクスポート",
+      "quickbooksTitle": "QuickBooksへエクスポート",
+      "zohoTitle": "Zohoへエクスポート"
+    }
+  },
+  "globalEmployeesPage": {
+    "title": "グローバル従業員",
+    "description": "世界中のEOR従業員、業務委託者、直接雇用者を管理します",
+    "actions": {
+      "addEmployee": "従業員を追加",
+      "editEmployee": "従業員を編集",
+      "terminateEmployee": "雇用を終了",
+      "alreadyTerminated": "雇用はすでに終了しています",
+      "cancel": "キャンセル",
+      "saveChanges": "変更を保存"
+    },
+    "filters": {
+      "searchPlaceholder": "名前、メールアドレス、国で検索...",
+      "allCountries": "すべての国",
+      "allTypes": "すべての種類",
+      "allStatuses": "すべてのステータス"
+    },
+    "employmentTypes": {
+      "eor": "EOR",
+      "contractor": "業務委託",
+      "direct_hire": "直接雇用"
+    },
+    "contractTypes": {
+      "fullTime": "フルタイム",
+      "partTime": "パートタイム",
+      "fixedTerm": "有期雇用"
+    },
+    "statuses": {
+      "active": "有効",
+      "onboarding": "オンボーディング",
+      "offboarding": "オフボーディング",
+      "terminated": "終了"
+    },
+    "salaryFrequencies": {
+      "monthly": "月払い",
+      "biweekly": "隔週払い",
+      "weekly": "週払い",
+      "annual": "年払い"
+    },
+    "salaryFrequencyShort": {
+      "monthly": "月",
+      "biweekly": "2週",
+      "weekly": "週",
+      "annual": "年"
+    },
+    "table": {
+      "name": "氏名",
+      "country": "国",
+      "type": "種類",
+      "status": "ステータス",
+      "salary": "給与",
+      "jobTitle": "役職",
+      "startDate": "開始日",
+      "actions": "操作"
+    },
+    "empty": "グローバル従業員が見つかりません。「従業員を追加」をクリックして、最初の海外チームメンバーを採用してください。",
+    "modal": {
+      "addTitle": "グローバル従業員を追加",
+      "editTitle": "グローバル従業員を編集",
+      "firstName": "名 *",
+      "lastName": "姓 *",
+      "email": "メールアドレス *",
+      "country": "国 *",
+      "employmentType": "雇用形態 *",
+      "contractType": "契約形態",
+      "jobTitle": "役職 *",
+      "department": "部門",
+      "selectDepartment": "部門を選択...",
+      "noDepartments": "部門がまだ設定されていません — 設定 > 部門から追加してください",
+      "startDate": "開始日 *",
+      "salaryAmount": "給与額 *（主要通貨単位）",
+      "payFrequency": "支払頻度",
+      "bankingTax": "銀行・税務情報（任意）",
+      "taxId": "納税者番号",
+      "bankName": "銀行名",
+      "bankNamePlaceholder": "例：HDFC Bank",
+      "bankAccount": "銀行口座番号",
+      "bankAccountPlaceholder": "例：12345678901234",
+      "bankRouting": "銀行ルーティング / IFSC",
+      "bankRoutingPlaceholder": "例：HDFC0001234"
+    },
+    "validation": {
+      "required": "必須項目をすべて入力してください"
+    },
+    "messages": {
+      "added": "グローバル従業員を追加しました",
+      "updated": "グローバル従業員を更新しました",
+      "addFailed": "従業員を追加できませんでした",
+      "updateFailed": "従業員を更新できませんでした",
+      "terminatePrompt": "{{name}}の雇用を終了しますか？理由を入力してください（必須）：",
+      "terminated": "従業員の雇用を終了しました",
+      "terminateFailed": "従業員の雇用を終了できませんでした"
+    }
+  },
+  "contractorInvoicesPage": {
+    "title": "業務委託者請求書",
+    "description": "業務委託者の請求書を管理・支払いします",
+    "actions": {
+      "submitInvoice": "請求書を提出",
+      "approve": "承認",
+      "reject": "却下",
+      "markPaid": "支払済みにする",
+      "cancel": "キャンセル"
+    },
+    "filters": {
+      "allStatuses": "すべてのステータス"
+    },
+    "statuses": {
+      "pending": "保留中",
+      "approved": "承認済み",
+      "paid": "支払済み",
+      "rejected": "却下済み"
+    },
+    "table": {
+      "invoiceNumber": "請求書番号",
+      "contractor": "業務委託者",
+      "period": "期間",
+      "amount": "金額",
+      "status": "ステータス",
+      "submitted": "提出日",
+      "actions": "操作"
+    },
+    "empty": "業務委託者の請求書はまだありません。",
+    "modal": {
+      "title": "業務委託者請求書を提出",
+      "contractorLabel": "業務委託者 *",
+      "selectContractor": "業務委託者を選択...",
+      "noContractors": "業務委託者はまだいません — グローバル従業員で追加してください",
+      "amountLabel": "金額",
+      "amountUnitHint": "主要通貨単位",
+      "periodStart": "期間開始 *",
+      "periodEnd": "期間終了 *",
+      "description": "説明"
+    },
+    "validation": {
+      "required": "必須項目をすべて入力してください",
+      "positiveAmount": "金額は正の数である必要があります",
+      "invalidPeriod": "終了日は開始日以降にしてください"
+    },
+    "messages": {
+      "submitted": "請求書を提出しました",
+      "submitFailed": "請求書を提出できませんでした",
+      "approved": "請求書を承認しました",
+      "approveFailed": "請求書を承認できませんでした",
+      "rejectConfirm": "この請求書を却下しますか？",
+      "rejected": "請求書を却下しました",
+      "rejectFailed": "請求書を却下できませんでした",
+      "paid": "請求書を支払済みにしました",
+      "paidFailed": "請求書を支払済みにできませんでした"
+    }
+  },
+  "globalPayrollDashboard": {
+    "title": "グローバル給与",
+    "description": "国、通貨、コンプライアンス要件をまたいでグローバル人材を管理します",
+    "stats": {
+      "activeEmployees": "有効な従業員",
+      "countries": "国",
+      "eorWorkers": "EOR従業員",
+      "contractors": "業務委託者",
+      "complianceScore": "コンプライアンススコア",
+      "pendingInvoices": "保留中の請求書",
+      "onboarding": "オンボーディング"
+    },
+    "compliance": {
+      "good": "良好",
+      "needsAttention": "要対応"
+    },
+    "employeesByCountry": {
+      "title": "国別従業員数",
+      "empty": "従業員はまだいません。最初のグローバル従業員を追加してください。"
+    },
+    "costByCurrency": {
+      "title": "通貨別月間コスト",
+      "empty": "有効な給与コストはまだありません。"
+    },
+    "costAnalysis": {
+      "title": "国別コスト分析",
+      "columns": {
+        "country": "国",
+        "employees": "従業員",
+        "averageSalary": "平均給与",
+        "totalGross": "総支給額",
+        "employerCost": "雇用主負担額",
+        "netPay": "手取り額"
+      }
+    }
+  },
+  "globalPayrollRuns": {
+    "title": "グローバル給与計算",
+    "description": "国ごとに毎月の給与計算を実行し、確認、承認、支払済み処理を行います",
+    "statusFilter": "ステータスで給与計算を絞り込む",
+    "allStatuses": "すべてのステータス",
+    "empty": "給与計算はまだありません。最初のグローバル給与計算を作成してください。",
+    "columns": {
+      "country": "国",
+      "period": "期間",
+      "status": "ステータス",
+      "gross": "総支給額",
+      "net": "手取り額",
+      "deductions": "控除額",
+      "employerCost": "雇用主負担額",
+      "actions": "操作"
+    },
+    "actions": {
+      "view": "給与計算を表示",
+      "approve": "承認",
+      "markPaid": "支払済みにする"
+    },
+    "createModal": {
+      "title": "グローバル給与計算を作成",
+      "country": "国 *",
+      "selectCountry": "国を選択...",
+      "noCountries": "有効なEORまたは直接雇用の従業員がいる国はありません",
+      "calculationNotice": "選択した国の有効なEORおよび直接雇用の全従業員について、控除額が自動計算されます。"
+    },
+    "detailModal": {
+      "title": "給与計算 — {{country}}",
+      "netPay": "手取り額",
+      "employee": "従業員",
+      "tax": "税金",
+      "socialSecurityEmployee": "社会保険（従業員）",
+      "pensionEmployee": "年金（従業員）"
+    },
+    "messages": {
+      "selectCountry": "国を選択してください",
+      "approved": "給与計算を承認しました",
+      "approveFailed": "給与計算を承認できませんでした",
+      "markedPaid": "給与計算を支払済みにしました",
+      "markPaidFailed": "給与計算を支払済みにできませんでした"
+    }
+  },
+  "announcementsPage": {
+    "title": "お知らせ",
+    "description": "EmpCloudから投稿された全社向けのお知らせ",
+    "manageInEmpCloud": "EmpCloudで管理",
+    "empty": "お知らせはまだありません",
+    "postFromEmpCloud": "EmpCloudから投稿",
+    "pinned": "固定済み",
+    "archived": "アーカイブ済み",
+    "byAuthor": "投稿者：{{author}}",
+    "unknownAuthor": "不明",
+    "expires": "{{date}}に期限切れ",
+    "priorities": {
+      "low": "低",
+      "normal": "通常",
+      "high": "高",
+      "urgent": "緊急"
+    },
+    "categories": {
+      "general": "一般",
+      "hr": "人事",
+      "policy": "規程",
+      "event": "イベント",
+      "holiday": "休日",
+      "maintenance": "メンテナンス"
+    }
+  },
+  "notificationsPage": {
+    "title": "通知",
+    "description": "最近のアラートと更新をまとめて確認できます",
+    "markAllRead": "すべて既読にする",
+    "bellAria": "通知、未読{{count}}件",
+    "newCount": "新着{{count}}件 — 既読にする",
+    "viewAll": "すべての通知を表示",
+    "tabs": {
+      "all": "すべて（{{count}}）",
+      "unread": "未読（{{count}}）"
+    },
+    "empty": {
+      "noUnread": "未読の通知はありません",
+      "none": "通知はありません",
+      "caughtUp": "すべて確認済みです！",
+      "updatesHere": "新しい更新はここに表示されます。"
+    },
+    "items": {
+      "admin": {
+        "tdsDue": {
+          "title": "TDS申告期限",
+          "description": "2025–26年度第4四半期のフォーム24Qの期限が近づいています",
+          "time": "対応が必要"
+        },
+        "payrollPending": {
+          "title": "{{month}}の給与処理が保留中",
+          "description": "今月の給与処理を作成して実行してください",
+          "time": "今月"
+        },
+        "payrollCompleted": {
+          "title": "前回の給与処理が完了",
+          "description": "すべての給与明細を作成し、支払い済みです",
+          "time": "先月"
+        },
+        "activeEmployees": {
+          "title": "有効な従業員{{count}}名",
+          "description": "すべての法定登録が最新です",
+          "time": "システム"
+        }
+      },
+      "employee": {
+        "payslipAvailable": {
+          "title": "給与明細が利用可能",
+          "description": "最新の給与明細を確認できます",
+          "time": "最近"
+        },
+        "taxReminder": {
+          "title": "税申告のリマインダー",
+          "description": "期限までに投資証明書を提出してください",
+          "time": "今四半期"
+        },
+        "salaryCredited": {
+          "title": "給与を入金しました",
+          "description": "給与が銀行口座に入金されました",
+          "time": "先月"
+        }
+      }
+    }
+  },
+  "selfServiceDashboard": {
+    "greeting": "{{name}}さん、ようこそ！",
+    "userFallback": "ユーザー",
+    "description": "給与の概要です",
+    "stats": {
+      "monthlyCtc": "月間CTC",
+      "latestNetPay": "最新の手取り額",
+      "taxRegime": "税制",
+      "daysAtCompany": "在籍日数"
+    },
+    "regimes": {
+      "old": "旧制度",
+      "new": "新制度"
+    },
+    "latestPayslip": "最新の給与明細 — {{period}}",
+    "payslip": {
+      "grossPay": "総支給額",
+      "deductions": "控除額",
+      "netPay": "手取り額",
+      "viewAll": "すべて表示"
+    },
+    "actions": {
+      "salaryBreakdown": "給与の内訳を見る",
+      "taxComputation": "税額計算",
+      "submitDeclarations": "申告を提出",
+      "reimbursements": "経費精算",
+      "profile": "プロフィール"
+    },
+    "announcements": {
+      "title": "社内のお知らせ",
+      "readMore": "続きを読む",
+      "fallbackTitle": "お知らせ",
+      "priorityLabel": "優先度：{{priority}}",
+      "priorities": {
+        "low": "低",
+        "normal": "通常",
+        "high": "高",
+        "urgent": "緊急"
+      }
+    }
+  },
+  "myPayslipsPage": {
+    "title": "給与明細",
+    "description": "給与明細の表示とダウンロード",
+    "financialYear": "{{start}}-{{end}}年度",
+    "financialYearFilter": "会計年度で絞り込む",
+    "empty": "給与明細はまだありません",
+    "gross": "総支給額",
+    "net": "手取り額",
+    "actions": {
+      "hide": "閉じる",
+      "details": "詳細",
+      "downloadPdf": "PDFをダウンロード",
+      "dispute": "給与明細に異議を申し立てる"
+    },
+    "earnings": "支給項目",
+    "totalEarnings": "支給額合計",
+    "deductions": "控除項目",
+    "totalDeductions": "控除額合計",
+    "components": {
+      "EPF": "従業員積立基金",
+      "PF": "積立基金",
+      "PF_EE": "従業員積立基金拠出",
+      "ESI": "従業員州保険",
+      "PT": "職業税",
+      "TDS": "所得税（TDS）",
+      "INCOME_TAX": "所得税",
+      "LOP": "無給控除"
+    },
+    "dispute": {
+      "title": "給与明細への異議申し立て",
+      "reasonRequired": "理由を入力してください",
+      "success": "異議申し立てを送信しました。人事部が確認します。",
+      "failed": "異議申し立てを送信できませんでした",
+      "description": "この給与明細に誤りがあると思われる場合は、下記に問題を記載してください。人事部が確認して回答します。",
+      "placeholder": "問題を記載してください（例：誤った控除、手当の不足）",
+      "cancel": "キャンセル",
+      "submit": "異議を申し立てる"
+    }
+  },
+  "mySalaryPage": {
+    "title": "給与",
+    "description": "CTCの内訳と給与体系",
+    "unavailable": "給与情報はありません",
+    "annualSummary": "年間概要",
+    "annualCtcConfigured": "年間CTC（設定値）",
+    "annualGrossComponents": "構成項目から算出した年間総支給額",
+    "roundingNotice": "設定されたCTCと構成項目の合計にはわずかな差が生じる場合があります。月額を1ルピー単位に丸めてから年額を算出するためです。",
+    "grossSalaryAnnual": "総支給額（年額）",
+    "monthlyComponent": "月額{{component}}",
+    "monthlyBreakdown": "月間給与の内訳",
+    "salaryComponents": "給与構成項目",
+    "effectiveFrom": "{{date}}から有効",
+    "columns": {
+      "component": "項目",
+      "monthly": "月額",
+      "annual": "年額"
+    },
+    "components": {
+      "BASIC": "基本給",
+      "HRA": "住宅手当（HRA）",
+      "SA": "特別手当"
+    }
+  },
+  "myTaxPage": {
+    "title": "税金",
+    "description": "年度 {{financialYear}} の税額計算",
+    "form16": "フォーム16",
+    "stats": {
+      "annualIncome": "年間所得",
+      "taxableIncome": "課税所得",
+      "estimatedTax": "推定税額",
+      "tdsDeductedYtd": "年初来TDS控除額"
+    },
+    "computationTitle": "税額計算",
+    "regimes": {
+      "new": "新税制",
+      "old": "旧税制"
+    },
+    "rows": {
+      "grossAnnualIncome": "年間総所得",
+      "standardDeduction": "控除：標準控除",
+      "chapterDeductions": "控除：第VI-A章控除",
+      "taxableIncome": "課税所得",
+      "taxOnIncome": "所得税",
+      "cess": "健康・教育目的税（4%）",
+      "totalLiability": "総納税額",
+      "monthlyTds": "月次TDS"
+    },
+    "tracker": {
+      "title": "TDS控除状況",
+      "totalTax": "年度の総税額",
+      "tdsDeductedYtd": "年初来TDS控除額",
+      "remaining": "残額",
+      "progress": "進捗",
+      "monthlyMessage": "毎月、給与から<strong>{{amount}}</strong>のTDSが控除されます。"
+    }
+  },
+  "myDeclarationsPage": {
+    "description": "年度 {{financialYear}} — 投資証明と申告を提出",
+    "actions": {
+      "quickDeclare": "一括クイック申告",
+      "newDeclaration": "新規申告",
+      "cancel": "キャンセル",
+      "submitAll": "すべての申告を提出",
+      "submit": "申告を提出"
+    },
+    "stats": {
+      "totalDeclared": "申告総額",
+      "totalApproved": "承認総額",
+      "pendingApproval": "承認待ち"
+    },
+    "declarations": "申告",
+    "empty": "申告はまだありません。最初の投資証明を提出するには「新規申告」を選択してください。",
+    "proof": {
+      "submitted": "証明書提出済み",
+      "upload": "アップロード"
+    },
+    "quick": {
+      "title": "税務クイック申告",
+      "description": "すべての投資をまとめて申告",
+      "tip": "ヒント：第80C条ではPPF、ELSS、LICなどについて最大₹1,50,000を申告できます。80CCD(1B)のNPSではさらに₹50,000の控除を受けられます。",
+      "defaultDescription": "第{{section}}条に基づく税務申告"
+    },
+    "sections": {
+      "80C": "80C — PPF、ELSS、LICなど",
+      "80CCD_1B": "80CCD(1B) — NPS",
+      "80D": "80D — 医療保険",
+      "80E": "80E — 教育ローン利息",
+      "80G": "80G — 寄付",
+      "80TTA": "80TTA — 預金利息",
+      "HRA": "HRA — 住宅家賃"
+    },
+    "validation": {
+      "sectionRequired": "項目を選択してください",
+      "fieldRequired": "この項目を入力してください",
+      "validAmount": "有効な金額を入力してください",
+      "nonnegativeAmount": "金額を負数にはできません",
+      "fileTooLarge": "ファイルサイズが5MBを超えています",
+      "fileType": "PDF、JPG、PNGファイルのみ使用できます",
+      "oneAmount": "少なくとも1つの金額を入力してください"
+    },
+    "messages": {
+      "proofUploaded": "証明書をアップロードしました",
+      "proofUploadFailed": "証明書をアップロードできませんでした",
+      "submitted": "申告を提出しました",
+      "submitFailed": "申告を提出できませんでした",
+      "submittedCount_one": "{{count}}件の申告を提出しました",
+      "submittedCount_other": "{{count}}件の申告を提出しました",
+      "submitAllFailed": "申告を提出できませんでした"
+    },
+    "form": {
+      "descriptionPlaceholder": "例：PPF拠出",
+      "amount": "金額",
+      "proofDocument": "証明書類",
+      "optional": "任意",
+      "uploadProof": "証明書類をアップロード",
+      "fileSelected": "{{size}} KB — 変更するには選択",
+      "dropzone": "選択してアップロード、またはドラッグ＆ドロップ",
+      "fileHelp": "PDF、JPG、PNG（最大5MB）"
+    }
+  },
+  "myReimbursementsPage": {
+    "title": "経費精算",
+    "description": "経費申請の提出と状況確認",
+    "newClaim": "新規申請",
+    "stats": {
+      "total": "申請総数",
+      "pending": "保留中",
+      "approvedPaid": "承認済み / 支払済み"
+    },
+    "empty": {
+      "title": "経費申請はありません",
+      "description": "経費を申請するには「新規申請」を選択してください"
+    },
+    "columns": {
+      "category": "カテゴリー",
+      "description": "説明",
+      "amount": "金額",
+      "date": "日付",
+      "status": "ステータス"
+    },
+    "categories": {
+      "medical": "医療",
+      "travel": "出張・交通",
+      "food": "食事",
+      "equipment": "備品",
+      "internet": "インターネット / 電話",
+      "books": "書籍・研修",
+      "other": "その他"
+    },
+    "status": {
+      "pending": "保留中",
+      "approved": "承認済み",
+      "paid": "支払済み",
+      "rejected": "却下"
+    },
+    "messages": {
+      "invalidAmount": "金額は0以上で入力してください",
+      "submitted": "申請を承認待ちとして提出しました",
+      "failed": "申請を提出できませんでした"
+    },
+    "modal": {
+      "title": "経費申請を提出",
+      "category": "カテゴリー",
+      "description": "説明",
+      "descriptionPlaceholder": "例：顧客訪問のタクシー代",
+      "amount": "金額 (₹)",
+      "expenseDate": "利用日",
+      "cancel": "キャンセル",
+      "submit": "申請を提出"
+    }
+  },
+  "holidaysPage": {
+    "title": "休日カレンダー",
+    "configured_one": "{{year}}年 — {{count}}件の休日を設定済み",
+    "configured_other": "{{year}}年 — {{count}}件の休日を設定済み",
+    "noHolidays": "休日なし",
+    "upcoming": "今後の休日",
+    "past": "過去の休日",
+    "actions": {
+      "add": "休日を追加",
+      "remove": "休日を削除",
+      "cancel": "キャンセル"
+    },
+    "columns": {
+      "holiday": "休日",
+      "date": "日付",
+      "day": "曜日",
+      "type": "種類"
+    },
+    "types": {
+      "national": "国民の祝日",
+      "regional": "地域の休日",
+      "optional": "任意 / 制限付き"
+    },
+    "messages": {
+      "nameRequired": "休日名は必須です",
+      "nameLetter": "休日名には少なくとも1文字を含めてください",
+      "added": "休日を追加しました",
+      "addFailed": "休日を追加できませんでした",
+      "removed": "休日を削除しました",
+      "removeFailed": "休日を削除できませんでした"
+    },
+    "modal": {
+      "title": "休日を追加",
+      "name": "休日名",
+      "namePlaceholder": "例：ディワリ",
+      "nameTitle": "少なくとも1文字を含めてください",
+      "date": "日付",
+      "type": "種類"
+    }
+  },
+  "payrollRuns": {
+    "title": "給与処理",
+    "description": "月次給与処理",
+    "runPayroll": "給与を処理",
+    "noRuns": "給与処理はまだありません。",
+    "runFirst": "最初の給与を処理",
+    "totalRuns": "処理数",
+    "allPeriods": "全期間",
+    "latestNetPay": "直近の手取り額",
+    "noComputedRuns": "計算済みの処理はありません",
+    "markedPaid": "支払済み",
+    "inProgress": "処理中",
+    "inProgressSubtitle": "下書き · 計算済み · 承認済み",
+    "filterAria": "ステータスで給与処理を絞り込む",
+    "noMatches": "この条件に一致する給与処理はありません。",
+    "newTitle": "新しい給与処理",
+    "newDescription": "新しい月次給与処理を作成",
+    "createInfo": "選択した月の全在籍従業員について、下書きを作成し、総支給額、控除額、手取り額を計算します。支払済みにする前に確認して承認できます。",
+    "month": "月",
+    "year": "年",
+    "payDate": "支払日",
+    "cancel": "キャンセル",
+    "createRun": "処理を作成",
+    "created": "給与処理を作成しました",
+    "missingReturnedId": "処理は送信されましたが、サーバーからIDが返されませんでした。一覧を更新して確認してください。",
+    "createFailed": "給与処理を作成できませんでした",
+    "missingId": "この給与処理にはIDがありません。一覧を更新してください。",
+    "columns": {
+      "period": "期間",
+      "employees": "従業員",
+      "grossPay": "総支給額",
+      "deductions": "控除額",
+      "netPay": "手取り額",
+      "status": "ステータス"
+    },
+    "statuses": {
+      "all": "すべて",
+      "draft": "下書き",
+      "processing": "処理中",
+      "computed": "計算済み",
+      "approved": "承認済み",
+      "paid": "支払済み",
+      "cancelled": "キャンセル済み"
+    },
+    "validation": {
+      "month": "有効な月を選択してください",
+      "year": "有効な年を入力してください（2020～2100）",
+      "futurePeriod": "将来の期間の給与処理は作成できません",
+      "payDate": "支払日を選択してください"
+    }
+  },
+  "pagination": {
+    "range": "全{{total}}件中 {{start}}–{{end}}件",
+    "pageOf": "{{totalPages}}ページ中 {{page}}ページ",
+    "previous": "前へ",
+    "previousPage": "前のページ",
+    "next": "次へ",
+    "nextPage": "次のページ"
+  },
+  "adminDeclarations": {
+    "title": "税務申告",
+    "description": "{{financialYear}}に従業員から提出された投資申告を確認します。",
+    "pending": {
+      "title": "承認待ち",
+      "badge": "承認待ち {{pending}}件 · 従業員 {{count}}人",
+      "badge_one": "承認待ち {{pending}}件 · 従業員 {{count}}人",
+      "badge_other": "承認待ち {{pending}}件 · 従業員 {{count}}人",
+      "loading": "承認待ちの申告を読み込み中…",
+      "empty": "{{financialYear}}に承認待ちの申告はありません。すべて完了しています。",
+      "declaredAmount": "申告額 {{amount}}"
+    },
+    "employees": {
+      "title": "従業員",
+      "loading": "読み込み中…",
+      "noMatches": "該当する従業員はいません。",
+      "shownOf": "全{{total}}件中{{shown}}件"
+    },
+    "filters": {
+      "searchPlaceholder": "氏名、メール、コード",
+      "filterDepartment": "部署で絞り込む",
+      "allDepartments": "すべての部署",
+      "filterLocation": "勤務地で絞り込む",
+      "allLocations": "すべての勤務地",
+      "clear": "フィルターをクリア"
+    },
+    "declarations": {
+      "pickEmployee": "従業員を選択",
+      "approving": "承認中…",
+      "approvePending": "承認待ち{{count}}件を承認",
+      "approvePending_one": "承認待ち{{count}}件を承認",
+      "approvePending_other": "承認待ち{{count}}件を承認",
+      "selectPrompt": "一覧から従業員を選択して税務申告を表示します。",
+      "loading": "申告を読み込み中…",
+      "empty": "{{financialYear}}に提出された申告はありません。"
+    },
+    "stats": {
+      "declared": "申告額",
+      "approved": "承認額",
+      "pending": "承認待ち"
+    },
+    "columns": {
+      "section": "条項",
+      "description": "説明",
+      "declared": "申告額",
+      "approved": "承認額",
+      "status": "ステータス",
+      "proof": "証明書類",
+      "action": "操作"
+    },
+    "statuses": {
+      "pending": "承認待ち",
+      "approved": "承認済み",
+      "rejected": "却下"
+    },
+    "proof": {
+      "view": "表示"
+    },
+    "actions": {
+      "approve": "承認"
+    },
+    "toasts": {
+      "noPending": "承認待ちの申告はありません。",
+      "approvedCount": "{{count}}件の申告を承認しました。",
+      "approvedCount_one": "{{count}}件の申告を承認しました。",
+      "approvedCount_other": "{{count}}件の申告を承認しました。",
+      "approveAllFailed": "申告を承認できませんでした",
+      "alreadyApproved": "すでに承認済みです。",
+      "approvedOne": "申告を承認しました。",
+      "approveOneFailed": "申告を承認できませんでした"
+    }
+  },
+  "taxCalculator": {
+    "title": "税額計算",
+    "description": "所得税の試算 — 従業員を選択し、任意の値で再計算します",
+    "financialYearShort": "年度 {{year}}",
+    "simulationFailed": "税額を計算できませんでした。もう一度お試しください。",
+    "newRegimeInfo": "新制度 — ₹75,000の標準控除のみ適用されます。HRA、80C、80D、およびその他の第VI-A章控除は利用できません。",
+    "steps": {
+      "employee": "ステップ1 · 従業員",
+      "inputs": "ステップ2 · 入力",
+      "taxBreakdown": "ステップ3 · 税額内訳"
+    },
+    "regimes": {
+      "new": "新制度",
+      "old": "旧制度"
+    },
+    "employee": {
+      "ctc": "CTC",
+      "select": "従業員を検索して選択…",
+      "joined": "入社日 {{date}}",
+      "monthsLeft": "今年度は残り{{count}}か月",
+      "monthsLeft_one": "今年度は残り{{count}}か月",
+      "monthsLeft_other": "今年度は残り{{count}}か月",
+      "midFyJoiner": "年度途中入社",
+      "searchPlaceholder": "氏名、メール、コードで検索…",
+      "noMatches": "「{{search}}」に一致する従業員はいません"
+    },
+    "empty": {
+      "title": "従業員を選択して開始",
+      "description": "現在の給与、税制、承認済み申告を読み込みます。任意の値を変更して、結果の月次TDSを確認できます。"
+    },
+    "inputs": {
+      "reset": "保存済みの値に戻す",
+      "loadingSaved": "保存済みの値を読み込み中…",
+      "noSalary": "有効な給与体系が割り当てられていません。すべての項目はゼロから始まります。税額を試算するには手動で入力してください。",
+      "midFyTitle": "年度途中入社 — 下記にフォーム12Bを入力",
+      "midFyDescription": "この従業員は年度{{financialYear}}の途中に入社しました。前職の収入とTDSがない場合、年間税額全体を残り{{count}}か月だけに配分するため、過剰控除となります。",
+      "midFyDescription_one": "この従業員は年度{{financialYear}}の途中に入社しました。前職の収入とTDSがない場合、年間税額全体を残り{{count}}か月だけに適用するため、過剰控除となります。",
+      "midFyDescription_other": "この従業員は年度{{financialYear}}の途中に入社しました。前職の収入とTDSがない場合、年間税額全体を残り{{count}}か月だけに配分するため、過剰控除となります。",
+      "regime": "税制",
+      "compare": "旧制度と新制度を比較",
+      "pan": "PAN",
+      "panHint": "空欄の場合は206AAにより一律20%",
+      "annualGross": "年間総支給額",
+      "annualBasic": "年間基本給",
+      "annualHra": "年間HRA",
+      "employeePfAnnual": "従業員PF（年間）"
+    },
+    "priorEmployer": {
+      "title": "前職（フォーム12B）",
+      "save": "プロフィールに保存",
+      "saved": "前職のTDSを保存しました",
+      "saveFailed": "前職のTDSを保存できませんでした",
+      "description": "今年度に前職で得た収入と控除されたTDSです。保存した値は次回の給与処理に反映され、二重控除を防ぎます。",
+      "gross": "前職の総収入（今年度）",
+      "tds": "前職のTDS",
+      "source": "出典 / メモ（任意）",
+      "sourcePlaceholder": "例：「フォーム12Bを2026-09-01にアップロード」"
+    },
+    "oldRegime": {
+      "title": "旧制度の追加項目",
+      "annualRent": "年間支払家賃",
+      "metro": "大都市（基本給の50%をHRA上限とする）",
+      "declarations": "第VI-A章の申告",
+      "add": "追加",
+      "noDeclarations": "申告はありません。「追加」をクリックして80C、80D、80CCD(1B)などを試算できます。",
+      "remove": "削除"
+    },
+    "actions": {
+      "compareRegimes": "税制を比較",
+      "calculate": "計算"
+    },
+    "validation": {
+      "invalidPan": "PANの形式が正しくないようです — ABCDE1234F形式で入力してください。",
+      "section80CCap": "80Cの合計は{{amount}}です — 控除上限は₹1,50,000です。",
+      "npsCap": "80CCD(1B) NPSの上限は₹50,000です。",
+      "hraNeedsRent": "HRA免除には家賃支払いが必要です — 年間家賃を入力してください。"
+    },
+    "results": {
+      "calculating": "計算中…",
+      "clickCalculate": "「計算」をクリックして税額を試算",
+      "enterAnnualGross": "年間総支給額を入力して税額を試算",
+      "section206aaTitle": "セクション206AAを適用",
+      "section206aaDetail": "PANがないため、税制や申告にかかわらず年間総支給額の20%を一律で控除します。",
+      "sameTax": "両制度の税額は同じです",
+      "saves": "{{regime}}で{{amount}}節税できます",
+      "recommended": "推奨：",
+      "monthlyTds": "月次TDS",
+      "tapRegime": "税制を選択すると下に詳細が表示されます",
+      "grossAnnualIncome": "年間総収入",
+      "less": "控除：{{item}}",
+      "taxableIncome": "課税所得",
+      "taxOnIncome": "所得税（87A控除後）",
+      "surcharge": "追加税",
+      "cess": "健康・教育税（4%）",
+      "totalAnnualTax": "年間税額合計",
+      "tdsPaidYtd": "年初来支払済みTDS",
+      "remainingTax": "残りの税額",
+      "savingSuggestion": "セクション80Cでさらに{{investment}}投資すると、約{{saving}}節税できます。"
+    },
+    "sections": {
+      "80C": "PPF / ELSS / LIC / 元本",
+      "80CCD_1B": "追加NPS",
+      "80D": "医療保険",
+      "80E": "教育ローン利息",
+      "80G": "寄付",
+      "80TTA": "預金利息"
+    }
+  },
+  "taxOverview": {
+    "title": "税務概要",
+    "financialYear": "年度 {{start}}-{{end}}",
+    "description": "{{fy}} 所得税概要",
+    "missingPanCount": "このページには有効なPANがない従業員が{{count}}人います",
+    "missingPanCount_one": "このページには有効なPANがない従業員が{{count}}人います",
+    "missingPanCount_other": "このページには有効なPANがない従業員が{{count}}人います",
+    "missingPanDetail": "これらの従業員のTDSは、セクション206AAに基づき一律20%で控除されています。標準税率を適用するには、各従業員にプロフィールのPANを更新するよう依頼してください。",
+    "summaryTitle": "従業員税務概要",
+    "regimeSuffix": "{{regime}}制度",
+    "noSalaryStructure": "給与体系が割り当てられていません",
+    "empty": "従業員が見つかりません。",
+    "stats": {
+      "totalEmployees": "従業員総数",
+      "estimatedTaxPage": "推定税額（ページ）",
+      "tdsDeductedYtdPage": "年初来TDS控除額（ページ）",
+      "pageOf": "{{totalPages}}ページ中 {{page}}ページ",
+      "newRegimePage": "新制度（ページ）",
+      "optedIn": "制度を選択した従業員"
+    },
+    "filters": {
+      "searchPlaceholder": "氏名、メール、コード、役職で検索…",
+      "filterDepartment": "部署で絞り込む",
+      "allDepartments": "すべての部署",
+      "filterLocation": "勤務地で絞り込む",
+      "allLocations": "すべての勤務地",
+      "clear": "フィルターをクリア"
+    },
+    "columns": {
+      "employee": "従業員",
+      "regime": "税制",
+      "estimatedTax": "推定税額",
+      "tdsDeductedYtd": "年初来TDS控除額"
+    },
+    "pan": {
+      "label": "PAN",
+      "invalidTitle": "有効なPANがありません — セクション206AAに基づきTDSを一律20%で控除します。",
+      "missing": "PANなし"
+    },
+    "regimes": {
+      "new": "新",
+      "old": "旧"
+    }
+  },
+  "payslipList": {
+    "title": "給与明細",
+    "count": "給与明細 {{count}}件",
+    "count_one": "給与明細 {{count}}件",
+    "count_other": "給与明細 {{count}}件",
+    "loading": "読み込み中…",
+    "firstOf": "全{{total}}件中、最初の{{loaded}}件を表示 — フィルターで絞り込んでください",
+    "filteredOf": "全{{total}}件中{{filtered}}件",
+    "exportAll": "すべてエクスポート",
+    "exportSuccess": "給与明細CSVをエクスポートしました",
+    "exportFailed": "エクスポートに失敗しました",
+    "emptyTitle": "この条件の給与明細はありません。",
+    "emptyHint": "別の月または年を選択してください。",
+    "cappedNotice": "全{{total}}件中、最初の{{loaded}}件を表示しています。上記の合計はこの表示範囲に基づきます。正確な値を確認するには月、年、または部署で絞り込んでください。",
+    "excludedTotals": "合計から係争中またはキャンセル済みの給与明細{{count}}件を除外しています。",
+    "excludedTotals_one": "合計から係争中またはキャンセル済みの給与明細{{count}}件を除外しています。",
+    "excludedTotals_other": "合計から係争中またはキャンセル済みの給与明細{{count}}件を除外しています。",
+    "emptyFiltered": "フィルターに一致する給与明細はありません。",
+    "filters": {
+      "search": "検索",
+      "searchPlaceholder": "氏名またはコード…",
+      "department": "部署",
+      "allDepartments": "すべての部署",
+      "location": "勤務地",
+      "allLocations": "すべての勤務地",
+      "month": "月",
+      "allMonths": "すべての月",
+      "year": "年",
+      "allYears": "すべての年"
+    },
+    "stats": {
+      "payslips": "給与明細",
+      "inView": "表示中",
+      "of": "全{{count}}件中",
+      "gross": "総支給額",
+      "grossEarnings": "総収入",
+      "deductions": "控除",
+      "totalDeductions": "控除合計",
+      "netPay": "差引支給額",
+      "takeHome": "手取り額"
+    },
+    "columns": {
+      "employee": "従業員",
+      "period": "対象期間",
+      "days": "日数",
+      "gross": "総支給額",
+      "deductions": "控除",
+      "netPay": "差引支給額",
+      "status": "ステータス"
+    },
+    "statuses": {
+      "draft": "下書き",
+      "generated": "作成済み",
+      "sent": "送信済み",
+      "viewed": "閲覧済み",
+      "paid": "支払済み",
+      "disputed": "係争中",
+      "resolved": "解決済み",
+      "cancelled": "キャンセル済み",
+      "pending": "保留中",
+      "rejected": "却下"
+    },
+    "actions": {
+      "view": "表示",
+      "downloadPdf": "PDFをダウンロード"
+    },
+    "modal": {
+      "fallbackTitle": "給与明細",
+      "lopNotice": "全{{total}}日中{{paid}}日を支給 — LOP {{lop}}日分を控除",
+      "earnings": "支給項目",
+      "grossPay": "総支給額",
+      "deductions": "控除項目",
+      "totalDeductions": "控除合計",
+      "netPay": "差引支給額",
+      "printSavePdf": "PDFを印刷 / 保存",
+      "close": "閉じる"
+    }
+  },
+  "salaryStructures": {
+    "title": "給与体系",
+    "configured": "{{count}}件の体系を設定済み",
+    "configured_one": "{{count}}件の体系を設定済み",
+    "configured_other": "{{count}}件の体系を設定済み",
+    "newStructure": "新しい体系",
+    "noStructures": "給与体系はまだありません。",
+    "createFirst": "最初の体系を作成",
+    "editTitle": "給与体系を編集",
+    "newTitle": "新しい給与体系",
+    "structureName": "体系名",
+    "structureNamePlaceholder": "例：インド標準CTC",
+    "description": "説明",
+    "descriptionPlaceholder": "正社員向け",
+    "components": "構成項目",
+    "nightHelpAria": "夜勤手当の計算ヘルプ",
+    "nightHelpTitle": "夜勤手当の計算方法",
+    "nightOvertimeHelp": "夜勤手当と残業の計算方法",
+    "addPresetAria": "定義済み項目を追加",
+    "addPreset": "+ プリセットを追加…",
+    "custom": "カスタム",
+    "componentName": "項目名",
+    "auto": "自動",
+    "nightRatePlaceholder": "₹/夜",
+    "dayRatePlaceholder": "₹/日",
+    "percentPlaceholder": "% 例：10",
+    "multiplierPlaceholder": "例：2",
+    "autoTitle": "割り当て時にCTCから自動入力",
+    "info": "情報",
+    "noteTitle": "注：",
+    "noteText": "法定控除（EPF、ESI、PT、TDS）は給与処理時に自動計算されます。定期的な非法定控除には控除を使い、残りのCTCを吸収する収入項目には残額を使います。",
+    "cancel": "キャンセル",
+    "updateStructure": "体系を更新",
+    "createStructure": "体系を作成",
+    "gotIt": "了解",
+    "deleteTitle": "給与体系を削除しますか？",
+    "deleteDescription": "「{{name}}」を削除します。すでに割り当てられた従業員の給与と計算済み給与明細には影響しません。",
+    "delete": "削除",
+    "active": "有効",
+    "inactive": "無効",
+    "default": "既定",
+    "defaultStructureName": "標準CTC体系",
+    "defaultStructureDescription": "基本給、HRA、SA、PF、ESIを含む既定の給与体系",
+    "noComponents": "構成項目なし",
+    "noComponentsDefined": "構成項目が定義されていません",
+    "duplicate": "複製",
+    "duplicateAria": "体系を複製",
+    "edit": "編集",
+    "editAria": "体系を編集",
+    "deleteAria": "体系を削除",
+    "collapse": "折りたたむ",
+    "expand": "展開",
+    "statutoryNote": "EPF、ESI、職業税、TDSは給与処理時に自動計算され、給与体系には含まれません。",
+    "created": "給与体系を作成しました",
+    "updated": "給与体系を更新しました",
+    "deleted": "給与体系を削除しました",
+    "duplicated": "体系を複製しました",
+    "saveFailed": "保存できませんでした",
+    "deleteFailed": "削除できませんでした",
+    "duplicateFailed": "複製できませんでした",
+    "copyName": "{{name}}（コピー）",
+    "columns": {
+      "name": "名前",
+      "code": "コード",
+      "type": "種類",
+      "calc": "計算",
+      "value": "値",
+      "percentOf": "%の基準",
+      "component": "項目",
+      "calculation": "計算"
+    },
+    "types": {
+      "earning": "収入",
+      "deduction": "控除",
+      "reimbursement": "精算",
+      "reimbursementShort": "精算"
+    },
+    "counts": {
+      "earning": "収入 {{count}}件",
+      "earning_one": "収入 {{count}}件",
+      "earning_other": "収入 {{count}}件",
+      "deduction": "控除 {{count}}件",
+      "deduction_one": "控除 {{count}}件",
+      "deduction_other": "控除 {{count}}件",
+      "reimbursement": "精算 {{count}}件",
+      "reimbursement_one": "精算 {{count}}件",
+      "reimbursement_other": "精算 {{count}}件",
+      "earningLabel": "収入",
+      "earningLabel_one": "収入",
+      "earningLabel_other": "収入",
+      "deductionLabel": "控除",
+      "deductionLabel_one": "控除",
+      "deductionLabel_other": "控除"
+    },
+    "calcs": {
+      "perNight": "1夜あたり ₹",
+      "dayPay": "× 日給",
+      "netPayPercent": "手取りの%",
+      "perOtDay": "残業日あたり ₹",
+      "fixed": "固定",
+      "balance": "残額"
+    },
+    "calculationText": {
+      "percentageOf": "{{base}}の{{value}}%",
+      "fixed": "固定 ₹{{value}}",
+      "perNight": "₹{{value}} / 夜",
+      "wholeSalaryNight": "給与全体の{{value}}倍（夜勤）",
+      "netPayNight": "手取りの{{value}}%（夜勤）",
+      "perOtDay": "₹{{value}} / 残業日",
+      "dayPayOt": "日給の{{value}}倍 / 残業日",
+      "balancing": "残額調整"
+    },
+    "presetNames": {
+      "BASIC": "基本給",
+      "HRA": "住宅手当",
+      "SA": "特別手当",
+      "CA": "通勤手当",
+      "MA": "医療手当",
+      "LTA": "旅行手当",
+      "BONUS": "業績賞与",
+      "NIGHT_ALLOW": "夜勤手当",
+      "OVERTIME": "残業",
+      "CANTEEN": "食堂控除",
+      "WELFARE": "福利厚生基金",
+      "ADV_REC": "前払金回収"
+    },
+    "validation": {
+      "singleBalance": "残額計算を使える項目は1つだけです。",
+      "balanceEarning": "残額計算は収入項目にのみ使用できます（{{code}}）。",
+      "percentage": "{{code}}：割合は0～100で指定してください。",
+      "percentageBase": "{{code}}：%の基準を選択してください（例：CTC、BASIC）。",
+      "fixedEarning": "{{code}}：固定収入額は0より大きくしてください。",
+      "nightRate": "{{code}}：1夜あたりの金額を0より大きくしてください。",
+      "nightMultiplier": "{{code}}：夜勤倍率は1以上にしてください。",
+      "netPercentage": "{{code}}：手取り割合を0～100で指定してください。",
+      "overtimeRate": "{{code}}：残業日単価を0より大きくしてください。",
+      "overtimeMultiplier": "{{code}}：残業倍率は1以上にしてください。"
+    },
+    "help": {
+      "title": "夜勤手当と残業 — 計算モード",
+      "intro": "夜勤手当は勤怠でis_night_shift = 1とされたシフトの実働日にのみ支給されます。LOP日は対象外です。",
+      "modeValue": "モード + 値",
+      "allowanceAdded": "追加手当",
+      "perNight": "1夜あたり",
+      "flatExample": "固定₹250 × 22夜",
+      "addedOnBase": "基本額に追加",
+      "double": "2倍",
+      "doubleFormula": "基本 166,666 × (2 − 1)",
+      "doubleTotal": "→ 総支給 = 基本 × 2 = 333,332",
+      "oneHalfFormula": "基本 166,666 × (1.5 − 1)",
+      "oneHalfTotal": "→ 総支給 = 基本 × 1.5 = 250,000",
+      "howModesWork": "各モードの仕組み：",
+      "perNightExplanation": "1夜あたり₹ — 実働1夜ごとの固定額を通常給与に加算します。",
+      "dayPayExplanation": "×日給 — 夜勤従業員の給与全体を倍率で支給します。月に最低1夜の実働が必要です。",
+      "exampleBase": "例で使用する月額基本総支給：₹166,666。",
+      "overtimeTitle": "残業（休日・祝日勤務）：",
+      "overtimeCount": "残業日は休日または祝日の出勤日で、WOT/HOTとして自動表示されます。",
+      "perOtExplanation": "残業日あたり₹ — 残業日ごとの固定額です。",
+      "otDayPayExplanation": "×日給 — 各残業日について日給に倍率を掛けます。",
+      "notesTitle": "注記。",
+      "notesText": "手当は課税所得のため、EPFとTDSが単純に倍増するわけではありません。実際に夜勤した日のみ算入します（半日=0.5）。"
+    }
+  }
+}

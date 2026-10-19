@@ -13,28 +13,31 @@ import {
   Receipt,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { isLoggedIn, getUser, logout } from "@/api/auth";
+import { useTranslation } from "react-i18next";
 
 const navItems = [
-  { to: "/my", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/my/payslips", label: "My Payslips", icon: FileText },
-  { to: "/my/salary", label: "My Salary", icon: Wallet },
-  { to: "/my/tax", label: "My Tax", icon: Calculator },
-  { to: "/my/declarations", label: "Declarations", icon: ClipboardList },
+  { to: "/my", labelKey: "myDashboard", icon: LayoutDashboard, end: true },
+  { to: "/my/payslips", labelKey: "myPayslips", icon: FileText },
+  { to: "/my/salary", labelKey: "mySalary", icon: Wallet },
+  { to: "/my/tax", labelKey: "myTax", icon: Calculator },
+  { to: "/my/declarations", labelKey: "declarations", icon: ClipboardList },
   // "My Leaves" was removed from payroll's self-service nav -- employees
   // file and view leave via EmpCloud's HRMS app, not via the payroll
   // self-service portal.
-  { to: "/my/reimbursements", label: "Reimbursements", icon: Receipt },
-  { to: "/my/profile", label: "Profile", icon: User },
+  { to: "/my/reimbursements", labelKey: "reimbursements", icon: Receipt },
+  { to: "/my/profile", labelKey: "myProfile", icon: User },
 ];
 
 export function SelfServiceLayout() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   if (!isLoggedIn()) return <Navigate to="/login" replace />;
 
   const user = getUser();
-  const displayName = user ? `${user.firstName} ${user.lastName}` : "User";
+  const displayName = user ? `${user.firstName} ${user.lastName}` : t("common.user");
   const subtitle = user ? `${user.department}` : "";
   const isAdmin = user && ["org_admin", "hr_admin", "hr_manager"].includes(user.role);
 
@@ -42,14 +45,15 @@ export function SelfServiceLayout() {
     <div className="flex h-screen bg-gray-50">
       <aside className="flex h-screen w-64 flex-col border-r border-gray-200 bg-white">
         {/* Logo */}
-        <div className="flex h-16 items-center gap-2.5 border-b border-gray-100 px-6">
+        <div className="flex h-16 items-center gap-2.5 border-b border-gray-100 px-4">
           <div className="bg-brand-600 flex h-9 w-9 items-center justify-center rounded-lg">
             <DollarSign className="h-5 w-5 text-white" />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-gray-900">EMP Payroll</p>
-            <p className="text-xs text-gray-400">Employee Portal</p>
+            <p className="text-xs text-gray-400">{t("selfService.employeePortal")}</p>
           </div>
+          <LanguageSwitcher showCode={false} />
         </div>
 
         {/* Employee info */}
@@ -80,7 +84,7 @@ export function SelfServiceLayout() {
               }
             >
               <item.icon className="h-5 w-5 shrink-0" />
-              {item.label}
+              {t(`sidebar.items.${item.labelKey}`)}
             </NavLink>
           ))}
         </nav>
@@ -93,7 +97,7 @@ export function SelfServiceLayout() {
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
             >
               <ArrowLeft className="h-5 w-5" />
-              Admin Panel
+              {t("selfService.adminPanel")}
             </button>
           )}
           <button
@@ -101,7 +105,7 @@ export function SelfServiceLayout() {
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
           >
             <LogOut className="h-5 w-5" />
-            Logout
+            {t("sidebar.logout")}
           </button>
         </div>
       </aside>

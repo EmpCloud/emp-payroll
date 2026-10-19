@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Search,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 // #1657 — Indian PAN format. Anything that doesn't match (or empty) is
 // treated as "missing for compliance purposes" — Section 206AA flat 20%
@@ -26,6 +27,7 @@ const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const PAGE_SIZE = 20;
 
 export function TaxOverviewPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -74,7 +76,10 @@ export function TaxOverviewPage() {
   // → Mar 2027).
   const _now = new Date();
   const fyStartYear = _now.getMonth() >= 3 ? _now.getFullYear() : _now.getFullYear() - 1;
-  const fyLabel = `FY ${fyStartYear}-${String(fyStartYear + 1).slice(-2)}`;
+  const fyLabel = t("taxOverview.financialYear", {
+    start: fyStartYear,
+    end: String(fyStartYear + 1).slice(-2),
+  });
 
   const taxData = employees.map((e: any) => {
     const taxInfo = typeof e.tax_info === "string" ? JSON.parse(e.tax_info) : e.tax_info || {};
@@ -111,7 +116,7 @@ export function TaxOverviewPage() {
   const columns = [
     {
       key: "name",
-      header: "Employee",
+      header: t("taxOverview.columns.employee"),
       render: (row: any) => (
         <div>
           <p className="font-medium text-gray-900">
@@ -119,16 +124,16 @@ export function TaxOverviewPage() {
           </p>
           <p className="flex items-center gap-2 text-xs text-gray-500">
             <span>
-              {row.employee_code} &middot; PAN: {row.pan}
+              {row.employee_code} &middot; {t("taxOverview.pan.label")}: {row.pan}
             </span>
             {/* #1657 — flag rows where PAN is missing or malformed; they
                 trigger Section 206AA flat 20% TDS in the calc engine. */}
             {!row.panValid && (
               <span
-                title="No valid PAN — TDS deducted at Section 206AA flat 20%."
+                title={t("taxOverview.pan.invalidTitle")}
                 className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800"
               >
-                <AlertTriangle className="h-3 w-3" /> No PAN
+                <AlertTriangle className="h-3 w-3" /> {t("taxOverview.pan.missing")}
               </span>
             )}
           </p>
@@ -137,19 +142,19 @@ export function TaxOverviewPage() {
     },
     {
       key: "regime",
-      header: "Regime",
+      header: t("taxOverview.columns.regime"),
       render: (row: any) => (
         <Badge variant={row.regime === "new" ? "approved" : "pending"}>
-          {row.regime === "new" ? "New" : "Old"}
+          {row.regime === "new" ? t("taxOverview.regimes.new") : t("taxOverview.regimes.old")}
         </Badge>
       ),
     },
     {
       key: "estimated_tax",
-      header: "Estimated Tax",
+      header: t("taxOverview.columns.estimatedTax"),
       render: (row: any) =>
         row.estimated_tax == null ? (
-          <span className="text-gray-400" title="No salary structure assigned">
+          <span className="text-gray-400" title={t("taxOverview.noSalaryStructure")}>
             —
           </span>
         ) : (
@@ -158,7 +163,7 @@ export function TaxOverviewPage() {
     },
     {
       key: "tds_deducted",
-      header: "TDS Deducted YTD",
+      header: t("taxOverview.columns.tdsDeductedYtd"),
       render: (row: any) =>
         row.tds_deducted == null ? (
           <span className="text-gray-400">—</span>
@@ -170,7 +175,10 @@ export function TaxOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Tax Overview" description={`${fyLabel} income tax summary`} />
+      <PageHeader
+        title={t("taxOverview.title")}
+        description={t("taxOverview.description", { fy: fyLabel })}
+      />
 
       {/* #1657 — banner highlighting the count of employees missing a valid
           PAN, since each one is being TDS'd at Section 206AA flat 20%
@@ -180,42 +188,42 @@ export function TaxOverviewPage() {
           <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
           <div>
             <p className="font-medium">
-              {missingPanCount} employee{missingPanCount === 1 ? "" : "s"} on this page without a
-              valid PAN
+              {t("taxOverview.missingPanCount", { count: missingPanCount })}
             </p>
-            <p className="mt-1 text-amber-800">
-              TDS for these employees is being deducted at the Section 206AA flat rate of 20%. Ask
-              each employee to update their PAN in their profile so standard slab rates apply.
-            </p>
+            <p className="mt-1 text-amber-800">{t("taxOverview.missingPanDetail")}</p>
           </div>
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <Link to="/tax" className="block transition-transform hover:scale-[1.02]">
-          <StatCard title="Total Employees" value={String(orgTotal)} icon={Users} />
+          <StatCard
+            title={t("taxOverview.stats.totalEmployees")}
+            value={String(orgTotal)}
+            icon={Users}
+          />
         </Link>
         <Link to="/tax" className="block transition-transform hover:scale-[1.02]">
           <StatCard
-            title="Estimated Tax (page)"
+            title={t("taxOverview.stats.estimatedTaxPage")}
             value={formatCurrency(totalEstimatedTax)}
-            subtitle={`page ${page} of ${totalPages}`}
+            subtitle={t("taxOverview.stats.pageOf", { page, totalPages })}
             icon={Calculator}
           />
         </Link>
         <Link to="/tax" className="block transition-transform hover:scale-[1.02]">
           <StatCard
-            title="TDS Deducted YTD (page)"
+            title={t("taxOverview.stats.tdsDeductedYtdPage")}
             value={formatCurrency(totalTdsDeducted)}
-            subtitle={`page ${page} of ${totalPages}`}
+            subtitle={t("taxOverview.stats.pageOf", { page, totalPages })}
             icon={IndianRupee}
           />
         </Link>
         <Link to="/tax?regime=new" className="block transition-transform hover:scale-[1.02]">
           <StatCard
-            title="New Regime (page)"
+            title={t("taxOverview.stats.newRegimePage")}
             value={`${newRegimeOnPage}/${displayed.length}`}
-            subtitle="employees opted in"
+            subtitle={t("taxOverview.stats.optedIn")}
             icon={FileText}
           />
         </Link>
@@ -227,7 +235,8 @@ export function TaxOverviewPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by name, email, code, or designation..."
+            placeholder={t("taxOverview.filters.searchPlaceholder")}
+            aria-label={t("taxOverview.filters.searchPlaceholder")}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
@@ -237,9 +246,9 @@ export function TaxOverviewPage() {
           value={departmentId}
           onChange={(e) => setDepartmentId(e.target.value)}
           className="focus:border-brand-500 focus:ring-brand-500 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-          aria-label="Filter by department"
+          aria-label={t("taxOverview.filters.filterDepartment")}
         >
-          <option value="">All departments</option>
+          <option value="">{t("taxOverview.filters.allDepartments")}</option>
           {departments.map((d) => (
             <option key={d.id} value={d.id}>
               {d.name}
@@ -250,9 +259,9 @@ export function TaxOverviewPage() {
           value={locationId}
           onChange={(e) => setLocationId(e.target.value)}
           className="focus:border-brand-500 focus:ring-brand-500 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-          aria-label="Filter by location"
+          aria-label={t("taxOverview.filters.filterLocation")}
         >
-          <option value="">All locations</option>
+          <option value="">{t("taxOverview.filters.allLocations")}</option>
           {locations.map((l) => (
             <option key={l.id} value={l.id}>
               {l.name}
@@ -272,15 +281,22 @@ export function TaxOverviewPage() {
           }}
           className="text-xs text-gray-500 underline hover:text-gray-700"
         >
-          Clear filters
+          {t("taxOverview.filters.clear")}
         </button>
       )}
 
       <Card>
         <CardHeader>
           <CardTitle>
-            Employee Tax Summary
-            {regimeFilter ? ` — ${regimeFilter === "new" ? "New" : "Old"} Regime` : ""}
+            {t("taxOverview.summaryTitle")}
+            {regimeFilter
+              ? ` — ${t("taxOverview.regimeSuffix", {
+                  regime:
+                    regimeFilter === "new"
+                      ? t("taxOverview.regimes.new")
+                      : t("taxOverview.regimes.old"),
+                })}`
+              : ""}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -294,6 +310,7 @@ export function TaxOverviewPage() {
                 columns={columns}
                 data={displayed}
                 paginated={false}
+                emptyMessage={t("taxOverview.empty")}
                 onRowClick={(row: any) => row.id && navigate(`/employees/${row.id}`)}
               />
               <Pagination

@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Avatar } from "@/components/ui/Avatar";
 import { Modal } from "@/components/ui/Modal";
@@ -144,6 +145,14 @@ function NodeCard({
   isHighlighted: boolean;
   hasChildren: boolean;
 }) {
+  const { t } = useTranslation();
+  const displayName =
+    node.kind === "root"
+      ? t("orgChart.organization")
+      : node.name === UNASSIGNED
+        ? t("common.unassigned")
+        : node.name;
+
   if (node.kind !== "person") {
     const isRoot = node.kind === "root";
     return (
@@ -167,11 +176,11 @@ function NodeCard({
             {isRoot ? <Network className="h-5 w-5" /> : <Building2 className="h-5 w-5" />}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-gray-900" title={node.name}>
-              {node.name}
+            <p className="truncate text-sm font-semibold text-gray-900" title={displayName}>
+              {displayName}
             </p>
             <p className="text-xs text-gray-500">
-              {node.count} {node.count === 1 ? "person" : "people"}
+              {t("orgChart.personCount", { count: node.count ?? 0 })}
             </p>
           </div>
         </div>
@@ -220,7 +229,7 @@ function NodeCard({
                 unassigned ? "bg-gray-50 text-gray-400" : "bg-gray-100 text-gray-600"
               }`}
             >
-              {node.department}
+              {unassigned ? t("common.unassigned") : node.department}
             </span>
           </div>
         </div>
@@ -245,6 +254,7 @@ function ChartNode({
   highlightedId: string | null;
   openIds: Set<string>;
 }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(level < 2);
   const hasChildren = node.children.length > 0;
 
@@ -271,8 +281,12 @@ function ChartNode({
               setExpanded((v) => !v);
             }}
             className="hover:border-brand-300 hover:bg-brand-50 hover:text-brand-600 absolute -bottom-3 left-1/2 z-10 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm"
-            title={expanded ? "Collapse" : `Expand ${node.children.length} reports`}
-            aria-label={expanded ? "Collapse" : "Expand"}
+            title={
+              expanded
+                ? t("orgChart.collapse")
+                : t("orgChart.expandReports", { count: node.children.length })
+            }
+            aria-label={expanded ? t("orgChart.collapse") : t("orgChart.expand")}
           >
             {expanded ? (
               <ChevronDown className="h-3.5 w-3.5" />
@@ -329,6 +343,7 @@ interface FlatPerson {
 }
 
 export function OrgChartPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: res, isLoading } = useEmployees({ limit: 500 });
   const employees = res?.data?.data || [];
@@ -650,7 +665,7 @@ export function OrgChartPage() {
         icon={Users}
         accent="text-indigo-500"
         hover="hover:border-indigo-300 hover:bg-indigo-50"
-        label="People"
+        label={t("orgChart.people")}
         value={stats.total}
         onClick={() => setStatModal("people")}
       />
@@ -658,7 +673,7 @@ export function OrgChartPage() {
         icon={Briefcase}
         accent="text-emerald-500"
         hover="hover:border-emerald-300 hover:bg-emerald-50"
-        label="Managers"
+        label={t("orgChart.managers")}
         value={stats.managers}
         onClick={() => setStatModal("managers")}
       />
@@ -666,7 +681,7 @@ export function OrgChartPage() {
         icon={Building2}
         accent="text-amber-500"
         hover="hover:border-amber-300 hover:bg-amber-50"
-        label="Departments"
+        label={t("orgChart.departments")}
         value={stats.departments}
         onClick={() => setStatModal("departments")}
       />
@@ -676,8 +691,8 @@ export function OrgChartPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Organization Chart"
-        description="Reporting structure — drag to pan, scroll or pinch to zoom"
+        title={t("orgChart.title")}
+        description={t("orgChart.description")}
         actions={statPills}
       />
 
@@ -690,7 +705,7 @@ export function OrgChartPage() {
           <div className="rounded-full bg-gray-50 p-3">
             <Users className="h-6 w-6 text-gray-300" />
           </div>
-          <p className="text-sm text-gray-400">No employees to chart yet.</p>
+          <p className="text-sm text-gray-400">{t("orgChart.noEmployees")}</p>
         </div>
       ) : (
         <>
@@ -700,8 +715,8 @@ export function OrgChartPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search people, roles, departments…"
-              aria-label="Search the org chart"
+              placeholder={t("orgChart.searchPlaceholder")}
+              aria-label={t("orgChart.searchAria")}
               className="focus:border-brand-300 focus:ring-brand-100 w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-9 text-sm outline-none transition focus:ring-2"
             />
             {search && (
@@ -712,7 +727,7 @@ export function OrgChartPage() {
                   setOpenIds(new Set());
                 }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                aria-label="Clear search"
+                aria-label={t("orgChart.clearSearch")}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -759,26 +774,30 @@ export function OrgChartPage() {
           >
             {/* Zoom controls */}
             <div className="absolute right-4 top-4 z-20 flex flex-col gap-1.5">
-              <ControlButton title="Zoom in" onClick={() => zoomBy(0.15)}>
+              <ControlButton title={t("orgChart.zoomIn")} onClick={() => zoomBy(0.15)}>
                 <Plus className="h-4 w-4" />
               </ControlButton>
               <div className="select-none text-center text-[10px] font-medium text-gray-400">
                 {zoomPercent}%
               </div>
-              <ControlButton title="Zoom out" onClick={() => zoomBy(-0.15)}>
+              <ControlButton title={t("orgChart.zoomOut")} onClick={() => zoomBy(-0.15)}>
                 <Minus className="h-4 w-4" />
               </ControlButton>
-              <ControlButton title="Fit to screen" onClick={fitToScreen} className="mt-1">
+              <ControlButton
+                title={t("orgChart.fitToScreen")}
+                onClick={fitToScreen}
+                className="mt-1"
+              >
                 <Maximize className="h-4 w-4" />
               </ControlButton>
-              <ControlButton title="Fullscreen" onClick={toggleFullscreen}>
+              <ControlButton title={t("orgChart.fullscreen")} onClick={toggleFullscreen}>
                 <Maximize2 className="h-4 w-4" />
               </ControlButton>
             </div>
 
             {/* Hint */}
             <div className="pointer-events-none absolute bottom-3 left-3 z-20 select-none text-[11px] text-gray-400">
-              Drag to pan · scroll to zoom · pinch on touch
+              {t("orgChart.hint")}
             </div>
 
             {/* Transform layer */}
@@ -854,11 +873,12 @@ function StatPill({
   value: number;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <button
       type="button"
       onClick={onClick}
-      title={`View all ${label.toLowerCase()}`}
+      title={t("orgChart.viewAll", { label })}
       className={`flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-200 ${hover}`}
     >
       <Icon className={`h-4 w-4 ${accent}`} />
@@ -888,6 +908,7 @@ function StatListModal({
   departments: { name: string; people: FlatPerson[] }[];
   onNavigate: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState("");
   useEffect(() => {
     setFilter("");
@@ -904,10 +925,10 @@ function StatListModal({
 
   const title =
     mode === "people"
-      ? `All People (${people.length})`
+      ? t("orgChart.allPeopleTitle", { count: people.length })
       : mode === "managers"
-        ? `Managers (${managers.length})`
-        : `Departments (${departments.length})`;
+        ? t("orgChart.managersTitle", { count: managers.length })
+        : t("orgChart.departmentsTitle", { count: departments.length });
 
   const list = mode === "managers" ? managers : people;
 
@@ -918,7 +939,9 @@ function StatListModal({
         <input
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          placeholder={mode === "departments" ? "Filter departments…" : "Filter people…"}
+          placeholder={
+            mode === "departments" ? t("orgChart.filterDepartments") : t("orgChart.filterPeople")
+          }
           className="focus:border-brand-300 focus:ring-brand-100 w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:ring-2"
         />
       </div>
@@ -944,8 +967,9 @@ function PersonList({
   people: FlatPerson[];
   onNavigate: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   if (people.length === 0) {
-    return <p className="px-4 py-8 text-center text-sm text-gray-400">No matches.</p>;
+    return <p className="px-4 py-8 text-center text-sm text-gray-400">{t("orgChart.noMatches")}</p>;
   }
   return (
     <ul className="divide-y divide-gray-100">
@@ -966,7 +990,7 @@ function PersonList({
             </div>
             {p.reports > 0 && (
               <span className="text-brand-600 bg-brand-50 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold">
-                {p.reports} report{p.reports === 1 ? "" : "s"}
+                {t("orgChart.reportCount", { count: p.reports })}
               </span>
             )}
           </button>
@@ -983,9 +1007,10 @@ function DepartmentList({
   departments: { name: string; people: FlatPerson[] }[];
   onNavigate: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState<string | null>(null);
   if (departments.length === 0) {
-    return <p className="px-4 py-8 text-center text-sm text-gray-400">No matches.</p>;
+    return <p className="px-4 py-8 text-center text-sm text-gray-400">{t("orgChart.noMatches")}</p>;
   }
   return (
     <ul className="divide-y divide-gray-100">
@@ -1006,9 +1031,11 @@ function DepartmentList({
                 <Building2 className="h-4 w-4" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-900">{d.name}</p>
+                <p className="truncate text-sm font-medium text-gray-900">
+                  {d.name === UNASSIGNED ? t("common.unassigned") : d.name}
+                </p>
                 <p className="text-xs text-gray-500">
-                  {d.people.length} {d.people.length === 1 ? "person" : "people"}
+                  {t("orgChart.personCount", { count: d.people.length })}
                 </p>
               </div>
               {expanded ? (

@@ -1,0 +1,2445 @@
+{
+  "language": { "change": "تغيير اللغة", "menuLabel": "اختر اللغة" },
+  "common": {
+    "appName": "EMP Payroll",
+    "user": "المستخدم",
+    "employees": "الموظفون",
+    "employee_one": "موظف واحد",
+    "employee_other": "{{count}} موظفين",
+    "unassigned": "غير معيّن",
+    "noResults": "لم يتم العثور على نتائج"
+  },
+  "employeeList": {
+    "title": "الموظفون",
+    "loading": "جارٍ التحميل...",
+    "summary": "{{visible}} من أصل {{total}} موظفًا",
+    "summary_one": "{{visible}} من أصل موظف واحد",
+    "summary_other": "{{visible}} من أصل {{total}} موظفًا",
+    "pendingBankRequests": "طلبات تحديث البيانات المصرفية المعلّقة ({{count}})",
+    "bankDetails": "{{bank}} — الحساب {{accountNumber}} — IFSC {{ifscCode}}",
+    "approve": "موافقة",
+    "reject": "رفض",
+    "bankUpdated": "تم تحديث البيانات المصرفية",
+    "requestRejected": "تم رفض الطلب",
+    "actionFailed": "تعذر إكمال الإجراء: {{action}}",
+    "selectEmployee": "تحديد {{name}}",
+    "export": "تصدير",
+    "exportSuccess": "تم تصدير ملف CSV للموظفين",
+    "exportFailed": "فشل التصدير",
+    "import": "استيراد",
+    "importTitle": "استيراد موظفين جدد من ملف CSV",
+    "bulkUpdate": "تحديث جماعي",
+    "bulkUpdateTitle": "تحديث الموظفين الحاليين من ملف CSV",
+    "bulkSalary": "رواتب جماعية",
+    "bulkSalaryTitle": "تحديث الرواتب من ملف CSV",
+    "addEmployee": "إضافة موظف",
+    "searchPlaceholder": "البحث بالاسم أو البريد أو الرمز أو المسمى الوظيفي...",
+    "filterDepartment": "التصفية حسب القسم",
+    "allDepartments": "كل الأقسام",
+    "filterLocation": "التصفية حسب الموقع",
+    "allLocations": "كل المواقع",
+    "clearFilters": "مسح عوامل التصفية",
+    "selected": "تم تحديد {{count}} موظفًا",
+    "selected_one": "تم تحديد موظف واحد",
+    "selected_other": "تم تحديد {{count}} موظفًا",
+    "updateSalary": "تحديث الراتب",
+    "clear": "مسح",
+    "columns": {
+      "employee": "الموظف",
+      "designation": "المسمى الوظيفي",
+      "email": "البريد الإلكتروني",
+      "location": "الموقع",
+      "joined": "تاريخ الانضمام",
+      "status": "الحالة"
+    },
+    "statuses": { "active": "نشط", "inactive": "غير نشط" }
+  },
+  "orgChart": {
+    "title": "الهيكل التنظيمي",
+    "description": "هيكل التقارير — اسحب للتحريك ومرّر أو قرّب بإصبعين للتكبير",
+    "organization": "المؤسسة",
+    "noEmployees": "لا يوجد موظفون لعرضهم في المخطط بعد.",
+    "people": "الأشخاص",
+    "managers": "المديرون",
+    "departments": "الأقسام",
+    "personCount": "{{count}} أشخاص",
+    "personCount_one": "شخص واحد",
+    "personCount_other": "{{count}} أشخاص",
+    "collapse": "طي",
+    "expand": "توسيع",
+    "expandReports": "عرض {{count}} مرؤوسين",
+    "viewAll": "عرض {{label}}",
+    "searchPlaceholder": "البحث عن أشخاص أو وظائف أو أقسام…",
+    "searchAria": "البحث في الهيكل التنظيمي",
+    "clearSearch": "مسح البحث",
+    "zoomIn": "تكبير",
+    "zoomOut": "تصغير",
+    "fitToScreen": "ملاءمة للشاشة",
+    "fullscreen": "ملء الشاشة",
+    "hint": "اسحب للتحريك · مرّر للتكبير · قرّب بإصبعين على شاشة اللمس",
+    "allPeopleTitle": "كل الأشخاص ({{count}})",
+    "managersTitle": "المديرون ({{count}})",
+    "departmentsTitle": "الأقسام ({{count}})",
+    "filterDepartments": "تصفية الأقسام…",
+    "filterPeople": "تصفية الأشخاص…",
+    "noMatches": "لا توجد نتائج مطابقة.",
+    "reportCount": "{{count}} مرؤوسين",
+    "reportCount_one": "مرؤوس واحد",
+    "reportCount_other": "{{count}} مرؤوسين"
+  },
+  "departmentsPage": {
+    "title": "الأقسام",
+    "departmentCount": "{{count}} أقسام",
+    "departmentCount_one": "قسم واحد",
+    "departmentCount_other": "{{count}} أقسام",
+    "employeeCount": "{{count}} موظفين",
+    "employeeCount_one": "موظف واحد",
+    "employeeCount_other": "{{count}} موظفين",
+    "fromEmpCloud": "من EmpCloud",
+    "addDepartment": "إضافة قسم",
+    "noDepartments": "لا توجد أقسام بعد.",
+    "addFirst": "إضافة أول قسم",
+    "searchPlaceholder": "البحث في الأقسام…",
+    "searchAria": "البحث في الأقسام",
+    "noSearchMatches": "لا توجد أقسام تطابق «{{query}}».",
+    "nameRequired": "اسم القسم مطلوب",
+    "added": "تمت إضافة القسم",
+    "addFailed": "تعذرت إضافة القسم",
+    "removed": "تمت إزالة القسم",
+    "removeFailed": "تعذرت إزالة القسم",
+    "addDescription": "تتم مزامنته مع EmpCloud ويصبح متاحًا في ملفات الموظفين والهيكل التنظيمي والتقارير.",
+    "uniqueNamesHelp": "يجب أن تكون الأسماء فريدة داخل مؤسستك. يمكنك إزالة القسم لاحقًا دون التأثير في سجلات الرواتب الحالية.",
+    "departmentName": "اسم القسم",
+    "namePlaceholder": "مثال: الهندسة",
+    "cancel": "إلغاء",
+    "removeTitle": "إزالة القسم؟",
+    "removeDescription": "ستتم إزالة «{{name}}» من مؤسستك.",
+    "deleteWarning": "يوجد حاليًا {{count}} موظفين في هذا القسم. ستبقى سجلاتهم محفوظة، لكن لن يظهر لهم قسم حتى إعادة تعيينهم.",
+    "deleteWarning_one": "يوجد حاليًا موظف واحد في هذا القسم. سيبقى سجله محفوظًا، لكن لن يظهر له قسم حتى إعادة تعيينه.",
+    "deleteWarning_other": "يوجد حاليًا {{count}} موظفين في هذا القسم. ستبقى سجلاتهم محفوظة، لكن لن يظهر لهم قسم حتى إعادة تعيينهم.",
+    "remove": "إزالة",
+    "removeAria": "إزالة {{name}}",
+    "noMembers": "لا يوجد أعضاء بعد",
+    "created": "تم الإنشاء في {{date}}"
+  },
+  "attendancePage": {
+    "title": "الحضور",
+    "summary": "ملخص الحضور لشهر {{period}}",
+    "markAllPresent": "تسجيل حضور الجميع",
+    "markAttendance": "تسجيل الحضور",
+    "previousMonth": "الشهر السابق",
+    "nextMonth": "الشهر التالي",
+    "searchPlaceholder": "البحث بالاسم أو الرمز...",
+    "filterDepartment": "التصفية حسب القسم",
+    "allDepartments": "كل الأقسام",
+    "filterLocation": "التصفية حسب الموقع",
+    "allLocations": "كل المواقع",
+    "clearFilters": "مسح عوامل التصفية",
+    "employeesShown": "{{visible}} من أصل {{total}} موظفًا",
+    "employeesShown_one": "{{visible}} من أصل موظف واحد",
+    "employeesShown_other": "{{visible}} من أصل {{total}} موظفًا",
+    "totalPresentDays": "إجمالي أيام الحضور",
+    "totalAbsentDays": "إجمالي أيام الغياب",
+    "lopDays": "أيام بلا أجر",
+    "overtimeHours": "ساعات العمل الإضافي",
+    "hoursValue": "{{count}} س",
+    "lopValue": "{{count}} بلا أجر",
+    "employeeFallback": "الموظف رقم {{id}}",
+    "columns": {
+      "employee": "الموظف",
+      "workingDays": "أيام العمل",
+      "present": "حاضر",
+      "absent": "غائب",
+      "lopDays": "أيام بلا أجر",
+      "overtimeHours": "العمل الإضافي"
+    },
+    "markAllDescription": "سجّل جميع الموظفين كحاضرين في الشهر المحدد.",
+    "markSingleDescription": "سجّل حضور موظف واحد.",
+    "month": "الشهر",
+    "year": "السنة",
+    "workingDaysInMonth": "أيام العمل في الشهر",
+    "workingDays": "أيام العمل",
+    "presentDays": "أيام الحضور",
+    "absentDays": "أيام الغياب",
+    "employee": "الموظف",
+    "selectEmployee": "اختر موظفًا",
+    "cancel": "إلغاء",
+    "saveAttendance": "حفظ الحضور",
+    "overwriteExisting": "استبدال السجلات الحالية لهذا الشهر",
+    "overwriteAllHelp": "هذا الخيار متوقف افتراضيًا للحفاظ على تسجيلات الموظفين. حدده لاستبدال الأيام المسجلة بأيام حضور.",
+    "overwriteSingleHelp": "يتم افتراضيًا الاحتفاظ بالأيام المسجلة مسبقًا في EmpCloud. حدد هذا الخيار لاستبدالها بالقيم أعلاه.",
+    "markAllHelp": "سيتم تسجيل حضور جميع الموظفين النشطين وعددهم {{count}} لمدة {{days}} يومًا في {{period}}. يمكنك تعديل السجلات الفردية لاحقًا.",
+    "workingDaysInvalid": "يجب أن تكون أيام العمل عددًا صحيحًا بين 1 و31",
+    "presentDaysInvalid": "يجب أن تكون أيام الحضور بين 0 وعدد أيام العمل",
+    "selectEmployeeRequired": "يرجى اختيار موظف",
+    "noPayrollEmployees": "لم يتم العثور على موظفين في الرواتب. أضف مستخدمي EmpCloud إلى الرواتب أولًا (الإعدادات > الموظفون).",
+    "bulkSyncFailed": "تم التسجيل محليًا لـ {{employeeCount}} موظفين، لكن مزامنة EmpCloud فشلت لـ {{failureCount}}. قد لا تظهر التغييرات في لوحة المعلومات بعد.",
+    "nothingChangedAll": "لكل يوم عمل في {{period}} سجل موجود في EmpCloud (تم الاحتفاظ بـ {{preserved}})، لذلك لم يتغير شيء. حدد الاستبدال لتغييرها.",
+    "markedAllOverwrite": "تم تسجيل حضور {{count}} موظفين في {{period}} (تم استبدال الأيام الحالية).",
+    "markedAllSuccess": "تم تسجيل {{count}} موظفين في {{period}} — أضيفت {{inserted}} صفوف جديدة إلى EmpCloud{{preservedText}}.",
+    "singleSyncFailed": "تم التسجيل محليًا، لكن مزامنة EmpCloud فشلت ({{error}}). قد لا يظهر ذلك في لوحة المعلومات حتى يصبح EmpCloud متاحًا.",
+    "unknownError": "خطأ غير معروف",
+    "nothingChangedSingle": "يوجد بالفعل {{preserved}} سجل حضور لهذا الموظف في {{period}}، لذلك لم يتغير شيء. حدد الاستبدال واحفظ مرة أخرى.",
+    "singleOverwriteSuccess": "تم تحديث حضور {{period}} (تم تعيين {{count}} أيام).",
+    "singleSuccess": "تم تسجيل حضور {{period}} — أضيفت {{inserted}} صفوف جديدة إلى EmpCloud{{preservedText}}.",
+    "preservedSuffix": "، وتم الاحتفاظ بـ {{count}} صفوف حالية",
+    "markFailed": "تعذر تسجيل الحضور"
+  },
+  "payrollAnalytics": {
+    "title": "تحليلات الرواتب",
+    "description": "اتجاهات التكلفة والمقارنات والرؤى",
+    "notice": "تعكس الأرقام أدناه الموظفين المشمولين في كل دورة رواتب. لا يتم احتساب الموظفين الذين تم تخطيهم أثناء الحساب (لعدم وجود هيكل راتب نشط، أو لتعيينهم بعد فترة الدفع، أو لمغادرتهم قبلها)، لذلك قد يتغير عدد الموظفين ومتوسطات كل موظف بين الأشهر بشكل مستقل عن نشاط التوظيف الفعلي.",
+    "noRuns": "لا توجد دورات رواتب بعد",
+    "employeeSource": "{{count}} موظف · {{source}}",
+    "headcountSuppressed": "تغير عدد الموظفين بأكثر من 25٪ — تم إخفاء المقارنة",
+    "vsPrevious": "مقارنة بالشهر السابق · {{source}}",
+    "ofGrossPay": "من إجمالي الراتب · {{source}}",
+    "avgNetPayPerEmployee": "متوسط صافي الراتب / الموظف",
+    "grossPayChange": "تغير إجمالي الراتب",
+    "netPayChange": "تغير صافي الراتب",
+    "deductionRate": "معدل الاستقطاعات",
+    "payrollCostTrend": "اتجاه تكلفة الرواتب",
+    "costBreakdownLatest": "تفصيل التكلفة (الأحدث)",
+    "headcountTrend": "اتجاه عدد الموظفين",
+    "monthComparison": "مقارنة شهرية",
+    "totalEmployerCost": "إجمالي تكلفة صاحب العمل (الإجمالي + المساهمات)",
+    "needCompletedRun": "يلزم وجود دورة رواتب مكتملة واحدة على الأقل لعرض التحليلات",
+    "noData": "لا توجد بيانات بعد",
+    "series": {
+      "gross": "الإجمالي",
+      "net": "الصافي",
+      "deductions": "الاستقطاعات",
+      "netPay": "صافي الراتب",
+      "employerContributions": "مساهمات صاحب العمل",
+      "employerCost": "تكلفة صاحب العمل",
+      "amount": "المبلغ",
+      "employees": "الموظفون"
+    },
+    "columns": {
+      "period": "الفترة",
+      "employees": "الموظفون",
+      "grossPay": "إجمالي الراتب",
+      "deductions": "الاستقطاعات",
+      "netPay": "صافي الراتب",
+      "avgPerEmployee": "المتوسط/الموظف",
+      "grossPercent": "الإجمالي %",
+      "netPercent": "الصافي %"
+    },
+    "statuses": { "paid": "مدفوع", "computed": "محسوب", "approved": "معتمد" }
+  },
+  "reimbursementsPage": {
+    "title": "المصروفات المستردة",
+    "claimsShown": "{{visible}} من {{total}} طلبات",
+    "fileForEmployee": "تقديم لموظف",
+    "searchPlaceholder": "البحث باسم الموظف أو رمزه أو مسماه...",
+    "filterDepartment": "التصفية حسب القسم",
+    "allDepartments": "كل الأقسام",
+    "filterLocation": "التصفية حسب الموقع",
+    "allLocations": "كل المواقع",
+    "clearFilters": "مسح عوامل التصفية",
+    "noClaims": "لم يتم العثور على طلبات استرداد",
+    "forEmployee": "لصالح {{name}}",
+    "statuses": {
+      "pending": "قيد الانتظار",
+      "approved": "معتمد",
+      "rejected": "مرفوض",
+      "paid": "مدفوع"
+    },
+    "filters": { "all": "الكل" },
+    "cards": {
+      "totalClaims": "إجمالي الطلبات",
+      "viewAll": "عرض كل طلبات الاسترداد",
+      "viewPending": "عرض الطلبات المعلقة",
+      "viewApproved": "عرض الطلبات المعتمدة",
+      "viewRejected": "عرض الطلبات المرفوضة",
+      "viewPaid": "عرض الطلبات المدفوعة"
+    },
+    "columns": {
+      "employee": "الموظف",
+      "category": "الفئة",
+      "description": "الوصف",
+      "amount": "المبلغ",
+      "date": "التاريخ",
+      "status": "الحالة"
+    },
+    "actions": {
+      "approve": "اعتماد",
+      "reject": "رفض",
+      "awaitingPayroll": "بانتظار الرواتب",
+      "awaitingPayrollTitle": "سيتم الدفع في دورة الرواتب التالية",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "cancel": "إلغاء"
+    },
+    "fields": {
+      "category": "الفئة",
+      "amount": "المبلغ",
+      "expenseDate": "تاريخ المصروف",
+      "description": "الوصف",
+      "month": "الشهر",
+      "year": "السنة"
+    },
+    "fileModal": {
+      "title": "تقديم استرداد لموظف",
+      "description": "قدّم طلبًا نيابة عن موظف. سيظهر له كطلب قيد الانتظار في قائمة الاستردادات.",
+      "searchEmployee": "البحث عن موظف",
+      "employeePlaceholder": "الاسم أو رمز الموظف أو البريد (حرفان على الأقل)",
+      "searching": "جارٍ البحث...",
+      "typeMore": "اكتب حرفين على الأقل للبحث.",
+      "noEmployees": "لا يوجد موظفون مطابقون.",
+      "change": "تغيير",
+      "categoryPlaceholder": "سفر، طعام، إنترنت...",
+      "descriptionPlaceholder": "ما الغرض من المصروف؟",
+      "submit": "تقديم الطلب"
+    },
+    "deleteModal": {
+      "title": "حذف الاسترداد؟",
+      "paidTitle": "تم دفع هذا الطلب بالفعل.",
+      "paidWarning": "يؤدي الحذف إلى إزالة الصف من قائمة الاستردادات فقط، ولا يعيد المبلغ للموظف أو يزيل البند من قسيمة الراتب. لعكس الدفع، احذف دورة الرواتب بدلًا من ذلك؛ وسيعود الطلب تلقائيًا إلى حالة معتمد.",
+      "warning": "سيتم حذف الطلب نهائيًا ولا يمكن التراجع عن ذلك."
+    },
+    "editModal": { "title": "تعديل الاسترداد", "save": "حفظ التغييرات" },
+    "payModal": {
+      "title": "تحديد الاسترداد كمدفوع",
+      "description": "سجّل فترة الرواتب التي تم فيها صرف هذا الطلب. ستتغير حالته من معتمد إلى مدفوع.",
+      "confirm": "تأكيد الدفع"
+    },
+    "validation": {
+      "categoryRequired": "الفئة مطلوبة",
+      "descriptionRequired": "الوصف مطلوب",
+      "validAmount": "أدخل مبلغًا صالحًا",
+      "expenseDateRequired": "تاريخ المصروف مطلوب",
+      "pickEmployee": "اختر موظفًا أولًا"
+    },
+    "messages": {
+      "approved": "تم اعتماد الطلب",
+      "rejected": "تم رفض الطلب",
+      "failed": "فشل الإجراء",
+      "updated": "تم تحديث الطلب",
+      "updateFailed": "تعذر تحديث الطلب",
+      "deleted": "تم حذف الطلب",
+      "deleteFailed": "تعذر حذف الطلب",
+      "filed": "تم تقديم الطلب للموظف",
+      "fileFailed": "تعذر تقديم الطلب",
+      "markedPaid": "تم تحديد الطلب كمدفوع",
+      "markPaidFailed": "تعذر تحديد الطلب كمدفوع"
+    }
+  },
+  "loansPage": {
+    "title": "القروض والسلف",
+    "recordsShown": "{{visible}} من {{total}} سجلات قروض وسلف",
+    "addAdvance": "إضافة سلفة",
+    "addLoan": "إضافة قرض",
+    "searchPlaceholder": "البحث باسم الموظف أو رمزه أو مسماه...",
+    "filterDepartment": "التصفية حسب القسم",
+    "allDepartments": "كل الأقسام",
+    "filterLocation": "التصفية حسب الموقع",
+    "allLocations": "كل المواقع",
+    "clearFilters": "مسح عوامل التصفية",
+    "noRecords": "لم يتم العثور على قروض أو سلف",
+    "cards": {
+      "active": "القروض والسلف النشطة",
+      "outstanding": "المبلغ المتبقي",
+      "monthlyDeductions": "الاستقطاعات الشهرية",
+      "totalAcrossAll": "الإجمالي للكل",
+      "completed": "مكتمل"
+    },
+    "filters": { "all": "الكل" },
+    "statuses": { "active": "نشط", "completed": "مكتمل", "cancelled": "ملغى" },
+    "types": { "loan": "قرض", "salary_advance": "سلفة راتب", "emergency": "سلفة طارئة" },
+    "columns": {
+      "employee": "الموظف",
+      "type": "النوع",
+      "description": "الوصف",
+      "principal": "أصل المبلغ",
+      "outstanding": "المتبقي",
+      "deduction": "الاستقطاع",
+      "progress": "التقدم",
+      "status": "الحالة"
+    },
+    "deduction": { "customDefault": "مخصص (الافتراضي {{amount}})", "oneTime": "مرة واحدة" },
+    "progress": { "recovered": "تم الاسترداد", "pendingRecovery": "الاسترداد معلق" },
+    "actions": {
+      "recordEmiPayment": "تسجيل دفعة القسط",
+      "recordAdvanceRecovery": "تسجيل استرداد السلفة",
+      "pay": "دفع",
+      "recover": "استرداد",
+      "edit": "تعديل القرض أو السلفة",
+      "delete": "حذف",
+      "cancel": "إلغاء",
+      "saveChanges": "حفظ التغييرات"
+    },
+    "fields": {
+      "employee": "الموظف",
+      "description": "الوصف",
+      "amount": "المبلغ (₹)",
+      "tenure": "المدة (أشهر)",
+      "interestRate": "معدل الفائدة (%)",
+      "startDate": "تاريخ البدء",
+      "customMonthlyEmi": "قسط شهري مخصص (₹) — اختياري",
+      "notes": "ملاحظات (اختياري)",
+      "advanceType": "نوع السلفة",
+      "reason": "السبب",
+      "advanceAmount": "مبلغ السلفة (₹)",
+      "recoveryDate": "تاريخ الاسترداد"
+    },
+    "form": {
+      "noEmployee": "لا يوجد موظفون",
+      "descriptionPlaceholder": "مثال: حالة طبية طارئة",
+      "customEmiPlaceholder": "اتركه فارغًا لاستخدام القسط المحسوب حسب المدة",
+      "customEmiHelpCreate": "يستبدل الاستقطاع الشهري. تسدد الدفعة الأخيرة الرصيد المتبقي تلقائيًا.",
+      "customEmiHelpEdit": "يستبدل الاستقطاع الشهري. تسدد الدفعة الأخيرة الرصيد المتبقي تلقائيًا. امسح الحقل لاستخدام القسط المحسوب حسب المدة.",
+      "notesPlaceholder": "ملاحظات إضافية",
+      "paidInstallmentsNotice": "تم دفع {{count}} قسط — سيعاد حساب المتبقي مع الاحتفاظ بالمبلغ المسدد."
+    },
+    "advanceModal": {
+      "description": "أضف سلفة راتب لمرة واحدة. سيتم استرداد المبلغ كاملًا في فترة رواتب واحدة."
+    },
+    "editModal": { "loanTitle": "تعديل القرض", "advanceTitle": "تعديل السلفة" },
+    "deleteModal": {
+      "title": "حذف القرض أو السلفة؟",
+      "outstandingTitle": "لا يزال {{amount}} متبقيًا.",
+      "outstandingWarning": "يؤدي الحذف إلى إيقاف الاستقطاعات المستقبلية. المبالغ المستقطعة في قسائم الرواتب السابقة لا تتأثر. لا يمكن التراجع عن ذلك.",
+      "warning": "سيتم حذف السجل نهائيًا. المبالغ المستقطعة سابقًا لا تتأثر. لا يمكن التراجع عن ذلك."
+    },
+    "validation": {
+      "amountNonNegative": "يجب أن يكون المبلغ صفرًا أو أكثر",
+      "tenureMinimum": "يجب ألا تقل المدة عن شهر واحد",
+      "interestNonNegative": "يجب أن يكون معدل الفائدة صفرًا أو أكثر",
+      "customEmiPositive": "يجب أن يكون القسط الشهري المخصص أكبر من صفر",
+      "customEmiMaximum": "لا يمكن أن يتجاوز القسط الشهري المخصص مبلغ القرض"
+    },
+    "messages": {
+      "advanceCreated": "تم إنشاء السلفة",
+      "loanCreated": "تم إنشاء القرض",
+      "failed": "فشل الإجراء",
+      "paymentRecorded": "تم تسجيل الدفع",
+      "advanceUpdated": "تم تحديث السلفة",
+      "loanUpdated": "تم تحديث القرض",
+      "updateFailed": "تعذر تحديث القرض أو السلفة",
+      "deleted": "تم حذف القرض أو السلفة",
+      "deleteFailed": "تعذر حذف القرض أو السلفة"
+    }
+  },
+  "roles": {
+    "super_admin": "مسؤول أعلى",
+    "org_admin": "مسؤول المؤسسة",
+    "admin": "مسؤول",
+    "hr_admin": "مسؤول الموارد البشرية",
+    "hr_manager": "مدير الموارد البشرية",
+    "manager": "مدير",
+    "employee": "موظف"
+  },
+  "header": { "openMenu": "فتح قائمة التنقل", "searchEmployees": "البحث عن الموظفين... (Ctrl+K)" },
+  "sidebar": {
+    "collapse": "طي الشريط الجانبي",
+    "expand": "توسيع الشريط الجانبي",
+    "search": "البحث في القائمة…",
+    "clearSearch": "مسح البحث",
+    "noMatches": "لا توجد نتائج لـ «{{query}}»",
+    "pressToSearch": "اضغط / للبحث",
+    "logout": "تسجيل الخروج",
+    "sections": {
+      "overview": "نظرة عامة",
+      "people": "الموظفون",
+      "payroll": "الرواتب",
+      "compliance": "الامتثال",
+      "payBenefits": "الأجور والمزايا",
+      "workplace": "مكان العمل",
+      "globalPayroll": "الرواتب العالمية",
+      "admin": "الإدارة",
+      "selfService": "الخدمة الذاتية"
+    },
+    "items": {
+      "dashboard": "لوحة المعلومات",
+      "employees": "الموظفون",
+      "orgChart": "الهيكل التنظيمي",
+      "departments": "الأقسام",
+      "attendance": "الحضور",
+      "structures": "الهياكل",
+      "payrollRuns": "دورات الرواتب",
+      "analytics": "التحليلات",
+      "payslips": "قسائم الرواتب",
+      "tax": "الضرائب",
+      "taxCalculator": "حاسبة الضرائب",
+      "taxDeclarations": "الإقرارات الضريبية",
+      "reimbursements": "المصروفات المستردة",
+      "loans": "القروض",
+      "benefits": "المزايا",
+      "benchmarks": "المعايير",
+      "payEquity": "عدالة الأجور",
+      "totalRewards": "إجمالي المكافآت",
+      "earnedWageAccess": "الوصول إلى الأجر المكتسب",
+      "insurance": "التأمين",
+      "holidays": "العطلات",
+      "announcements": "الإعلانات",
+      "globalDashboard": "لوحة المعلومات العالمية",
+      "globalEmployees": "الموظفون العالميون",
+      "contractorInvoices": "فواتير المتعاقدين",
+      "countryCompliance": "امتثال الدول",
+      "glAccounting": "دفتر الأستاذ / المحاسبة",
+      "reports": "التقارير",
+      "auditLog": "سجل التدقيق",
+      "system": "النظام",
+      "settings": "الإعدادات",
+      "myDashboard": "لوحتي",
+      "myPayslips": "قسائم راتبي",
+      "mySalary": "راتبي",
+      "myTax": "ضرائبي",
+      "declarations": "الإقرارات",
+      "myClaims": "طلباتي",
+      "myProfile": "ملفي الشخصي"
+    }
+  },
+  "dashboard": {
+    "title": "لوحة معلومات الرواتب",
+    "overviewFor": "نظرة عامة لشهر {{period}}",
+    "runPayroll": "تشغيل الرواتب",
+    "addEmployee": "إضافة موظف",
+    "viewReports": "عرض التقارير",
+    "activeEmployees": "الموظفون النشطون",
+    "viewActiveEmployees": "عرض الموظفين النشطين",
+    "totalEmployees": "الإجمالي {{count}}",
+    "lastPayrollGross": "آخر راتب (إجمالي)",
+    "lastPayrollNet": "آخر راتب (صافي)",
+    "noPayrollYet": "لا توجد رواتب بعد",
+    "totalDeductions": "إجمالي الاستقطاعات",
+    "viewDeductions": "عرض تفاصيل إجمالي الاستقطاعات لآخر مسير رواتب",
+    "monthOverMonth": "{{value}}% شهريًا",
+    "monthlyTrend": "اتجاه الرواتب الشهري",
+    "trendPeriods_one": "الإجمالي مقابل الصافي للشهر الماضي",
+    "trendPeriods_other": "الإجمالي مقابل الصافي لآخر {{count}} أشهر",
+    "trendFallback": "تكلفة الرواتب الإجمالية والصافية",
+    "gross": "الإجمالي",
+    "net": "الصافي",
+    "noTrend": "لا توجد بيانات رواتب بعد. شغّل أول دورة لعرض الاتجاهات.",
+    "headcountByDepartment": "عدد الموظفين حسب القسم",
+    "moreDepartments": "+{{count}} أقسام أخرى",
+    "noEmployeesToChart": "لا يوجد موظفون لعرضهم.",
+    "complianceStatus": "حالة الامتثال",
+    "providentFund": "صندوق الادخار",
+    "professionalTax": "الضريبة المهنية",
+    "tdsForm": "TDS (النموذج 24Q)",
+    "filed": "تم التقديم",
+    "pending": "قيد الانتظار",
+    "recentActivity": "النشاط الأخير",
+    "noRecentActivity": "لا يوجد نشاط حديث بعد.",
+    "activity": "النشاط",
+    "actions": {
+      "created": "تم إنشاء مسير الرواتب",
+      "computed": "تم احتساب الرواتب",
+      "approved": "تمت الموافقة على الرواتب",
+      "paid": "تم تحديد الرواتب كمدفوعة",
+      "cancelled": "تم إلغاء الرواتب",
+      "reverted": "تمت إعادة الرواتب إلى المسودة",
+      "rerun": "أعيد تشغيل الرواتب",
+      "deleted": "تم حذف مسير الرواتب"
+    }
+  },
+  "breadcrumbs": {
+    "home": "الرئيسية",
+    "addNew": "إضافة جديد",
+    "salaryStructures": "هياكل الرواتب",
+    "myPortal": "بوابتي",
+    "salary": "الراتب",
+    "profile": "الملف الشخصي",
+    "setup": "الإعداد"
+  },
+  "selfService": {
+    "employeePortal": "بوابة الموظف",
+    "adminPanel": "لوحة الإدارة",
+    "profile": "الملف الشخصي"
+  },
+  "myProfile": {
+    "title": "ملفي الشخصي",
+    "notFound": "لم يتم العثور على الملف الشخصي",
+    "notAvailable": "غير متاح",
+    "cancel": "إلغاء",
+    "requestUpdate": "طلب تحديث",
+    "pendingBankRequest": "لديك طلب تحديث للبيانات البنكية بانتظار موافقة المسؤول.",
+    "status": { "active": "نشط", "inactive": "غير نشط" },
+    "taxRegime": { "new": "النظام الضريبي الجديد", "old": "النظام الضريبي القديم" },
+    "sections": {
+      "personalDetails": "البيانات الشخصية",
+      "employment": "بيانات التوظيف",
+      "bankDetails": "البيانات البنكية",
+      "statutoryDetails": "البيانات النظامية",
+      "security": "الأمان"
+    },
+    "fields": {
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "dateOfBirth": "تاريخ الميلاد",
+      "gender": "الجنس",
+      "employeeCode": "رمز الموظف",
+      "department": "القسم",
+      "designation": "المسمى الوظيفي",
+      "employmentType": "نوع التوظيف",
+      "dateOfJoining": "تاريخ الانضمام",
+      "bank": "البنك",
+      "accountNumber": "رقم الحساب",
+      "ifsc": "IFSC",
+      "pan": "PAN",
+      "uan": "UAN",
+      "pfNumber": "رقم PF",
+      "password": "كلمة المرور"
+    },
+    "values": {
+      "gender": { "female": "أنثى", "male": "ذكر", "non_binary": "غير ثنائي", "other": "آخر" },
+      "employmentTypes": {
+        "full_time": "دوام كامل",
+        "part_time": "دوام جزئي",
+        "contract": "عقد",
+        "intern": "متدرب",
+        "consultant": "مستشار"
+      }
+    },
+    "security": {
+      "changePasswordHelp": "غيّر كلمة مرور حسابك",
+      "changePassword": "تغيير كلمة المرور"
+    },
+    "bankModal": {
+      "title": "طلب تحديث البيانات البنكية",
+      "reviewNotice": "ستراجع الموارد البشرية أو الإدارة طلبك قبل تطبيق التغييرات.",
+      "newBankName": "اسم البنك الجديد",
+      "bankPlaceholder": "مثال: HDFC Bank",
+      "newAccountNumber": "رقم الحساب الجديد",
+      "accountPlaceholder": "مثال: 1234567890",
+      "newIfscCode": "رمز IFSC الجديد",
+      "ifscPlaceholder": "مثال: HDFC0001234",
+      "ifscValidation": "يجب أن يتكون IFSC من 11 خانة: 4 أحرف + '0' + 6 أحرف أو أرقام (مثال: HDFC0001234).",
+      "accountType": "نوع الحساب",
+      "accountTypes": { "savings": "توفير", "current": "جاري", "salary": "حساب راتب" },
+      "reason": "سبب التغيير",
+      "reasonPlaceholder": "مثال: الانتقال إلى بنك جديد",
+      "submit": "إرسال الطلب",
+      "success": "تم إرسال طلب تحديث البيانات البنكية للموافقة",
+      "failure": "تعذر إرسال الطلب"
+    },
+    "passwordModal": {
+      "title": "تغيير كلمة المرور",
+      "currentPassword": "كلمة المرور الحالية",
+      "newPassword": "كلمة المرور الجديدة",
+      "confirmNewPassword": "تأكيد كلمة المرور الجديدة",
+      "mismatch": "كلمتا المرور غير متطابقتين",
+      "success": "تم تغيير كلمة المرور",
+      "failure": "تعذر تغيير كلمة المرور",
+      "submit": "تغيير كلمة المرور"
+    }
+  },
+  "totalRewardsPage": {
+    "title": "كشوف المكافآت الإجمالية",
+    "description": "إنشاء كشوف شاملة للتعويضات والمزايا للموظفين",
+    "printPdf": "طباعة / PDF",
+    "selectEmployee": "اختر موظفًا",
+    "chooseEmployee": "اختر موظفًا…",
+    "searchEmployee": "ابحث بالاسم أو المسمى أو الرمز…",
+    "noEmployeeMatches": "لا يوجد موظفون مطابقون للبحث",
+    "employeesAvailable_one": "موظف واحد متاح",
+    "employeesAvailable_other": "{{count}} موظفين متاحين",
+    "unnamedEmployee": "موظف بلا اسم",
+    "totalRewardsValue": "قيمة المكافآت الإجمالية",
+    "financialYear": "السنة المالية {{year}}",
+    "directCompensation": "التعويض المباشر",
+    "benefitsValue": "قيمة المزايا",
+    "ytdNetPay": "صافي الأجر منذ بداية السنة",
+    "reimbursements": "التعويضات",
+    "salaryBreakdown": "تفصيل الراتب",
+    "perMonth": "/شهر",
+    "annualCtc": "التكلفة السنوية",
+    "benefitsEnrollment": "الاشتراك في المزايا",
+    "noBenefits": "لا توجد مزايا مشتركة",
+    "perYear": "/سنة",
+    "totalEmployerContribution": "إجمالي مساهمة صاحب العمل",
+    "ytdEarnings": "أرباح السنة حتى تاريخه",
+    "monthsProcessed_one": "تمت معالجة شهر واحد",
+    "monthsProcessed_other": "تمت معالجة {{count}} أشهر",
+    "grossEarnings": "إجمالي الأرباح",
+    "totalDeductions": "إجمالي الاستقطاعات",
+    "netPay": "صافي الأجر",
+    "taxPaid": "الضريبة المدفوعة",
+    "activeLoans": "القروض النشطة",
+    "outstanding": "المتبقي",
+    "emi": "القسط",
+    "selectPrompt": "اختر موظفًا لإنشاء كشف المكافآت الإجمالية الخاص به",
+    "components": { "basic": "الراتب الأساسي", "hra": "بدل السكن", "sa": "بدل خاص" },
+    "benefitTypes": {
+      "health": "صحي",
+      "life": "حياة",
+      "dental": "أسنان",
+      "vision": "نظر",
+      "accident": "حوادث"
+    },
+    "coverageTypes": {
+      "employee": "الموظف",
+      "employee_spouse": "الموظف + الزوج/الزوجة",
+      "family": "العائلة",
+      "parents": "الوالدان"
+    },
+    "loanTypes": {
+      "personal_loan": "قرض شخصي",
+      "salary_advance": "سلفة راتب",
+      "home_loan": "قرض سكني",
+      "car_loan": "قرض سيارة",
+      "education_loan": "قرض تعليمي"
+    }
+  },
+  "benefitsPage": {
+    "title": "إدارة المزايا",
+    "description": "إدارة خطط المزايا وتسجيل الموظفين",
+    "enrollEmployee": "تسجيل موظف",
+    "newPlan": "خطة جديدة",
+    "stats": {
+      "activePlans": "الخطط النشطة",
+      "enrolled": "المسجلون",
+      "pending": "قيد الانتظار",
+      "monthlyEmployerCost": "تكلفة صاحب العمل الشهرية"
+    },
+    "tabs": {
+      "plans": "الخطط ({{count}})",
+      "enrollments": "التسجيلات ({{count}})",
+      "pending": "قيد الانتظار ({{count}})"
+    },
+    "columns": {
+      "planName": "اسم الخطة",
+      "type": "النوع",
+      "provider": "مزود الخدمة",
+      "premium": "القسط",
+      "employerShare": "حصة صاحب العمل",
+      "status": "الحالة",
+      "employee": "الموظف",
+      "plan": "الخطة",
+      "coverage": "التغطية",
+      "employeeShare": "حصة الموظف"
+    },
+    "empty": {
+      "plans": "لم يتم إنشاء خطط مزايا بعد",
+      "enrollments": "لا توجد تسجيلات بعد",
+      "pending": "لا توجد تسجيلات قيد الانتظار"
+    },
+    "status": {
+      "active": "نشطة",
+      "inactive": "غير نشطة",
+      "enrolled": "مسجل",
+      "pending": "قيد الانتظار",
+      "cancelled": "ملغى"
+    },
+    "actions": {
+      "edit": "تعديل",
+      "deactivate": "إلغاء التفعيل",
+      "cancel": "إلغاء"
+    },
+    "planTypes": {
+      "health": "صحي",
+      "dental": "أسنان",
+      "vision": "بصر",
+      "life": "تأمين على الحياة",
+      "disability": "عجز",
+      "retirement": "تقاعد"
+    },
+    "coverageTypes": {
+      "individual": "فردي",
+      "family": "عائلي",
+      "individual_plus_spouse": "فردي + الزوج/الزوجة"
+    },
+    "fallbackUser": "المستخدم رقم {{id}}",
+    "messages": {
+      "invalidEnrollmentDates": "لا يمكن أن يكون تاريخ انتهاء التسجيل قبل تاريخ البدء",
+      "planUpdated": "تم تحديث خطة المزايا",
+      "planCreated": "تم إنشاء خطة المزايا",
+      "savePlanFailed": "تعذر حفظ الخطة",
+      "deactivateConfirm": "هل تريد إلغاء تفعيل خطة المزايا هذه؟ لن تتأثر التسجيلات الحالية.",
+      "planDeactivated": "تم إلغاء تفعيل خطة المزايا",
+      "deactivateFailed": "تعذر إلغاء تفعيل الخطة",
+      "employeeEnrolled": "تم تسجيل الموظف في خطة المزايا",
+      "enrollFailed": "تعذر إكمال التسجيل",
+      "enrollmentCancelled": "تم إلغاء التسجيل",
+      "actionFailed": "فشلت العملية"
+    },
+    "planModal": {
+      "editTitle": "تعديل خطة المزايا",
+      "createTitle": "إنشاء خطة مزايا",
+      "planName": "اسم الخطة",
+      "type": "النوع",
+      "provider": "مزود الخدمة",
+      "description": "الوصف",
+      "monthlyPremium": "القسط الشهري",
+      "employerContribution": "مساهمة صاحب العمل",
+      "enrollmentStart": "بداية التسجيل",
+      "enrollmentEnd": "نهاية التسجيل",
+      "cancel": "إلغاء",
+      "updatePlan": "تحديث الخطة",
+      "createPlan": "إنشاء الخطة"
+    },
+    "enrollModal": {
+      "title": "تسجيل موظف في خطة مزايا",
+      "employee": "الموظف",
+      "benefitPlan": "خطة المزايا",
+      "coverageType": "نوع التغطية",
+      "startDate": "تاريخ البدء",
+      "employeePremiumShare": "حصة الموظف من القسط",
+      "employerPremiumShare": "حصة صاحب العمل من القسط",
+      "cancel": "إلغاء",
+      "submit": "تسجيل"
+    }
+  },
+  "benchmarksPage": {
+    "title": "المقارنة المرجعية للتعويضات",
+    "description": "قارن أجور الموظفين ببيانات السوق",
+    "addBenchmark": "إضافة معيار",
+    "stats": {
+      "benchmarks": "المعايير",
+      "avgCompaRatio": "متوسط نسبة المقارنة",
+      "belowMarket": "أقل من السوق",
+      "aboveMarket": "أعلى من السوق"
+    },
+    "tabs": {
+      "marketBenchmarks": "معايير السوق ({{count}})",
+      "compaRatioReport": "تقرير نسبة المقارنة",
+      "belowMarket": "أقل من السوق ({{count}})",
+      "aboveMarket": "أعلى من السوق ({{count}})"
+    },
+    "columns": {
+      "jobTitle": "المسمى الوظيفي",
+      "department": "القسم",
+      "location": "الموقع",
+      "p50Median": "P50 (الوسيط)",
+      "source": "المصدر",
+      "effective": "تاريخ السريان",
+      "employee": "الموظف",
+      "marketP50": "P50 للسوق",
+      "compaRatio": "نسبة المقارنة",
+      "position": "الموضع"
+    },
+    "empty": {
+      "benchmarks": "لم تتم إضافة معايير بعد",
+      "employees": "لا تتوفر بيانات موظفين",
+      "belowMarket": "لا يوجد موظفون أقل من مستوى السوق",
+      "aboveMarket": "لا يوجد موظفون أعلى من مستوى السوق"
+    },
+    "summary": {
+      "employeesTotal": "إجمالي الموظفين",
+      "matchedToBenchmarks": "مطابقون للمعايير",
+      "withoutBenchmarkData": "من دون بيانات معيارية"
+    },
+    "labels": {
+      "noBenchmark": "لا يوجد معيار",
+      "notAvailable": "غير متاح",
+      "noData": "لا توجد بيانات",
+      "below": "أقل",
+      "above": "أعلى",
+      "atMarket": "عند مستوى السوق"
+    },
+    "actions": {
+      "edit": "تعديل",
+      "delete": "حذف"
+    },
+    "messages": {
+      "validPercentiles": "يرجى إدخال مبالغ صحيحة لـ P25 وP50 وP75",
+      "nonNegative": "لا يمكن أن تكون قيم الشرائح المئوية سالبة",
+      "ordered": "يجب ترتيب الشرائح المئوية: P25 ≤ P50 ≤ P75",
+      "updated": "تم تحديث المعيار",
+      "created": "تم إنشاء المعيار",
+      "deleted": "تم حذف المعيار",
+      "failed": "فشلت العملية"
+    },
+    "modal": {
+      "editTitle": "تعديل معيار التعويض",
+      "addTitle": "إضافة معيار تعويض",
+      "jobTitle": "المسمى الوظيفي",
+      "jobTitlePlaceholder": "مثال: مهندس برمجيات",
+      "department": "القسم",
+      "selectDepartment": "اختر القسم...",
+      "noDepartments": "لا توجد أقسام مهيأة",
+      "location": "الموقع",
+      "locationPlaceholder": "مثال: بنغالور",
+      "p25Annual": "P25 (سنوي)",
+      "p50Annual": "وسيط P50 (سنوي)",
+      "p75Annual": "P75 (سنوي)",
+      "p25Placeholder": "مثال 800000",
+      "p50Placeholder": "مثال 1200000",
+      "p75Placeholder": "مثال 1800000",
+      "source": "المصدر",
+      "sourcePlaceholder": "مثال: Glassdoor 2026",
+      "effectiveDate": "تاريخ السريان",
+      "cancel": "إلغاء",
+      "updateBenchmark": "تحديث المعيار",
+      "saveBenchmark": "حفظ المعيار"
+    }
+  },
+  "payEquityPage": {
+    "title": "تحليل المساواة في الأجور",
+    "description": "تحليل عدالة التعويض حسب الجنس والقسم والدور",
+    "stats": {
+      "employeesAnalyzed": "الموظفون الذين تم تحليلهم",
+      "medianSalary": "متوسط الراتب الوسيط",
+      "meanPayGap": "متوسط فجوة الأجور",
+      "medianPayGap": "فجوة الأجور الوسيطة"
+    },
+    "tabs": {
+      "overview": "نظرة عامة على التحليل",
+      "compliance": "تقرير الامتثال"
+    },
+    "gender": {
+      "title": "تحليل فجوة الأجور بين الجنسين",
+      "maleEmployees": "الموظفون الذكور",
+      "femaleEmployees": "الموظفات",
+      "maleMeanSalary": "متوسط راتب الذكور",
+      "femaleMeanSalary": "متوسط راتب الإناث",
+      "menPaidMore": "يتقاضى الرجال أجراً أعلى في المتوسط",
+      "womenPaidMore": "تتقاضى النساء أجراً أعلى في المتوسط",
+      "noGap": "لم يتم اكتشاف فجوة"
+    },
+    "department": {
+      "title": "تحليل الأقسام",
+      "department": "القسم",
+      "employees": "الموظفون",
+      "meanSalary": "متوسط الراتب",
+      "median": "الوسيط",
+      "min": "الحد الأدنى",
+      "max": "الحد الأقصى",
+      "spread": "النطاق"
+    },
+    "role": {
+      "title": "تحليل الدور / المسمى",
+      "designation": "المسمى الوظيفي",
+      "count": "العدد",
+      "mean": "المتوسط",
+      "median": "الوسيط"
+    },
+    "compliance": {
+      "title": "تقرير الامتثال",
+      "generated": "تاريخ الإنشاء",
+      "findings": "النتائج",
+      "recommendations": "التوصيات",
+      "notAvailable": "غير متاح"
+    },
+    "complianceMessages": {
+      "significantMean": "تم اكتشاف فجوة كبيرة في متوسط الأجور: {{value}}% ({{group}})",
+      "significantMedian": "تم اكتشاف فجوة كبيرة في الأجر الوسيط: {{value}}%",
+      "menPaidMore": "أجور الرجال أعلى",
+      "womenPaidMore": "أجور النساء أعلى",
+      "highVariance": "تباين مرتفع في الرواتب في قسم «{{department}}» (معامل التباين: {{value}}%)",
+      "acceptableGap": "فجوة الأجور ضمن النطاق المقبول (حتى 5%)",
+      "noConcerns": "لم يتم اكتشاف مخاوف كبيرة بشأن المساواة في الأجور",
+      "reviewDepartment": "راجع نطاقات الرواتب لقسم «{{department}}» لضمان المساواة الداخلية",
+      "reviewCompensation": "أجرِ مراجعة تفصيلية لتعويضات الأدوار التي توجد بها فجوات كبيرة",
+      "continueMonitoring": "استمر في مراقبة المساواة في الأجور كل ثلاثة أشهر"
+    }
+  },
+  "earnedWagePage": {
+    "title": "الوصول إلى الأجر المكتسب",
+    "description": "الدفع عند الطلب — إتاحة الأجر المكتسب للموظفين قبل يوم الدفع",
+    "actions": {
+      "approve": "موافقة",
+      "reject": "رفض",
+      "settings": "الإعدادات",
+      "requestAdvance": "طلب سلفة"
+    },
+    "stats": {
+      "pendingRequests": "الطلبات المعلقة",
+      "totalDisbursed": "إجمالي المصروف",
+      "avgRequest": "متوسط الطلب",
+      "totalRequests": "إجمالي الطلبات"
+    },
+    "filter": {
+      "showing": "عرض طلبات",
+      "requests": "",
+      "clear": "مسح عامل التصفية"
+    },
+    "balance": {
+      "title": "رصيدك المتاح",
+      "details": "المكتسب حتى الآن: {{earned}} | المسحوب مسبقاً: {{withdrawn}} | اليوم {{day}}/{{days}}",
+      "maxPercentage": "الحد الأقصى {{value}}% من الأجر المكتسب"
+    },
+    "status": {
+      "pending": "معلقة",
+      "approved": "موافق عليها",
+      "disbursed": "مصروفة",
+      "rejected": "مرفوضة",
+      "repaid": "مسددة",
+      "enabled": "مفعّل",
+      "disabled": "معطّل"
+    },
+    "columns": {
+      "employee": "الموظف",
+      "amount": "المبلغ",
+      "fee": "الرسوم",
+      "status": "الحالة",
+      "requested": "تاريخ الطلب",
+      "reason": "السبب"
+    },
+    "emptyRequests": "لا توجد طلبات سلفة بعد",
+    "messages": {
+      "showingAll": "يتم عرض جميع الطلبات أدناه",
+      "requestSubmitted": "تم إرسال طلب السلفة",
+      "submitFailed": "تعذر إرسال الطلب",
+      "requestApproved": "تمت الموافقة على الطلب",
+      "approveFailed": "تعذرت الموافقة",
+      "rejectionReason": "سبب الرفض (اختياري):",
+      "requestRejected": "تم رفض الطلب",
+      "rejectFailed": "تعذر الرفض",
+      "settingsSaved": "تم حفظ الإعدادات",
+      "settingsSaveFailed": "تعذر حفظ الإعدادات"
+    },
+    "requestModal": {
+      "title": "طلب سلفة على الراتب",
+      "available": "المتاح: {{amount}}",
+      "salaryDetails": "الراتب الشهري: {{salary}} | اليوم {{day}}/{{days}}",
+      "unavailable": "لا توجد سلفة متاحة حالياً. تحقق من إعداد الراتب أو فترة الانتظار.",
+      "amount": "المبلغ",
+      "amountPlaceholder": "أدخل المبلغ",
+      "reason": "السبب (اختياري)",
+      "reasonPlaceholder": "لماذا تحتاج إلى هذه السلفة؟",
+      "cancel": "إلغاء",
+      "submit": "إرسال الطلب"
+    },
+    "settingsModal": {
+      "title": "إعدادات الوصول إلى الأجر المكتسب",
+      "enable": "تفعيل الوصول إلى الأجر المكتسب",
+      "maxPercentage": "الحد الأقصى كنسبة من الأجر المكتسب",
+      "cooldownDays": "أيام الانتظار",
+      "minAmount": "الحد الأدنى للمبلغ",
+      "maxAmount": "الحد الأقصى للمبلغ (0 = بلا حد)",
+      "feePercentage": "نسبة الرسوم",
+      "flatFee": "رسوم ثابتة",
+      "autoApproveBelow": "موافقة تلقائية لأقل من (0 = معطّل)",
+      "requiresApproval": "يتطلب موافقة المدير",
+      "cancel": "إلغاء",
+      "save": "حفظ الإعدادات"
+    }
+  },
+  "insurancePage": {
+    "title": "إدارة التأمين",
+    "description": "إدارة وثائق التأمين الجماعي والتسجيلات والمطالبات",
+    "actions": {
+      "edit": "تعديل",
+      "deactivate": "إلغاء التفعيل",
+      "cancel": "إلغاء",
+      "settle": "تسوية",
+      "approve": "موافقة",
+      "reject": "رفض",
+      "submitClaim": "تقديم مطالبة",
+      "enrollEmployee": "تسجيل موظف",
+      "newPolicy": "وثيقة جديدة"
+    },
+    "stats": {
+      "activePolicies": "الوثائق النشطة",
+      "activeEnrollments": "التسجيلات النشطة",
+      "pendingClaims": "المطالبات المعلقة",
+      "totalApproved": "إجمالي المعتمد"
+    },
+    "tabs": {
+      "policies": "الوثائق ({{count}})",
+      "enrollments": "التسجيلات ({{count}})",
+      "claims": "المطالبات ({{count}})"
+    },
+    "empty": {
+      "policies": "لم يتم إنشاء وثائق تأمين بعد",
+      "enrollments": "لا توجد تسجيلات بعد",
+      "claims": "لم يتم تقديم مطالبات بعد"
+    },
+    "columns": {
+      "policyName": "اسم الوثيقة",
+      "number": "الرقم",
+      "provider": "شركة التأمين",
+      "type": "النوع",
+      "coverage": "التغطية",
+      "premiumPerEmployee": "القسط/الموظف",
+      "status": "الحالة",
+      "employee": "الموظف",
+      "policy": "الوثيقة",
+      "sumInsured": "مبلغ التأمين",
+      "premiumShare": "حصة القسط",
+      "nominee": "المستفيد",
+      "claimNumber": "رقم المطالبة",
+      "claimed": "المبلغ المطالب به",
+      "approved": "المعتمد",
+      "submitted": "تاريخ التقديم"
+    },
+    "policyTypes": {
+      "group_health": "صحي جماعي",
+      "group_life": "حياة جماعي",
+      "disability": "عجز",
+      "accidental": "حوادث",
+      "travel": "سفر"
+    },
+    "claimTypes": {
+      "hospitalization": "دخول المستشفى",
+      "outpatient": "عيادات خارجية",
+      "dental": "أسنان",
+      "vision": "بصر",
+      "life": "حياة",
+      "disability": "عجز",
+      "accidental": "حوادث",
+      "travel": "سفر",
+      "group_health": "صحي جماعي",
+      "group_life": "حياة جماعي"
+    },
+    "status": {
+      "active": "نشطة",
+      "expired": "منتهية",
+      "cancelled": "ملغاة",
+      "submitted": "مقدمة",
+      "under_review": "قيد المراجعة",
+      "approved": "معتمدة",
+      "rejected": "مرفوضة",
+      "settled": "مسواة",
+      "inactive": "غير نشطة",
+      "claimed": "تمت المطالبة"
+    },
+    "messages": {
+      "invalidEndDate": "لا يمكن أن يكون تاريخ انتهاء الوثيقة قبل تاريخ البدء",
+      "renewalInPast": "لا يمكن أن يكون تاريخ التجديد في الماضي",
+      "invalidRenewalDate": "يجب أن يكون تاريخ التجديد في تاريخ انتهاء الوثيقة أو بعده",
+      "invalidPolicyNumber": "لا يمكن أن يبدأ رقم الوثيقة بعلامة ناقص",
+      "policyUpdated": "تم تحديث وثيقة التأمين",
+      "policyCreated": "تم إنشاء وثيقة التأمين",
+      "saveFailed": "تعذر حفظ الوثيقة",
+      "deactivateConfirm": "هل تريد إلغاء تفعيل وثيقة التأمين هذه؟ لن تتأثر التسجيلات الحالية.",
+      "policyDeactivated": "تم إلغاء تفعيل وثيقة التأمين",
+      "deactivateFailed": "تعذر إلغاء تفعيل الوثيقة",
+      "employeeEnrolled": "تم تسجيل الموظف في التأمين",
+      "enrollFailed": "تعذر إكمال التسجيل",
+      "claimSubmitted": "تم تقديم المطالبة",
+      "claimSubmitFailed": "تعذر تقديم المطالبة",
+      "approvedAmountPrompt": "المبلغ المعتمد (اتركه فارغاً للمبلغ الكامل):",
+      "claimApproved": "تمت الموافقة على المطالبة",
+      "actionFailed": "فشلت العملية",
+      "rejectionReason": "سبب الرفض:",
+      "claimRejected": "تم رفض المطالبة",
+      "claimSettled": "تمت تسوية المطالبة",
+      "enrollmentCancelled": "تم إلغاء التسجيل"
+    },
+    "policyModal": {
+      "editTitle": "تعديل وثيقة التأمين",
+      "createTitle": "إنشاء وثيقة تأمين",
+      "policyName": "اسم الوثيقة",
+      "policyNumber": "رقم الوثيقة",
+      "policyNumberPlaceholder": "مثال POL-2024-001",
+      "provider": "شركة التأمين",
+      "type": "النوع",
+      "totalPremium": "إجمالي القسط",
+      "premiumPerEmployee": "القسط / الموظف",
+      "coverageAmount": "مبلغ التغطية",
+      "startDate": "تاريخ البدء",
+      "endDate": "تاريخ الانتهاء",
+      "renewalDate": "تاريخ التجديد",
+      "terms": "الشروط والأحكام",
+      "cancel": "إلغاء",
+      "updatePolicy": "تحديث الوثيقة",
+      "createPolicy": "إنشاء الوثيقة"
+    },
+    "enrollModal": {
+      "title": "تسجيل موظف في التأمين",
+      "employee": "الموظف",
+      "policy": "وثيقة التأمين",
+      "sumInsured": "مبلغ التأمين",
+      "premiumShare": "حصة الموظف من القسط",
+      "nomineeName": "اسم المستفيد",
+      "nomineeRelationship": "صلة المستفيد",
+      "relationshipPlaceholder": "مثال: الزوج/الزوجة، أحد الوالدين",
+      "cancel": "إلغاء",
+      "submit": "تسجيل"
+    },
+    "claimModal": {
+      "title": "تقديم مطالبة تأمين",
+      "policy": "وثيقة التأمين",
+      "claimType": "نوع المطالبة",
+      "amountClaimed": "المبلغ المطالب به",
+      "description": "الوصف",
+      "descriptionPlaceholder": "صِف المطالبة",
+      "notes": "ملاحظات",
+      "cancel": "إلغاء",
+      "submit": "تقديم المطالبة"
+    }
+  },
+  "countryCompliancePage": {
+    "title": "الامتثال حسب البلد",
+    "description": "استعرض قوانين العمل ومعدلات الضرائب والمتطلبات القانونية حسب البلد",
+    "filters": {
+      "searchPlaceholder": "البحث عن البلدان...",
+      "configuredOnly": "البلدان المهيأة لدي فقط ({{count}})"
+    },
+    "regions": {
+      "all": "كل المناطق",
+      "asia": "آسيا",
+      "europe": "أوروبا",
+      "americas": "الأمريكتان",
+      "africa": "أفريقيا",
+      "oceania": "أوقيانوسيا",
+      "middle_east": "الشرق الأوسط"
+    },
+    "metrics": {
+      "maxHours": "الحد الأقصى لساعات العمل/الأسبوع",
+      "annualLeave": "الإجازة السنوية",
+      "publicHolidays": "العطلات الرسمية",
+      "noticePeriod": "فترة الإشعار",
+      "probation": "فترة الاختبار",
+      "payFrequency": "دورية الدفع"
+    },
+    "units": {
+      "hours": "{{value}} ساعة",
+      "days": "{{value}} يومًا",
+      "months": "{{value}} شهرًا"
+    },
+    "payFrequencies": {
+      "monthly": "شهري",
+      "biweekly": "كل أسبوعين",
+      "weekly": "أسبوعي",
+      "annual": "سنوي"
+    },
+    "benefits": {
+      "title": "المزايا القانونية",
+      "socialSecurity": "الضمان الاجتماعي",
+      "pension": "التقاعد",
+      "healthInsurance": "التأمين الصحي",
+      "required": "مطلوب",
+      "notRequired": "غير مطلوب"
+    },
+    "ratesTitle": "معدلات الضرائب والضمان الاجتماعي",
+    "additional": {
+      "title": "معلومات إضافية",
+      "taxYearStart": "بداية السنة الضريبية",
+      "minimumWage": "الحد الأدنى للأجور (شهريًا)",
+      "notSet": "غير محدد / متغير",
+      "countryCode": "رمز البلد",
+      "region": "المنطقة"
+    },
+    "empty": {
+      "title": "حدد بلدًا لعرض تفاصيل الامتثال",
+      "description": "استعرض قوانين العمل ومعدلات الضرائب والمتطلبات القانونية"
+    },
+    "complianceKeys": {
+      "income_tax": "ضريبة الدخل",
+      "solidarity_surcharge": "رسم التضامن",
+      "health_insurance_employer": "تأمين صحي على صاحب العمل",
+      "health_insurance_employee": "تأمين صحي على الموظف",
+      "pension_employer": "معاش صاحب العمل",
+      "pension_employee": "معاش الموظف",
+      "unemployment_employer": "تأمين بطالة على صاحب العمل",
+      "unemployment_employee": "تأمين بطالة على الموظف",
+      "care_insurance_employer": "تأمين رعاية على صاحب العمل",
+      "care_insurance_employee": "تأمين رعاية على الموظف",
+      "employer_social_charges": "رسوم اجتماعية على صاحب العمل",
+      "employee_social_charges": "رسوم اجتماعية على الموظف",
+      "social_security_rate": "معدل الضمان الاجتماعي",
+      "social_security_cap": "حد الضمان الاجتماعي",
+      "federal_tax": "ضريبة اتحادية",
+      "state_tax": "ضريبة الولاية",
+      "epf_employer": "EPF صاحب العمل",
+      "epf_employee": "EPF الموظف",
+      "esi_employer": "ESI صاحب العمل",
+      "esi_employee": "ESI الموظف"
+    }
+  },
+  "glAccountingPage": {
+    "title": "دفتر الأستاذ / المحاسبة",
+    "description": "ربط مكونات الرواتب بحسابات دفتر الأستاذ وإنشاء قيود اليومية",
+    "actions": {
+      "generateJournal": "إنشاء قيد",
+      "addMapping": "إضافة ربط",
+      "deleteMapping": "حذف الربط",
+      "cancel": "إلغاء",
+      "saveMapping": "حفظ الربط",
+      "generate": "إنشاء"
+    },
+    "stats": {
+      "mappings": "عمليات ربط دفتر الأستاذ",
+      "journals": "قيود اليومية",
+      "exported": "مُصدّرة"
+    },
+    "tabs": {
+      "mappings": "عمليات ربط دفتر الأستاذ",
+      "journals": "قيود اليومية",
+      "exported": "مُصدّرة"
+    },
+    "mappingTable": {
+      "payComponent": "مكون الراتب",
+      "accountCode": "رمز الحساب",
+      "accountName": "اسم الحساب",
+      "description": "الوصف"
+    },
+    "journalTable": {
+      "date": "التاريخ",
+      "payrollRun": "تشغيل الرواتب",
+      "totalDebit": "إجمالي المدين",
+      "totalCredit": "إجمالي الدائن",
+      "status": "الحالة",
+      "export": "تصدير"
+    },
+    "statuses": {
+      "draft": "مسودة",
+      "posted": "مُرحّل",
+      "exported": "مُصدّر"
+    },
+    "empty": {
+      "mappings": "لا توجد عمليات ربط لدفتر الأستاذ",
+      "journals": "لم يتم إنشاء قيود يومية",
+      "exported": "لم يتم تصدير أي قيود حتى الآن"
+    },
+    "mappingModal": {
+      "title": "إضافة ربط لدفتر الأستاذ",
+      "payComponentCode": "رمز مكون الراتب",
+      "payComponentPlaceholder": "مثال: BASIC, HRA, EPF, TDS",
+      "accountCode": "رمز الحساب",
+      "accountCodePlaceholder": "مثال: 4001",
+      "accountName": "اسم الحساب",
+      "accountNamePlaceholder": "مثال: مصروف الرواتب",
+      "description": "الوصف"
+    },
+    "journalModal": {
+      "title": "إنشاء قيد يومية",
+      "payrollRun": "تشغيل الرواتب",
+      "selectRun": "اختر تشغيل الرواتب...",
+      "help": "سيؤدي ذلك إلى إنشاء قيود يومية من تشغيل الرواتب المحدد باستخدام عمليات الربط المهيأة."
+    },
+    "validation": {
+      "accountCode": "يجب أن يكون رمز الحساب رقمًا موجبًا من دون إشارات سالبة أو أحرف أو مسافات"
+    },
+    "messages": {
+      "mappingCreated": "تم إنشاء ربط دفتر الأستاذ",
+      "journalGenerated": "تم إنشاء قيد اليومية",
+      "mappingDeleted": "تم حذف الربط",
+      "failed": "فشلت العملية"
+    },
+    "exports": {
+      "tallyTitle": "تصدير إلى Tally",
+      "quickbooksTitle": "تصدير إلى QuickBooks",
+      "zohoTitle": "تصدير إلى Zoho"
+    }
+  },
+  "globalEmployeesPage": {
+    "title": "الموظفون العالميون",
+    "description": "إدارة موظفي EOR والمتعاقدين والتعيينات المباشرة حول العالم",
+    "actions": {
+      "addEmployee": "إضافة موظف",
+      "editEmployee": "تعديل الموظف",
+      "terminateEmployee": "إنهاء خدمة الموظف",
+      "alreadyTerminated": "تم إنهاء خدمة الموظف بالفعل",
+      "cancel": "إلغاء",
+      "saveChanges": "حفظ التغييرات"
+    },
+    "filters": {
+      "searchPlaceholder": "البحث بالاسم أو البريد الإلكتروني أو البلد...",
+      "allCountries": "كل البلدان",
+      "allTypes": "كل الأنواع",
+      "allStatuses": "كل الحالات"
+    },
+    "employmentTypes": {
+      "eor": "EOR",
+      "contractor": "متعاقد",
+      "direct_hire": "توظيف مباشر"
+    },
+    "contractTypes": {
+      "fullTime": "دوام كامل",
+      "partTime": "دوام جزئي",
+      "fixedTerm": "مدة محددة"
+    },
+    "statuses": {
+      "active": "نشط",
+      "onboarding": "التهيئة",
+      "offboarding": "إنهاء الإجراءات",
+      "terminated": "منتهي الخدمة"
+    },
+    "salaryFrequencies": {
+      "monthly": "شهري",
+      "biweekly": "كل أسبوعين",
+      "weekly": "أسبوعي",
+      "annual": "سنوي"
+    },
+    "salaryFrequencyShort": {
+      "monthly": "شهر",
+      "biweekly": "أسبوعان",
+      "weekly": "أسبوع",
+      "annual": "سنة"
+    },
+    "table": {
+      "name": "الاسم",
+      "country": "البلد",
+      "type": "النوع",
+      "status": "الحالة",
+      "salary": "الراتب",
+      "jobTitle": "المسمى الوظيفي",
+      "startDate": "تاريخ البدء",
+      "actions": "الإجراءات"
+    },
+    "empty": "لم يتم العثور على موظفين عالميين. انقر على «إضافة موظف» لتعيين أول عضو دولي في فريقك.",
+    "modal": {
+      "addTitle": "إضافة موظف عالمي",
+      "editTitle": "تعديل موظف عالمي",
+      "firstName": "الاسم الأول *",
+      "lastName": "اسم العائلة *",
+      "email": "البريد الإلكتروني *",
+      "country": "البلد *",
+      "employmentType": "نوع التوظيف *",
+      "contractType": "نوع العقد",
+      "jobTitle": "المسمى الوظيفي *",
+      "department": "القسم",
+      "selectDepartment": "اختر القسم...",
+      "noDepartments": "لا توجد أقسام مهيأة بعد — أضفها من الإعدادات > الأقسام",
+      "startDate": "تاريخ البدء *",
+      "salaryAmount": "مبلغ الراتب * (بوحدة العملة الرئيسية)",
+      "payFrequency": "دورية الدفع",
+      "bankingTax": "البيانات البنكية والضريبية (اختياري)",
+      "taxId": "الرقم الضريبي",
+      "bankName": "اسم البنك",
+      "bankNamePlaceholder": "مثال: HDFC Bank",
+      "bankAccount": "رقم الحساب البنكي",
+      "bankAccountPlaceholder": "مثال: 12345678901234",
+      "bankRouting": "رمز التوجيه البنكي / IFSC",
+      "bankRoutingPlaceholder": "مثال: HDFC0001234"
+    },
+    "validation": {
+      "required": "يرجى ملء جميع الحقول المطلوبة"
+    },
+    "messages": {
+      "added": "تمت إضافة الموظف العالمي",
+      "updated": "تم تحديث الموظف العالمي",
+      "addFailed": "تعذرت إضافة الموظف",
+      "updateFailed": "تعذر تحديث الموظف",
+      "terminatePrompt": "إنهاء خدمة {{name}}؟ أدخل السبب (مطلوب):",
+      "terminated": "تم إنهاء خدمة الموظف",
+      "terminateFailed": "تعذر إنهاء خدمة الموظف"
+    }
+  },
+  "contractorInvoicesPage": {
+    "title": "فواتير المتعاقدين",
+    "description": "إدارة فواتير المتعاقدين ودفعها",
+    "actions": {
+      "submitInvoice": "إرسال الفاتورة",
+      "approve": "موافقة",
+      "reject": "رفض",
+      "markPaid": "وضع علامة مدفوعة",
+      "cancel": "إلغاء"
+    },
+    "filters": {
+      "allStatuses": "كل الحالات"
+    },
+    "statuses": {
+      "pending": "قيد الانتظار",
+      "approved": "معتمدة",
+      "paid": "مدفوعة",
+      "rejected": "مرفوضة"
+    },
+    "table": {
+      "invoiceNumber": "رقم الفاتورة",
+      "contractor": "المتعاقد",
+      "period": "الفترة",
+      "amount": "المبلغ",
+      "status": "الحالة",
+      "submitted": "تاريخ الإرسال",
+      "actions": "الإجراءات"
+    },
+    "empty": "لا توجد فواتير متعاقدين حتى الآن.",
+    "modal": {
+      "title": "إرسال فاتورة متعاقد",
+      "contractorLabel": "المتعاقد *",
+      "selectContractor": "اختر متعاقدًا...",
+      "noContractors": "لا يوجد متعاقدون بعد — أضف متعاقدًا ضمن الموظفين العالميين",
+      "amountLabel": "المبلغ",
+      "amountUnitHint": "وحدة العملة الرئيسية",
+      "periodStart": "بداية الفترة *",
+      "periodEnd": "نهاية الفترة *",
+      "description": "الوصف"
+    },
+    "validation": {
+      "required": "يرجى ملء جميع الحقول المطلوبة",
+      "positiveAmount": "يجب أن يكون المبلغ رقمًا موجبًا",
+      "invalidPeriod": "يجب أن يكون تاريخ النهاية في تاريخ البداية أو بعده"
+    },
+    "messages": {
+      "submitted": "تم إرسال الفاتورة",
+      "submitFailed": "تعذر إرسال الفاتورة",
+      "approved": "تمت الموافقة على الفاتورة",
+      "approveFailed": "تعذرت الموافقة على الفاتورة",
+      "rejectConfirm": "هل تريد رفض هذه الفاتورة؟",
+      "rejected": "تم رفض الفاتورة",
+      "rejectFailed": "تعذر رفض الفاتورة",
+      "paid": "تم وضع علامة مدفوعة على الفاتورة",
+      "paidFailed": "تعذر وضع علامة مدفوعة على الفاتورة"
+    }
+  },
+  "globalPayrollDashboard": {
+    "title": "الرواتب العالمية",
+    "description": "إدارة القوى العاملة العالمية عبر البلدان والعملات ومتطلبات الامتثال",
+    "stats": {
+      "activeEmployees": "الموظفون النشطون",
+      "countries": "البلدان",
+      "eorWorkers": "موظفو EOR",
+      "contractors": "المتعاقدون",
+      "complianceScore": "درجة الامتثال",
+      "pendingInvoices": "الفواتير المعلقة",
+      "onboarding": "التهيئة"
+    },
+    "compliance": {
+      "good": "جيد",
+      "needsAttention": "يحتاج إلى اهتمام"
+    },
+    "employeesByCountry": {
+      "title": "الموظفون حسب البلد",
+      "empty": "لا يوجد موظفون حتى الآن. أضف أول موظف عالمي."
+    },
+    "costByCurrency": {
+      "title": "التكلفة الشهرية حسب العملة",
+      "empty": "لا توجد تكاليف رواتب نشطة حتى الآن."
+    },
+    "costAnalysis": {
+      "title": "تحليل التكلفة حسب البلد",
+      "columns": {
+        "country": "البلد",
+        "employees": "الموظفون",
+        "averageSalary": "متوسط الراتب",
+        "totalGross": "إجمالي الراتب",
+        "employerCost": "تكلفة صاحب العمل",
+        "netPay": "صافي الراتب"
+      }
+    }
+  },
+  "globalPayrollRuns": {
+    "title": "عمليات الرواتب العالمية",
+    "description": "تشغيل الرواتب شهريًا لكل بلد ومراجعتها واعتمادها ووضع علامة مدفوع عليها",
+    "statusFilter": "تصفية عمليات الرواتب حسب الحالة",
+    "allStatuses": "جميع الحالات",
+    "empty": "لا توجد عمليات رواتب بعد. أنشئ أول عملية رواتب عالمية.",
+    "columns": {
+      "country": "البلد",
+      "period": "الفترة",
+      "status": "الحالة",
+      "gross": "الإجمالي",
+      "net": "الصافي",
+      "deductions": "الاستقطاعات",
+      "employerCost": "تكلفة صاحب العمل",
+      "actions": "الإجراءات"
+    },
+    "actions": {
+      "view": "عرض عملية الرواتب",
+      "approve": "اعتماد",
+      "markPaid": "وضع علامة مدفوع"
+    },
+    "createModal": {
+      "title": "إنشاء عملية رواتب عالمية",
+      "country": "البلد *",
+      "selectCountry": "اختر بلدًا...",
+      "noCountries": "لا توجد بلدان تضم موظفين نشطين عبر EOR أو التوظيف المباشر",
+      "calculationNotice": "سيتم احتساب الاستقطاعات تلقائيًا لجميع الموظفين النشطين عبر EOR والتوظيف المباشر في البلد المحدد."
+    },
+    "detailModal": {
+      "title": "عملية الرواتب — {{country}}",
+      "netPay": "صافي الراتب",
+      "employee": "الموظف",
+      "tax": "الضريبة",
+      "socialSecurityEmployee": "الضمان الاجتماعي (الموظف)",
+      "pensionEmployee": "التقاعد (الموظف)"
+    },
+    "messages": {
+      "selectCountry": "يرجى اختيار بلد",
+      "approved": "تم اعتماد عملية الرواتب",
+      "approveFailed": "تعذر اعتماد عملية الرواتب",
+      "markedPaid": "تم وضع علامة مدفوع على عملية الرواتب",
+      "markPaidFailed": "تعذر وضع علامة مدفوع على عملية الرواتب"
+    }
+  },
+  "announcementsPage": {
+    "title": "الإعلانات",
+    "description": "إشعارات لجميع موظفي الشركة منشورة من EmpCloud",
+    "manageInEmpCloud": "الإدارة في EmpCloud",
+    "empty": "لا توجد إعلانات حتى الآن",
+    "postFromEmpCloud": "النشر من EmpCloud",
+    "pinned": "مثبّت",
+    "archived": "مؤرشف",
+    "byAuthor": "بواسطة {{author}}",
+    "unknownAuthor": "غير معروف",
+    "expires": "ينتهي في {{date}}",
+    "priorities": {
+      "low": "منخفضة",
+      "normal": "عادية",
+      "high": "مرتفعة",
+      "urgent": "عاجلة"
+    },
+    "categories": {
+      "general": "عام",
+      "hr": "الموارد البشرية",
+      "policy": "سياسة",
+      "event": "فعالية",
+      "holiday": "عطلة",
+      "maintenance": "صيانة"
+    }
+  },
+  "notificationsPage": {
+    "title": "الإشعارات",
+    "description": "كل التنبيهات والتحديثات الأخيرة في مكان واحد",
+    "markAllRead": "تحديد الكل كمقروء",
+    "bellAria": "الإشعارات، {{count}} غير مقروء",
+    "newCount": "{{count}} جديدة — تحديد كمقروء",
+    "viewAll": "عرض كل الإشعارات",
+    "tabs": {
+      "all": "الكل ({{count}})",
+      "unread": "غير المقروءة ({{count}})"
+    },
+    "empty": {
+      "noUnread": "لا توجد إشعارات غير مقروءة",
+      "none": "لا توجد إشعارات",
+      "caughtUp": "أنت على اطلاع بكل جديد!",
+      "updatesHere": "ستظهر التحديثات الجديدة هنا."
+    },
+    "items": {
+      "admin": {
+        "tdsDue": {
+          "title": "موعد تقديم TDS",
+          "description": "يستحق النموذج 24Q للربع الرابع من السنة المالية 2025–26 قريبًا",
+          "time": "يلزم اتخاذ إجراء"
+        },
+        "payrollPending": {
+          "title": "رواتب {{month}} معلقة",
+          "description": "أنشئ وشغّل رواتب هذا الشهر",
+          "time": "هذا الشهر"
+        },
+        "payrollCompleted": {
+          "title": "اكتملت آخر رواتب",
+          "description": "تم إنشاء جميع قسائم الرواتب ودفعها",
+          "time": "الشهر الماضي"
+        },
+        "activeEmployees": {
+          "title": "{{count}} موظفين نشطين",
+          "description": "جميع التسجيلات القانونية محدثة",
+          "time": "النظام"
+        }
+      },
+      "employee": {
+        "payslipAvailable": {
+          "title": "قسيمة الراتب متاحة",
+          "description": "أحدث قسيمة راتب جاهزة للعرض",
+          "time": "مؤخرًا"
+        },
+        "taxReminder": {
+          "title": "تذكير بالإقرار الضريبي",
+          "description": "أرسل إثباتات الاستثمار قبل الموعد النهائي",
+          "time": "هذا الربع"
+        },
+        "salaryCredited": {
+          "title": "تم إيداع الراتب",
+          "description": "تم إيداع راتبك في حسابك البنكي",
+          "time": "الشهر الماضي"
+        }
+      }
+    }
+  },
+  "selfServiceDashboard": {
+    "greeting": "مرحبًا، {{name}}!",
+    "userFallback": "المستخدم",
+    "description": "إليك ملخص راتبك",
+    "stats": {
+      "monthlyCtc": "التكلفة الشهرية على الشركة",
+      "latestNetPay": "أحدث صافي راتب",
+      "taxRegime": "النظام الضريبي",
+      "daysAtCompany": "أيام العمل في الشركة"
+    },
+    "regimes": {
+      "old": "النظام القديم",
+      "new": "النظام الجديد"
+    },
+    "latestPayslip": "أحدث قسيمة راتب — {{period}}",
+    "payslip": {
+      "grossPay": "الراتب الإجمالي",
+      "deductions": "الاستقطاعات",
+      "netPay": "صافي الراتب",
+      "viewAll": "عرض الكل"
+    },
+    "actions": {
+      "salaryBreakdown": "عرض تفاصيل الراتب",
+      "taxComputation": "حساب الضريبة",
+      "submitDeclarations": "إرسال الإقرارات",
+      "reimbursements": "المصروفات المستردة",
+      "profile": "ملفي الشخصي"
+    },
+    "announcements": {
+      "title": "إعلانات الشركة",
+      "readMore": "قراءة المزيد",
+      "fallbackTitle": "إعلان",
+      "priorityLabel": "أولوية {{priority}}",
+      "priorities": {
+        "low": "منخفضة",
+        "normal": "عادية",
+        "high": "مرتفعة",
+        "urgent": "عاجلة"
+      }
+    }
+  },
+  "myPayslipsPage": {
+    "title": "قسائم راتبي",
+    "description": "عرض قسائم راتبك وتنزيلها",
+    "financialYear": "السنة المالية {{start}}-{{end}}",
+    "financialYearFilter": "التصفية حسب السنة المالية",
+    "empty": "لا تتوفر قسائم راتب حتى الآن",
+    "gross": "الإجمالي",
+    "net": "الصافي",
+    "actions": {
+      "hide": "إخفاء",
+      "details": "التفاصيل",
+      "downloadPdf": "تنزيل PDF",
+      "dispute": "الاعتراض على قسيمة الراتب"
+    },
+    "earnings": "المستحقات",
+    "totalEarnings": "إجمالي المستحقات",
+    "deductions": "الاستقطاعات",
+    "totalDeductions": "إجمالي الاستقطاعات",
+    "components": {
+      "EPF": "صندوق ادخار الموظف",
+      "PF": "صندوق الادخار",
+      "PF_EE": "مساهمة الموظف في صندوق الادخار",
+      "ESI": "تأمين الموظفين الحكومي",
+      "PT": "الضريبة المهنية",
+      "TDS": "ضريبة الدخل (TDS)",
+      "INCOME_TAX": "ضريبة الدخل",
+      "LOP": "خصم الغياب"
+    },
+    "dispute": {
+      "title": "الاعتراض على قسيمة الراتب",
+      "reasonRequired": "يرجى ذكر السبب",
+      "success": "تم إرسال الاعتراض، وستراجعه الموارد البشرية.",
+      "failed": "تعذر إرسال الاعتراض",
+      "description": "إذا كنت تعتقد أن هناك خطأ في قسيمة الراتب هذه، فصِف المشكلة أدناه. ستراجعها الموارد البشرية وترد عليك.",
+      "placeholder": "صِف المشكلة، مثل استقطاع غير صحيح أو بدل مفقود",
+      "cancel": "إلغاء",
+      "submit": "إرسال الاعتراض"
+    }
+  },
+  "mySalaryPage": {
+    "title": "راتبي",
+    "description": "تفاصيل التكلفة على الشركة وهيكل راتبك",
+    "unavailable": "لا تتوفر معلومات عن الراتب",
+    "annualSummary": "الملخص السنوي",
+    "annualCtcConfigured": "التكلفة السنوية على الشركة (المعتمدة)",
+    "annualGrossComponents": "الإجمالي السنوي من المكونات",
+    "roundingNotice": "من الطبيعي وجود فروق طفيفة بين التكلفة المعتمدة على الشركة ومجموع المكونات، إذ تُقرَّب المبالغ الشهرية إلى أقرب روبية صحيحة قبل احتسابها سنويًا.",
+    "grossSalaryAnnual": "الراتب الإجمالي (سنوي)",
+    "monthlyComponent": "{{component}} الشهري",
+    "monthlyBreakdown": "تفاصيل الراتب الشهري",
+    "salaryComponents": "مكونات الراتب",
+    "effectiveFrom": "ساري من {{date}}",
+    "columns": {
+      "component": "المكوّن",
+      "monthly": "شهري",
+      "annual": "سنوي"
+    },
+    "components": {
+      "BASIC": "الراتب الأساسي",
+      "HRA": "بدل السكن (HRA)",
+      "SA": "البدل الخاص"
+    }
+  },
+  "myTaxPage": {
+    "title": "ضرائبي",
+    "description": "حساب الضريبة للسنة المالية {{financialYear}}",
+    "form16": "النموذج 16",
+    "stats": {
+      "annualIncome": "الدخل السنوي",
+      "taxableIncome": "الدخل الخاضع للضريبة",
+      "estimatedTax": "الضريبة المقدرة",
+      "tdsDeductedYtd": "TDS المخصوم منذ بداية السنة"
+    },
+    "computationTitle": "حساب الضريبة",
+    "regimes": {
+      "new": "النظام الجديد",
+      "old": "النظام القديم"
+    },
+    "rows": {
+      "grossAnnualIncome": "إجمالي الدخل السنوي",
+      "standardDeduction": "ناقص: الخصم القياسي",
+      "chapterDeductions": "ناقص: خصومات الفصل VI-A",
+      "taxableIncome": "الدخل الخاضع للضريبة",
+      "taxOnIncome": "ضريبة الدخل",
+      "cess": "رسم الصحة والتعليم (4%)",
+      "totalLiability": "إجمالي الالتزام الضريبي",
+      "monthlyTds": "TDS الشهري"
+    },
+    "tracker": {
+      "title": "متابعة خصومات TDS",
+      "totalTax": "إجمالي ضريبة السنة المالية",
+      "tdsDeductedYtd": "TDS المخصوم منذ بداية السنة",
+      "remaining": "المتبقي",
+      "progress": "التقدم",
+      "monthlyMessage": "سيُخصم TDS شهري بقيمة <strong>{{amount}}</strong> من راتبك."
+    }
+  },
+  "myDeclarationsPage": {
+    "description": "السنة المالية {{financialYear}} — إرسال إثباتات ومطالبات الاستثمار",
+    "actions": {
+      "quickDeclare": "إقرار سريع للكل",
+      "newDeclaration": "إقرار جديد",
+      "cancel": "إلغاء",
+      "submitAll": "إرسال جميع الإقرارات",
+      "submit": "إرسال الإقرار"
+    },
+    "stats": {
+      "totalDeclared": "إجمالي المبالغ المعلنة",
+      "totalApproved": "إجمالي المبالغ المعتمدة",
+      "pendingApproval": "بانتظار الموافقة"
+    },
+    "declarations": "الإقرارات",
+    "empty": "لا توجد إقرارات بعد. اختر إقرار جديد لإرسال أول إثبات استثمار.",
+    "proof": {
+      "submitted": "تم إرسال الإثبات",
+      "upload": "رفع"
+    },
+    "quick": {
+      "title": "إقرار ضريبي سريع",
+      "description": "الإقرار عن جميع استثماراتك دفعة واحدة",
+      "tip": "نصيحة: يتيح القسم 80C المطالبة بما يصل إلى ₹1,50,000 مقابل PPF وELSS وLIC وغيرها. ويمنح NPS ضمن 80CCD(1B) خصماً إضافياً قدره ₹50,000.",
+      "defaultDescription": "إقرار ضريبي بموجب القسم {{section}}"
+    },
+    "sections": {
+      "80C": "80C — PPF وELSS وLIC وغيرها",
+      "80CCD_1B": "80CCD(1B) — NPS",
+      "80D": "80D — التأمين الطبي",
+      "80E": "80E — فوائد قرض التعليم",
+      "80G": "80G — التبرعات",
+      "80TTA": "80TTA — فوائد المدخرات",
+      "HRA": "HRA — إيجار السكن"
+    },
+    "validation": {
+      "sectionRequired": "يرجى اختيار قسم",
+      "fieldRequired": "يرجى تعبئة هذا الحقل",
+      "validAmount": "يرجى إدخال مبلغ صالح",
+      "nonnegativeAmount": "لا يمكن أن يكون المبلغ سالباً",
+      "fileTooLarge": "حجم الملف أكبر من 5 ميغابايت",
+      "fileType": "يُسمح فقط بملفات PDF أو JPG أو PNG",
+      "oneAmount": "أدخل مبلغاً واحداً على الأقل"
+    },
+    "messages": {
+      "proofUploaded": "تم رفع الإثبات",
+      "proofUploadFailed": "تعذر رفع الإثبات",
+      "submitted": "تم إرسال الإقرار",
+      "submitFailed": "تعذر إرسال الإقرار",
+      "submittedCount_one": "تم إرسال إقرار واحد",
+      "submittedCount_other": "تم إرسال {{count}} إقرارات",
+      "submitAllFailed": "تعذر إرسال الإقرارات"
+    },
+    "form": {
+      "descriptionPlaceholder": "مثال: مساهمة PPF",
+      "amount": "المبلغ",
+      "proofDocument": "مستند الإثبات",
+      "optional": "اختياري",
+      "uploadProof": "رفع مستند الإثبات",
+      "fileSelected": "{{size}} كيلوبايت — اختر للتغيير",
+      "dropzone": "اختر ملفاً للرفع أو اسحبه وأفلته",
+      "fileHelp": "PDF أو JPG أو PNG حتى 5 ميغابايت"
+    }
+  },
+  "myReimbursementsPage": {
+    "title": "مستحقات المصروفات الخاصة بي",
+    "description": "إرسال مطالبات المصروفات ومتابعتها",
+    "newClaim": "مطالبة جديدة",
+    "stats": {
+      "total": "إجمالي المطالبات",
+      "pending": "قيد الانتظار",
+      "approvedPaid": "مقبولة / مدفوعة"
+    },
+    "empty": {
+      "title": "لا توجد مطالبات مصروفات",
+      "description": "اختر مطالبة جديدة لإرسال مصروف"
+    },
+    "columns": {
+      "category": "الفئة",
+      "description": "الوصف",
+      "amount": "المبلغ",
+      "date": "التاريخ",
+      "status": "الحالة"
+    },
+    "categories": {
+      "medical": "طبي",
+      "travel": "سفر",
+      "food": "طعام ووجبات",
+      "equipment": "معدات",
+      "internet": "إنترنت / هاتف",
+      "books": "كتب وتعلّم",
+      "other": "أخرى"
+    },
+    "status": {
+      "pending": "قيد الانتظار",
+      "approved": "مقبولة",
+      "paid": "مدفوعة",
+      "rejected": "مرفوضة"
+    },
+    "messages": {
+      "invalidAmount": "يجب أن يكون المبلغ صفراً أو رقماً موجباً",
+      "submitted": "تم إرسال المطالبة للموافقة",
+      "failed": "تعذر إرسال المطالبة"
+    },
+    "modal": {
+      "title": "إرسال مطالبة مصروفات",
+      "category": "الفئة",
+      "description": "الوصف",
+      "descriptionPlaceholder": "مثال: سيارة أجرة لاجتماع عميل",
+      "amount": "المبلغ (₹)",
+      "expenseDate": "تاريخ المصروف",
+      "cancel": "إلغاء",
+      "submit": "إرسال المطالبة"
+    }
+  },
+  "holidaysPage": {
+    "title": "تقويم العطلات",
+    "configured_one": "{{year}} — تم إعداد عطلة واحدة",
+    "configured_other": "{{year}} — تم إعداد {{count}} عطلات",
+    "noHolidays": "لا توجد عطلات",
+    "upcoming": "العطلات القادمة",
+    "past": "العطلات السابقة",
+    "actions": {
+      "add": "إضافة عطلة",
+      "remove": "إزالة العطلة",
+      "cancel": "إلغاء"
+    },
+    "columns": {
+      "holiday": "العطلة",
+      "date": "التاريخ",
+      "day": "اليوم",
+      "type": "النوع"
+    },
+    "types": {
+      "national": "وطنية",
+      "regional": "إقليمية",
+      "optional": "اختيارية / مقيّدة"
+    },
+    "messages": {
+      "nameRequired": "اسم العطلة مطلوب",
+      "nameLetter": "يجب أن يحتوي اسم العطلة على حرف واحد على الأقل",
+      "added": "تمت إضافة العطلة",
+      "addFailed": "تعذرت إضافة العطلة",
+      "removed": "تمت إزالة العطلة",
+      "removeFailed": "تعذرت إزالة العطلة"
+    },
+    "modal": {
+      "title": "إضافة عطلة",
+      "name": "اسم العطلة",
+      "namePlaceholder": "مثال: ديوالي",
+      "nameTitle": "يجب أن يحتوي على حرف واحد على الأقل",
+      "date": "التاريخ",
+      "type": "النوع"
+    }
+  },
+  "payrollRuns": {
+    "title": "دورات الرواتب",
+    "description": "معالجة الرواتب الشهرية",
+    "runPayroll": "تشغيل الرواتب",
+    "noRuns": "لا توجد دورات رواتب بعد.",
+    "runFirst": "تشغيل أول دورة رواتب",
+    "totalRuns": "إجمالي الدورات",
+    "allPeriods": "كل الفترات",
+    "latestNetPay": "أحدث صافي راتب",
+    "noComputedRuns": "لا توجد دورات محسوبة",
+    "markedPaid": "المعلّمة كمدفوعة",
+    "inProgress": "قيد التنفيذ",
+    "inProgressSubtitle": "مسودة · محسوبة · معتمدة",
+    "filterAria": "تصفية الدورات حسب الحالة",
+    "noMatches": "لا توجد دورات تطابق هذا المرشح.",
+    "newTitle": "دورة رواتب جديدة",
+    "newDescription": "إنشاء دورة رواتب شهرية جديدة",
+    "createInfo": "ينشئ دورة مسودة ويحسب الإجمالي والاستقطاعات والصافي لكل موظف نشط في الشهر المحدد. يمكنك مراجعتها واعتمادها قبل تعليمها كمدفوعة.",
+    "month": "الشهر",
+    "year": "السنة",
+    "payDate": "تاريخ الدفع",
+    "cancel": "إلغاء",
+    "createRun": "إنشاء الدورة",
+    "created": "تم إنشاء دورة الرواتب",
+    "missingReturnedId": "أُرسلت الدورة، لكن الخادم لم يُرجع معرّفًا. حدّث القائمة للتحقق.",
+    "createFailed": "تعذر إنشاء دورة الرواتب",
+    "missingId": "تفتقد دورة الرواتب هذه إلى معرّف — يرجى تحديث القائمة.",
+    "columns": {
+      "period": "الفترة",
+      "employees": "الموظفون",
+      "grossPay": "الراتب الإجمالي",
+      "deductions": "الاستقطاعات",
+      "netPay": "صافي الراتب",
+      "status": "الحالة"
+    },
+    "statuses": {
+      "all": "الكل",
+      "draft": "مسودة",
+      "processing": "قيد المعالجة",
+      "computed": "محسوبة",
+      "approved": "معتمدة",
+      "paid": "مدفوعة",
+      "cancelled": "ملغاة"
+    },
+    "validation": {
+      "month": "يرجى اختيار شهر صالح",
+      "year": "يرجى إدخال سنة صالحة (2020–2100)",
+      "futurePeriod": "لا يمكن إنشاء دورة رواتب لفترة مستقبلية",
+      "payDate": "يرجى اختيار تاريخ الدفع"
+    }
+  },
+  "pagination": {
+    "range": "{{start}}–{{end}} من {{total}}",
+    "pageOf": "الصفحة {{page}} من {{totalPages}}",
+    "previous": "السابق",
+    "previousPage": "الصفحة السابقة",
+    "next": "التالي",
+    "nextPage": "الصفحة التالية"
+  },
+  "adminDeclarations": {
+    "title": "الإقرارات الضريبية",
+    "description": "راجع إقرارات الاستثمار التي قدمها الموظفون للسنة {{financialYear}}.",
+    "pending": {
+      "title": "الموافقات المعلّقة",
+      "badge": "{{pending}} معلّقة · {{count}} موظفين",
+      "badge_one": "{{pending}} معلّقة · موظف واحد",
+      "badge_other": "{{pending}} معلّقة · {{count}} موظفين",
+      "loading": "جارٍ تحميل الإقرارات المعلّقة…",
+      "empty": "لا توجد إقرارات تنتظر الموافقة للسنة {{financialYear}}. كل شيء محدّث.",
+      "declaredAmount": "تم إقرار {{amount}}"
+    },
+    "employees": {
+      "title": "الموظفون",
+      "loading": "جارٍ التحميل…",
+      "noMatches": "لا يوجد موظفون مطابقون.",
+      "shownOf": "{{shown}} من {{total}}"
+    },
+    "filters": {
+      "searchPlaceholder": "الاسم أو البريد أو الرمز",
+      "filterDepartment": "التصفية حسب القسم",
+      "allDepartments": "جميع الأقسام",
+      "filterLocation": "التصفية حسب الموقع",
+      "allLocations": "جميع المواقع",
+      "clear": "مسح عوامل التصفية"
+    },
+    "declarations": {
+      "pickEmployee": "اختر موظفًا",
+      "approving": "جارٍ الاعتماد…",
+      "approvePending": "اعتماد {{count}} إقرارات معلّقة",
+      "approvePending_one": "اعتماد إقرار معلّق واحد",
+      "approvePending_other": "اعتماد {{count}} إقرارات معلّقة",
+      "selectPrompt": "اختر موظفًا من القائمة لعرض إقراراته الضريبية.",
+      "loading": "جارٍ تحميل الإقرارات…",
+      "empty": "لم يتم تقديم إقرارات للسنة {{financialYear}}."
+    },
+    "stats": {
+      "declared": "المُقر به",
+      "approved": "المعتمد",
+      "pending": "المعلّق"
+    },
+    "columns": {
+      "section": "القسم",
+      "description": "الوصف",
+      "declared": "المُقر به",
+      "approved": "المعتمد",
+      "status": "الحالة",
+      "proof": "الإثبات",
+      "action": "الإجراء"
+    },
+    "statuses": {
+      "pending": "معلّق",
+      "approved": "معتمد",
+      "rejected": "مرفوض"
+    },
+    "proof": {
+      "view": "عرض"
+    },
+    "actions": {
+      "approve": "اعتماد"
+    },
+    "toasts": {
+      "noPending": "لا توجد إقرارات معلّقة لاعتمادها.",
+      "approvedCount": "تم اعتماد {{count}} إقرارات.",
+      "approvedCount_one": "تم اعتماد إقرار واحد.",
+      "approvedCount_other": "تم اعتماد {{count}} إقرارات.",
+      "approveAllFailed": "تعذر اعتماد الإقرارات",
+      "alreadyApproved": "تم اعتماده بالفعل.",
+      "approvedOne": "تم اعتماد الإقرار.",
+      "approveOneFailed": "تعذر اعتماد الإقرار"
+    }
+  },
+  "taxCalculator": {
+    "title": "حاسبة الضرائب",
+    "description": "تقدير افتراضي لضريبة الدخل — اختر موظفًا وأعد الحساب باستخدام بيانات مخصصة",
+    "financialYearShort": "السنة المالية {{year}}",
+    "simulationFailed": "تعذر حساب الضريبة. يرجى المحاولة مرة أخرى.",
+    "newRegimeInfo": "النظام الجديد — ينطبق فقط الخصم القياسي البالغ ₹75,000. لا تتوفر خصومات HRA و80C و80D وغيرها من خصومات الفصل VI-A.",
+    "steps": {
+      "employee": "الخطوة 1 · الموظف",
+      "inputs": "الخطوة 2 · البيانات",
+      "taxBreakdown": "الخطوة 3 · تفاصيل الضريبة"
+    },
+    "regimes": {
+      "new": "النظام الجديد",
+      "old": "النظام القديم"
+    },
+    "employee": {
+      "ctc": "CTC",
+      "select": "ابحث عن موظف واختره…",
+      "joined": "تاريخ الانضمام {{date}}",
+      "monthsLeft": "متبقي {{count}} أشهر في هذه السنة المالية",
+      "monthsLeft_one": "متبقي شهر واحد في هذه السنة المالية",
+      "monthsLeft_other": "متبقي {{count}} أشهر في هذه السنة المالية",
+      "midFyJoiner": "انضمام في منتصف السنة المالية",
+      "searchPlaceholder": "البحث بالاسم أو البريد أو الرمز…",
+      "noMatches": "لا يوجد موظفون يطابقون «{{search}}»"
+    },
+    "empty": {
+      "title": "اختر موظفًا للبدء",
+      "description": "تحمّل الحاسبة الراتب الحالي والنظام والإقرارات المعتمدة لتتمكن من تعديل أي قيمة ورؤية TDS الشهري الناتج."
+    },
+    "inputs": {
+      "reset": "استعادة القيم المحفوظة",
+      "loadingSaved": "جارٍ تحميل القيم المحفوظة…",
+      "noSalary": "لم يتم تعيين هيكل راتب نشط. تبدأ جميع الحقول من الصفر — أدخل القيم يدويًا لتقدير الضريبة.",
+      "midFyTitle": "انضمام في منتصف السنة — أدخل نموذج 12B أدناه",
+      "midFyDescription": "انضم هذا الموظف في منتصف السنة المالية {{financialYear}}. بدون دخل وTDS من صاحب العمل السابق، سيوزّع النظام الضريبة السنوية كاملة على {{count}} أشهر فقط ويخصم مبلغًا زائدًا.",
+      "midFyDescription_one": "انضم هذا الموظف في منتصف السنة المالية {{financialYear}}. بدون دخل وTDS من صاحب العمل السابق، سيطبّق النظام الضريبة السنوية كاملة على شهر واحد فقط ويخصم مبلغًا زائدًا.",
+      "midFyDescription_other": "انضم هذا الموظف في منتصف السنة المالية {{financialYear}}. بدون دخل وTDS من صاحب العمل السابق، سيوزّع النظام الضريبة السنوية كاملة على {{count}} أشهر فقط ويخصم مبلغًا زائدًا.",
+      "regime": "النظام الضريبي",
+      "compare": "مقارنة النظام القديم بالجديد",
+      "pan": "PAN",
+      "panHint": "نسبة ثابتة 20% بموجب 206AA إذا كان فارغًا",
+      "annualGross": "الإجمالي السنوي",
+      "annualBasic": "الراتب الأساسي السنوي",
+      "annualHra": "HRA السنوي",
+      "employeePfAnnual": "PF الموظف (سنوي)"
+    },
+    "priorEmployer": {
+      "title": "صاحب العمل السابق (نموذج 12B)",
+      "save": "حفظ في الملف الشخصي",
+      "saved": "تم حفظ TDS الخاص بصاحب العمل السابق",
+      "saveFailed": "تعذر حفظ TDS السابق",
+      "description": "الدخل الذي كسبه الموظف وTDS الذي خصمه صاحب العمل السابق خلال هذه السنة المالية. تنتقل القيم المحفوظة إلى دورة الرواتب التالية لمنع الخصم المزدوج.",
+      "gross": "إجمالي صاحب العمل السابق (هذه السنة المالية)",
+      "tds": "TDS لدى صاحب العمل السابق",
+      "source": "المصدر / الملاحظات (اختياري)",
+      "sourcePlaceholder": "مثال: «تم رفع نموذج 12B بتاريخ 2026-09-01»"
+    },
+    "oldRegime": {
+      "title": "بيانات إضافية للنظام القديم",
+      "annualRent": "الإيجار السنوي المدفوع",
+      "metro": "مدينة كبرى (حد HRA بنسبة 50% من الراتب الأساسي)",
+      "declarations": "إقرارات الفصل VI-A",
+      "add": "إضافة",
+      "noDeclarations": "لا توجد إقرارات. انقر على «إضافة» لمحاكاة 80C و80D و80CCD(1B) وغيرها.",
+      "remove": "إزالة"
+    },
+    "actions": {
+      "compareRegimes": "مقارنة الأنظمة",
+      "calculate": "حساب"
+    },
+    "validation": {
+      "invalidPan": "يبدو تنسيق PAN غير صالح — التنسيق المتوقع ABCDE1234F.",
+      "section80CCap": "إجمالي 80C هو {{amount}} — يمكن خصم ₹1,50,000 فقط (الحد الأقصى).",
+      "npsCap": "الحد الأقصى لـ NPS بموجب 80CCD(1B) هو ₹50,000.",
+      "hraNeedsRent": "يتطلب إعفاء HRA دفع إيجار — أدخل الإيجار السنوي للمطالبة به."
+    },
+    "results": {
+      "calculating": "جارٍ الحساب…",
+      "clickCalculate": "انقر على حساب لتقدير الضريبة",
+      "enterAnnualGross": "أدخل الإجمالي السنوي لتقدير الضريبة",
+      "section206aaTitle": "تم تطبيق القسم 206AA",
+      "section206aaDetail": "PAN غير متوفر، لذلك يُخصم 20% من الإجمالي السنوي بغض النظر عن النظام أو الإقرارات.",
+      "sameTax": "ينتج عن النظامين الضريبة نفسها",
+      "saves": "يوفر {{regime}} مبلغ {{amount}}",
+      "recommended": "الموصى به:",
+      "monthlyTds": "TDS الشهري",
+      "tapRegime": "اختر نظامًا لرؤية التفاصيل الكاملة أدناه",
+      "grossAnnualIncome": "الدخل السنوي الإجمالي",
+      "less": "ناقص: {{item}}",
+      "taxableIncome": "الدخل الخاضع للضريبة",
+      "taxOnIncome": "ضريبة الدخل (بعد خصم 87A)",
+      "surcharge": "الضريبة الإضافية",
+      "cess": "رسم الصحة والتعليم (4%)",
+      "totalAnnualTax": "إجمالي الضريبة السنوية",
+      "tdsPaidYtd": "TDS المدفوع منذ بداية السنة",
+      "remainingTax": "الضريبة المتبقية",
+      "savingSuggestion": "استثمر {{investment}} إضافية بموجب القسم 80C لتوفير نحو {{saving}} من الضريبة."
+    },
+    "sections": {
+      "80C": "PPF / ELSS / LIC / أصل القرض",
+      "80CCD_1B": "NPS إضافي",
+      "80D": "التأمين الطبي",
+      "80E": "فائدة قرض التعليم",
+      "80G": "التبرعات",
+      "80TTA": "فائدة المدخرات"
+    }
+  },
+  "taxOverview": {
+    "title": "نظرة عامة على الضرائب",
+    "financialYear": "السنة المالية {{start}}-{{end}}",
+    "description": "ملخص ضريبة الدخل للسنة {{fy}}",
+    "missingPanCount": "يوجد {{count}} موظفين في هذه الصفحة دون PAN صالح",
+    "missingPanCount_one": "يوجد موظف واحد في هذه الصفحة دون PAN صالح",
+    "missingPanCount_other": "يوجد {{count}} موظفين في هذه الصفحة دون PAN صالح",
+    "missingPanDetail": "يتم خصم TDS لهؤلاء الموظفين بمعدل ثابت قدره 20% بموجب القسم 206AA. اطلب من كل موظف تحديث PAN في ملفه الشخصي لتطبيق الشرائح القياسية.",
+    "summaryTitle": "ملخص ضرائب الموظفين",
+    "regimeSuffix": "النظام {{regime}}",
+    "noSalaryStructure": "لم يتم تعيين هيكل راتب",
+    "empty": "لم يتم العثور على موظفين.",
+    "stats": {
+      "totalEmployees": "إجمالي الموظفين",
+      "estimatedTaxPage": "الضريبة المقدرة (الصفحة)",
+      "tdsDeductedYtdPage": "TDS المخصوم منذ بداية السنة (الصفحة)",
+      "pageOf": "الصفحة {{page}} من {{totalPages}}",
+      "newRegimePage": "النظام الجديد (الصفحة)",
+      "optedIn": "موظفون اختاروا النظام"
+    },
+    "filters": {
+      "searchPlaceholder": "البحث بالاسم أو البريد أو الرمز أو المسمى الوظيفي…",
+      "filterDepartment": "التصفية حسب القسم",
+      "allDepartments": "جميع الأقسام",
+      "filterLocation": "التصفية حسب الموقع",
+      "allLocations": "جميع المواقع",
+      "clear": "مسح عوامل التصفية"
+    },
+    "columns": {
+      "employee": "الموظف",
+      "regime": "النظام الضريبي",
+      "estimatedTax": "الضريبة المقدرة",
+      "tdsDeductedYtd": "TDS المخصوم منذ بداية السنة"
+    },
+    "pan": {
+      "label": "PAN",
+      "invalidTitle": "لا يوجد PAN صالح — يُخصم TDS بمعدل ثابت 20% بموجب القسم 206AA.",
+      "missing": "لا يوجد PAN"
+    },
+    "regimes": {
+      "new": "الجديد",
+      "old": "القديم"
+    }
+  },
+  "payslipList": {
+    "title": "قسائم الرواتب",
+    "count": "{{count}} قسائم راتب",
+    "count_one": "قسيمة راتب واحدة",
+    "count_other": "{{count}} قسائم راتب",
+    "loading": "جارٍ التحميل…",
+    "firstOf": "عرض أول {{loaded}} من أصل {{total}} قسيمة — حدّد عوامل التصفية لتضييق النتائج",
+    "filteredOf": "{{filtered}} من أصل {{total}} قسيمة",
+    "exportAll": "تصدير الكل",
+    "exportSuccess": "تم تصدير ملف CSV لقسائم الرواتب",
+    "exportFailed": "فشل التصدير",
+    "emptyTitle": "لا توجد قسائم رواتب لهذا الاختيار.",
+    "emptyHint": "جرّب شهرًا أو سنة مختلفة.",
+    "cappedNotice": "يتم عرض أول {{loaded}} من أصل {{total}} قسيمة — تعكس الإجماليات أعلاه هذا العرض. حدّد الشهر أو السنة أو القسم لعرض أرقام دقيقة.",
+    "excludedTotals": "لا تشمل الإجماليات {{count}} قسائم متنازعًا عليها أو ملغاة.",
+    "excludedTotals_one": "لا تشمل الإجماليات قسيمة واحدة متنازعًا عليها أو ملغاة.",
+    "excludedTotals_other": "لا تشمل الإجماليات {{count}} قسائم متنازعًا عليها أو ملغاة.",
+    "emptyFiltered": "لا توجد قسائم تطابق عوامل التصفية.",
+    "filters": {
+      "search": "بحث",
+      "searchPlaceholder": "الاسم أو الرمز…",
+      "department": "القسم",
+      "allDepartments": "جميع الأقسام",
+      "location": "الموقع",
+      "allLocations": "جميع المواقع",
+      "month": "الشهر",
+      "allMonths": "جميع الأشهر",
+      "year": "السنة",
+      "allYears": "جميع السنوات"
+    },
+    "stats": {
+      "payslips": "قسائم الرواتب",
+      "inView": "في العرض",
+      "of": "من أصل {{count}}",
+      "gross": "الإجمالي",
+      "grossEarnings": "إجمالي الدخل",
+      "deductions": "الاستقطاعات",
+      "totalDeductions": "إجمالي الاستقطاعات",
+      "netPay": "صافي الراتب",
+      "takeHome": "المبلغ المستلم"
+    },
+    "columns": {
+      "employee": "الموظف",
+      "period": "الفترة",
+      "days": "الأيام",
+      "gross": "الإجمالي",
+      "deductions": "الاستقطاعات",
+      "netPay": "صافي الراتب",
+      "status": "الحالة"
+    },
+    "statuses": {
+      "draft": "مسودة",
+      "generated": "تم الإنشاء",
+      "sent": "تم الإرسال",
+      "viewed": "تم العرض",
+      "paid": "مدفوع",
+      "disputed": "متنازع عليه",
+      "resolved": "تم الحل",
+      "cancelled": "ملغى",
+      "pending": "معلّق",
+      "rejected": "مرفوض"
+    },
+    "actions": {
+      "view": "عرض",
+      "downloadPdf": "تنزيل PDF"
+    },
+    "modal": {
+      "fallbackTitle": "قسيمة راتب",
+      "lopNotice": "تم دفع {{paid}} من أصل {{total}} يومًا — خُصم {{lop}} من أيام LOP",
+      "earnings": "الدخل",
+      "grossPay": "الراتب الإجمالي",
+      "deductions": "الاستقطاعات",
+      "totalDeductions": "إجمالي الاستقطاعات",
+      "netPay": "صافي الراتب",
+      "printSavePdf": "طباعة / حفظ PDF",
+      "close": "إغلاق"
+    }
+  },
+  "salaryStructures": {
+    "title": "هياكل الرواتب",
+    "configured": "تم إعداد {{count}} هياكل",
+    "configured_one": "تم إعداد هيكل واحد",
+    "configured_other": "تم إعداد {{count}} هياكل",
+    "newStructure": "هيكل جديد",
+    "noStructures": "لا توجد هياكل رواتب بعد.",
+    "createFirst": "إنشاء أول هيكل",
+    "editTitle": "تعديل هيكل الراتب",
+    "newTitle": "هيكل راتب جديد",
+    "structureName": "اسم الهيكل",
+    "structureNamePlaceholder": "مثال: CTC الهند القياسي",
+    "description": "الوصف",
+    "descriptionPlaceholder": "للموظفين بدوام كامل",
+    "components": "المكونات",
+    "nightHelpAria": "مساعدة حساب بدل الليل",
+    "nightHelpTitle": "كيفية حساب بدل الليل",
+    "nightOvertimeHelp": "كيفية حساب بدل الليل والعمل الإضافي",
+    "addPresetAria": "إضافة مكون جاهز",
+    "addPreset": "+ إضافة إعداد جاهز…",
+    "custom": "مخصص",
+    "componentName": "اسم المكون",
+    "auto": "تلقائي",
+    "nightRatePlaceholder": "₹/ليلة",
+    "dayRatePlaceholder": "₹/يوم",
+    "percentPlaceholder": "% مثل 10",
+    "multiplierPlaceholder": "مثل 2",
+    "autoTitle": "يُملأ تلقائيًا من CTC عند التعيين",
+    "info": "معلومات",
+    "noteTitle": "ملاحظة:",
+    "noteText": "تُحسب الاستقطاعات القانونية (EPF وESI وPT وTDS) تلقائيًا. استخدم الاستقطاع للاستقطاعات الدورية غير القانونية، والرصيد في أحد بنود الدخل لاستيعاب الجزء المتبقي من CTC.",
+    "cancel": "إلغاء",
+    "updateStructure": "تحديث الهيكل",
+    "createStructure": "إنشاء الهيكل",
+    "gotIt": "فهمت",
+    "deleteTitle": "حذف هيكل الراتب؟",
+    "deleteDescription": "سيتم حذف «{{name}}». يحتفظ الموظفون المعينون برواتبهم ولا تتأثر قسائم الرواتب المحسوبة.",
+    "delete": "حذف",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "default": "افتراضي",
+    "defaultStructureName": "هيكل CTC القياسي",
+    "defaultStructureDescription": "هيكل الراتب الافتراضي بمكونات الأساسي وHRA وSA وPF وESI",
+    "noComponents": "لا توجد مكونات",
+    "noComponentsDefined": "لم يتم تعريف مكونات",
+    "duplicate": "تكرار",
+    "duplicateAria": "تكرار الهيكل",
+    "edit": "تعديل",
+    "editAria": "تعديل الهيكل",
+    "deleteAria": "حذف الهيكل",
+    "collapse": "طي",
+    "expand": "توسيع",
+    "statutoryNote": "تُحسب EPF وESI والضريبة المهنية وTDS تلقائيًا أثناء الرواتب — وليست جزءًا من هيكل الراتب.",
+    "created": "تم إنشاء هيكل الراتب",
+    "updated": "تم تحديث هيكل الراتب",
+    "deleted": "تم حذف هيكل الراتب",
+    "duplicated": "تم تكرار الهيكل",
+    "saveFailed": "تعذر الحفظ",
+    "deleteFailed": "تعذر الحذف",
+    "duplicateFailed": "تعذر التكرار",
+    "copyName": "{{name}} (نسخة)",
+    "columns": {
+      "name": "الاسم",
+      "code": "الرمز",
+      "type": "النوع",
+      "calc": "الحساب",
+      "value": "القيمة",
+      "percentOf": "% من",
+      "component": "المكون",
+      "calculation": "الحساب"
+    },
+    "types": {
+      "earning": "دخل",
+      "deduction": "استقطاع",
+      "reimbursement": "تعويض",
+      "reimbursementShort": "تعويض"
+    },
+    "counts": {
+      "earning": "{{count}} بنود دخل",
+      "earning_one": "دخل واحد",
+      "earning_other": "{{count}} بنود دخل",
+      "deduction": "{{count}} استقطاعات",
+      "deduction_one": "استقطاع واحد",
+      "deduction_other": "{{count}} استقطاعات",
+      "reimbursement": "{{count}} تعويضات",
+      "reimbursement_one": "تعويض واحد",
+      "reimbursement_other": "{{count}} تعويضات",
+      "earningLabel": "دخل",
+      "earningLabel_one": "دخل",
+      "earningLabel_other": "دخل",
+      "deductionLabel": "استقطاعات",
+      "deductionLabel_one": "استقطاع",
+      "deductionLabel_other": "استقطاعات"
+    },
+    "calcs": {
+      "perNight": "لكل ليلة ₹",
+      "dayPay": "× أجر اليوم",
+      "netPayPercent": "% من الصافي",
+      "perOtDay": "لكل يوم إضافي ₹",
+      "fixed": "ثابت",
+      "balance": "رصيد"
+    },
+    "calculationText": {
+      "percentageOf": "{{value}}% من {{base}}",
+      "fixed": "ثابت ₹{{value}}",
+      "perNight": "₹{{value}} / ليلة",
+      "wholeSalaryNight": "{{value}}× كامل الراتب (وردية ليلية)",
+      "netPayNight": "{{value}}% من الصافي (وردية ليلية)",
+      "perOtDay": "₹{{value}} / يوم إضافي",
+      "dayPayOt": "{{value}}× أجر اليوم / يوم إضافي",
+      "balancing": "موازنة"
+    },
+    "presetNames": {
+      "BASIC": "الراتب الأساسي",
+      "HRA": "بدل السكن",
+      "SA": "بدل خاص",
+      "CA": "بدل المواصلات",
+      "MA": "بدل طبي",
+      "LTA": "بدل السفر",
+      "BONUS": "مكافأة الأداء",
+      "NIGHT_ALLOW": "بدل الليل",
+      "OVERTIME": "عمل إضافي",
+      "CANTEEN": "استقطاع المقصف",
+      "WELFARE": "صندوق الرعاية",
+      "ADV_REC": "استرداد السلفة"
+    },
+    "validation": {
+      "singleBalance": "يمكن لمكون واحد فقط استخدام حساب الرصيد.",
+      "balanceEarning": "حساب الرصيد صالح للدخل فقط ({{code}}).",
+      "percentage": "{{code}}: يجب أن تكون النسبة بين 0 و100.",
+      "percentageBase": "{{code}}: اختر أساس النسبة مثل CTC أو BASIC.",
+      "fixedEarning": "{{code}}: يجب أن يكون الدخل الثابت أكبر من 0.",
+      "nightRate": "{{code}}: أدخل سعرًا لليلة أكبر من 0.",
+      "nightMultiplier": "{{code}}: يجب ألا يقل معامل الليل عن 1.",
+      "netPercentage": "{{code}}: أدخل نسبة صافي بين 0 و100.",
+      "overtimeRate": "{{code}}: أدخل سعر يوم إضافي أكبر من 0.",
+      "overtimeMultiplier": "{{code}}: يجب ألا يقل معامل العمل الإضافي عن 1."
+    },
+    "help": {
+      "title": "بدل الليل والعمل الإضافي — طرق الحساب",
+      "intro": "يُدفع بدل الليل فقط للأيام التي عُمل فيها ضمن وردية محددة is_night_shift = 1. لا تُحتسب أيام LOP.",
+      "modeValue": "الطريقة + القيمة",
+      "allowanceAdded": "البدل المضاف",
+      "perNight": "لكل ليلة",
+      "flatExample": "₹250 ثابتة × 22 ليلة",
+      "addedOnBase": "مضاف فوق الأساسي",
+      "double": "مضاعف",
+      "doubleFormula": "الأساسي 166,666 × (2 − 1)",
+      "doubleTotal": "← الإجمالي = الأساسي × 2 = 333,332",
+      "oneHalfFormula": "الأساسي 166,666 × (1.5 − 1)",
+      "oneHalfTotal": "← الإجمالي = الأساسي × 1.5 = 250,000",
+      "howModesWork": "كيفية عمل كل طريقة:",
+      "perNightExplanation": "لكل ليلة ₹ — مبلغ ثابت لكل ليلة عمل يضاف إلى الراتب المعتاد.",
+      "dayPayExplanation": "× أجر اليوم — يُدفع كامل راتب موظف الوردية الليلية بالمعامل، ويلزم العمل ليلة واحدة على الأقل.",
+      "exampleBase": "إجمالي الراتب الأساسي الشهري في المثال: ₹166,666.",
+      "overtimeTitle": "العمل الإضافي (يوم راحة أو عطلة):",
+      "overtimeCount": "أيام العمل الإضافي هي الحضور في يوم راحة أو عطلة وتُعلّم تلقائيًا WOT/HOT.",
+      "perOtExplanation": "لكل يوم إضافي ₹ — مبلغ ثابت لكل يوم إضافي.",
+      "otDayPayExplanation": "× أجر اليوم — معامل الراتب اليومي لكل يوم إضافي.",
+      "notesTitle": "ملاحظات.",
+      "notesText": "البدل دخل خاضع للضريبة، لذلك لا تتضاعف EPF وTDS ببساطة. تُحتسب الليلة فقط عند العمل الفعلي (نصف يوم = 0.5)."
+    }
+  }
+}

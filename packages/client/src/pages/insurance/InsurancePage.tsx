@@ -28,14 +28,9 @@ import {
   Trash2,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
-const POLICY_TYPES = [
-  { value: "group_health", label: "Group Health" },
-  { value: "group_life", label: "Group Life" },
-  { value: "disability", label: "Disability" },
-  { value: "accidental", label: "Accidental" },
-  { value: "travel", label: "Travel" },
-];
+const POLICY_TYPES = ["group_health", "group_life", "disability", "accidental", "travel"];
 
 // #100 — The claim-type dropdown used to list only medical-specific categories
 // (hospitalization, outpatient, etc.) even though policies could be Group Life,
@@ -43,16 +38,16 @@ const POLICY_TYPES = [
 // a matching claim type. Union the policy types into the options, grouped
 // so the common ones still lead.
 const CLAIM_TYPES = [
-  { value: "hospitalization", label: "Hospitalization" },
-  { value: "outpatient", label: "Outpatient" },
-  { value: "dental", label: "Dental" },
-  { value: "vision", label: "Vision" },
-  { value: "life", label: "Life" },
-  { value: "disability", label: "Disability" },
-  { value: "accidental", label: "Accidental" },
-  { value: "travel", label: "Travel" },
-  { value: "group_health", label: "Group Health" },
-  { value: "group_life", label: "Group Life" },
+  "hospitalization",
+  "outpatient",
+  "dental",
+  "vision",
+  "life",
+  "disability",
+  "accidental",
+  "travel",
+  "group_health",
+  "group_life",
 ];
 
 const STATUS_BADGE: Record<string, "active" | "draft" | "inactive"> = {
@@ -69,6 +64,7 @@ const STATUS_BADGE: Record<string, "active" | "draft" | "inactive"> = {
 };
 
 export function InsurancePage() {
+  const { t, i18n } = useTranslation();
   const [tab, setTab] = useState<"policies" | "enrollments" | "claims">("policies");
   const [showCreatePolicy, setShowCreatePolicy] = useState(false);
   const [showEnroll, setShowEnroll] = useState(false);
@@ -125,7 +121,7 @@ export function InsurancePage() {
     const renewal = String(fd.get("renewalDate") || "");
     // Client-side guard for #13 — server rejects too but we fail fast.
     if (start && end && new Date(end).getTime() < new Date(start).getTime()) {
-      toast.error("Policy end date cannot be before start date");
+      toast.error(t("insurancePage.messages.invalidEndDate"));
       return;
     }
     // #98 — Renewal date is meaningful only after the policy ends. It can't
@@ -135,12 +131,12 @@ export function InsurancePage() {
       const renewTime = new Date(renewal).getTime();
       const today = new Date().setHours(0, 0, 0, 0);
       if (renewTime < today) {
-        toast.error("Renewal date cannot be in the past");
+        toast.error(t("insurancePage.messages.renewalInPast"));
         return;
       }
       const floor = end ? new Date(end).getTime() : start ? new Date(start).getTime() : 0;
       if (floor && renewTime < floor) {
-        toast.error("Renewal date must be on or after the policy end date");
+        toast.error(t("insurancePage.messages.invalidRenewalDate"));
         return;
       }
     }
@@ -149,7 +145,7 @@ export function InsurancePage() {
     // before sending so HR can't accidentally save a malformed id.
     const policyNumber = String(fd.get("policyNumber") || "").trim();
     if (policyNumber && (policyNumber.startsWith("-") || /^-\d/.test(policyNumber))) {
-      toast.error("Policy number cannot start with a minus sign");
+      toast.error(t("insurancePage.messages.invalidPolicyNumber"));
       return;
     }
     setSaving(true);
@@ -169,30 +165,32 @@ export function InsurancePage() {
     try {
       if (editingPolicy) {
         await apiPut(`/insurance/policies/${editingPolicy.id}`, payload);
-        toast.success("Insurance policy updated");
+        toast.success(t("insurancePage.messages.policyUpdated"));
       } else {
         await apiPost("/insurance/policies", payload);
-        toast.success("Insurance policy created");
+        toast.success(t("insurancePage.messages.policyCreated"));
       }
       closePolicyModal();
       qc.invalidateQueries({ queryKey: ["insurance-policies"] });
       qc.invalidateQueries({ queryKey: ["insurance-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to save policy");
+      toast.error(err.response?.data?.error?.message || t("insurancePage.messages.saveFailed"));
     } finally {
       setSaving(false);
     }
   }
 
   async function deletePolicy(id: string) {
-    if (!confirm("Deactivate this insurance policy? Existing enrollments are unaffected.")) return;
+    if (!confirm(t("insurancePage.messages.deactivateConfirm"))) return;
     try {
       await apiDelete(`/insurance/policies/${id}`);
-      toast.success("Insurance policy deactivated");
+      toast.success(t("insurancePage.messages.policyDeactivated"));
       qc.invalidateQueries({ queryKey: ["insurance-policies"] });
       qc.invalidateQueries({ queryKey: ["insurance-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to deactivate policy");
+      toast.error(
+        err.response?.data?.error?.message || t("insurancePage.messages.deactivateFailed"),
+      );
     }
   }
 
@@ -209,12 +207,12 @@ export function InsurancePage() {
         nomineeName: fd.get("nomineeName") || undefined,
         nomineeRelationship: fd.get("nomineeRelationship") || undefined,
       });
-      toast.success("Employee enrolled in insurance");
+      toast.success(t("insurancePage.messages.employeeEnrolled"));
       setShowEnroll(false);
       qc.invalidateQueries({ queryKey: ["insurance-enrollments"] });
       qc.invalidateQueries({ queryKey: ["insurance-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to enroll");
+      toast.error(err.response?.data?.error?.message || t("insurancePage.messages.enrollFailed"));
     } finally {
       setSaving(false);
     }
@@ -232,62 +230,64 @@ export function InsurancePage() {
         description: fd.get("description") || undefined,
         notes: fd.get("notes") || undefined,
       });
-      toast.success("Claim submitted");
+      toast.success(t("insurancePage.messages.claimSubmitted"));
       setShowSubmitClaim(false);
       qc.invalidateQueries({ queryKey: ["insurance-claims"] });
       qc.invalidateQueries({ queryKey: ["insurance-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to submit claim");
+      toast.error(
+        err.response?.data?.error?.message || t("insurancePage.messages.claimSubmitFailed"),
+      );
     } finally {
       setSaving(false);
     }
   }
 
   async function handleApproveClaim(id: string) {
-    const amountStr = prompt("Approved amount (leave blank for full amount):");
+    const amountStr = prompt(t("insurancePage.messages.approvedAmountPrompt"));
     try {
       await apiPost(`/insurance/claims/${id}/approve`, {
         amountApproved: amountStr ? Number(amountStr) : undefined,
       });
-      toast.success("Claim approved");
+      toast.success(t("insurancePage.messages.claimApproved"));
       qc.invalidateQueries({ queryKey: ["insurance-claims"] });
       qc.invalidateQueries({ queryKey: ["insurance-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed");
+      toast.error(err.response?.data?.error?.message || t("insurancePage.messages.actionFailed"));
     }
   }
 
   async function handleRejectClaim(id: string) {
-    const reason = prompt("Rejection reason:");
+    const reason = prompt(t("insurancePage.messages.rejectionReason"));
     try {
       await apiPost(`/insurance/claims/${id}/reject`, { rejectionReason: reason });
-      toast.success("Claim rejected");
+      toast.success(t("insurancePage.messages.claimRejected"));
       qc.invalidateQueries({ queryKey: ["insurance-claims"] });
       qc.invalidateQueries({ queryKey: ["insurance-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed");
+      toast.error(err.response?.data?.error?.message || t("insurancePage.messages.actionFailed"));
     }
   }
 
   async function handleSettleClaim(id: string) {
     try {
       await apiPost(`/insurance/claims/${id}/settle`);
-      toast.success("Claim settled");
+      toast.success(t("insurancePage.messages.claimSettled"));
       qc.invalidateQueries({ queryKey: ["insurance-claims"] });
       qc.invalidateQueries({ queryKey: ["insurance-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed");
+      toast.error(err.response?.data?.error?.message || t("insurancePage.messages.actionFailed"));
     }
   }
 
   async function cancelEnrollment(id: string) {
     try {
       await apiPost(`/insurance/enrollments/${id}/cancel`);
-      toast.success("Enrollment cancelled");
+      toast.success(t("insurancePage.messages.enrollmentCancelled"));
       qc.invalidateQueries({ queryKey: ["insurance-enrollments"] });
       qc.invalidateQueries({ queryKey: ["insurance-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed");
+      toast.error(err.response?.data?.error?.message || t("insurancePage.messages.actionFailed"));
     }
   }
 
@@ -295,34 +295,46 @@ export function InsurancePage() {
   const policyColumns = [
     {
       key: "name",
-      header: "Policy Name",
+      header: t("insurancePage.columns.policyName"),
       render: (r: any) => <span className="font-medium text-gray-900">{r.name}</span>,
     },
     {
       key: "policy_number",
-      header: "Number",
+      header: t("insurancePage.columns.number"),
       render: (r: any) => r.policy_number || "-",
     },
-    { key: "provider", header: "Provider" },
+    { key: "provider", header: t("insurancePage.columns.provider") },
     {
       key: "type",
-      header: "Type",
-      render: (r: any) => <Badge variant="draft">{r.type.replace(/_/g, " ")}</Badge>,
+      header: t("insurancePage.columns.type"),
+      render: (r: any) => (
+        <Badge variant="draft">
+          {t(`insurancePage.policyTypes.${String(r.type).toLowerCase()}`, {
+            defaultValue: String(r.type).replace(/_/g, " "),
+          })}
+        </Badge>
+      ),
     },
     {
       key: "coverage_amount",
-      header: "Coverage",
+      header: t("insurancePage.columns.coverage"),
       render: (r: any) => formatCurrency(Number(r.coverage_amount)),
     },
     {
       key: "premium_per_employee",
-      header: "Premium/Employee",
+      header: t("insurancePage.columns.premiumPerEmployee"),
       render: (r: any) => formatCurrency(Number(r.premium_per_employee)),
     },
     {
       key: "status",
-      header: "Status",
-      render: (r: any) => <Badge variant={STATUS_BADGE[r.status] || "draft"}>{r.status}</Badge>,
+      header: t("insurancePage.columns.status"),
+      render: (r: any) => (
+        <Badge variant={STATUS_BADGE[r.status] || "draft"}>
+          {t(`insurancePage.status.${String(r.status).toLowerCase()}`, {
+            defaultValue: r.status,
+          })}
+        </Badge>
+      ),
     },
     {
       key: "actions",
@@ -332,7 +344,7 @@ export function InsurancePage() {
           <Button
             variant="ghost"
             size="sm"
-            title="Edit"
+            title={t("insurancePage.actions.edit")}
             onClick={() => {
               setEditingPolicy(r);
               setShowCreatePolicy(true);
@@ -344,7 +356,7 @@ export function InsurancePage() {
             <Button
               variant="ghost"
               size="sm"
-              title="Deactivate"
+              title={t("insurancePage.actions.deactivate")}
               onClick={() => deletePolicy(r.id)}
               className="text-red-600"
             >
@@ -359,39 +371,51 @@ export function InsurancePage() {
   const enrollColumns = [
     {
       key: "employee_name",
-      header: "Employee",
+      header: t("insurancePage.columns.employee"),
       render: (r: any) => <span className="font-medium text-gray-900">{r.employee_name}</span>,
     },
     {
       key: "policy_name",
-      header: "Policy",
+      header: t("insurancePage.columns.policy"),
       render: (r: any) => r.policy_name,
     },
     {
       key: "policy_type",
-      header: "Type",
-      render: (r: any) => <Badge variant="draft">{(r.policy_type || "").replace(/_/g, " ")}</Badge>,
+      header: t("insurancePage.columns.type"),
+      render: (r: any) => (
+        <Badge variant="draft">
+          {t(`insurancePage.policyTypes.${String(r.policy_type).toLowerCase()}`, {
+            defaultValue: String(r.policy_type || "").replace(/_/g, " "),
+          })}
+        </Badge>
+      ),
     },
     {
       key: "sum_insured",
-      header: "Sum Insured",
+      header: t("insurancePage.columns.sumInsured"),
       render: (r: any) => formatCurrency(Number(r.sum_insured)),
     },
     {
       key: "premium_share",
-      header: "Premium Share",
+      header: t("insurancePage.columns.premiumShare"),
       render: (r: any) => formatCurrency(Number(r.premium_share)),
     },
     {
       key: "nominee_name",
-      header: "Nominee",
+      header: t("insurancePage.columns.nominee"),
       render: (r: any) =>
         r.nominee_name ? `${r.nominee_name} (${r.nominee_relationship || ""})` : "-",
     },
     {
       key: "status",
-      header: "Status",
-      render: (r: any) => <Badge variant={STATUS_BADGE[r.status] || "draft"}>{r.status}</Badge>,
+      header: t("insurancePage.columns.status"),
+      render: (r: any) => (
+        <Badge variant={STATUS_BADGE[r.status] || "draft"}>
+          {t(`insurancePage.status.${String(r.status).toLowerCase()}`, {
+            defaultValue: r.status,
+          })}
+        </Badge>
+      ),
     },
     {
       key: "actions",
@@ -404,7 +428,7 @@ export function InsurancePage() {
             onClick={() => cancelEnrollment(r.id)}
             className="text-red-600"
           >
-            Cancel
+            {t("insurancePage.actions.cancel")}
           </Button>
         ) : null,
     },
@@ -413,41 +437,54 @@ export function InsurancePage() {
   const claimColumns = [
     {
       key: "claim_number",
-      header: "Claim #",
+      header: t("insurancePage.columns.claimNumber"),
       render: (r: any) => <span className="font-mono text-sm font-medium">{r.claim_number}</span>,
     },
     {
       key: "employee_name",
-      header: "Employee",
+      header: t("insurancePage.columns.employee"),
       render: (r: any) => <span className="font-medium">{r.employee_name}</span>,
     },
     {
       key: "claim_type",
-      header: "Type",
-      render: (r: any) => <Badge variant="draft">{r.claim_type}</Badge>,
+      header: t("insurancePage.columns.type"),
+      render: (r: any) => (
+        <Badge variant="draft">
+          {t(`insurancePage.claimTypes.${String(r.claim_type).toLowerCase()}`, {
+            defaultValue: r.claim_type,
+          })}
+        </Badge>
+      ),
     },
     {
       key: "amount_claimed",
-      header: "Claimed",
+      header: t("insurancePage.columns.claimed"),
       render: (r: any) => formatCurrency(Number(r.amount_claimed)),
     },
     {
       key: "amount_approved",
-      header: "Approved",
+      header: t("insurancePage.columns.approved"),
       render: (r: any) =>
         r.amount_approved != null ? formatCurrency(Number(r.amount_approved)) : "-",
     },
     {
       key: "status",
-      header: "Status",
+      header: t("insurancePage.columns.status"),
       render: (r: any) => (
-        <Badge variant={STATUS_BADGE[r.status] || "draft"}>{r.status.replace(/_/g, " ")}</Badge>
+        <Badge variant={STATUS_BADGE[r.status] || "draft"}>
+          {t(`insurancePage.status.${String(r.status).toLowerCase()}`, {
+            defaultValue: String(r.status).replace(/_/g, " "),
+          })}
+        </Badge>
       ),
     },
     {
       key: "submitted_at",
-      header: "Submitted",
-      render: (r: any) => (r.submitted_at ? new Date(r.submitted_at).toLocaleDateString() : "-"),
+      header: t("insurancePage.columns.submitted"),
+      render: (r: any) =>
+        r.submitted_at
+          ? new Date(r.submitted_at).toLocaleDateString(i18n.resolvedLanguage || i18n.language)
+          : "-",
     },
     {
       key: "actions",
@@ -456,10 +493,20 @@ export function InsurancePage() {
         if (r.status === "submitted" || r.status === "under_review") {
           return (
             <div className="flex gap-1">
-              <Button variant="ghost" size="sm" onClick={() => handleApproveClaim(r.id)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                title={t("insurancePage.actions.approve")}
+                onClick={() => handleApproveClaim(r.id)}
+              >
                 <CheckCircle className="mr-1 h-4 w-4 text-green-600" />
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => handleRejectClaim(r.id)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                title={t("insurancePage.actions.reject")}
+                onClick={() => handleRejectClaim(r.id)}
+              >
                 <XCircle className="mr-1 h-4 w-4 text-red-600" />
               </Button>
             </div>
@@ -468,7 +515,7 @@ export function InsurancePage() {
         if (r.status === "approved") {
           return (
             <Button variant="ghost" size="sm" onClick={() => handleSettleClaim(r.id)}>
-              <CreditCard className="mr-1 h-4 w-4" /> Settle
+              <CreditCard className="mr-1 h-4 w-4" /> {t("insurancePage.actions.settle")}
             </Button>
           );
         }
@@ -480,18 +527,18 @@ export function InsurancePage() {
   return (
     <div>
       <PageHeader
-        title="Insurance Management"
-        description="Manage group insurance policies, enrollments, and claims"
+        title={t("insurancePage.title")}
+        description={t("insurancePage.description")}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setShowSubmitClaim(true)}>
-              <FileText className="mr-2 h-4 w-4" /> Submit Claim
+              <FileText className="mr-2 h-4 w-4" /> {t("insurancePage.actions.submitClaim")}
             </Button>
             <Button variant="outline" onClick={() => setShowEnroll(true)}>
-              <UserPlus className="mr-2 h-4 w-4" /> Enroll Employee
+              <UserPlus className="mr-2 h-4 w-4" /> {t("insurancePage.actions.enrollEmployee")}
             </Button>
             <Button onClick={() => setShowCreatePolicy(true)}>
-              <Plus className="mr-2 h-4 w-4" /> New Policy
+              <Plus className="mr-2 h-4 w-4" /> {t("insurancePage.actions.newPolicy")}
             </Button>
           </div>
         }
@@ -500,25 +547,25 @@ export function InsurancePage() {
       {/* Stats — cards drill into the matching tab (#96) */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Active Policies"
+          title={t("insurancePage.stats.activePolicies")}
           value={stats.totalPolicies || 0}
           icon={ShieldCheck}
           onClick={() => setTab("policies")}
         />
         <StatCard
-          title="Active Enrollments"
+          title={t("insurancePage.stats.activeEnrollments")}
           value={stats.totalEnrollments || 0}
           icon={Users}
           onClick={() => setTab("enrollments")}
         />
         <StatCard
-          title="Pending Claims"
+          title={t("insurancePage.stats.pendingClaims")}
           value={stats.pendingClaims || 0}
           icon={AlertCircle}
           onClick={() => setTab("claims")}
         />
         <StatCard
-          title="Total Approved"
+          title={t("insurancePage.stats.totalApproved")}
           value={formatCurrency(stats.totalApprovedAmount || 0)}
           icon={DollarSign}
           onClick={() => setTab("claims")}
@@ -531,19 +578,19 @@ export function InsurancePage() {
           onClick={() => setTab("policies")}
           className={`px-4 py-2 text-sm font-medium ${tab === "policies" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
         >
-          Policies ({policies.length})
+          {t("insurancePage.tabs.policies", { count: policies.length })}
         </button>
         <button
           onClick={() => setTab("enrollments")}
           className={`px-4 py-2 text-sm font-medium ${tab === "enrollments" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
         >
-          Enrollments ({enrollments.length})
+          {t("insurancePage.tabs.enrollments", { count: enrollments.length })}
         </button>
         <button
           onClick={() => setTab("claims")}
           className={`px-4 py-2 text-sm font-medium ${tab === "claims" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
         >
-          Claims ({claims.length})
+          {t("insurancePage.tabs.claims", { count: claims.length })}
         </button>
       </div>
 
@@ -559,7 +606,7 @@ export function InsurancePage() {
               <DataTable
                 columns={policyColumns}
                 data={policies}
-                emptyMessage="No insurance policies created yet"
+                emptyMessage={t("insurancePage.empty.policies")}
               />
             )}
           </CardContent>
@@ -578,7 +625,7 @@ export function InsurancePage() {
               <DataTable
                 columns={enrollColumns}
                 data={enrollments}
-                emptyMessage="No enrollments yet"
+                emptyMessage={t("insurancePage.empty.enrollments")}
               />
             )}
           </CardContent>
@@ -597,7 +644,7 @@ export function InsurancePage() {
               <DataTable
                 columns={claimColumns}
                 data={claims}
-                emptyMessage="No claims submitted yet"
+                emptyMessage={t("insurancePage.empty.claims")}
               />
             )}
           </CardContent>
@@ -610,36 +657,43 @@ export function InsurancePage() {
       <Modal
         open={showCreatePolicy}
         onClose={closePolicyModal}
-        title={editingPolicy ? "Edit Insurance Policy" : "Create Insurance Policy"}
+        title={
+          editingPolicy
+            ? t("insurancePage.policyModal.editTitle")
+            : t("insurancePage.policyModal.createTitle")
+        }
         key={editingPolicy?.id || "new-policy"}
       >
         <form onSubmit={handlePolicySubmit} className="space-y-4">
           <Input
-            label="Policy Name"
+            label={t("insurancePage.policyModal.policyName")}
             name="name"
             defaultValue={editingPolicy?.name || ""}
             required
           />
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Policy Number"
+              label={t("insurancePage.policyModal.policyNumber")}
               name="policyNumber"
               defaultValue={editingPolicy?.policy_number || ""}
               pattern="[^\-].*"
-              title="Policy number cannot start with a minus sign"
-              placeholder="e.g. POL-2024-001"
+              title={t("insurancePage.messages.invalidPolicyNumber")}
+              placeholder={t("insurancePage.policyModal.policyNumberPlaceholder")}
             />
             <Input
-              label="Provider"
+              label={t("insurancePage.policyModal.provider")}
               name="provider"
               defaultValue={editingPolicy?.provider || ""}
               required
             />
           </div>
           <SelectField
-            label="Type"
+            label={t("insurancePage.policyModal.type")}
             name="type"
-            options={POLICY_TYPES}
+            options={POLICY_TYPES.map((value) => ({
+              value,
+              label: t(`insurancePage.policyTypes.${value}`),
+            }))}
             defaultValue={editingPolicy?.type || ""}
             required
           />
@@ -648,7 +702,7 @@ export function InsurancePage() {
                 so users don't have to manually clear the leading zero. In
                 edit mode we still pre-fill with the existing value. */}
             <Input
-              label="Total Premium"
+              label={t("insurancePage.policyModal.totalPremium")}
               name="premiumTotal"
               type="number"
               min={0}
@@ -656,7 +710,7 @@ export function InsurancePage() {
               defaultValue={editingPolicy?.premium_total ?? ""}
             />
             <Input
-              label="Premium / Employee"
+              label={t("insurancePage.policyModal.premiumPerEmployee")}
               name="premiumPerEmployee"
               type="number"
               min={0}
@@ -664,7 +718,7 @@ export function InsurancePage() {
               defaultValue={editingPolicy?.premium_per_employee ?? ""}
             />
             <Input
-              label="Coverage Amount"
+              label={t("insurancePage.policyModal.coverageAmount")}
               name="coverageAmount"
               type="number"
               min={0}
@@ -674,7 +728,7 @@ export function InsurancePage() {
           </div>
           <div className="grid grid-cols-3 gap-4">
             <Input
-              label="Start Date"
+              label={t("insurancePage.policyModal.startDate")}
               name="startDate"
               type="date"
               defaultValue={
@@ -688,7 +742,7 @@ export function InsurancePage() {
               }}
             />
             <Input
-              label="End Date"
+              label={t("insurancePage.policyModal.endDate")}
               name="endDate"
               type="date"
               defaultValue={
@@ -708,7 +762,7 @@ export function InsurancePage() {
               }}
             />
             <Input
-              label="Renewal Date"
+              label={t("insurancePage.policyModal.renewalDate")}
               name="renewalDate"
               type="date"
               defaultValue={
@@ -724,17 +778,19 @@ export function InsurancePage() {
             />
           </div>
           <Input
-            label="Terms & Conditions"
+            label={t("insurancePage.policyModal.terms")}
             name="terms"
             defaultValue={editingPolicy?.terms || ""}
           />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={closePolicyModal}>
-              Cancel
+              {t("insurancePage.policyModal.cancel")}
             </Button>
             <Button type="submit" disabled={saving}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {editingPolicy ? "Update Policy" : "Create Policy"}
+              {editingPolicy
+                ? t("insurancePage.policyModal.updatePolicy")
+                : t("insurancePage.policyModal.createPolicy")}
             </Button>
           </div>
         </form>
@@ -744,11 +800,11 @@ export function InsurancePage() {
       <Modal
         open={showEnroll}
         onClose={() => setShowEnroll(false)}
-        title="Enroll Employee in Insurance"
+        title={t("insurancePage.enrollModal.title")}
       >
         <form onSubmit={handleEnroll} className="space-y-4">
           <SelectField
-            label="Employee"
+            label={t("insurancePage.enrollModal.employee")}
             name="employeeId"
             options={employees.map((e: any) => ({
               value: String(e.empcloud_user_id || e.id),
@@ -757,22 +813,31 @@ export function InsurancePage() {
             required
           />
           <SelectField
-            label="Insurance Policy"
+            label={t("insurancePage.enrollModal.policy")}
             name="policyId"
             options={policies
               .filter((p: any) => p.status === "active")
               .map((p: any) => ({
                 value: p.id,
-                label: `${p.name} (${p.type.replace(/_/g, " ")})`,
+                label: `${p.name} (${t(
+                  `insurancePage.policyTypes.${String(p.type).toLowerCase()}`,
+                  { defaultValue: String(p.type).replace(/_/g, " ") },
+                )})`,
               }))}
             required
           />
           <div className="grid grid-cols-2 gap-4">
             {/* #97 — placeholder instead of defaultValue so users don't have to
                 backspace the "0" before typing; min="0" also blocks negatives. */}
-            <Input label="Sum Insured" name="sumInsured" type="number" min="0" placeholder="0" />
             <Input
-              label="Employee Premium Share"
+              label={t("insurancePage.enrollModal.sumInsured")}
+              name="sumInsured"
+              type="number"
+              min="0"
+              placeholder="0"
+            />
+            <Input
+              label={t("insurancePage.enrollModal.premiumShare")}
               name="premiumShare"
               type="number"
               min="0"
@@ -780,20 +845,20 @@ export function InsurancePage() {
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Nominee Name" name="nomineeName" />
+            <Input label={t("insurancePage.enrollModal.nomineeName")} name="nomineeName" />
             <Input
-              label="Nominee Relationship"
+              label={t("insurancePage.enrollModal.nomineeRelationship")}
               name="nomineeRelationship"
-              placeholder="e.g. Spouse, Parent"
+              placeholder={t("insurancePage.enrollModal.relationshipPlaceholder")}
             />
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setShowEnroll(false)}>
-              Cancel
+              {t("insurancePage.enrollModal.cancel")}
             </Button>
             <Button type="submit" disabled={saving}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Enroll
+              {t("insurancePage.enrollModal.submit")}
             </Button>
           </div>
         </form>
@@ -803,31 +868,52 @@ export function InsurancePage() {
       <Modal
         open={showSubmitClaim}
         onClose={() => setShowSubmitClaim(false)}
-        title="Submit Insurance Claim"
+        title={t("insurancePage.claimModal.title")}
       >
         <form onSubmit={handleSubmitClaim} className="space-y-4">
           <SelectField
-            label="Insurance Policy"
+            label={t("insurancePage.claimModal.policy")}
             name="policyId"
             options={policies
               .filter((p: any) => p.status === "active")
               .map((p: any) => ({
                 value: p.id,
-                label: `${p.name} (${p.type.replace(/_/g, " ")})`,
+                label: `${p.name} (${t(
+                  `insurancePage.policyTypes.${String(p.type).toLowerCase()}`,
+                  { defaultValue: String(p.type).replace(/_/g, " ") },
+                )})`,
               }))}
             required
           />
-          <SelectField label="Claim Type" name="claimType" options={CLAIM_TYPES} required />
-          <Input label="Amount Claimed" name="amountClaimed" type="number" required min={1} />
-          <Input label="Description" name="description" placeholder="Describe the claim" />
-          <Input label="Notes" name="notes" />
+          <SelectField
+            label={t("insurancePage.claimModal.claimType")}
+            name="claimType"
+            options={CLAIM_TYPES.map((value) => ({
+              value,
+              label: t(`insurancePage.claimTypes.${value}`),
+            }))}
+            required
+          />
+          <Input
+            label={t("insurancePage.claimModal.amountClaimed")}
+            name="amountClaimed"
+            type="number"
+            required
+            min={1}
+          />
+          <Input
+            label={t("insurancePage.claimModal.description")}
+            name="description"
+            placeholder={t("insurancePage.claimModal.descriptionPlaceholder")}
+          />
+          <Input label={t("insurancePage.claimModal.notes")} name="notes" />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setShowSubmitClaim(false)}>
-              Cancel
+              {t("insurancePage.claimModal.cancel")}
             </Button>
             <Button type="submit" disabled={saving}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Submit Claim
+              {t("insurancePage.claimModal.submit")}
             </Button>
           </div>
         </form>

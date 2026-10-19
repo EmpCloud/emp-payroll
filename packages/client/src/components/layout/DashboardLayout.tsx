@@ -7,10 +7,13 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Avatar } from "@/components/ui/Avatar";
 import { BackToDashboard } from "@/components/ui/BackToDashboard";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { isLoggedIn, getUser } from "@/api/auth";
 import { apiGet } from "@/api/client";
+import { useTranslation } from "react-i18next";
 
 export function DashboardLayout() {
+  const { t } = useTranslation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const user = getUser();
@@ -21,21 +24,21 @@ export function DashboardLayout() {
   }, [location.pathname]);
 
   if (!isLoggedIn()) return <Navigate to="/login" replace />;
-  const displayName = user ? `${user.firstName} ${user.lastName}` : "User";
+  const displayName = user ? `${user.firstName} ${user.lastName}` : t("common.user");
   // Map the 5 internal roles to human labels. Previously this only handled
   // hr_admin / hr_manager and fell through to "Employee" for everything
   // else — so org_admin + super_admin showed as "Employee" in the top bar
   // (issue #39).
   const roleLabel =
     user?.role === "super_admin"
-      ? "Super Admin"
+      ? t("roles.super_admin")
       : user?.role === "org_admin"
-        ? "Admin"
+        ? t("roles.admin")
         : user?.role === "hr_admin"
-          ? "HR Admin"
+          ? t("roles.hr_admin")
           : user?.role === "hr_manager"
-            ? "HR Manager"
-            : "Employee";
+            ? t("roles.hr_manager")
+            : t("roles.employee");
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -60,7 +63,9 @@ export function DashboardLayout() {
           <div className="flex items-center gap-3">
             <BackToDashboard />
             <button
+              type="button"
               onClick={() => setMobileOpen(true)}
+              aria-label={t("header.openMenu")}
               className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 lg:hidden"
             >
               <Menu className="h-5 w-5" />
@@ -68,6 +73,7 @@ export function DashboardLayout() {
             <GlobalSearch />
           </div>
           <div className="flex items-center gap-3">
+            <LanguageSwitcher />
             <ThemeToggle />
             <NotificationBell />
             <div className="flex items-center gap-3">
@@ -94,6 +100,7 @@ export function DashboardLayout() {
 }
 
 function GlobalSearch() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
@@ -157,7 +164,7 @@ function GlobalSearch() {
         value={query}
         onChange={(e) => handleChange(e.target.value)}
         onFocus={() => results.length > 0 && setOpen(true)}
-        placeholder="Search employees... (Ctrl+K)"
+        placeholder={t("header.searchEmployees")}
         className="focus:border-brand-500 focus:ring-brand-500 h-9 w-64 rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-4 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 lg:w-80"
       />
       {loading && (
@@ -192,7 +199,7 @@ function GlobalSearch() {
 
       {open && query.length >= 2 && results.length === 0 && !loading && (
         <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-gray-200 bg-white p-4 text-center text-sm text-gray-400 shadow-lg lg:w-80">
-          No results found
+          {t("common.noResults")}
         </div>
       )}
     </div>

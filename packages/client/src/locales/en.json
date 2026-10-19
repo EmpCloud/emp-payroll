@@ -1,0 +1,2461 @@
+{
+  "language": { "change": "Change language", "menuLabel": "Select language" },
+  "common": {
+    "appName": "EMP Payroll",
+    "user": "User",
+    "employees": "Employees",
+    "employee_one": "{{count}} employee",
+    "employee_other": "{{count}} employees",
+    "unassigned": "Unassigned",
+    "noResults": "No results found"
+  },
+  "employeeList": {
+    "title": "Employees",
+    "loading": "Loading...",
+    "summary": "{{visible}} of {{total}} employees",
+    "summary_one": "{{visible}} of {{total}} employee",
+    "summary_other": "{{visible}} of {{total}} employees",
+    "pendingBankRequests": "Pending Bank Update Requests ({{count}})",
+    "bankDetails": "{{bank}} — A/C {{accountNumber}} — IFSC {{ifscCode}}",
+    "approve": "Approve",
+    "reject": "Reject",
+    "bankUpdated": "Bank details updated",
+    "requestRejected": "Request rejected",
+    "actionFailed": "Failed to {{action}}",
+    "selectEmployee": "Select {{name}}",
+    "export": "Export",
+    "exportSuccess": "Exported employees CSV",
+    "exportFailed": "Export failed",
+    "import": "Import",
+    "importTitle": "Import new employees from a CSV file",
+    "bulkUpdate": "Bulk Update",
+    "bulkUpdateTitle": "Bulk update existing employees from a CSV file",
+    "bulkSalary": "Bulk Salary",
+    "bulkSalaryTitle": "Bulk update salary from a CSV file",
+    "addEmployee": "Add Employee",
+    "searchPlaceholder": "Search by name, email, code, or designation...",
+    "filterDepartment": "Filter by department",
+    "allDepartments": "All departments",
+    "filterLocation": "Filter by location",
+    "allLocations": "All locations",
+    "clearFilters": "Clear filters",
+    "selected": "{{count}} employees selected",
+    "selected_one": "{{count}} employee selected",
+    "selected_other": "{{count}} employees selected",
+    "updateSalary": "Update Salary",
+    "clear": "Clear",
+    "columns": {
+      "employee": "Employee",
+      "designation": "Designation",
+      "email": "Email",
+      "location": "Location",
+      "joined": "Joined",
+      "status": "Status"
+    },
+    "statuses": { "active": "Active", "inactive": "Inactive" }
+  },
+  "orgChart": {
+    "title": "Organization Chart",
+    "description": "Reporting structure — drag to pan, scroll or pinch to zoom",
+    "organization": "Organization",
+    "noEmployees": "No employees to chart yet.",
+    "people": "People",
+    "managers": "Managers",
+    "departments": "Departments",
+    "personCount": "{{count}} people",
+    "personCount_one": "{{count}} person",
+    "personCount_other": "{{count}} people",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "expandReports": "Expand {{count}} reports",
+    "viewAll": "View all {{label}}",
+    "searchPlaceholder": "Search people, roles, departments…",
+    "searchAria": "Search the organization chart",
+    "clearSearch": "Clear search",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fitToScreen": "Fit to screen",
+    "fullscreen": "Fullscreen",
+    "hint": "Drag to pan · scroll to zoom · pinch on touch",
+    "allPeopleTitle": "All People ({{count}})",
+    "managersTitle": "Managers ({{count}})",
+    "departmentsTitle": "Departments ({{count}})",
+    "filterDepartments": "Filter departments…",
+    "filterPeople": "Filter people…",
+    "noMatches": "No matches.",
+    "reportCount": "{{count}} reports",
+    "reportCount_one": "{{count}} report",
+    "reportCount_other": "{{count}} reports"
+  },
+  "departmentsPage": {
+    "title": "Departments",
+    "departmentCount": "{{count}} departments",
+    "departmentCount_one": "{{count}} department",
+    "departmentCount_other": "{{count}} departments",
+    "employeeCount": "{{count}} employees",
+    "employeeCount_one": "{{count}} employee",
+    "employeeCount_other": "{{count}} employees",
+    "fromEmpCloud": "from EmpCloud",
+    "addDepartment": "Add Department",
+    "noDepartments": "No departments yet.",
+    "addFirst": "Add your first department",
+    "searchPlaceholder": "Search departments…",
+    "searchAria": "Search departments",
+    "noSearchMatches": "No departments match “{{query}}”.",
+    "nameRequired": "Department name is required",
+    "added": "Department added",
+    "addFailed": "Failed to add department",
+    "removed": "Department removed",
+    "removeFailed": "Failed to remove department",
+    "addDescription": "Syncs to EmpCloud and becomes selectable on employee profiles, the organization chart, and reports.",
+    "uniqueNamesHelp": "Names should be unique within your organization. You can remove a department later without affecting existing payroll records.",
+    "departmentName": "Department Name",
+    "namePlaceholder": "e.g. Engineering",
+    "cancel": "Cancel",
+    "removeTitle": "Remove department?",
+    "removeDescription": "“{{name}}” will be removed from your organization.",
+    "deleteWarning": "{{count}} employees are currently in this department. Their records are kept, but they will show no department until reassigned.",
+    "deleteWarning_one": "{{count}} employee is currently in this department. Their record is kept, but they will show no department until reassigned.",
+    "deleteWarning_other": "{{count}} employees are currently in this department. Their records are kept, but they will show no department until reassigned.",
+    "remove": "Remove",
+    "removeAria": "Remove {{name}}",
+    "noMembers": "No members yet",
+    "created": "Created {{date}}"
+  },
+  "attendancePage": {
+    "title": "Attendance",
+    "summary": "{{period}} attendance summary",
+    "markAllPresent": "Mark All Present",
+    "markAttendance": "Mark Attendance",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "searchPlaceholder": "Search by name or code...",
+    "filterDepartment": "Filter by department",
+    "allDepartments": "All departments",
+    "filterLocation": "Filter by location",
+    "allLocations": "All locations",
+    "clearFilters": "Clear filters",
+    "employeesShown": "{{visible}} of {{total}} employees",
+    "employeesShown_one": "{{visible}} of {{total}} employee",
+    "employeesShown_other": "{{visible}} of {{total}} employees",
+    "totalPresentDays": "Total Present Days",
+    "totalAbsentDays": "Total Absent Days",
+    "lopDays": "LOP Days",
+    "overtimeHours": "Overtime Hours",
+    "hoursValue": "{{count}}h",
+    "lopValue": "{{count}} LOP",
+    "employeeFallback": "Employee #{{id}}",
+    "columns": {
+      "employee": "Employee",
+      "workingDays": "Working Days",
+      "present": "Present",
+      "absent": "Absent",
+      "lopDays": "LOP Days",
+      "overtimeHours": "Overtime (hrs)"
+    },
+    "markAllDescription": "Bulk mark all employees as present for the chosen month.",
+    "markSingleDescription": "Record attendance for a single employee.",
+    "month": "Month",
+    "year": "Year",
+    "workingDaysInMonth": "Working Days in Month",
+    "workingDays": "Working Days",
+    "presentDays": "Present Days",
+    "absentDays": "Absent Days",
+    "employee": "Employee",
+    "selectEmployee": "Select an employee",
+    "cancel": "Cancel",
+    "saveAttendance": "Save Attendance",
+    "overwriteExisting": "Overwrite existing records for this month",
+    "overwriteAllHelp": "Off by default so employees' own check-ins are kept. Select this to replace already-recorded days with present.",
+    "overwriteSingleHelp": "By default, days already recorded on EmpCloud, such as the employee's own check-ins, are preserved. Select this to replace them with the values above.",
+    "markAllHelp": "This will mark all {{count}} active employees as present for {{days}} days in {{period}}. You can edit individual records afterwards.",
+    "workingDaysInvalid": "Working days must be a whole number between 1 and 31",
+    "presentDaysInvalid": "Present days must be between 0 and working days",
+    "selectEmployeeRequired": "Please select an employee",
+    "noPayrollEmployees": "No employees found in payroll. Apply EmpCloud users to payroll first (Settings > Employees).",
+    "bulkSyncFailed": "Marked locally for {{employeeCount}} employees, but EmpCloud sync failed for {{failureCount}}. The dashboard may not reflect the change yet.",
+    "nothingChangedAll": "Every workday in {{period}} already has a record on EmpCloud ({{preserved}} preserved), so nothing changed. Select overwrite below to replace them.",
+    "markedAllOverwrite": "Marked {{count}} employees present for {{period}} (existing days overwritten).",
+    "markedAllSuccess": "Marked {{count}} employees for {{period}} — {{inserted}} new EmpCloud rows added{{preservedText}}.",
+    "singleSyncFailed": "Marked locally, but EmpCloud sync failed ({{error}}). The dashboard may not reflect this until EmpCloud is reachable.",
+    "unknownError": "unknown error",
+    "nothingChangedSingle": "{{period}} already has {{preserved}} attendance records for this employee, so nothing changed. Select overwrite below and save again to replace them.",
+    "singleOverwriteSuccess": "Attendance for {{period}} updated ({{count}} days set).",
+    "singleSuccess": "Attendance recorded for {{period}} — {{inserted}} new EmpCloud rows added{{preservedText}}.",
+    "preservedSuffix": ", {{count}} existing rows preserved",
+    "markFailed": "Failed to mark attendance"
+  },
+  "payrollAnalytics": {
+    "title": "Payroll Analytics",
+    "description": "Cost trends, comparisons, and insights",
+    "notice": "Numbers below reflect employees included in each payroll run. Employees skipped during compute (no active salary structure, hired after the pay period, exited before it) are not counted, so headcount and per-employee averages can shift between months independently of actual hiring activity.",
+    "noRuns": "no runs yet",
+    "employeeSource": "{{count}} employees · {{source}}",
+    "headcountSuppressed": "headcount changed >25% — comparison suppressed",
+    "vsPrevious": "vs previous month · {{source}}",
+    "ofGrossPay": "of gross pay · {{source}}",
+    "avgNetPayPerEmployee": "Avg Net Pay / Employee",
+    "grossPayChange": "Gross Pay Change",
+    "netPayChange": "Net Pay Change",
+    "deductionRate": "Deduction Rate",
+    "payrollCostTrend": "Payroll Cost Trend",
+    "costBreakdownLatest": "Cost Breakdown (Latest)",
+    "headcountTrend": "Headcount Trend",
+    "monthComparison": "Month-over-Month Comparison",
+    "totalEmployerCost": "Total Employer Cost (Gross + Contributions)",
+    "needCompletedRun": "Need at least 1 completed payroll run for analytics",
+    "noData": "No data yet",
+    "series": {
+      "gross": "Gross",
+      "net": "Net",
+      "deductions": "Deductions",
+      "netPay": "Net Pay",
+      "employerContributions": "Employer Contributions",
+      "employerCost": "Employer Cost",
+      "amount": "Amount",
+      "employees": "Employees"
+    },
+    "columns": {
+      "period": "Period",
+      "employees": "Employees",
+      "grossPay": "Gross Pay",
+      "deductions": "Deductions",
+      "netPay": "Net Pay",
+      "avgPerEmployee": "Avg/Employee",
+      "grossPercent": "Gross %",
+      "netPercent": "Net %"
+    },
+    "statuses": { "paid": "Paid", "computed": "Computed", "approved": "Approved" }
+  },
+  "reimbursementsPage": {
+    "title": "Reimbursements",
+    "claimsShown": "{{visible}} of {{total}} claims",
+    "fileForEmployee": "File for Employee",
+    "searchPlaceholder": "Search by employee name, code, or designation...",
+    "filterDepartment": "Filter by department",
+    "allDepartments": "All departments",
+    "filterLocation": "Filter by location",
+    "allLocations": "All locations",
+    "clearFilters": "Clear filters",
+    "noClaims": "No reimbursement claims found",
+    "forEmployee": "For {{name}}",
+    "statuses": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "paid": "Paid"
+    },
+    "filters": { "all": "All" },
+    "cards": {
+      "totalClaims": "Total Claims",
+      "viewAll": "View all reimbursement claims",
+      "viewPending": "View pending reimbursement claims",
+      "viewApproved": "View approved reimbursement claims",
+      "viewRejected": "View rejected reimbursement claims",
+      "viewPaid": "View paid reimbursement claims"
+    },
+    "columns": {
+      "employee": "Employee",
+      "category": "Category",
+      "description": "Description",
+      "amount": "Amount",
+      "date": "Date",
+      "status": "Status"
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "awaitingPayroll": "Awaiting payroll",
+      "awaitingPayrollTitle": "Will be paid in the next payroll run",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel"
+    },
+    "fields": {
+      "category": "Category",
+      "amount": "Amount",
+      "expenseDate": "Expense date",
+      "description": "Description",
+      "month": "Month",
+      "year": "Year"
+    },
+    "fileModal": {
+      "title": "File reimbursement for employee",
+      "description": "Submit a claim on behalf of an employee. They will see it as pending in their reimbursement list.",
+      "searchEmployee": "Search employee",
+      "employeePlaceholder": "Name, employee code, or email (min 2 chars)",
+      "searching": "Searching...",
+      "typeMore": "Type at least 2 characters to search.",
+      "noEmployees": "No matching employees.",
+      "change": "Change",
+      "categoryPlaceholder": "Travel, Food, Internet...",
+      "descriptionPlaceholder": "What was the expense for?",
+      "submit": "File claim"
+    },
+    "deleteModal": {
+      "title": "Delete reimbursement?",
+      "paidTitle": "This claim is already paid.",
+      "paidWarning": "Deleting only removes the row from the reimbursements list. It does not refund the employee or remove the line from the payslip. To reverse the payment, delete the payroll run instead; that automatically returns the claim to approved.",
+      "warning": "This will permanently remove the claim. This cannot be undone."
+    },
+    "editModal": { "title": "Edit reimbursement", "save": "Save changes" },
+    "payModal": {
+      "title": "Mark reimbursement as paid",
+      "description": "Record the payroll period in which this claim was disbursed. Its status will change from approved to paid.",
+      "confirm": "Confirm payment"
+    },
+    "validation": {
+      "categoryRequired": "Category is required",
+      "descriptionRequired": "Description is required",
+      "validAmount": "Enter a valid amount",
+      "expenseDateRequired": "Expense date is required",
+      "pickEmployee": "Pick an employee first"
+    },
+    "messages": {
+      "approved": "Claim approved",
+      "rejected": "Claim rejected",
+      "failed": "Action failed",
+      "updated": "Claim updated",
+      "updateFailed": "Failed to update claim",
+      "deleted": "Claim deleted",
+      "deleteFailed": "Failed to delete claim",
+      "filed": "Claim filed for employee",
+      "fileFailed": "Failed to file claim",
+      "markedPaid": "Claim marked as paid",
+      "markPaidFailed": "Failed to mark claim as paid"
+    }
+  },
+  "loansPage": {
+    "title": "Loans & Advances",
+    "recordsShown": "{{visible}} of {{total}} loan and advance records",
+    "addAdvance": "Add Advance",
+    "addLoan": "Add Loan",
+    "searchPlaceholder": "Search by employee name, code, or designation...",
+    "filterDepartment": "Filter by department",
+    "allDepartments": "All departments",
+    "filterLocation": "Filter by location",
+    "allLocations": "All locations",
+    "clearFilters": "Clear filters",
+    "noRecords": "No loans or advances found",
+    "cards": {
+      "active": "Active Loans & Advances",
+      "outstanding": "Outstanding",
+      "monthlyDeductions": "Monthly Deductions",
+      "totalAcrossAll": "total across all",
+      "completed": "Completed"
+    },
+    "filters": { "all": "All" },
+    "statuses": { "active": "Active", "completed": "Completed", "cancelled": "Cancelled" },
+    "types": {
+      "loan": "Loan",
+      "salary_advance": "Salary Advance",
+      "emergency": "Emergency Advance"
+    },
+    "columns": {
+      "employee": "Employee",
+      "type": "Type",
+      "description": "Description",
+      "principal": "Principal",
+      "outstanding": "Outstanding",
+      "deduction": "Deduction",
+      "progress": "Progress",
+      "status": "Status"
+    },
+    "deduction": { "customDefault": "Custom (default {{amount}})", "oneTime": "One-time" },
+    "progress": { "recovered": "Recovered", "pendingRecovery": "Pending recovery" },
+    "actions": {
+      "recordEmiPayment": "Record EMI payment",
+      "recordAdvanceRecovery": "Record advance recovery",
+      "pay": "Pay",
+      "recover": "Recover",
+      "edit": "Edit loan or advance",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "saveChanges": "Save Changes"
+    },
+    "fields": {
+      "employee": "Employee",
+      "description": "Description",
+      "amount": "Amount (₹)",
+      "tenure": "Tenure (months)",
+      "interestRate": "Interest Rate (%)",
+      "startDate": "Start Date",
+      "customMonthlyEmi": "Custom Monthly EMI (₹) — optional",
+      "notes": "Notes (optional)",
+      "advanceType": "Advance Type",
+      "reason": "Reason",
+      "advanceAmount": "Advance Amount (₹)",
+      "recoveryDate": "Recovery Date"
+    },
+    "form": {
+      "noEmployee": "There is no employee",
+      "descriptionPlaceholder": "e.g. Medical emergency",
+      "customEmiPlaceholder": "Leave blank to use tenure-based EMI",
+      "customEmiHelpCreate": "Override the monthly deduction. The last instalment automatically settles the remaining amount.",
+      "customEmiHelpEdit": "Override the monthly deduction. The last instalment automatically settles the remaining amount. Clear the field to use the tenure-based EMI.",
+      "notesPlaceholder": "Any additional notes",
+      "paidInstallmentsNotice": "{{count}} EMI(s) already paid — outstanding will be recalculated from the new amount while keeping the amount already repaid."
+    },
+    "advanceModal": {
+      "description": "Add a one-time salary advance. The full amount will be recovered in one payroll period."
+    },
+    "editModal": { "loanTitle": "Edit Loan", "advanceTitle": "Edit Advance" },
+    "deleteModal": {
+      "title": "Delete loan or advance?",
+      "outstandingTitle": "{{amount}} still outstanding.",
+      "outstandingWarning": "Deleting removes the record and stops future deductions. Amounts already deducted on past payslips are unaffected. This cannot be undone.",
+      "warning": "This permanently removes the record. Amounts already deducted on past payslips are unaffected. This cannot be undone."
+    },
+    "validation": {
+      "amountNonNegative": "Amount must be zero or greater",
+      "tenureMinimum": "Tenure must be at least 1 month",
+      "interestNonNegative": "Interest rate must be zero or greater",
+      "customEmiPositive": "Custom monthly EMI must be greater than zero",
+      "customEmiMaximum": "Custom monthly EMI cannot exceed the loan amount"
+    },
+    "messages": {
+      "advanceCreated": "Advance created",
+      "loanCreated": "Loan created",
+      "failed": "Action failed",
+      "paymentRecorded": "Payment recorded",
+      "advanceUpdated": "Advance updated",
+      "loanUpdated": "Loan updated",
+      "updateFailed": "Failed to update loan or advance",
+      "deleted": "Loan or advance deleted",
+      "deleteFailed": "Failed to delete loan or advance"
+    }
+  },
+  "roles": {
+    "super_admin": "Super Admin",
+    "org_admin": "Org Admin",
+    "admin": "Admin",
+    "hr_admin": "HR Admin",
+    "hr_manager": "HR Manager",
+    "manager": "Manager",
+    "employee": "Employee"
+  },
+  "header": {
+    "openMenu": "Open navigation menu",
+    "searchEmployees": "Search employees... (Ctrl+K)"
+  },
+  "sidebar": {
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "search": "Search menu…",
+    "clearSearch": "Clear search",
+    "noMatches": "No matches for “{{query}}”",
+    "pressToSearch": "Press / to search",
+    "logout": "Logout",
+    "sections": {
+      "overview": "Overview",
+      "people": "People",
+      "payroll": "Payroll",
+      "compliance": "Compliance",
+      "payBenefits": "Pay & Benefits",
+      "workplace": "Workplace",
+      "globalPayroll": "Global Payroll",
+      "admin": "Admin",
+      "selfService": "Self-Service"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "employees": "Employees",
+      "orgChart": "Org Chart",
+      "departments": "Departments",
+      "attendance": "Attendance",
+      "structures": "Structures",
+      "payrollRuns": "Payroll Runs",
+      "analytics": "Analytics",
+      "payslips": "Payslips",
+      "tax": "Tax",
+      "taxCalculator": "Tax Calculator",
+      "taxDeclarations": "Tax Declarations",
+      "reimbursements": "Reimbursements",
+      "loans": "Loans",
+      "benefits": "Benefits",
+      "benchmarks": "Benchmarks",
+      "payEquity": "Pay Equity",
+      "totalRewards": "Total Rewards",
+      "earnedWageAccess": "Earned Wage Access",
+      "insurance": "Insurance",
+      "holidays": "Holidays",
+      "announcements": "Announcements",
+      "globalDashboard": "Global Dashboard",
+      "globalEmployees": "Global Employees",
+      "contractorInvoices": "Contractor Invoices",
+      "countryCompliance": "Country Compliance",
+      "glAccounting": "GL / Accounting",
+      "reports": "Reports",
+      "auditLog": "Audit Log",
+      "system": "System",
+      "settings": "Settings",
+      "myDashboard": "My Dashboard",
+      "myPayslips": "My Payslips",
+      "mySalary": "My Salary",
+      "myTax": "My Tax",
+      "declarations": "Declarations",
+      "myClaims": "My Claims",
+      "myProfile": "My Profile"
+    }
+  },
+  "dashboard": {
+    "title": "Payroll Dashboard",
+    "overviewFor": "Overview for {{period}}",
+    "runPayroll": "Run Payroll",
+    "addEmployee": "Add Employee",
+    "viewReports": "View Reports",
+    "activeEmployees": "Active Employees",
+    "viewActiveEmployees": "View active employees",
+    "totalEmployees": "{{count}} total",
+    "lastPayrollGross": "Last Payroll (Gross)",
+    "lastPayrollNet": "Last Payroll (Net)",
+    "noPayrollYet": "No payroll yet",
+    "totalDeductions": "Total Deductions",
+    "viewDeductions": "View total deductions breakdown for the latest payroll run",
+    "monthOverMonth": "{{value}}% MoM",
+    "monthlyTrend": "Monthly Payroll Trend",
+    "trendPeriods_one": "Gross vs net over the last {{count}} month",
+    "trendPeriods_other": "Gross vs net over the last {{count}} months",
+    "trendFallback": "Gross vs net payroll cost",
+    "gross": "Gross",
+    "net": "Net",
+    "noTrend": "No payroll data yet. Run your first payroll to see trends.",
+    "headcountByDepartment": "Headcount by Department",
+    "moreDepartments": "+{{count}} more departments",
+    "noEmployeesToChart": "No employees to chart yet.",
+    "complianceStatus": "Compliance Status",
+    "providentFund": "Provident Fund",
+    "professionalTax": "Professional Tax",
+    "tdsForm": "TDS (Form 24Q)",
+    "filed": "Filed",
+    "pending": "Pending",
+    "recentActivity": "Recent Activity",
+    "noRecentActivity": "No recent activity yet.",
+    "activity": "Activity",
+    "actions": {
+      "created": "Payroll run created",
+      "computed": "Payroll computed",
+      "approved": "Payroll approved",
+      "paid": "Payroll marked paid",
+      "cancelled": "Payroll cancelled",
+      "reverted": "Payroll reverted to draft",
+      "rerun": "Payroll re-run",
+      "deleted": "Payroll run deleted"
+    }
+  },
+  "breadcrumbs": {
+    "home": "Home",
+    "addNew": "Add New",
+    "salaryStructures": "Salary Structures",
+    "myPortal": "My Portal",
+    "salary": "Salary",
+    "profile": "Profile",
+    "setup": "Setup"
+  },
+  "selfService": {
+    "employeePortal": "Employee Portal",
+    "adminPanel": "Admin Panel",
+    "profile": "Profile"
+  },
+  "myProfile": {
+    "title": "My Profile",
+    "notFound": "Profile not found",
+    "notAvailable": "N/A",
+    "cancel": "Cancel",
+    "requestUpdate": "Request Update",
+    "pendingBankRequest": "You have a pending bank update request awaiting admin approval.",
+    "status": { "active": "Active", "inactive": "Inactive" },
+    "taxRegime": { "new": "New Tax Regime", "old": "Old Tax Regime" },
+    "sections": {
+      "personalDetails": "Personal Details",
+      "employment": "Employment",
+      "bankDetails": "Bank Details",
+      "statutoryDetails": "Statutory Details",
+      "security": "Security"
+    },
+    "fields": {
+      "email": "Email",
+      "phone": "Phone",
+      "dateOfBirth": "Date of Birth",
+      "gender": "Gender",
+      "employeeCode": "Employee Code",
+      "department": "Department",
+      "designation": "Designation",
+      "employmentType": "Employment Type",
+      "dateOfJoining": "Date of Joining",
+      "bank": "Bank",
+      "accountNumber": "Account Number",
+      "ifsc": "IFSC",
+      "pan": "PAN",
+      "uan": "UAN",
+      "pfNumber": "PF Number",
+      "password": "Password"
+    },
+    "values": {
+      "gender": {
+        "female": "Female",
+        "male": "Male",
+        "non_binary": "Non-binary",
+        "other": "Other"
+      },
+      "employmentTypes": {
+        "full_time": "Full Time",
+        "part_time": "Part Time",
+        "contract": "Contract",
+        "intern": "Intern",
+        "consultant": "Consultant"
+      }
+    },
+    "security": {
+      "changePasswordHelp": "Change your account password",
+      "changePassword": "Change Password"
+    },
+    "bankModal": {
+      "title": "Request Bank Details Update",
+      "reviewNotice": "Your request will be reviewed by HR/Admin before the changes take effect.",
+      "newBankName": "New Bank Name",
+      "bankPlaceholder": "e.g. HDFC Bank",
+      "newAccountNumber": "New Account Number",
+      "accountPlaceholder": "e.g. 1234567890",
+      "newIfscCode": "New IFSC Code",
+      "ifscPlaceholder": "e.g. HDFC0001234",
+      "ifscValidation": "IFSC must be 11 characters: 4 letters + '0' + 6 letters/digits (e.g. HDFC0001234).",
+      "accountType": "Account Type",
+      "accountTypes": { "savings": "Savings", "current": "Current", "salary": "Salary Account" },
+      "reason": "Reason for Change",
+      "reasonPlaceholder": "e.g. Switched to a new bank",
+      "submit": "Submit Request",
+      "success": "Bank update request submitted for approval",
+      "failure": "Failed to submit request"
+    },
+    "passwordModal": {
+      "title": "Change Password",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmNewPassword": "Confirm New Password",
+      "mismatch": "Passwords don't match",
+      "success": "Password changed",
+      "failure": "Failed to change password",
+      "submit": "Change Password"
+    }
+  },
+  "totalRewardsPage": {
+    "title": "Total Rewards Statements",
+    "description": "Generate comprehensive compensation and benefits statements for employees",
+    "printPdf": "Print / PDF",
+    "selectEmployee": "Select Employee",
+    "chooseEmployee": "Choose an employee…",
+    "searchEmployee": "Search by name, designation, or code…",
+    "noEmployeeMatches": "No employees match your search",
+    "employeesAvailable_one": "{{count}} employee available",
+    "employeesAvailable_other": "{{count}} employees available",
+    "unnamedEmployee": "Unnamed employee",
+    "totalRewardsValue": "Total Rewards Value",
+    "financialYear": "FY {{year}}",
+    "directCompensation": "Direct Compensation",
+    "benefitsValue": "Benefits Value",
+    "ytdNetPay": "YTD Net Pay",
+    "reimbursements": "Reimbursements",
+    "salaryBreakdown": "Salary Breakdown",
+    "perMonth": "/mo",
+    "annualCtc": "Annual CTC",
+    "benefitsEnrollment": "Benefits Enrollment",
+    "noBenefits": "No benefits enrolled",
+    "perYear": "/yr",
+    "totalEmployerContribution": "Total Employer Contribution",
+    "ytdEarnings": "Year-to-Date Earnings",
+    "monthsProcessed_one": "{{count}} month processed",
+    "monthsProcessed_other": "{{count}} months processed",
+    "grossEarnings": "Gross Earnings",
+    "totalDeductions": "Total Deductions",
+    "netPay": "Net Pay",
+    "taxPaid": "Tax Paid",
+    "activeLoans": "Active Loans",
+    "outstanding": "Outstanding",
+    "emi": "EMI",
+    "selectPrompt": "Select an employee to generate their Total Rewards Statement",
+    "components": {
+      "basic": "Basic Salary",
+      "hra": "House Rent Allowance",
+      "sa": "Special Allowance"
+    },
+    "benefitTypes": {
+      "health": "Health",
+      "life": "Life",
+      "dental": "Dental",
+      "vision": "Vision",
+      "accident": "Accident"
+    },
+    "coverageTypes": {
+      "employee": "Employee",
+      "employee_spouse": "Employee + Spouse",
+      "family": "Family",
+      "parents": "Parents"
+    },
+    "loanTypes": {
+      "personal_loan": "Personal Loan",
+      "salary_advance": "Salary Advance",
+      "home_loan": "Home Loan",
+      "car_loan": "Car Loan",
+      "education_loan": "Education Loan"
+    }
+  },
+  "benefitsPage": {
+    "title": "Benefits Administration",
+    "description": "Manage benefit plans and employee enrollments",
+    "enrollEmployee": "Enroll Employee",
+    "newPlan": "New Plan",
+    "stats": {
+      "activePlans": "Active Plans",
+      "enrolled": "Enrolled",
+      "pending": "Pending",
+      "monthlyEmployerCost": "Monthly Employer Cost"
+    },
+    "tabs": {
+      "plans": "Plans ({{count}})",
+      "enrollments": "Enrollments ({{count}})",
+      "pending": "Pending ({{count}})"
+    },
+    "columns": {
+      "planName": "Plan Name",
+      "type": "Type",
+      "provider": "Provider",
+      "premium": "Premium",
+      "employerShare": "Employer Share",
+      "status": "Status",
+      "employee": "Employee",
+      "plan": "Plan",
+      "coverage": "Coverage",
+      "employeeShare": "Employee Share"
+    },
+    "empty": {
+      "plans": "No benefit plans created yet",
+      "enrollments": "No enrollments yet",
+      "pending": "No pending enrollments"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "enrolled": "Enrolled",
+      "pending": "Pending",
+      "cancelled": "Cancelled"
+    },
+    "actions": {
+      "edit": "Edit",
+      "deactivate": "Deactivate",
+      "cancel": "Cancel"
+    },
+    "planTypes": {
+      "health": "Health",
+      "dental": "Dental",
+      "vision": "Vision",
+      "life": "Life Insurance",
+      "disability": "Disability",
+      "retirement": "Retirement"
+    },
+    "coverageTypes": {
+      "individual": "Individual",
+      "family": "Family",
+      "individual_plus_spouse": "Individual + Spouse"
+    },
+    "fallbackUser": "User #{{id}}",
+    "messages": {
+      "invalidEnrollmentDates": "Enrollment end date cannot be before start date",
+      "planUpdated": "Benefit plan updated",
+      "planCreated": "Benefit plan created",
+      "savePlanFailed": "Failed to save plan",
+      "deactivateConfirm": "Deactivate this benefit plan? Existing enrollments are unaffected.",
+      "planDeactivated": "Benefit plan deactivated",
+      "deactivateFailed": "Failed to deactivate plan",
+      "employeeEnrolled": "Employee enrolled in benefit plan",
+      "enrollFailed": "Failed to enroll",
+      "enrollmentCancelled": "Enrollment cancelled",
+      "actionFailed": "Action failed"
+    },
+    "planModal": {
+      "editTitle": "Edit Benefit Plan",
+      "createTitle": "Create Benefit Plan",
+      "planName": "Plan Name",
+      "type": "Type",
+      "provider": "Provider",
+      "description": "Description",
+      "monthlyPremium": "Monthly Premium",
+      "employerContribution": "Employer Contribution",
+      "enrollmentStart": "Enrollment Start",
+      "enrollmentEnd": "Enrollment End",
+      "cancel": "Cancel",
+      "updatePlan": "Update Plan",
+      "createPlan": "Create Plan"
+    },
+    "enrollModal": {
+      "title": "Enroll Employee in Benefit Plan",
+      "employee": "Employee",
+      "benefitPlan": "Benefit Plan",
+      "coverageType": "Coverage Type",
+      "startDate": "Start Date",
+      "employeePremiumShare": "Employee Premium Share",
+      "employerPremiumShare": "Employer Premium Share",
+      "cancel": "Cancel",
+      "submit": "Enroll"
+    }
+  },
+  "benchmarksPage": {
+    "title": "Compensation Benchmarking",
+    "description": "Compare employee pay against market data",
+    "addBenchmark": "Add Benchmark",
+    "stats": {
+      "benchmarks": "Benchmarks",
+      "avgCompaRatio": "Avg Compa-Ratio",
+      "belowMarket": "Below Market",
+      "aboveMarket": "Above Market"
+    },
+    "tabs": {
+      "marketBenchmarks": "Market Benchmarks ({{count}})",
+      "compaRatioReport": "Compa-Ratio Report",
+      "belowMarket": "Below Market ({{count}})",
+      "aboveMarket": "Above Market ({{count}})"
+    },
+    "columns": {
+      "jobTitle": "Job Title",
+      "department": "Department",
+      "location": "Location",
+      "p50Median": "P50 (Median)",
+      "source": "Source",
+      "effective": "Effective",
+      "employee": "Employee",
+      "marketP50": "Market P50",
+      "compaRatio": "Compa-Ratio",
+      "position": "Position"
+    },
+    "empty": {
+      "benchmarks": "No benchmarks added yet",
+      "employees": "No employee data available",
+      "belowMarket": "No employees below market",
+      "aboveMarket": "No employees above market"
+    },
+    "summary": {
+      "employeesTotal": "employees total",
+      "matchedToBenchmarks": "matched to benchmarks",
+      "withoutBenchmarkData": "without benchmark data"
+    },
+    "labels": {
+      "noBenchmark": "No benchmark",
+      "notAvailable": "N/A",
+      "noData": "No Data",
+      "below": "Below",
+      "above": "Above",
+      "atMarket": "At Market"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "messages": {
+      "validPercentiles": "Please enter valid P25, P50 and P75 amounts",
+      "nonNegative": "Percentile values cannot be negative",
+      "ordered": "Percentiles must be ordered: P25 ≤ P50 ≤ P75",
+      "updated": "Benchmark updated",
+      "created": "Benchmark created",
+      "deleted": "Benchmark deleted",
+      "failed": "Action failed"
+    },
+    "modal": {
+      "editTitle": "Edit Compensation Benchmark",
+      "addTitle": "Add Compensation Benchmark",
+      "jobTitle": "Job Title",
+      "jobTitlePlaceholder": "e.g., Software Engineer",
+      "department": "Department",
+      "selectDepartment": "Select department...",
+      "noDepartments": "No departments configured",
+      "location": "Location",
+      "locationPlaceholder": "e.g., Bangalore",
+      "p25Annual": "P25 (Annual)",
+      "p50Annual": "P50 Median (Annual)",
+      "p75Annual": "P75 (Annual)",
+      "p25Placeholder": "e.g. 800000",
+      "p50Placeholder": "e.g. 1200000",
+      "p75Placeholder": "e.g. 1800000",
+      "source": "Source",
+      "sourcePlaceholder": "e.g., Glassdoor 2026",
+      "effectiveDate": "Effective Date",
+      "cancel": "Cancel",
+      "updateBenchmark": "Update Benchmark",
+      "saveBenchmark": "Save Benchmark"
+    }
+  },
+  "payEquityPage": {
+    "title": "Pay Equity Analysis",
+    "description": "Analyze compensation fairness across gender, department, and role",
+    "stats": {
+      "employeesAnalyzed": "Employees Analyzed",
+      "medianSalary": "Median Salary",
+      "meanPayGap": "Mean Pay Gap",
+      "medianPayGap": "Median Pay Gap"
+    },
+    "tabs": {
+      "overview": "Analysis Overview",
+      "compliance": "Compliance Report"
+    },
+    "gender": {
+      "title": "Gender Pay Gap Analysis",
+      "maleEmployees": "Male Employees",
+      "femaleEmployees": "Female Employees",
+      "maleMeanSalary": "Male Mean Salary",
+      "femaleMeanSalary": "Female Mean Salary",
+      "menPaidMore": "Men are paid more on average",
+      "womenPaidMore": "Women are paid more on average",
+      "noGap": "No gap detected"
+    },
+    "department": {
+      "title": "Department Analysis",
+      "department": "Department",
+      "employees": "Employees",
+      "meanSalary": "Mean Salary",
+      "median": "Median",
+      "min": "Min",
+      "max": "Max",
+      "spread": "Spread"
+    },
+    "role": {
+      "title": "Role / Designation Analysis",
+      "designation": "Designation",
+      "count": "Count",
+      "mean": "Mean",
+      "median": "Median"
+    },
+    "compliance": {
+      "title": "Compliance Report",
+      "generated": "Generated",
+      "findings": "Findings",
+      "recommendations": "Recommendations",
+      "notAvailable": "N/A"
+    },
+    "complianceMessages": {
+      "significantMean": "Significant mean pay gap detected: {{value}}% ({{group}})",
+      "significantMedian": "Significant median pay gap detected: {{value}}%",
+      "menPaidMore": "men paid more",
+      "womenPaidMore": "women paid more",
+      "highVariance": "High salary variance in department \"{{department}}\" (CV: {{value}}%)",
+      "acceptableGap": "Pay gap is within acceptable range (within 5%)",
+      "noConcerns": "No significant pay equity concerns detected",
+      "reviewDepartment": "Review salary bands for department \"{{department}}\" to ensure internal equity",
+      "reviewCompensation": "Conduct detailed review of compensation for roles where significant gaps exist",
+      "continueMonitoring": "Continue monitoring pay equity on a quarterly basis"
+    }
+  },
+  "earnedWagePage": {
+    "title": "Earned Wage Access",
+    "description": "On-demand pay — allow employees to access earned wages before payday",
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "settings": "Settings",
+      "requestAdvance": "Request Advance"
+    },
+    "stats": {
+      "pendingRequests": "Pending Requests",
+      "totalDisbursed": "Total Disbursed",
+      "avgRequest": "Avg Request",
+      "totalRequests": "Total Requests"
+    },
+    "filter": {
+      "showing": "Showing",
+      "requests": "requests",
+      "clear": "Clear filter"
+    },
+    "balance": {
+      "title": "Your Available Balance",
+      "details": "Earned so far: {{earned}} | Already withdrawn: {{withdrawn}} | Day {{day}}/{{days}}",
+      "maxPercentage": "Max {{value}}% of earned salary"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "disbursed": "Disbursed",
+      "rejected": "Rejected",
+      "repaid": "Repaid",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "columns": {
+      "employee": "Employee",
+      "amount": "Amount",
+      "fee": "Fee",
+      "status": "Status",
+      "requested": "Requested",
+      "reason": "Reason"
+    },
+    "emptyRequests": "No advance requests yet",
+    "messages": {
+      "showingAll": "Showing all requests below",
+      "requestSubmitted": "Advance request submitted",
+      "submitFailed": "Failed to submit request",
+      "requestApproved": "Request approved",
+      "approveFailed": "Failed to approve",
+      "rejectionReason": "Rejection reason (optional):",
+      "requestRejected": "Request rejected",
+      "rejectFailed": "Failed to reject",
+      "settingsSaved": "Settings saved",
+      "settingsSaveFailed": "Failed to save settings"
+    },
+    "requestModal": {
+      "title": "Request Salary Advance",
+      "available": "Available: {{amount}}",
+      "salaryDetails": "Monthly salary: {{salary}} | Day {{day}}/{{days}}",
+      "unavailable": "No advance available yet. Check your salary configuration or cooldown period.",
+      "amount": "Amount",
+      "amountPlaceholder": "Enter amount",
+      "reason": "Reason (optional)",
+      "reasonPlaceholder": "Why do you need this advance?",
+      "cancel": "Cancel",
+      "submit": "Submit Request"
+    },
+    "settingsModal": {
+      "title": "Earned Wage Access Settings",
+      "enable": "Enable Earned Wage Access",
+      "maxPercentage": "Max % of Earned Salary",
+      "cooldownDays": "Cooldown Days",
+      "minAmount": "Min Amount",
+      "maxAmount": "Max Amount (0 = no limit)",
+      "feePercentage": "Fee %",
+      "flatFee": "Flat Fee",
+      "autoApproveBelow": "Auto-approve Below (0 = disabled)",
+      "requiresApproval": "Requires Manager Approval",
+      "cancel": "Cancel",
+      "save": "Save Settings"
+    }
+  },
+  "insurancePage": {
+    "title": "Insurance Management",
+    "description": "Manage group insurance policies, enrollments, and claims",
+    "actions": {
+      "edit": "Edit",
+      "deactivate": "Deactivate",
+      "cancel": "Cancel",
+      "settle": "Settle",
+      "approve": "Approve",
+      "reject": "Reject",
+      "submitClaim": "Submit Claim",
+      "enrollEmployee": "Enroll Employee",
+      "newPolicy": "New Policy"
+    },
+    "stats": {
+      "activePolicies": "Active Policies",
+      "activeEnrollments": "Active Enrollments",
+      "pendingClaims": "Pending Claims",
+      "totalApproved": "Total Approved"
+    },
+    "tabs": {
+      "policies": "Policies ({{count}})",
+      "enrollments": "Enrollments ({{count}})",
+      "claims": "Claims ({{count}})"
+    },
+    "empty": {
+      "policies": "No insurance policies created yet",
+      "enrollments": "No enrollments yet",
+      "claims": "No claims submitted yet"
+    },
+    "columns": {
+      "policyName": "Policy Name",
+      "number": "Number",
+      "provider": "Provider",
+      "type": "Type",
+      "coverage": "Coverage",
+      "premiumPerEmployee": "Premium/Employee",
+      "status": "Status",
+      "employee": "Employee",
+      "policy": "Policy",
+      "sumInsured": "Sum Insured",
+      "premiumShare": "Premium Share",
+      "nominee": "Nominee",
+      "claimNumber": "Claim #",
+      "claimed": "Claimed",
+      "approved": "Approved",
+      "submitted": "Submitted"
+    },
+    "policyTypes": {
+      "group_health": "Group Health",
+      "group_life": "Group Life",
+      "disability": "Disability",
+      "accidental": "Accidental",
+      "travel": "Travel"
+    },
+    "claimTypes": {
+      "hospitalization": "Hospitalization",
+      "outpatient": "Outpatient",
+      "dental": "Dental",
+      "vision": "Vision",
+      "life": "Life",
+      "disability": "Disability",
+      "accidental": "Accidental",
+      "travel": "Travel",
+      "group_health": "Group Health",
+      "group_life": "Group Life"
+    },
+    "status": {
+      "active": "Active",
+      "expired": "Expired",
+      "cancelled": "Cancelled",
+      "submitted": "Submitted",
+      "under_review": "Under Review",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "settled": "Settled",
+      "inactive": "Inactive",
+      "claimed": "Claimed"
+    },
+    "messages": {
+      "invalidEndDate": "Policy end date cannot be before start date",
+      "renewalInPast": "Renewal date cannot be in the past",
+      "invalidRenewalDate": "Renewal date must be on or after the policy end date",
+      "invalidPolicyNumber": "Policy number cannot start with a minus sign",
+      "policyUpdated": "Insurance policy updated",
+      "policyCreated": "Insurance policy created",
+      "saveFailed": "Failed to save policy",
+      "deactivateConfirm": "Deactivate this insurance policy? Existing enrollments are unaffected.",
+      "policyDeactivated": "Insurance policy deactivated",
+      "deactivateFailed": "Failed to deactivate policy",
+      "employeeEnrolled": "Employee enrolled in insurance",
+      "enrollFailed": "Failed to enroll",
+      "claimSubmitted": "Claim submitted",
+      "claimSubmitFailed": "Failed to submit claim",
+      "approvedAmountPrompt": "Approved amount (leave blank for full amount):",
+      "claimApproved": "Claim approved",
+      "actionFailed": "Action failed",
+      "rejectionReason": "Rejection reason:",
+      "claimRejected": "Claim rejected",
+      "claimSettled": "Claim settled",
+      "enrollmentCancelled": "Enrollment cancelled"
+    },
+    "policyModal": {
+      "editTitle": "Edit Insurance Policy",
+      "createTitle": "Create Insurance Policy",
+      "policyName": "Policy Name",
+      "policyNumber": "Policy Number",
+      "policyNumberPlaceholder": "e.g. POL-2024-001",
+      "provider": "Provider",
+      "type": "Type",
+      "totalPremium": "Total Premium",
+      "premiumPerEmployee": "Premium / Employee",
+      "coverageAmount": "Coverage Amount",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "renewalDate": "Renewal Date",
+      "terms": "Terms & Conditions",
+      "cancel": "Cancel",
+      "updatePolicy": "Update Policy",
+      "createPolicy": "Create Policy"
+    },
+    "enrollModal": {
+      "title": "Enroll Employee in Insurance",
+      "employee": "Employee",
+      "policy": "Insurance Policy",
+      "sumInsured": "Sum Insured",
+      "premiumShare": "Employee Premium Share",
+      "nomineeName": "Nominee Name",
+      "nomineeRelationship": "Nominee Relationship",
+      "relationshipPlaceholder": "e.g. Spouse, Parent",
+      "cancel": "Cancel",
+      "submit": "Enroll"
+    },
+    "claimModal": {
+      "title": "Submit Insurance Claim",
+      "policy": "Insurance Policy",
+      "claimType": "Claim Type",
+      "amountClaimed": "Amount Claimed",
+      "description": "Description",
+      "descriptionPlaceholder": "Describe the claim",
+      "notes": "Notes",
+      "cancel": "Cancel",
+      "submit": "Submit Claim"
+    }
+  },
+  "countryCompliancePage": {
+    "title": "Country Compliance",
+    "description": "Browse labor laws, tax rates, and statutory requirements by country",
+    "filters": {
+      "searchPlaceholder": "Search countries...",
+      "configuredOnly": "Only my configured countries ({{count}})"
+    },
+    "regions": {
+      "all": "All Regions",
+      "asia": "Asia",
+      "europe": "Europe",
+      "americas": "Americas",
+      "africa": "Africa",
+      "oceania": "Oceania",
+      "middle_east": "Middle East"
+    },
+    "metrics": {
+      "maxHours": "Max Work Hours/Week",
+      "annualLeave": "Annual Leave",
+      "publicHolidays": "Public Holidays",
+      "noticePeriod": "Notice Period",
+      "probation": "Probation",
+      "payFrequency": "Pay Frequency"
+    },
+    "units": {
+      "hours": "{{value}} hrs",
+      "days": "{{value}} days",
+      "months": "{{value}} months"
+    },
+    "payFrequencies": {
+      "monthly": "Monthly",
+      "biweekly": "Bi-weekly",
+      "weekly": "Weekly",
+      "annual": "Annual"
+    },
+    "benefits": {
+      "title": "Statutory Benefits",
+      "socialSecurity": "Social Security",
+      "pension": "Pension",
+      "healthInsurance": "Health Insurance",
+      "required": "Required",
+      "notRequired": "Not Required"
+    },
+    "ratesTitle": "Tax & Social Security Rates",
+    "additional": {
+      "title": "Additional Information",
+      "taxYearStart": "Tax Year Start",
+      "minimumWage": "Minimum Wage (Monthly)",
+      "notSet": "Not set / Varies",
+      "countryCode": "Country Code",
+      "region": "Region"
+    },
+    "empty": {
+      "title": "Select a country to view compliance details",
+      "description": "Browse labor laws, tax rates, and statutory requirements"
+    },
+    "complianceKeys": {
+      "income_tax": "Income tax",
+      "solidarity_surcharge": "Solidarity surcharge",
+      "health_insurance_employer": "Employer health insurance",
+      "health_insurance_employee": "Employee health insurance",
+      "pension_employer": "Employer pension",
+      "pension_employee": "Employee pension",
+      "unemployment_employer": "Employer unemployment insurance",
+      "unemployment_employee": "Employee unemployment insurance",
+      "care_insurance_employer": "Employer care insurance",
+      "care_insurance_employee": "Employee care insurance",
+      "employer_social_charges": "Employer social charges",
+      "employee_social_charges": "Employee social charges",
+      "social_security_rate": "Social security rate",
+      "social_security_cap": "Social security cap",
+      "federal_tax": "Federal tax",
+      "state_tax": "State tax",
+      "epf_employer": "Employer EPF",
+      "epf_employee": "Employee EPF",
+      "esi_employer": "Employer ESI",
+      "esi_employee": "Employee ESI"
+    }
+  },
+  "glAccountingPage": {
+    "title": "GL / Accounting",
+    "description": "Map payroll components to GL accounts and generate journal entries",
+    "actions": {
+      "generateJournal": "Generate Journal",
+      "addMapping": "Add Mapping",
+      "deleteMapping": "Delete mapping",
+      "cancel": "Cancel",
+      "saveMapping": "Save Mapping",
+      "generate": "Generate"
+    },
+    "stats": {
+      "mappings": "GL Mappings",
+      "journals": "Journal Entries",
+      "exported": "Exported"
+    },
+    "tabs": {
+      "mappings": "GL Mappings",
+      "journals": "Journal Entries",
+      "exported": "Exported"
+    },
+    "mappingTable": {
+      "payComponent": "Pay Component",
+      "accountCode": "GL Account Code",
+      "accountName": "GL Account Name",
+      "description": "Description"
+    },
+    "journalTable": {
+      "date": "Date",
+      "payrollRun": "Payroll Run",
+      "totalDebit": "Total Debit",
+      "totalCredit": "Total Credit",
+      "status": "Status",
+      "export": "Export"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "posted": "Posted",
+      "exported": "Exported"
+    },
+    "empty": {
+      "mappings": "No GL mappings configured",
+      "journals": "No journal entries generated",
+      "exported": "No journals have been exported yet"
+    },
+    "mappingModal": {
+      "title": "Add GL Mapping",
+      "payComponentCode": "Pay Component Code",
+      "payComponentPlaceholder": "e.g., BASIC, HRA, EPF, TDS",
+      "accountCode": "GL Account Code",
+      "accountCodePlaceholder": "e.g., 4001",
+      "accountName": "GL Account Name",
+      "accountNamePlaceholder": "e.g., Salary Expense",
+      "description": "Description"
+    },
+    "journalModal": {
+      "title": "Generate Journal Entry",
+      "payrollRun": "Payroll Run",
+      "selectRun": "Select a payroll run...",
+      "help": "This will generate journal entries from the selected payroll run using your configured GL mappings."
+    },
+    "validation": {
+      "accountCode": "GL Account Code must be a positive number (no negative signs, letters, or spaces)"
+    },
+    "messages": {
+      "mappingCreated": "GL mapping created",
+      "journalGenerated": "Journal entry generated",
+      "mappingDeleted": "Mapping deleted",
+      "failed": "Action failed"
+    },
+    "exports": {
+      "tallyTitle": "Export to Tally",
+      "quickbooksTitle": "Export to QuickBooks",
+      "zohoTitle": "Export to Zoho"
+    }
+  },
+  "globalEmployeesPage": {
+    "title": "Global Employees",
+    "description": "Manage EOR, contractor, and direct-hire employees worldwide",
+    "actions": {
+      "addEmployee": "Add Employee",
+      "editEmployee": "Edit employee",
+      "terminateEmployee": "Terminate employee",
+      "alreadyTerminated": "Employee already terminated",
+      "cancel": "Cancel",
+      "saveChanges": "Save Changes"
+    },
+    "filters": {
+      "searchPlaceholder": "Search by name, email, or country...",
+      "allCountries": "All Countries",
+      "allTypes": "All Types",
+      "allStatuses": "All Statuses"
+    },
+    "employmentTypes": {
+      "eor": "EOR",
+      "contractor": "Contractor",
+      "direct_hire": "Direct Hire"
+    },
+    "contractTypes": {
+      "fullTime": "Full-time",
+      "partTime": "Part-time",
+      "fixedTerm": "Fixed-term"
+    },
+    "statuses": {
+      "active": "Active",
+      "onboarding": "Onboarding",
+      "offboarding": "Offboarding",
+      "terminated": "Terminated"
+    },
+    "salaryFrequencies": {
+      "monthly": "Monthly",
+      "biweekly": "Bi-weekly",
+      "weekly": "Weekly",
+      "annual": "Annual"
+    },
+    "salaryFrequencyShort": {
+      "monthly": "mo",
+      "biweekly": "2 wk",
+      "weekly": "wk",
+      "annual": "yr"
+    },
+    "table": {
+      "name": "Name",
+      "country": "Country",
+      "type": "Type",
+      "status": "Status",
+      "salary": "Salary",
+      "jobTitle": "Job Title",
+      "startDate": "Start Date",
+      "actions": "Actions"
+    },
+    "empty": "No global employees found. Click 'Add Employee' to hire your first international team member.",
+    "modal": {
+      "addTitle": "Add Global Employee",
+      "editTitle": "Edit Global Employee",
+      "firstName": "First Name *",
+      "lastName": "Last Name *",
+      "email": "Email *",
+      "country": "Country *",
+      "employmentType": "Employment Type *",
+      "contractType": "Contract Type",
+      "jobTitle": "Job Title *",
+      "department": "Department",
+      "selectDepartment": "Select department...",
+      "noDepartments": "No departments configured yet — add some from Settings > Departments",
+      "startDate": "Start Date *",
+      "salaryAmount": "Salary Amount * (in major currency unit)",
+      "payFrequency": "Pay Frequency",
+      "bankingTax": "Banking & Tax (Optional)",
+      "taxId": "Tax ID",
+      "bankName": "Bank Name",
+      "bankNamePlaceholder": "e.g. HDFC Bank",
+      "bankAccount": "Bank Account Number",
+      "bankAccountPlaceholder": "e.g. 12345678901234",
+      "bankRouting": "Bank Routing / IFSC",
+      "bankRoutingPlaceholder": "e.g. HDFC0001234"
+    },
+    "validation": {
+      "required": "Please fill all required fields"
+    },
+    "messages": {
+      "added": "Global employee added",
+      "updated": "Global employee updated",
+      "addFailed": "Failed to add employee",
+      "updateFailed": "Failed to update employee",
+      "terminatePrompt": "Terminate {{name}}? Enter a reason (required):",
+      "terminated": "Employee terminated",
+      "terminateFailed": "Failed to terminate employee"
+    }
+  },
+  "contractorInvoicesPage": {
+    "title": "Contractor Invoices",
+    "description": "Manage and pay contractor invoices",
+    "actions": {
+      "submitInvoice": "Submit Invoice",
+      "approve": "Approve",
+      "reject": "Reject",
+      "markPaid": "Mark Paid",
+      "cancel": "Cancel"
+    },
+    "filters": {
+      "allStatuses": "All Statuses"
+    },
+    "statuses": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "paid": "Paid",
+      "rejected": "Rejected"
+    },
+    "table": {
+      "invoiceNumber": "Invoice #",
+      "contractor": "Contractor",
+      "period": "Period",
+      "amount": "Amount",
+      "status": "Status",
+      "submitted": "Submitted",
+      "actions": "Actions"
+    },
+    "empty": "No contractor invoices yet.",
+    "modal": {
+      "title": "Submit Contractor Invoice",
+      "contractorLabel": "Contractor *",
+      "selectContractor": "Select a contractor...",
+      "noContractors": "No contractors yet — add one under Global Employees",
+      "amountLabel": "Amount",
+      "amountUnitHint": "major currency unit",
+      "periodStart": "Period Start *",
+      "periodEnd": "Period End *",
+      "description": "Description"
+    },
+    "validation": {
+      "required": "Please fill all required fields",
+      "positiveAmount": "Amount must be a positive number",
+      "invalidPeriod": "End date must be on or after start date"
+    },
+    "messages": {
+      "submitted": "Invoice submitted",
+      "submitFailed": "Failed to submit invoice",
+      "approved": "Invoice approved",
+      "approveFailed": "Failed to approve invoice",
+      "rejectConfirm": "Reject this invoice?",
+      "rejected": "Invoice rejected",
+      "rejectFailed": "Failed to reject invoice",
+      "paid": "Invoice marked as paid",
+      "paidFailed": "Failed to mark invoice as paid"
+    }
+  },
+  "globalPayrollDashboard": {
+    "title": "Global Payroll",
+    "description": "Manage your worldwide workforce across countries, currencies, and compliance requirements",
+    "stats": {
+      "activeEmployees": "Active Employees",
+      "countries": "Countries",
+      "eorWorkers": "EOR Workers",
+      "contractors": "Contractors",
+      "complianceScore": "Compliance Score",
+      "pendingInvoices": "Pending Invoices",
+      "onboarding": "Onboarding"
+    },
+    "compliance": {
+      "good": "Good",
+      "needsAttention": "Needs attention"
+    },
+    "employeesByCountry": {
+      "title": "Employees by Country",
+      "empty": "No employees yet. Add your first global employee."
+    },
+    "costByCurrency": {
+      "title": "Monthly Cost by Currency",
+      "empty": "No active payroll costs yet."
+    },
+    "costAnalysis": {
+      "title": "Cost Analysis by Country",
+      "columns": {
+        "country": "Country",
+        "employees": "Employees",
+        "averageSalary": "Avg Salary",
+        "totalGross": "Total Gross",
+        "employerCost": "Employer Cost",
+        "netPay": "Net Pay"
+      }
+    }
+  },
+  "globalPayrollRuns": {
+    "title": "Global Payroll Runs",
+    "description": "Run payroll per country per month, review, approve, and mark paid",
+    "statusFilter": "Filter payroll runs by status",
+    "allStatuses": "All Statuses",
+    "empty": "No payroll runs yet. Create your first global payroll run.",
+    "columns": {
+      "country": "Country",
+      "period": "Period",
+      "status": "Status",
+      "gross": "Gross",
+      "net": "Net",
+      "deductions": "Deductions",
+      "employerCost": "Employer Cost",
+      "actions": "Actions"
+    },
+    "actions": {
+      "view": "View payroll run",
+      "approve": "Approve",
+      "markPaid": "Mark Paid"
+    },
+    "createModal": {
+      "title": "Create Global Payroll Run",
+      "country": "Country *",
+      "selectCountry": "Select a country...",
+      "noCountries": "No countries with active EOR/direct-hire employees",
+      "calculationNotice": "This will automatically calculate deductions for all active EOR and direct-hire employees in the selected country."
+    },
+    "detailModal": {
+      "title": "Payroll Run — {{country}}",
+      "netPay": "Net Pay",
+      "employee": "Employee",
+      "tax": "Tax",
+      "socialSecurityEmployee": "SS (Employee)",
+      "pensionEmployee": "Pension (Employee)"
+    },
+    "messages": {
+      "selectCountry": "Please select a country",
+      "approved": "Payroll run approved",
+      "approveFailed": "Failed to approve payroll run",
+      "markedPaid": "Payroll run marked as paid",
+      "markPaidFailed": "Failed to mark payroll run as paid"
+    }
+  },
+  "announcementsPage": {
+    "title": "Announcements",
+    "description": "Company-wide notices, posted from EmpCloud",
+    "manageInEmpCloud": "Manage in EmpCloud",
+    "empty": "No announcements yet",
+    "postFromEmpCloud": "Post one from EmpCloud",
+    "pinned": "Pinned",
+    "archived": "Archived",
+    "byAuthor": "By {{author}}",
+    "unknownAuthor": "Unknown",
+    "expires": "Expires {{date}}",
+    "priorities": {
+      "low": "Low",
+      "normal": "Normal",
+      "high": "High",
+      "urgent": "Urgent"
+    },
+    "categories": {
+      "general": "General",
+      "hr": "HR",
+      "policy": "Policy",
+      "event": "Event",
+      "holiday": "Holiday",
+      "maintenance": "Maintenance"
+    }
+  },
+  "notificationsPage": {
+    "title": "Notifications",
+    "description": "All your recent alerts and updates in one place",
+    "markAllRead": "Mark all as read",
+    "bellAria": "Notifications, {{count}} unread",
+    "newCount": "{{count}} new — Mark read",
+    "viewAll": "View all notifications",
+    "tabs": {
+      "all": "All ({{count}})",
+      "unread": "Unread ({{count}})"
+    },
+    "empty": {
+      "noUnread": "No unread notifications",
+      "none": "No notifications",
+      "caughtUp": "You're all caught up!",
+      "updatesHere": "You'll see updates here as they come in."
+    },
+    "items": {
+      "admin": {
+        "tdsDue": {
+          "title": "TDS Filing Due",
+          "description": "Form 24Q for Q4 FY 2025-26 is due soon",
+          "time": "Action needed"
+        },
+        "payrollPending": {
+          "title": "{{month}} Payroll Pending",
+          "description": "Create and run this month's payroll",
+          "time": "This month"
+        },
+        "payrollCompleted": {
+          "title": "Last Payroll Completed",
+          "description": "All payslips generated and paid",
+          "time": "Last month"
+        },
+        "activeEmployees": {
+          "title": "{{count}} Active Employees",
+          "description": "All statutory registrations up to date",
+          "time": "System"
+        }
+      },
+      "employee": {
+        "payslipAvailable": {
+          "title": "Payslip Available",
+          "description": "Your latest payslip is ready to view",
+          "time": "Recently"
+        },
+        "taxReminder": {
+          "title": "Tax Declaration Reminder",
+          "description": "Submit your investment proofs before the deadline",
+          "time": "This quarter"
+        },
+        "salaryCredited": {
+          "title": "Salary Credited",
+          "description": "Your salary has been credited to your bank account",
+          "time": "Last month"
+        }
+      }
+    }
+  },
+  "selfServiceDashboard": {
+    "greeting": "Welcome, {{name}}!",
+    "userFallback": "User",
+    "description": "Here's your payroll summary",
+    "stats": {
+      "monthlyCtc": "Monthly CTC",
+      "latestNetPay": "Net Pay (Latest)",
+      "taxRegime": "Tax Regime",
+      "daysAtCompany": "Days at Company"
+    },
+    "regimes": {
+      "old": "Old Regime",
+      "new": "New Regime"
+    },
+    "latestPayslip": "Latest Payslip — {{period}}",
+    "payslip": {
+      "grossPay": "Gross Pay",
+      "deductions": "Deductions",
+      "netPay": "Net Pay",
+      "viewAll": "View All"
+    },
+    "actions": {
+      "salaryBreakdown": "View Salary Breakdown",
+      "taxComputation": "Tax Computation",
+      "submitDeclarations": "Submit Declarations",
+      "reimbursements": "Reimbursements",
+      "profile": "My Profile"
+    },
+    "announcements": {
+      "title": "Company Announcements",
+      "readMore": "Read more",
+      "fallbackTitle": "Announcement",
+      "priorityLabel": "{{priority}} priority",
+      "priorities": {
+        "low": "Low",
+        "normal": "Normal",
+        "high": "High",
+        "urgent": "Urgent"
+      }
+    }
+  },
+  "myPayslipsPage": {
+    "title": "My Payslips",
+    "description": "View and download your payslips",
+    "financialYear": "FY {{start}}-{{end}}",
+    "financialYearFilter": "Filter by financial year",
+    "empty": "No payslips available yet",
+    "gross": "Gross",
+    "net": "Net",
+    "actions": {
+      "hide": "Hide",
+      "details": "Details",
+      "downloadPdf": "Download PDF",
+      "dispute": "Raise a payslip dispute"
+    },
+    "earnings": "Earnings",
+    "totalEarnings": "Total Earnings",
+    "deductions": "Deductions",
+    "totalDeductions": "Total Deductions",
+    "components": {
+      "EPF": "Employee Provident Fund",
+      "PF": "Provident Fund",
+      "PF_EE": "Employee Provident Fund",
+      "ESI": "Employee State Insurance",
+      "PT": "Professional Tax",
+      "TDS": "Income Tax (TDS)",
+      "INCOME_TAX": "Income Tax",
+      "LOP": "Loss of Pay"
+    },
+    "dispute": {
+      "title": "Raise Payslip Dispute",
+      "reasonRequired": "Please provide a reason",
+      "success": "Dispute raised. HR will review it.",
+      "failed": "Failed to raise dispute",
+      "description": "If you believe there is an error in this payslip, describe the issue below. HR will review and respond.",
+      "placeholder": "Describe the issue (e.g. incorrect deduction or missing allowance)",
+      "cancel": "Cancel",
+      "submit": "Raise Dispute"
+    }
+  },
+  "mySalaryPage": {
+    "title": "My Salary",
+    "description": "Your CTC breakdown and salary structure",
+    "unavailable": "No salary information available",
+    "annualSummary": "Annual Summary",
+    "annualCtcConfigured": "Annual CTC (configured)",
+    "annualGrossComponents": "Annual gross from components",
+    "roundingNotice": "Small differences between configured CTC and the sum of components are expected — components are rounded to whole rupees per month before being annualised.",
+    "grossSalaryAnnual": "Gross Salary (Annual)",
+    "monthlyComponent": "Monthly {{component}}",
+    "monthlyBreakdown": "Monthly Salary Breakdown",
+    "salaryComponents": "Salary Components",
+    "effectiveFrom": "Effective from {{date}}",
+    "columns": {
+      "component": "Component",
+      "monthly": "Monthly",
+      "annual": "Annual"
+    },
+    "components": {
+      "BASIC": "Basic Salary",
+      "HRA": "HRA",
+      "SA": "Special Allowance"
+    }
+  },
+  "myTaxPage": {
+    "title": "My Tax",
+    "description": "FY {{financialYear}} tax computation",
+    "form16": "Form 16",
+    "stats": {
+      "annualIncome": "Annual Income",
+      "taxableIncome": "Taxable Income",
+      "estimatedTax": "Estimated Tax",
+      "tdsDeductedYtd": "TDS Deducted YTD"
+    },
+    "computationTitle": "Tax Computation",
+    "regimes": {
+      "new": "New Regime",
+      "old": "Old Regime"
+    },
+    "rows": {
+      "grossAnnualIncome": "Gross Annual Income",
+      "standardDeduction": "Less: Standard Deduction",
+      "chapterDeductions": "Less: Chapter VI-A Deductions",
+      "taxableIncome": "Taxable Income",
+      "taxOnIncome": "Tax on Income",
+      "cess": "Health & Education Cess (4%)",
+      "totalLiability": "Total Tax Liability",
+      "monthlyTds": "Monthly TDS"
+    },
+    "tracker": {
+      "title": "TDS Deduction Tracker",
+      "totalTax": "Total Tax for FY",
+      "tdsDeductedYtd": "TDS Deducted YTD",
+      "remaining": "Remaining",
+      "progress": "Progress",
+      "monthlyMessage": "Monthly TDS of <strong>{{amount}}</strong> will be deducted from your salary each month."
+    }
+  },
+  "myDeclarationsPage": {
+    "description": "FY {{financialYear}} — Submit investment proofs and claims",
+    "actions": {
+      "quickDeclare": "Quick Declare All",
+      "newDeclaration": "New Declaration",
+      "cancel": "Cancel",
+      "submitAll": "Submit All Declarations",
+      "submit": "Submit Declaration"
+    },
+    "stats": {
+      "totalDeclared": "Total Declared",
+      "totalApproved": "Total Approved",
+      "pendingApproval": "Pending Approval"
+    },
+    "declarations": "Declarations",
+    "empty": "No declarations yet. Select New Declaration to submit your first investment proof.",
+    "proof": {
+      "submitted": "Proof submitted",
+      "upload": "Upload"
+    },
+    "quick": {
+      "title": "Quick Tax Declaration",
+      "description": "Declare all your investments in one go",
+      "tip": "Tip: Under Section 80C you can claim up to ₹1,50,000 for PPF, ELSS, LIC, etc. NPS under 80CCD(1B) gives an additional ₹50,000 deduction.",
+      "defaultDescription": "Tax declaration under Section {{section}}"
+    },
+    "sections": {
+      "80C": "80C — PPF, ELSS, LIC, etc.",
+      "80CCD_1B": "80CCD(1B) — NPS",
+      "80D": "80D — Medical Insurance",
+      "80E": "80E — Education Loan Interest",
+      "80G": "80G — Donations",
+      "80TTA": "80TTA — Savings Interest",
+      "HRA": "HRA — House Rent"
+    },
+    "validation": {
+      "sectionRequired": "Please select a section",
+      "fieldRequired": "Please fill this field",
+      "validAmount": "Please enter a valid amount",
+      "nonnegativeAmount": "Amount cannot be negative",
+      "fileTooLarge": "File is larger than 5MB",
+      "fileType": "Only PDF, JPG or PNG files are allowed",
+      "oneAmount": "Enter at least one amount"
+    },
+    "messages": {
+      "proofUploaded": "Proof uploaded",
+      "proofUploadFailed": "Failed to upload proof",
+      "submitted": "Declaration submitted",
+      "submitFailed": "Failed to submit declaration",
+      "submittedCount_one": "{{count}} declaration submitted",
+      "submittedCount_other": "{{count}} declarations submitted",
+      "submitAllFailed": "Failed to submit declarations"
+    },
+    "form": {
+      "descriptionPlaceholder": "e.g. PPF Contribution",
+      "amount": "Amount",
+      "proofDocument": "Proof Document",
+      "optional": "optional",
+      "uploadProof": "Upload proof document",
+      "fileSelected": "{{size}} KB — select to change",
+      "dropzone": "Select to upload or drag and drop",
+      "fileHelp": "PDF, JPG or PNG up to 5MB"
+    }
+  },
+  "myReimbursementsPage": {
+    "title": "My Reimbursements",
+    "description": "Submit and track expense claims",
+    "newClaim": "New Claim",
+    "stats": {
+      "total": "Total Claims",
+      "pending": "Pending",
+      "approvedPaid": "Approved / Paid"
+    },
+    "empty": {
+      "title": "No reimbursement claims",
+      "description": "Select New Claim to submit an expense"
+    },
+    "columns": {
+      "category": "Category",
+      "description": "Description",
+      "amount": "Amount",
+      "date": "Date",
+      "status": "Status"
+    },
+    "categories": {
+      "medical": "Medical",
+      "travel": "Travel",
+      "food": "Food & Meals",
+      "equipment": "Equipment",
+      "internet": "Internet / Phone",
+      "books": "Books & Learning",
+      "other": "Other"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "paid": "Paid",
+      "rejected": "Rejected"
+    },
+    "messages": {
+      "invalidAmount": "Amount must be zero or a positive number",
+      "submitted": "Claim submitted for approval",
+      "failed": "Failed to submit claim"
+    },
+    "modal": {
+      "title": "Submit Expense Claim",
+      "category": "Category",
+      "description": "Description",
+      "descriptionPlaceholder": "e.g. Client meeting taxi",
+      "amount": "Amount (₹)",
+      "expenseDate": "Expense Date",
+      "cancel": "Cancel",
+      "submit": "Submit Claim"
+    }
+  },
+  "holidaysPage": {
+    "title": "Holiday Calendar",
+    "configured_one": "{{year}} — {{count}} holiday configured",
+    "configured_other": "{{year}} — {{count}} holidays configured",
+    "noHolidays": "No holidays",
+    "upcoming": "Upcoming Holidays",
+    "past": "Past Holidays",
+    "actions": {
+      "add": "Add Holiday",
+      "remove": "Remove holiday",
+      "cancel": "Cancel"
+    },
+    "columns": {
+      "holiday": "Holiday",
+      "date": "Date",
+      "day": "Day",
+      "type": "Type"
+    },
+    "types": {
+      "national": "National",
+      "regional": "Regional",
+      "optional": "Optional / Restricted"
+    },
+    "messages": {
+      "nameRequired": "Holiday name is required",
+      "nameLetter": "Holiday name must contain at least one letter",
+      "added": "Holiday added",
+      "addFailed": "Failed to add holiday",
+      "removed": "Holiday removed",
+      "removeFailed": "Failed to remove holiday"
+    },
+    "modal": {
+      "title": "Add Holiday",
+      "name": "Holiday Name",
+      "namePlaceholder": "e.g. Diwali",
+      "nameTitle": "Must contain at least one letter",
+      "date": "Date",
+      "type": "Type"
+    }
+  },
+  "payrollRuns": {
+    "title": "Payroll Runs",
+    "description": "Monthly payroll processing",
+    "runPayroll": "Run Payroll",
+    "noRuns": "No payroll runs yet.",
+    "runFirst": "Run your first payroll",
+    "totalRuns": "Total Runs",
+    "allPeriods": "All periods",
+    "latestNetPay": "Latest Net Pay",
+    "noComputedRuns": "No computed runs",
+    "markedPaid": "Marked paid",
+    "inProgress": "In Progress",
+    "inProgressSubtitle": "Draft · computed · approved",
+    "filterAria": "Filter runs by status",
+    "noMatches": "No runs match this filter.",
+    "newTitle": "New Payroll Run",
+    "newDescription": "Create a new monthly payroll run",
+    "createInfo": "Creates a draft run and computes gross, deductions, and net for every active employee in the selected month. You can review and approve it before marking it paid.",
+    "month": "Month",
+    "year": "Year",
+    "payDate": "Pay Date",
+    "cancel": "Cancel",
+    "createRun": "Create Run",
+    "created": "Payroll run created",
+    "missingReturnedId": "The run was submitted, but the server did not return an id. Refresh the list to verify it.",
+    "createFailed": "Failed to create payroll run",
+    "missingId": "This payroll run is missing an id — please refresh the list.",
+    "columns": {
+      "period": "Period",
+      "employees": "Employees",
+      "grossPay": "Gross Pay",
+      "deductions": "Deductions",
+      "netPay": "Net Pay",
+      "status": "Status"
+    },
+    "statuses": {
+      "all": "All",
+      "draft": "Draft",
+      "processing": "Processing",
+      "computed": "Computed",
+      "approved": "Approved",
+      "paid": "Paid",
+      "cancelled": "Cancelled"
+    },
+    "validation": {
+      "month": "Please select a valid month",
+      "year": "Please enter a valid year (2020–2100)",
+      "futurePeriod": "Cannot create a payroll run for a future period",
+      "payDate": "Please choose a pay date"
+    }
+  },
+  "pagination": {
+    "range": "{{start}}–{{end}} of {{total}}",
+    "pageOf": "Page {{page}} of {{totalPages}}",
+    "previous": "Previous",
+    "previousPage": "Previous page",
+    "next": "Next",
+    "nextPage": "Next page"
+  },
+  "adminDeclarations": {
+    "title": "Tax Declarations",
+    "description": "Review investment declarations submitted by employees for {{financialYear}}.",
+    "pending": {
+      "title": "Pending Approvals",
+      "badge": "{{pending}} pending · {{count}} employees",
+      "badge_one": "{{pending}} pending · {{count}} employee",
+      "badge_other": "{{pending}} pending · {{count}} employees",
+      "loading": "Loading pending declarations…",
+      "empty": "No declarations awaiting approval for {{financialYear}}. You’re all caught up.",
+      "declaredAmount": "{{amount}} declared"
+    },
+    "employees": {
+      "title": "Employees",
+      "loading": "Loading…",
+      "noMatches": "No matching employees.",
+      "shownOf": "{{shown}} of {{total}}"
+    },
+    "filters": {
+      "searchPlaceholder": "Name, email, or code",
+      "filterDepartment": "Filter by department",
+      "allDepartments": "All departments",
+      "filterLocation": "Filter by location",
+      "allLocations": "All locations",
+      "clear": "Clear filters"
+    },
+    "declarations": {
+      "pickEmployee": "Pick an employee",
+      "approving": "Approving…",
+      "approvePending": "Approve {{count}} pending declarations",
+      "approvePending_one": "Approve {{count}} pending declaration",
+      "approvePending_other": "Approve {{count}} pending declarations",
+      "selectPrompt": "Select an employee from the list to view their tax declarations.",
+      "loading": "Loading declarations…",
+      "empty": "No declarations submitted for {{financialYear}}."
+    },
+    "stats": {
+      "declared": "Declared",
+      "approved": "Approved",
+      "pending": "Pending"
+    },
+    "columns": {
+      "section": "Section",
+      "description": "Description",
+      "declared": "Declared",
+      "approved": "Approved",
+      "status": "Status",
+      "proof": "Proof",
+      "action": "Action"
+    },
+    "statuses": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "proof": {
+      "view": "View"
+    },
+    "actions": {
+      "approve": "Approve"
+    },
+    "toasts": {
+      "noPending": "No pending declarations to approve.",
+      "approvedCount": "Approved {{count}} declarations.",
+      "approvedCount_one": "Approved {{count}} declaration.",
+      "approvedCount_other": "Approved {{count}} declarations.",
+      "approveAllFailed": "Failed to approve declarations",
+      "alreadyApproved": "Already approved.",
+      "approvedOne": "Declaration approved.",
+      "approveOneFailed": "Failed to approve declaration"
+    }
+  },
+  "taxCalculator": {
+    "title": "Tax Calculator",
+    "description": "What-if income tax projection — pick any employee and recompute with custom inputs",
+    "financialYearShort": "FY {{year}}",
+    "simulationFailed": "Failed to compute tax. Please try again.",
+    "newRegimeInfo": "New regime — only the ₹75,000 standard deduction applies. HRA, 80C, 80D and other Chapter VI-A deductions are not available.",
+    "steps": {
+      "employee": "Step 1 · Employee",
+      "inputs": "Step 2 · Inputs",
+      "taxBreakdown": "Step 3 · Tax Breakdown"
+    },
+    "regimes": {
+      "new": "New Regime",
+      "old": "Old Regime"
+    },
+    "employee": {
+      "ctc": "CTC",
+      "select": "Search and select an employee…",
+      "joined": "Joined {{date}}",
+      "monthsLeft": "{{count}} months left this FY",
+      "monthsLeft_one": "{{count}} month left this FY",
+      "monthsLeft_other": "{{count}} months left this FY",
+      "midFyJoiner": "Mid-FY joiner",
+      "searchPlaceholder": "Search name, email, code…",
+      "noMatches": "No employees match “{{search}}”"
+    },
+    "empty": {
+      "title": "Pick an employee to begin",
+      "description": "The calculator loads their current salary, regime, and approved declarations so you can tweak any input and see the resulting monthly TDS."
+    },
+    "inputs": {
+      "reset": "Reset to saved",
+      "loadingSaved": "Loading saved values…",
+      "noSalary": "No active salary structure assigned. All fields start at zero — enter figures manually to project tax.",
+      "midFyTitle": "Mid-FY joiner — capture Form 12B below",
+      "midFyDescription": "This employee joined in the middle of FY {{financialYear}}. Without their prior employer’s income + TDS, the engine will spread the full annual tax over only {{count}} months and over-deduct.",
+      "midFyDescription_one": "This employee joined in the middle of FY {{financialYear}}. Without their prior employer’s income + TDS, the engine will spread the full annual tax over only {{count}} month and over-deduct.",
+      "midFyDescription_other": "This employee joined in the middle of FY {{financialYear}}. Without their prior employer’s income + TDS, the engine will spread the full annual tax over only {{count}} months and over-deduct.",
+      "regime": "Regime",
+      "compare": "Compare Old vs New",
+      "pan": "PAN",
+      "panHint": "206AA flat 20% if blank",
+      "annualGross": "Annual Gross",
+      "annualBasic": "Annual Basic",
+      "annualHra": "Annual HRA",
+      "employeePfAnnual": "Employee PF (annual)"
+    },
+    "priorEmployer": {
+      "title": "Prior Employer (Form 12B)",
+      "save": "Save to profile",
+      "saved": "Prior-employer TDS saved",
+      "saveFailed": "Failed to save prior TDS",
+      "description": "Income the employee earned and TDS deducted at their previous employer this FY. Saved values flow into the next payroll run so the engine does not collect this employer’s share against the prior employer’s withholding.",
+      "gross": "Prior employer gross (this FY)",
+      "tds": "Prior employer TDS",
+      "source": "Source / notes (optional)",
+      "sourcePlaceholder": "e.g. “Form 12B uploaded 2026-09-01”"
+    },
+    "oldRegime": {
+      "title": "Old-regime extras",
+      "annualRent": "Annual Rent Paid",
+      "metro": "Metro city (50% basic HRA cap)",
+      "declarations": "Chapter VI-A Declarations",
+      "add": "Add",
+      "noDeclarations": "No declarations. Click “Add” to model 80C / 80D / 80CCD(1B), etc.",
+      "remove": "Remove"
+    },
+    "actions": {
+      "compareRegimes": "Compare Regimes",
+      "calculate": "Calculate"
+    },
+    "validation": {
+      "invalidPan": "PAN format looks invalid — expected ABCDE1234F.",
+      "section80CCap": "80C total is {{amount}} — only ₹1,50,000 is deductible (cap).",
+      "npsCap": "80CCD(1B) NPS is capped at ₹50,000.",
+      "hraNeedsRent": "HRA exemption needs rent paid — enter annual rent to claim it."
+    },
+    "results": {
+      "calculating": "Calculating…",
+      "clickCalculate": "Click Calculate to project tax",
+      "enterAnnualGross": "Enter an Annual Gross to project tax",
+      "section206aaTitle": "Section 206AA applied",
+      "section206aaDetail": "PAN is missing, so a flat 20% of annual gross is being deducted regardless of regime or declarations.",
+      "sameTax": "Both regimes result in the same tax",
+      "saves": "{{regime}} saves {{amount}}",
+      "recommended": "Recommended:",
+      "monthlyTds": "Monthly TDS",
+      "tapRegime": "Select a regime to see its full breakdown below",
+      "grossAnnualIncome": "Gross Annual Income",
+      "less": "Less: {{item}}",
+      "taxableIncome": "Taxable Income",
+      "taxOnIncome": "Tax on Income (post-rebate 87A)",
+      "surcharge": "Surcharge",
+      "cess": "Health & Education Cess (4%)",
+      "totalAnnualTax": "Total Annual Tax",
+      "tdsPaidYtd": "TDS Paid YTD",
+      "remainingTax": "Remaining Tax",
+      "savingSuggestion": "Invest {{investment}} more under Section 80C to save approximately {{saving}} in tax."
+    },
+    "sections": {
+      "80C": "PPF / ELSS / LIC / Principal",
+      "80CCD_1B": "Additional NPS",
+      "80D": "Medical Insurance",
+      "80E": "Education Loan Interest",
+      "80G": "Donations",
+      "80TTA": "Savings Interest"
+    }
+  },
+  "taxOverview": {
+    "title": "Tax Overview",
+    "financialYear": "FY {{start}}-{{end}}",
+    "description": "{{fy}} income tax summary",
+    "missingPanCount": "{{count}} employees on this page without a valid PAN",
+    "missingPanCount_one": "{{count}} employee on this page without a valid PAN",
+    "missingPanCount_other": "{{count}} employees on this page without a valid PAN",
+    "missingPanDetail": "TDS for these employees is being deducted at the Section 206AA flat rate of 20%. Ask each employee to update their PAN in their profile so standard slab rates apply.",
+    "summaryTitle": "Employee Tax Summary",
+    "regimeSuffix": "{{regime}} Regime",
+    "noSalaryStructure": "No salary structure assigned",
+    "empty": "No employees found.",
+    "stats": {
+      "totalEmployees": "Total Employees",
+      "estimatedTaxPage": "Estimated Tax (page)",
+      "tdsDeductedYtdPage": "TDS Deducted YTD (page)",
+      "pageOf": "page {{page}} of {{totalPages}}",
+      "newRegimePage": "New Regime (page)",
+      "optedIn": "employees opted in"
+    },
+    "filters": {
+      "searchPlaceholder": "Search by name, email, code, or designation…",
+      "filterDepartment": "Filter by department",
+      "allDepartments": "All departments",
+      "filterLocation": "Filter by location",
+      "allLocations": "All locations",
+      "clear": "Clear filters"
+    },
+    "columns": {
+      "employee": "Employee",
+      "regime": "Regime",
+      "estimatedTax": "Estimated Tax",
+      "tdsDeductedYtd": "TDS Deducted YTD"
+    },
+    "pan": {
+      "label": "PAN",
+      "invalidTitle": "No valid PAN — TDS deducted at Section 206AA flat 20%.",
+      "missing": "No PAN"
+    },
+    "regimes": {
+      "new": "New",
+      "old": "Old"
+    }
+  },
+  "payslipList": {
+    "title": "Payslips",
+    "count": "{{count}} payslips",
+    "count_one": "{{count}} payslip",
+    "count_other": "{{count}} payslips",
+    "loading": "Loading…",
+    "firstOf": "First {{loaded}} of {{total}} payslips — refine filters to narrow",
+    "filteredOf": "{{filtered}} of {{total}} payslips",
+    "exportAll": "Export All",
+    "exportSuccess": "Exported payslips CSV",
+    "exportFailed": "Export failed",
+    "emptyTitle": "No payslips for this selection.",
+    "emptyHint": "Try a different month or year.",
+    "cappedNotice": "Showing the first {{loaded}} of {{total}} payslips — the totals above reflect this view. Narrow by month, year, or department to see exact figures.",
+    "excludedTotals": "Totals exclude {{count}} disputed/cancelled payslips.",
+    "excludedTotals_one": "Totals exclude {{count}} disputed/cancelled payslip.",
+    "excludedTotals_other": "Totals exclude {{count}} disputed/cancelled payslips.",
+    "emptyFiltered": "No payslips match your filters.",
+    "filters": {
+      "search": "Search",
+      "searchPlaceholder": "Name or code…",
+      "department": "Department",
+      "allDepartments": "All Departments",
+      "location": "Location",
+      "allLocations": "All Locations",
+      "month": "Month",
+      "allMonths": "All Months",
+      "year": "Year",
+      "allYears": "All Years"
+    },
+    "stats": {
+      "payslips": "Payslips",
+      "inView": "in view",
+      "of": "of {{count}}",
+      "gross": "Gross",
+      "grossEarnings": "gross earnings",
+      "deductions": "Deductions",
+      "totalDeductions": "total deductions",
+      "netPay": "Net Pay",
+      "takeHome": "take-home"
+    },
+    "columns": {
+      "employee": "Employee",
+      "period": "Period",
+      "days": "Days",
+      "gross": "Gross",
+      "deductions": "Deductions",
+      "netPay": "Net Pay",
+      "status": "Status"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "generated": "Generated",
+      "sent": "Sent",
+      "viewed": "Viewed",
+      "paid": "Paid",
+      "disputed": "Disputed",
+      "resolved": "Resolved",
+      "cancelled": "Cancelled",
+      "pending": "Pending",
+      "rejected": "Rejected"
+    },
+    "actions": {
+      "view": "View",
+      "downloadPdf": "Download PDF"
+    },
+    "modal": {
+      "fallbackTitle": "Payslip",
+      "lopNotice": "Paid {{paid}} of {{total}} days — {{lop}} LOP days deducted",
+      "earnings": "Earnings",
+      "grossPay": "Gross Pay",
+      "deductions": "Deductions",
+      "totalDeductions": "Total Deductions",
+      "netPay": "Net Pay",
+      "printSavePdf": "Print / Save PDF",
+      "close": "Close"
+    }
+  },
+  "salaryStructures": {
+    "title": "Salary Structures",
+    "configured": "{{count}} structures configured",
+    "configured_one": "{{count}} structure configured",
+    "configured_other": "{{count}} structures configured",
+    "newStructure": "New Structure",
+    "noStructures": "No salary structures yet.",
+    "createFirst": "Create your first structure",
+    "editTitle": "Edit Salary Structure",
+    "newTitle": "New Salary Structure",
+    "structureName": "Structure Name",
+    "structureNamePlaceholder": "e.g. Standard India CTC",
+    "description": "Description",
+    "descriptionPlaceholder": "For full-time employees",
+    "components": "Components",
+    "nightHelpAria": "Night Allowance calculation help",
+    "nightHelpTitle": "How Night Allowance is calculated",
+    "nightOvertimeHelp": "How Night Allowance and Overtime are calculated",
+    "addPresetAria": "Add preset component",
+    "addPreset": "+ Add preset…",
+    "custom": "Custom",
+    "componentName": "Component name",
+    "auto": "auto",
+    "nightRatePlaceholder": "₹/night",
+    "dayRatePlaceholder": "₹/day",
+    "percentPlaceholder": "% e.g. 10",
+    "multiplierPlaceholder": "e.g. 2",
+    "autoTitle": "Auto-filled from CTC at assignment time",
+    "info": "Info",
+    "noteTitle": "Note:",
+    "noteText": "Statutory deductions (EPF, ESI, PT, TDS) are computed automatically during payroll and do not need to be added here. Use the Deduction type for recurring non-statutory deductions such as canteen fees or welfare fund. Use Balance on one earning (typically Special Allowance) to absorb the portion of CTC remaining after other components.",
+    "cancel": "Cancel",
+    "updateStructure": "Update Structure",
+    "createStructure": "Create Structure",
+    "gotIt": "Got it",
+    "deleteTitle": "Delete salary structure?",
+    "deleteDescription": "“{{name}}” will be removed. Employees already assigned to it keep their salary, and their computed payslips are unaffected.",
+    "delete": "Delete",
+    "active": "Active",
+    "inactive": "Inactive",
+    "default": "Default",
+    "defaultStructureName": "Standard CTC Structure",
+    "defaultStructureDescription": "Default salary structure with Basic, HRA, SA, PF, and ESI components",
+    "noComponents": "No components",
+    "noComponentsDefined": "No components defined",
+    "duplicate": "Duplicate",
+    "duplicateAria": "Duplicate structure",
+    "edit": "Edit",
+    "editAria": "Edit structure",
+    "deleteAria": "Delete structure",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "statutoryNote": "EPF, ESI, Professional Tax, and TDS are computed automatically during payroll — they are not part of the salary structure.",
+    "created": "Salary structure created",
+    "updated": "Salary structure updated",
+    "deleted": "Salary structure deleted",
+    "duplicated": "Structure duplicated",
+    "saveFailed": "Failed to save",
+    "deleteFailed": "Failed to delete",
+    "duplicateFailed": "Failed to duplicate",
+    "copyName": "{{name}} (Copy)",
+    "columns": {
+      "name": "Name",
+      "code": "Code",
+      "type": "Type",
+      "calc": "Calc",
+      "value": "Value",
+      "percentOf": "% Of",
+      "component": "Component",
+      "calculation": "Calculation"
+    },
+    "types": {
+      "earning": "Earning",
+      "deduction": "Deduction",
+      "reimbursement": "Reimbursement",
+      "reimbursementShort": "Reimb."
+    },
+    "counts": {
+      "earning": "{{count}} earnings",
+      "earning_one": "{{count}} earning",
+      "earning_other": "{{count}} earnings",
+      "deduction": "{{count}} deductions",
+      "deduction_one": "{{count}} deduction",
+      "deduction_other": "{{count}} deductions",
+      "reimbursement": "{{count}} reimbursements",
+      "reimbursement_one": "{{count}} reimbursement",
+      "reimbursement_other": "{{count}} reimbursements",
+      "earningLabel": "earnings",
+      "earningLabel_one": "earning",
+      "earningLabel_other": "earnings",
+      "deductionLabel": "deductions",
+      "deductionLabel_one": "deduction",
+      "deductionLabel_other": "deductions"
+    },
+    "calcs": {
+      "perNight": "Per Night ₹",
+      "dayPay": "× Day Pay",
+      "netPayPercent": "% of Net Pay",
+      "perOtDay": "Per OT day ₹",
+      "fixed": "Fixed",
+      "balance": "Balance"
+    },
+    "calculationText": {
+      "percentageOf": "{{value}}% of {{base}}",
+      "fixed": "Fixed ₹{{value}}",
+      "perNight": "₹{{value}} / night",
+      "wholeSalaryNight": "{{value}}× whole salary (night shift)",
+      "netPayNight": "{{value}}% of net pay (night shift)",
+      "perOtDay": "₹{{value}} / OT day",
+      "dayPayOt": "{{value}}× day pay / OT day",
+      "balancing": "Balancing"
+    },
+    "presetNames": {
+      "BASIC": "Basic Salary",
+      "HRA": "House Rent Allowance",
+      "SA": "Special Allowance",
+      "CA": "Conveyance Allowance",
+      "MA": "Medical Allowance",
+      "LTA": "Leave Travel Allowance",
+      "BONUS": "Performance Bonus",
+      "NIGHT_ALLOW": "Night Allowance",
+      "OVERTIME": "Overtime",
+      "CANTEEN": "Canteen Deduction",
+      "WELFARE": "Welfare Fund",
+      "ADV_REC": "Advance Recovery"
+    },
+    "validation": {
+      "singleBalance": "Only one component can use Balance calculation.",
+      "balanceEarning": "Balance calculation is only valid for earnings ({{code}}).",
+      "percentage": "{{code}}: percentage must be between 0 and 100.",
+      "percentageBase": "{{code}}: choose a % Of base (e.g. CTC, BASIC).",
+      "fixedEarning": "{{code}}: fixed earning amount must be greater than 0.",
+      "nightRate": "{{code}}: enter a ₹/night rate greater than 0.",
+      "nightMultiplier": "{{code}}: night multiplier must be at least 1 (1 = same as day pay, 2 = double).",
+      "netPercentage": "{{code}}: enter a net-pay percentage between 0 and 100 (e.g. 10).",
+      "overtimeRate": "{{code}}: enter a ₹/OT-day rate greater than 0.",
+      "overtimeMultiplier": "{{code}}: overtime multiplier must be at least 1 (1 = same as a normal day, 2 = double)."
+    },
+    "help": {
+      "title": "Night Allowance & Overtime — calculation modes",
+      "intro": "Night Allowance is paid only for days worked on a shift marked is_night_shift = 1 in attendance. LOP days never contribute. Two modes are available:",
+      "modeValue": "Mode + Value",
+      "allowanceAdded": "Allowance added",
+      "perNight": "Per Night",
+      "flatExample": "flat ₹250 × 22 nights",
+      "addedOnBase": "added on top of base",
+      "double": "double",
+      "doubleFormula": "base 166,666 × (2 − 1)",
+      "doubleTotal": "→ total gross = base × 2 = 333,332",
+      "oneHalfFormula": "base 166,666 × (1.5 − 1)",
+      "oneHalfTotal": "→ total gross = base × 1.5 = 250,000",
+      "howModesWork": "How each mode works:",
+      "perNightExplanation": "Per Night ₹ — a flat rupee amount per night worked, added on top of normal salary.",
+      "dayPayExplanation": "× Day Pay — the whole salary of a night-shift employee is paid at the multiple. A value of 2 makes total gross equal base × 2. At least one night must be worked in the month.",
+      "exampleBase": "Example base monthly gross used above: ₹166,666.",
+      "overtimeTitle": "Overtime (week-off / holiday worked):",
+      "overtimeCount": "OT days are days an employee was present on a week-off or holiday. The Attendance Grid marks these WOT/HOT automatically.",
+      "perOtExplanation": "Per OT day ₹ — a flat rupee amount per OT day.",
+      "otDayPayExplanation": "× Day Pay — multiplier × daily salary for each OT day. Unlike the night mode, this is per-day rather than whole-salary.",
+      "notesTitle": "Notes.",
+      "notesText": "The allowance is taxable income, so EPF and TDS do not simply double. Net pay rises by less than gross. A night counts only for days actually worked on a night shift (half-days = 0.5)."
+    }
+  }
+}

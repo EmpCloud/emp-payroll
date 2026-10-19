@@ -12,22 +12,17 @@ import { apiGet, apiPost } from "@/api/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Receipt, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
-const CATEGORIES = [
-  { value: "medical", label: "Medical" },
-  { value: "travel", label: "Travel" },
-  { value: "food", label: "Food & Meals" },
-  { value: "equipment", label: "Equipment" },
-  { value: "internet", label: "Internet / Phone" },
-  { value: "books", label: "Books & Learning" },
-  { value: "other", label: "Other" },
-];
+const CATEGORIES = ["medical", "travel", "food", "equipment", "internet", "books", "other"];
 
 export function MyReimbursementsPage() {
+  const { t, i18n } = useTranslation();
   const [showAdd, setShowAdd] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved">("all");
   const qc = useQueryClient();
+  const locale = i18n.resolvedLanguage || i18n.language || "en";
 
   // #1358 — Request a large page so client-side pagination has all records
   // to paginate through. Without per_page, backend caps at 20 and anything
@@ -58,7 +53,7 @@ export function MyReimbursementsPage() {
     const amount = Number(fd.get("amount"));
     // #38 — guard against negative / NaN amounts before hitting the server
     if (!Number.isFinite(amount) || amount < 0) {
-      toast.error("Amount must be zero or a positive number");
+      toast.error(t("myReimbursementsPage.messages.invalidAmount"));
       return;
     }
     setSubmitting(true);
@@ -69,11 +64,11 @@ export function MyReimbursementsPage() {
         amount,
         expenseDate: fd.get("date"),
       });
-      toast.success("Claim submitted for approval");
+      toast.success(t("myReimbursementsPage.messages.submitted"));
       setShowAdd(false);
       qc.invalidateQueries({ queryKey: ["my-reimbursements"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to submit");
+      toast.error(err.response?.data?.error?.message || t("myReimbursementsPage.messages.failed"));
     } finally {
       setSubmitting(false);
     }
@@ -82,11 +77,11 @@ export function MyReimbursementsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="My Reimbursements"
-        description="Submit and track expense claims"
+        title={t("myReimbursementsPage.title")}
+        description={t("myReimbursementsPage.description")}
         actions={
           <Button size="sm" onClick={() => setShowAdd(true)}>
-            <Plus className="h-4 w-4" /> New Claim
+            <Plus className="h-4 w-4" /> {t("myReimbursementsPage.newClaim")}
           </Button>
         }
       />
@@ -103,7 +98,7 @@ export function MyReimbursementsPage() {
         >
           <Card>
             <CardContent className="py-4">
-              <p className="text-sm text-gray-500">Total Claims</p>
+              <p className="text-sm text-gray-500">{t("myReimbursementsPage.stats.total")}</p>
               <p className="text-xl font-bold">{claims.length}</p>
             </CardContent>
           </Card>
@@ -117,7 +112,7 @@ export function MyReimbursementsPage() {
         >
           <Card>
             <CardContent className="py-4">
-              <p className="text-sm text-gray-500">Pending</p>
+              <p className="text-sm text-gray-500">{t("myReimbursementsPage.stats.pending")}</p>
               <p className="text-xl font-bold text-orange-600">{formatCurrency(totalPending)}</p>
             </CardContent>
           </Card>
@@ -131,7 +126,9 @@ export function MyReimbursementsPage() {
         >
           <Card>
             <CardContent className="py-4">
-              <p className="text-sm text-gray-500">Approved / Paid</p>
+              <p className="text-sm text-gray-500">
+                {t("myReimbursementsPage.stats.approvedPaid")}
+              </p>
               <p className="text-xl font-bold text-green-600">{formatCurrency(totalApproved)}</p>
             </CardContent>
           </Card>
@@ -146,8 +143,10 @@ export function MyReimbursementsPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <Receipt className="mx-auto h-12 w-12 text-gray-300" />
-            <p className="mt-4 text-gray-500">No reimbursement claims</p>
-            <p className="mt-1 text-sm text-gray-400">Click "New Claim" to submit an expense</p>
+            <p className="mt-4 text-gray-500">{t("myReimbursementsPage.empty.title")}</p>
+            <p className="mt-1 text-sm text-gray-400">
+              {t("myReimbursementsPage.empty.description")}
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -155,19 +154,27 @@ export function MyReimbursementsPage() {
           columns={[
             {
               key: "category",
-              header: "Category",
-              render: (r: any) => <Badge variant="draft">{r.category}</Badge>,
+              header: t("myReimbursementsPage.columns.category"),
+              render: (r: any) => (
+                <Badge variant="draft">
+                  {t(`myReimbursementsPage.categories.${r.category}`, { defaultValue: r.category })}
+                </Badge>
+              ),
             },
-            { key: "description", header: "Description" },
-            { key: "amount", header: "Amount", render: (r: any) => formatCurrency(r.amount) },
+            { key: "description", header: t("myReimbursementsPage.columns.description") },
+            {
+              key: "amount",
+              header: t("myReimbursementsPage.columns.amount"),
+              render: (r: any) => formatCurrency(r.amount),
+            },
             {
               key: "expense_date",
-              header: "Date",
-              render: (r: any) => new Date(r.expense_date).toLocaleDateString("en-IN"),
+              header: t("myReimbursementsPage.columns.date"),
+              render: (r: any) => new Date(r.expense_date).toLocaleDateString(locale),
             },
             {
               key: "status",
-              header: "Status",
+              header: t("myReimbursementsPage.columns.status"),
               render: (r: any) => {
                 const steps = ["pending", "approved", "paid"];
                 const idx = steps.indexOf(r.status);
@@ -187,7 +194,9 @@ export function MyReimbursementsPage() {
                         />
                       ))}
                     </div>
-                    <Badge variant={r.status}>{r.status}</Badge>
+                    <Badge variant={r.status}>
+                      {t(`myReimbursementsPage.status.${r.status}`, { defaultValue: r.status })}
+                    </Badge>
                   </div>
                 );
               },
@@ -197,35 +206,53 @@ export function MyReimbursementsPage() {
         />
       )}
 
-      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Submit Expense Claim">
+      <Modal
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        title={t("myReimbursementsPage.modal.title")}
+      >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <SelectField id="category" name="category" label="Category" options={CATEGORIES} />
+          <SelectField
+            id="category"
+            name="category"
+            label={t("myReimbursementsPage.modal.category")}
+            options={CATEGORIES.map((category) => ({
+              value: category,
+              label: t(`myReimbursementsPage.categories.${category}`),
+            }))}
+          />
           <Input
             id="description"
             name="description"
-            label="Description"
-            placeholder="e.g. Client meeting taxi"
+            label={t("myReimbursementsPage.modal.description")}
+            placeholder={t("myReimbursementsPage.modal.descriptionPlaceholder")}
             required
           />
           <div className="grid grid-cols-2 gap-4">
             <Input
               id="amount"
               name="amount"
-              label="Amount (₹)"
+              label={t("myReimbursementsPage.modal.amount")}
               type="number"
               placeholder="1500"
               min="0"
               step="0.01"
               required
             />
-            <Input id="date" name="date" label="Expense Date" type="date" required />
+            <Input
+              id="date"
+              name="date"
+              label={t("myReimbursementsPage.modal.expenseDate")}
+              type="date"
+              required
+            />
           </div>
           <div className="flex justify-end gap-3">
             <Button variant="outline" type="button" onClick={() => setShowAdd(false)}>
-              Cancel
+              {t("myReimbursementsPage.modal.cancel")}
             </Button>
             <Button type="submit" loading={submitting}>
-              Submit Claim
+              {t("myReimbursementsPage.modal.submit")}
             </Button>
           </div>
         </form>

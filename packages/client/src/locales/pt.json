@@ -1,0 +1,2457 @@
+{
+  "language": { "change": "Alterar idioma", "menuLabel": "Selecionar idioma" },
+  "common": {
+    "appName": "EMP Payroll",
+    "user": "Usuário",
+    "employees": "Funcionários",
+    "employee_one": "{{count}} funcionário",
+    "employee_other": "{{count}} funcionários",
+    "unassigned": "Não atribuído",
+    "noResults": "Nenhum resultado encontrado"
+  },
+  "employeeList": {
+    "title": "Funcionários",
+    "loading": "Carregando...",
+    "summary": "{{visible}} de {{total}} funcionários",
+    "summary_one": "{{visible}} de {{total}} funcionário",
+    "summary_other": "{{visible}} de {{total}} funcionários",
+    "pendingBankRequests": "Solicitações pendentes de atualização bancária ({{count}})",
+    "bankDetails": "{{bank}} — Conta {{accountNumber}} — IFSC {{ifscCode}}",
+    "approve": "Aprovar",
+    "reject": "Rejeitar",
+    "bankUpdated": "Dados bancários atualizados",
+    "requestRejected": "Solicitação rejeitada",
+    "actionFailed": "Não foi possível concluir a ação: {{action}}",
+    "selectEmployee": "Selecionar {{name}}",
+    "export": "Exportar",
+    "exportSuccess": "CSV de funcionários exportado",
+    "exportFailed": "Falha na exportação",
+    "import": "Importar",
+    "importTitle": "Importar novos funcionários de um arquivo CSV",
+    "bulkUpdate": "Atualização em massa",
+    "bulkUpdateTitle": "Atualizar funcionários existentes de um arquivo CSV",
+    "bulkSalary": "Salários em massa",
+    "bulkSalaryTitle": "Atualizar salários de um arquivo CSV",
+    "addEmployee": "Adicionar funcionário",
+    "searchPlaceholder": "Buscar por nome, e-mail, código ou cargo...",
+    "filterDepartment": "Filtrar por departamento",
+    "allDepartments": "Todos os departamentos",
+    "filterLocation": "Filtrar por local",
+    "allLocations": "Todos os locais",
+    "clearFilters": "Limpar filtros",
+    "selected": "{{count}} funcionários selecionados",
+    "selected_one": "{{count}} funcionário selecionado",
+    "selected_other": "{{count}} funcionários selecionados",
+    "updateSalary": "Atualizar salário",
+    "clear": "Limpar",
+    "columns": {
+      "employee": "Funcionário",
+      "designation": "Cargo",
+      "email": "E-mail",
+      "location": "Local",
+      "joined": "Data de admissão",
+      "status": "Status"
+    },
+    "statuses": { "active": "Ativo", "inactive": "Inativo" }
+  },
+  "orgChart": {
+    "title": "Organograma",
+    "description": "Estrutura hierárquica — arraste para mover e role ou faça gesto de pinça para ampliar",
+    "organization": "Organização",
+    "noEmployees": "Ainda não há funcionários para exibir.",
+    "people": "Pessoas",
+    "managers": "Gestores",
+    "departments": "Departamentos",
+    "personCount": "{{count}} pessoas",
+    "personCount_one": "{{count}} pessoa",
+    "personCount_other": "{{count}} pessoas",
+    "collapse": "Recolher",
+    "expand": "Expandir",
+    "expandReports": "Exibir {{count}} subordinados",
+    "viewAll": "Ver: {{label}}",
+    "searchPlaceholder": "Buscar pessoas, cargos ou departamentos…",
+    "searchAria": "Buscar no organograma",
+    "clearSearch": "Limpar busca",
+    "zoomIn": "Ampliar",
+    "zoomOut": "Reduzir",
+    "fitToScreen": "Ajustar à tela",
+    "fullscreen": "Tela cheia",
+    "hint": "Arraste para mover · role para ampliar · use pinça em telas sensíveis ao toque",
+    "allPeopleTitle": "Todas as pessoas ({{count}})",
+    "managersTitle": "Gestores ({{count}})",
+    "departmentsTitle": "Departamentos ({{count}})",
+    "filterDepartments": "Filtrar departamentos…",
+    "filterPeople": "Filtrar pessoas…",
+    "noMatches": "Nenhum resultado.",
+    "reportCount": "{{count}} subordinados",
+    "reportCount_one": "{{count}} subordinado",
+    "reportCount_other": "{{count}} subordinados"
+  },
+  "departmentsPage": {
+    "title": "Departamentos",
+    "departmentCount": "{{count}} departamentos",
+    "departmentCount_one": "{{count}} departamento",
+    "departmentCount_other": "{{count}} departamentos",
+    "employeeCount": "{{count}} funcionários",
+    "employeeCount_one": "{{count}} funcionário",
+    "employeeCount_other": "{{count}} funcionários",
+    "fromEmpCloud": "do EmpCloud",
+    "addDepartment": "Adicionar departamento",
+    "noDepartments": "Ainda não há departamentos.",
+    "addFirst": "Adicionar o primeiro departamento",
+    "searchPlaceholder": "Buscar departamentos…",
+    "searchAria": "Buscar departamentos",
+    "noSearchMatches": "Nenhum departamento corresponde a “{{query}}”.",
+    "nameRequired": "O nome do departamento é obrigatório",
+    "added": "Departamento adicionado",
+    "addFailed": "Não foi possível adicionar o departamento",
+    "removed": "Departamento removido",
+    "removeFailed": "Não foi possível remover o departamento",
+    "addDescription": "Sincroniza com o EmpCloud e fica disponível nos perfis dos funcionários, no organograma e nos relatórios.",
+    "uniqueNamesHelp": "Os nomes devem ser únicos na organização. Você pode remover um departamento depois sem afetar os registros de folha existentes.",
+    "departmentName": "Nome do departamento",
+    "namePlaceholder": "ex.: Engenharia",
+    "cancel": "Cancelar",
+    "removeTitle": "Remover departamento?",
+    "removeDescription": "“{{name}}” será removido da sua organização.",
+    "deleteWarning": "Atualmente há {{count}} funcionários neste departamento. Os registros serão mantidos, mas eles ficarão sem departamento até serem reatribuídos.",
+    "deleteWarning_one": "Atualmente há {{count}} funcionário neste departamento. O registro será mantido, mas ele ficará sem departamento até ser reatribuído.",
+    "deleteWarning_other": "Atualmente há {{count}} funcionários neste departamento. Os registros serão mantidos, mas eles ficarão sem departamento até serem reatribuídos.",
+    "remove": "Remover",
+    "removeAria": "Remover {{name}}",
+    "noMembers": "Ainda não há membros",
+    "created": "Criado em {{date}}"
+  },
+  "attendancePage": {
+    "title": "Frequência",
+    "summary": "Resumo de frequência de {{period}}",
+    "markAllPresent": "Marcar todos como presentes",
+    "markAttendance": "Registrar frequência",
+    "previousMonth": "Mês anterior",
+    "nextMonth": "Próximo mês",
+    "searchPlaceholder": "Buscar por nome ou código...",
+    "filterDepartment": "Filtrar por departamento",
+    "allDepartments": "Todos os departamentos",
+    "filterLocation": "Filtrar por local",
+    "allLocations": "Todos os locais",
+    "clearFilters": "Limpar filtros",
+    "employeesShown": "{{visible}} de {{total}} funcionários",
+    "employeesShown_one": "{{visible}} de {{total}} funcionário",
+    "employeesShown_other": "{{visible}} de {{total}} funcionários",
+    "totalPresentDays": "Total de dias presentes",
+    "totalAbsentDays": "Total de dias ausentes",
+    "lopDays": "Dias sem remuneração",
+    "overtimeHours": "Horas extras",
+    "hoursValue": "{{count}} h",
+    "lopValue": "{{count}} sem remuneração",
+    "employeeFallback": "Funcionário nº {{id}}",
+    "columns": {
+      "employee": "Funcionário",
+      "workingDays": "Dias úteis",
+      "present": "Presente",
+      "absent": "Ausente",
+      "lopDays": "Dias sem remuneração",
+      "overtimeHours": "Horas extras"
+    },
+    "markAllDescription": "Marca todos os funcionários como presentes no mês escolhido.",
+    "markSingleDescription": "Registra a frequência de um funcionário.",
+    "month": "Mês",
+    "year": "Ano",
+    "workingDaysInMonth": "Dias úteis no mês",
+    "workingDays": "Dias úteis",
+    "presentDays": "Dias presentes",
+    "absentDays": "Dias ausentes",
+    "employee": "Funcionário",
+    "selectEmployee": "Selecionar um funcionário",
+    "cancel": "Cancelar",
+    "saveAttendance": "Salvar frequência",
+    "overwriteExisting": "Sobrescrever registros existentes deste mês",
+    "overwriteAllHelp": "Desativado por padrão para preservar os registros dos funcionários. Selecione para substituir os dias já registrados por presença.",
+    "overwriteSingleHelp": "Por padrão, os dias já registrados no EmpCloud são preservados. Selecione para substituí-los pelos valores acima.",
+    "markAllHelp": "Isso marcará todos os {{count}} funcionários ativos como presentes por {{days}} dias em {{period}}. Depois você poderá editar registros individuais.",
+    "workingDaysInvalid": "Os dias úteis devem ser um número inteiro entre 1 e 31",
+    "presentDaysInvalid": "Os dias presentes devem estar entre 0 e os dias úteis",
+    "selectEmployeeRequired": "Selecione um funcionário",
+    "noPayrollEmployees": "Nenhum funcionário encontrado na folha. Adicione primeiro os usuários do EmpCloud à folha (Configurações > Funcionários).",
+    "bulkSyncFailed": "Registrado localmente para {{employeeCount}} funcionários, mas a sincronização com o EmpCloud falhou para {{failureCount}}. O painel pode ainda não refletir a alteração.",
+    "nothingChangedAll": "Todos os dias úteis de {{period}} já possuem registro no EmpCloud ({{preserved}} preservados), portanto nada mudou. Selecione sobrescrever para substituí-los.",
+    "markedAllOverwrite": "{{count}} funcionários foram marcados como presentes em {{period}} (dias existentes sobrescritos).",
+    "markedAllSuccess": "{{count}} funcionários registrados em {{period}} — {{inserted}} novas linhas adicionadas ao EmpCloud{{preservedText}}.",
+    "singleSyncFailed": "Registrado localmente, mas a sincronização com o EmpCloud falhou ({{error}}). O painel pode não refletir isso até que o EmpCloud esteja disponível.",
+    "unknownError": "erro desconhecido",
+    "nothingChangedSingle": "{{period}} já possui {{preserved}} registros de frequência para este funcionário, portanto nada mudou. Selecione sobrescrever e salve novamente para substituí-los.",
+    "singleOverwriteSuccess": "Frequência de {{period}} atualizada ({{count}} dias definidos).",
+    "singleSuccess": "Frequência registrada para {{period}} — {{inserted}} novas linhas adicionadas ao EmpCloud{{preservedText}}.",
+    "preservedSuffix": ", {{count}} linhas existentes preservadas",
+    "markFailed": "Não foi possível registrar a frequência"
+  },
+  "payrollAnalytics": {
+    "title": "Análise da folha de pagamento",
+    "description": "Tendências de custos, comparações e informações",
+    "notice": "Os números abaixo refletem os colaboradores incluídos em cada processamento da folha. Os colaboradores ignorados durante o cálculo (sem estrutura salarial ativa, contratados após o período de pagamento ou desligados antes dele) não são contabilizados. Por isso, o quadro de pessoal e as médias por colaborador podem variar entre os meses independentemente das contratações reais.",
+    "noRuns": "ainda não há processamentos",
+    "employeeSource": "{{count}} colaboradores · {{source}}",
+    "headcountSuppressed": "o quadro de pessoal mudou mais de 25% — comparação ocultada",
+    "vsPrevious": "em relação ao mês anterior · {{source}}",
+    "ofGrossPay": "do salário bruto · {{source}}",
+    "avgNetPayPerEmployee": "Salário líquido médio / colaborador",
+    "grossPayChange": "Variação do salário bruto",
+    "netPayChange": "Variação do salário líquido",
+    "deductionRate": "Taxa de deduções",
+    "payrollCostTrend": "Tendência do custo da folha",
+    "costBreakdownLatest": "Detalhamento de custos (mais recente)",
+    "headcountTrend": "Tendência do quadro de pessoal",
+    "monthComparison": "Comparação mês a mês",
+    "totalEmployerCost": "Custo total do empregador (bruto + contribuições)",
+    "needCompletedRun": "É necessário pelo menos 1 processamento concluído para exibir a análise",
+    "noData": "Ainda não há dados",
+    "series": {
+      "gross": "Bruto",
+      "net": "Líquido",
+      "deductions": "Deduções",
+      "netPay": "Salário líquido",
+      "employerContributions": "Contribuições do empregador",
+      "employerCost": "Custo do empregador",
+      "amount": "Valor",
+      "employees": "Colaboradores"
+    },
+    "columns": {
+      "period": "Período",
+      "employees": "Colaboradores",
+      "grossPay": "Salário bruto",
+      "deductions": "Deduções",
+      "netPay": "Salário líquido",
+      "avgPerEmployee": "Média/colaborador",
+      "grossPercent": "Bruto %",
+      "netPercent": "Líquido %"
+    },
+    "statuses": { "paid": "Pago", "computed": "Calculado", "approved": "Aprovado" }
+  },
+  "reimbursementsPage": {
+    "title": "Reembolsos",
+    "claimsShown": "{{visible}} de {{total}} solicitações",
+    "fileForEmployee": "Registrar para colaborador",
+    "searchPlaceholder": "Buscar por nome, código ou cargo do colaborador...",
+    "filterDepartment": "Filtrar por departamento",
+    "allDepartments": "Todos os departamentos",
+    "filterLocation": "Filtrar por local",
+    "allLocations": "Todos os locais",
+    "clearFilters": "Limpar filtros",
+    "noClaims": "Nenhuma solicitação de reembolso encontrada",
+    "forEmployee": "Para {{name}}",
+    "statuses": {
+      "pending": "Pendente",
+      "approved": "Aprovado",
+      "rejected": "Rejeitado",
+      "paid": "Pago"
+    },
+    "filters": { "all": "Todos" },
+    "cards": {
+      "totalClaims": "Total de solicitações",
+      "viewAll": "Ver todas as solicitações de reembolso",
+      "viewPending": "Ver solicitações pendentes",
+      "viewApproved": "Ver solicitações aprovadas",
+      "viewRejected": "Ver solicitações rejeitadas",
+      "viewPaid": "Ver solicitações pagas"
+    },
+    "columns": {
+      "employee": "Colaborador",
+      "category": "Categoria",
+      "description": "Descrição",
+      "amount": "Valor",
+      "date": "Data",
+      "status": "Status"
+    },
+    "actions": {
+      "approve": "Aprovar",
+      "reject": "Rejeitar",
+      "awaitingPayroll": "Aguardando folha",
+      "awaitingPayrollTitle": "Será pago no próximo processamento da folha",
+      "edit": "Editar",
+      "delete": "Excluir",
+      "cancel": "Cancelar"
+    },
+    "fields": {
+      "category": "Categoria",
+      "amount": "Valor",
+      "expenseDate": "Data da despesa",
+      "description": "Descrição",
+      "month": "Mês",
+      "year": "Ano"
+    },
+    "fileModal": {
+      "title": "Registrar reembolso para colaborador",
+      "description": "Envie uma solicitação em nome de um colaborador. Ela aparecerá como pendente na lista de reembolsos dele.",
+      "searchEmployee": "Buscar colaborador",
+      "employeePlaceholder": "Nome, código ou e-mail (mín. 2 caracteres)",
+      "searching": "Buscando...",
+      "typeMore": "Digite pelo menos 2 caracteres para buscar.",
+      "noEmployees": "Nenhum colaborador correspondente.",
+      "change": "Alterar",
+      "categoryPlaceholder": "Viagem, alimentação, internet...",
+      "descriptionPlaceholder": "Qual foi o motivo da despesa?",
+      "submit": "Registrar solicitação"
+    },
+    "deleteModal": {
+      "title": "Excluir reembolso?",
+      "paidTitle": "Esta solicitação já foi paga.",
+      "paidWarning": "A exclusão remove apenas a linha da lista de reembolsos. Ela não devolve o valor ao colaborador nem remove a linha do holerite. Para reverter o pagamento, exclua o processamento da folha; a solicitação voltará automaticamente para aprovada.",
+      "warning": "A solicitação será removida permanentemente. Esta ação não pode ser desfeita."
+    },
+    "editModal": { "title": "Editar reembolso", "save": "Salvar alterações" },
+    "payModal": {
+      "title": "Marcar reembolso como pago",
+      "description": "Registre o período da folha em que esta solicitação foi paga. O status mudará de aprovado para pago.",
+      "confirm": "Confirmar pagamento"
+    },
+    "validation": {
+      "categoryRequired": "A categoria é obrigatória",
+      "descriptionRequired": "A descrição é obrigatória",
+      "validAmount": "Insira um valor válido",
+      "expenseDateRequired": "A data da despesa é obrigatória",
+      "pickEmployee": "Selecione primeiro um colaborador"
+    },
+    "messages": {
+      "approved": "Solicitação aprovada",
+      "rejected": "Solicitação rejeitada",
+      "failed": "A ação falhou",
+      "updated": "Solicitação atualizada",
+      "updateFailed": "Não foi possível atualizar a solicitação",
+      "deleted": "Solicitação excluída",
+      "deleteFailed": "Não foi possível excluir a solicitação",
+      "filed": "Solicitação registrada para o colaborador",
+      "fileFailed": "Não foi possível registrar a solicitação",
+      "markedPaid": "Solicitação marcada como paga",
+      "markPaidFailed": "Não foi possível marcar a solicitação como paga"
+    }
+  },
+  "loansPage": {
+    "title": "Empréstimos e adiantamentos",
+    "recordsShown": "{{visible}} de {{total}} registros de empréstimos e adiantamentos",
+    "addAdvance": "Adicionar adiantamento",
+    "addLoan": "Adicionar empréstimo",
+    "searchPlaceholder": "Buscar por nome, código ou cargo do colaborador...",
+    "filterDepartment": "Filtrar por departamento",
+    "allDepartments": "Todos os departamentos",
+    "filterLocation": "Filtrar por local",
+    "allLocations": "Todos os locais",
+    "clearFilters": "Limpar filtros",
+    "noRecords": "Nenhum empréstimo ou adiantamento encontrado",
+    "cards": {
+      "active": "Empréstimos e adiantamentos ativos",
+      "outstanding": "Saldo pendente",
+      "monthlyDeductions": "Descontos mensais",
+      "totalAcrossAll": "total geral",
+      "completed": "Concluídos"
+    },
+    "filters": { "all": "Todos" },
+    "statuses": { "active": "Ativo", "completed": "Concluído", "cancelled": "Cancelado" },
+    "types": {
+      "loan": "Empréstimo",
+      "salary_advance": "Adiantamento salarial",
+      "emergency": "Adiantamento emergencial"
+    },
+    "columns": {
+      "employee": "Colaborador",
+      "type": "Tipo",
+      "description": "Descrição",
+      "principal": "Principal",
+      "outstanding": "Pendente",
+      "deduction": "Desconto",
+      "progress": "Progresso",
+      "status": "Status"
+    },
+    "deduction": { "customDefault": "Personalizado (padrão {{amount}})", "oneTime": "Único" },
+    "progress": { "recovered": "Recuperado", "pendingRecovery": "Recuperação pendente" },
+    "actions": {
+      "recordEmiPayment": "Registrar pagamento da parcela",
+      "recordAdvanceRecovery": "Registrar recuperação do adiantamento",
+      "pay": "Pagar",
+      "recover": "Recuperar",
+      "edit": "Editar empréstimo ou adiantamento",
+      "delete": "Excluir",
+      "cancel": "Cancelar",
+      "saveChanges": "Salvar alterações"
+    },
+    "fields": {
+      "employee": "Colaborador",
+      "description": "Descrição",
+      "amount": "Valor (₹)",
+      "tenure": "Prazo (meses)",
+      "interestRate": "Taxa de juros (%)",
+      "startDate": "Data de início",
+      "customMonthlyEmi": "Parcela mensal personalizada (₹) — opcional",
+      "notes": "Observações (opcional)",
+      "advanceType": "Tipo de adiantamento",
+      "reason": "Motivo",
+      "advanceAmount": "Valor do adiantamento (₹)",
+      "recoveryDate": "Data de recuperação"
+    },
+    "form": {
+      "noEmployee": "Não há colaboradores",
+      "descriptionPlaceholder": "ex.: emergência médica",
+      "customEmiPlaceholder": "Deixe em branco para usar a parcela baseada no prazo",
+      "customEmiHelpCreate": "Substitui o desconto mensal. A última parcela quita automaticamente o saldo restante.",
+      "customEmiHelpEdit": "Substitui o desconto mensal. A última parcela quita automaticamente o saldo restante. Limpe o campo para usar a parcela baseada no prazo.",
+      "notesPlaceholder": "Observações adicionais",
+      "paidInstallmentsNotice": "{{count}} parcela(s) já paga(s) — o saldo será recalculado mantendo o valor já quitado."
+    },
+    "advanceModal": {
+      "description": "Adicione um adiantamento salarial único. O valor integral será recuperado em um período da folha."
+    },
+    "editModal": { "loanTitle": "Editar empréstimo", "advanceTitle": "Editar adiantamento" },
+    "deleteModal": {
+      "title": "Excluir empréstimo ou adiantamento?",
+      "outstandingTitle": "Ainda há {{amount}} pendentes.",
+      "outstandingWarning": "A exclusão interrompe descontos futuros. Valores já descontados em holerites anteriores não mudam. Esta ação não pode ser desfeita.",
+      "warning": "O registro será excluído permanentemente. Valores já descontados não mudam. Esta ação não pode ser desfeita."
+    },
+    "validation": {
+      "amountNonNegative": "O valor deve ser zero ou maior",
+      "tenureMinimum": "O prazo deve ser de pelo menos 1 mês",
+      "interestNonNegative": "A taxa de juros deve ser zero ou maior",
+      "customEmiPositive": "A parcela mensal personalizada deve ser maior que zero",
+      "customEmiMaximum": "A parcela mensal personalizada não pode exceder o valor do empréstimo"
+    },
+    "messages": {
+      "advanceCreated": "Adiantamento criado",
+      "loanCreated": "Empréstimo criado",
+      "failed": "A ação falhou",
+      "paymentRecorded": "Pagamento registrado",
+      "advanceUpdated": "Adiantamento atualizado",
+      "loanUpdated": "Empréstimo atualizado",
+      "updateFailed": "Não foi possível atualizar o empréstimo ou adiantamento",
+      "deleted": "Empréstimo ou adiantamento excluído",
+      "deleteFailed": "Não foi possível excluir o empréstimo ou adiantamento"
+    }
+  },
+  "roles": {
+    "super_admin": "Super administrador",
+    "org_admin": "Administrador da organização",
+    "admin": "Administrador",
+    "hr_admin": "Administrador de RH",
+    "hr_manager": "Gerente de RH",
+    "manager": "Gerente",
+    "employee": "Funcionário"
+  },
+  "header": {
+    "openMenu": "Abrir menu de navegação",
+    "searchEmployees": "Pesquisar funcionários... (Ctrl+K)"
+  },
+  "sidebar": {
+    "collapse": "Recolher barra lateral",
+    "expand": "Expandir barra lateral",
+    "search": "Pesquisar menu…",
+    "clearSearch": "Limpar pesquisa",
+    "noMatches": "Nenhum resultado para “{{query}}”",
+    "pressToSearch": "Pressione / para pesquisar",
+    "logout": "Sair",
+    "sections": {
+      "overview": "Visão geral",
+      "people": "Pessoas",
+      "payroll": "Folha de pagamento",
+      "compliance": "Conformidade",
+      "payBenefits": "Remuneração e benefícios",
+      "workplace": "Local de trabalho",
+      "globalPayroll": "Folha global",
+      "admin": "Administração",
+      "selfService": "Autoatendimento"
+    },
+    "items": {
+      "dashboard": "Painel",
+      "employees": "Funcionários",
+      "orgChart": "Organograma",
+      "departments": "Departamentos",
+      "attendance": "Frequência",
+      "structures": "Estruturas",
+      "payrollRuns": "Processamentos da folha",
+      "analytics": "Análises",
+      "payslips": "Holerites",
+      "tax": "Impostos",
+      "taxCalculator": "Calculadora fiscal",
+      "taxDeclarations": "Declarações fiscais",
+      "reimbursements": "Reembolsos",
+      "loans": "Empréstimos",
+      "benefits": "Benefícios",
+      "benchmarks": "Referências",
+      "payEquity": "Equidade salarial",
+      "totalRewards": "Recompensas totais",
+      "earnedWageAccess": "Acesso ao salário ganho",
+      "insurance": "Seguro",
+      "holidays": "Feriados",
+      "announcements": "Comunicados",
+      "globalDashboard": "Painel global",
+      "globalEmployees": "Funcionários globais",
+      "contractorInvoices": "Faturas de prestadores",
+      "countryCompliance": "Conformidade por país",
+      "glAccounting": "Contabilidade / Razão",
+      "reports": "Relatórios",
+      "auditLog": "Log de auditoria",
+      "system": "Sistema",
+      "settings": "Configurações",
+      "myDashboard": "Meu painel",
+      "myPayslips": "Meus holerites",
+      "mySalary": "Meu salário",
+      "myTax": "Meus impostos",
+      "declarations": "Declarações",
+      "myClaims": "Minhas solicitações",
+      "myProfile": "Meu perfil"
+    }
+  },
+  "dashboard": {
+    "title": "Painel da folha de pagamento",
+    "overviewFor": "Visão geral de {{period}}",
+    "runPayroll": "Processar folha",
+    "addEmployee": "Adicionar funcionário",
+    "viewReports": "Ver relatórios",
+    "activeEmployees": "Funcionários ativos",
+    "viewActiveEmployees": "Ver funcionários ativos",
+    "totalEmployees": "{{count}} no total",
+    "lastPayrollGross": "Última folha (bruto)",
+    "lastPayrollNet": "Última folha (líquido)",
+    "noPayrollYet": "Ainda não há folha",
+    "totalDeductions": "Deduções totais",
+    "viewDeductions": "Ver a discriminação das deduções totais da última folha",
+    "monthOverMonth": "{{value}}% mensal",
+    "monthlyTrend": "Tendência mensal da folha",
+    "trendPeriods_one": "Bruto versus líquido no último mês",
+    "trendPeriods_other": "Bruto versus líquido nos últimos {{count}} meses",
+    "trendFallback": "Custo bruto versus líquido",
+    "gross": "Bruto",
+    "net": "Líquido",
+    "noTrend": "Ainda não há dados. Processe a primeira folha para ver tendências.",
+    "headcountByDepartment": "Funcionários por departamento",
+    "moreDepartments": "+{{count}} departamentos",
+    "noEmployeesToChart": "Ainda não há funcionários para exibir.",
+    "complianceStatus": "Status de conformidade",
+    "providentFund": "Fundo de previdência",
+    "professionalTax": "Imposto profissional",
+    "tdsForm": "TDS (Formulário 24Q)",
+    "filed": "Entregue",
+    "pending": "Pendente",
+    "recentActivity": "Atividade recente",
+    "noRecentActivity": "Ainda não há atividade recente.",
+    "activity": "Atividade",
+    "actions": {
+      "created": "Processamento da folha criado",
+      "computed": "Folha calculada",
+      "approved": "Folha aprovada",
+      "paid": "Folha marcada como paga",
+      "cancelled": "Folha cancelada",
+      "reverted": "Folha revertida para rascunho",
+      "rerun": "Folha recalculada",
+      "deleted": "Processamento da folha eliminado"
+    }
+  },
+  "breadcrumbs": {
+    "home": "Início",
+    "addNew": "Adicionar",
+    "salaryStructures": "Estruturas salariais",
+    "myPortal": "Meu portal",
+    "salary": "Salário",
+    "profile": "Perfil",
+    "setup": "Configuração"
+  },
+  "selfService": {
+    "employeePortal": "Portal do funcionário",
+    "adminPanel": "Painel administrativo",
+    "profile": "Perfil"
+  },
+  "myProfile": {
+    "title": "Meu perfil",
+    "notFound": "Perfil não encontrado",
+    "notAvailable": "Não disponível",
+    "cancel": "Cancelar",
+    "requestUpdate": "Solicitar atualização",
+    "pendingBankRequest": "Há uma solicitação de atualização bancária aguardando aprovação do administrador.",
+    "status": { "active": "Ativo", "inactive": "Inativo" },
+    "taxRegime": { "new": "Novo regime tributário", "old": "Antigo regime tributário" },
+    "sections": {
+      "personalDetails": "Dados pessoais",
+      "employment": "Emprego",
+      "bankDetails": "Dados bancários",
+      "statutoryDetails": "Dados legais",
+      "security": "Segurança"
+    },
+    "fields": {
+      "email": "E-mail",
+      "phone": "Telefone",
+      "dateOfBirth": "Data de nascimento",
+      "gender": "Gênero",
+      "employeeCode": "Código do funcionário",
+      "department": "Departamento",
+      "designation": "Cargo",
+      "employmentType": "Tipo de emprego",
+      "dateOfJoining": "Data de admissão",
+      "bank": "Banco",
+      "accountNumber": "Número da conta",
+      "ifsc": "IFSC",
+      "pan": "PAN",
+      "uan": "UAN",
+      "pfNumber": "Número PF",
+      "password": "Senha"
+    },
+    "values": {
+      "gender": {
+        "female": "Feminino",
+        "male": "Masculino",
+        "non_binary": "Não binário",
+        "other": "Outro"
+      },
+      "employmentTypes": {
+        "full_time": "Tempo integral",
+        "part_time": "Meio período",
+        "contract": "Contrato",
+        "intern": "Estágio",
+        "consultant": "Consultoria"
+      }
+    },
+    "security": {
+      "changePasswordHelp": "Altere a senha da sua conta",
+      "changePassword": "Alterar senha"
+    },
+    "bankModal": {
+      "title": "Solicitar atualização dos dados bancários",
+      "reviewNotice": "O RH ou a administração analisará a solicitação antes de aplicar as alterações.",
+      "newBankName": "Novo nome do banco",
+      "bankPlaceholder": "ex.: HDFC Bank",
+      "newAccountNumber": "Novo número da conta",
+      "accountPlaceholder": "ex.: 1234567890",
+      "newIfscCode": "Novo código IFSC",
+      "ifscPlaceholder": "ex.: HDFC0001234",
+      "ifscValidation": "O IFSC deve ter 11 caracteres: 4 letras + '0' + 6 letras ou dígitos (ex.: HDFC0001234).",
+      "accountType": "Tipo de conta",
+      "accountTypes": { "savings": "Poupança", "current": "Corrente", "salary": "Conta salário" },
+      "reason": "Motivo da alteração",
+      "reasonPlaceholder": "ex.: mudança para um novo banco",
+      "submit": "Enviar solicitação",
+      "success": "Solicitação de atualização bancária enviada para aprovação",
+      "failure": "Não foi possível enviar a solicitação"
+    },
+    "passwordModal": {
+      "title": "Alterar senha",
+      "currentPassword": "Senha atual",
+      "newPassword": "Nova senha",
+      "confirmNewPassword": "Confirmar nova senha",
+      "mismatch": "As senhas não coincidem",
+      "success": "Senha alterada",
+      "failure": "Não foi possível alterar a senha",
+      "submit": "Alterar senha"
+    }
+  },
+  "totalRewardsPage": {
+    "title": "Demonstrativos de recompensas totais",
+    "description": "Gere demonstrativos completos de remuneração e benefícios para funcionários",
+    "printPdf": "Imprimir / PDF",
+    "selectEmployee": "Selecionar funcionário",
+    "chooseEmployee": "Escolha um funcionário…",
+    "searchEmployee": "Buscar por nome, cargo ou código…",
+    "noEmployeeMatches": "Nenhum funcionário corresponde à busca",
+    "employeesAvailable_one": "{{count}} funcionário disponível",
+    "employeesAvailable_other": "{{count}} funcionários disponíveis",
+    "unnamedEmployee": "Funcionário sem nome",
+    "totalRewardsValue": "Valor total das recompensas",
+    "financialYear": "Exercício {{year}}",
+    "directCompensation": "Remuneração direta",
+    "benefitsValue": "Valor dos benefícios",
+    "ytdNetPay": "Pagamento líquido acumulado",
+    "reimbursements": "Reembolsos",
+    "salaryBreakdown": "Detalhamento salarial",
+    "perMonth": "/mês",
+    "annualCtc": "CTC anual",
+    "benefitsEnrollment": "Adesão a benefícios",
+    "noBenefits": "Nenhum benefício contratado",
+    "perYear": "/ano",
+    "totalEmployerContribution": "Contribuição total do empregador",
+    "ytdEarnings": "Ganhos acumulados no ano",
+    "monthsProcessed_one": "{{count}} mês processado",
+    "monthsProcessed_other": "{{count}} meses processados",
+    "grossEarnings": "Ganhos brutos",
+    "totalDeductions": "Deduções totais",
+    "netPay": "Pagamento líquido",
+    "taxPaid": "Imposto pago",
+    "activeLoans": "Empréstimos ativos",
+    "outstanding": "Saldo pendente",
+    "emi": "Parcela",
+    "selectPrompt": "Selecione um funcionário para gerar seu demonstrativo de recompensas totais",
+    "components": { "basic": "Salário base", "hra": "Auxílio-moradia", "sa": "Auxílio especial" },
+    "benefitTypes": {
+      "health": "Saúde",
+      "life": "Vida",
+      "dental": "Odontológico",
+      "vision": "Visão",
+      "accident": "Acidentes"
+    },
+    "coverageTypes": {
+      "employee": "Funcionário",
+      "employee_spouse": "Funcionário + cônjuge",
+      "family": "Família",
+      "parents": "Pais"
+    },
+    "loanTypes": {
+      "personal_loan": "Empréstimo pessoal",
+      "salary_advance": "Adiantamento salarial",
+      "home_loan": "Financiamento imobiliário",
+      "car_loan": "Financiamento de veículo",
+      "education_loan": "Empréstimo educacional"
+    }
+  },
+  "benefitsPage": {
+    "title": "Administração de benefícios",
+    "description": "Gerencie planos de benefícios e inscrições de funcionários",
+    "enrollEmployee": "Inscrever funcionário",
+    "newPlan": "Novo plano",
+    "stats": {
+      "activePlans": "Planos ativos",
+      "enrolled": "Inscritos",
+      "pending": "Pendentes",
+      "monthlyEmployerCost": "Custo mensal do empregador"
+    },
+    "tabs": {
+      "plans": "Planos ({{count}})",
+      "enrollments": "Inscrições ({{count}})",
+      "pending": "Pendentes ({{count}})"
+    },
+    "columns": {
+      "planName": "Nome do plano",
+      "type": "Tipo",
+      "provider": "Fornecedor",
+      "premium": "Prêmio",
+      "employerShare": "Parte do empregador",
+      "status": "Status",
+      "employee": "Funcionário",
+      "plan": "Plano",
+      "coverage": "Cobertura",
+      "employeeShare": "Parte do funcionário"
+    },
+    "empty": {
+      "plans": "Nenhum plano de benefícios criado",
+      "enrollments": "Nenhuma inscrição",
+      "pending": "Nenhuma inscrição pendente"
+    },
+    "status": {
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "enrolled": "Inscrito",
+      "pending": "Pendente",
+      "cancelled": "Cancelado"
+    },
+    "actions": {
+      "edit": "Editar",
+      "deactivate": "Desativar",
+      "cancel": "Cancelar"
+    },
+    "planTypes": {
+      "health": "Saúde",
+      "dental": "Odontológico",
+      "vision": "Visão",
+      "life": "Seguro de vida",
+      "disability": "Invalidez",
+      "retirement": "Aposentadoria"
+    },
+    "coverageTypes": {
+      "individual": "Individual",
+      "family": "Familiar",
+      "individual_plus_spouse": "Individual + cônjuge"
+    },
+    "fallbackUser": "Usuário nº {{id}}",
+    "messages": {
+      "invalidEnrollmentDates": "A data final não pode ser anterior à data inicial",
+      "planUpdated": "Plano de benefícios atualizado",
+      "planCreated": "Plano de benefícios criado",
+      "savePlanFailed": "Não foi possível salvar o plano",
+      "deactivateConfirm": "Desativar este plano de benefícios? As inscrições existentes não serão afetadas.",
+      "planDeactivated": "Plano de benefícios desativado",
+      "deactivateFailed": "Não foi possível desativar o plano",
+      "employeeEnrolled": "Funcionário inscrito no plano de benefícios",
+      "enrollFailed": "Não foi possível realizar a inscrição",
+      "enrollmentCancelled": "Inscrição cancelada",
+      "actionFailed": "A ação falhou"
+    },
+    "planModal": {
+      "editTitle": "Editar plano de benefícios",
+      "createTitle": "Criar plano de benefícios",
+      "planName": "Nome do plano",
+      "type": "Tipo",
+      "provider": "Fornecedor",
+      "description": "Descrição",
+      "monthlyPremium": "Prêmio mensal",
+      "employerContribution": "Contribuição do empregador",
+      "enrollmentStart": "Início da inscrição",
+      "enrollmentEnd": "Fim da inscrição",
+      "cancel": "Cancelar",
+      "updatePlan": "Atualizar plano",
+      "createPlan": "Criar plano"
+    },
+    "enrollModal": {
+      "title": "Inscrever funcionário no plano de benefícios",
+      "employee": "Funcionário",
+      "benefitPlan": "Plano de benefícios",
+      "coverageType": "Tipo de cobertura",
+      "startDate": "Data de início",
+      "employeePremiumShare": "Parte do prêmio do funcionário",
+      "employerPremiumShare": "Parte do prêmio do empregador",
+      "cancel": "Cancelar",
+      "submit": "Inscrever"
+    }
+  },
+  "benchmarksPage": {
+    "title": "Benchmarking de remuneração",
+    "description": "Compare a remuneração dos funcionários com dados de mercado",
+    "addBenchmark": "Adicionar referência",
+    "stats": {
+      "benchmarks": "Referências",
+      "avgCompaRatio": "Compa-ratio médio",
+      "belowMarket": "Abaixo do mercado",
+      "aboveMarket": "Acima do mercado"
+    },
+    "tabs": {
+      "marketBenchmarks": "Referências de mercado ({{count}})",
+      "compaRatioReport": "Relatório de compa-ratio",
+      "belowMarket": "Abaixo do mercado ({{count}})",
+      "aboveMarket": "Acima do mercado ({{count}})"
+    },
+    "columns": {
+      "jobTitle": "Cargo",
+      "department": "Departamento",
+      "location": "Local",
+      "p50Median": "P50 (mediana)",
+      "source": "Fonte",
+      "effective": "Vigência",
+      "employee": "Funcionário",
+      "marketP50": "P50 de mercado",
+      "compaRatio": "Compa-ratio",
+      "position": "Posição"
+    },
+    "empty": {
+      "benchmarks": "Nenhuma referência adicionada",
+      "employees": "Nenhum dado de funcionário disponível",
+      "belowMarket": "Nenhum funcionário abaixo do mercado",
+      "aboveMarket": "Nenhum funcionário acima do mercado"
+    },
+    "summary": {
+      "employeesTotal": "funcionários no total",
+      "matchedToBenchmarks": "associados a referências",
+      "withoutBenchmarkData": "sem dados de referência"
+    },
+    "labels": {
+      "noBenchmark": "Sem referência",
+      "notAvailable": "N/D",
+      "noData": "Sem dados",
+      "below": "Abaixo",
+      "above": "Acima",
+      "atMarket": "No mercado"
+    },
+    "actions": {
+      "edit": "Editar",
+      "delete": "Excluir"
+    },
+    "messages": {
+      "validPercentiles": "Insira valores válidos para P25, P50 e P75",
+      "nonNegative": "Os valores percentis não podem ser negativos",
+      "ordered": "Os percentis devem estar ordenados: P25 ≤ P50 ≤ P75",
+      "updated": "Referência atualizada",
+      "created": "Referência criada",
+      "deleted": "Referência excluída",
+      "failed": "A ação falhou"
+    },
+    "modal": {
+      "editTitle": "Editar referência de remuneração",
+      "addTitle": "Adicionar referência de remuneração",
+      "jobTitle": "Cargo",
+      "jobTitlePlaceholder": "ex.: Engenheiro de software",
+      "department": "Departamento",
+      "selectDepartment": "Selecionar departamento...",
+      "noDepartments": "Nenhum departamento configurado",
+      "location": "Local",
+      "locationPlaceholder": "ex.: Bangalore",
+      "p25Annual": "P25 (anual)",
+      "p50Annual": "Mediana P50 (anual)",
+      "p75Annual": "P75 (anual)",
+      "p25Placeholder": "ex.: 800000",
+      "p50Placeholder": "ex.: 1200000",
+      "p75Placeholder": "ex.: 1800000",
+      "source": "Fonte",
+      "sourcePlaceholder": "ex.: Glassdoor 2026",
+      "effectiveDate": "Data de vigência",
+      "cancel": "Cancelar",
+      "updateBenchmark": "Atualizar referência",
+      "saveBenchmark": "Salvar referência"
+    }
+  },
+  "payEquityPage": {
+    "title": "Análise de equidade salarial",
+    "description": "Analise a justiça da remuneração por gênero, departamento e função",
+    "stats": {
+      "employeesAnalyzed": "Funcionários analisados",
+      "medianSalary": "Salário mediano",
+      "meanPayGap": "Diferença salarial média",
+      "medianPayGap": "Diferença salarial mediana"
+    },
+    "tabs": {
+      "overview": "Visão geral da análise",
+      "compliance": "Relatório de conformidade"
+    },
+    "gender": {
+      "title": "Análise da diferença salarial por gênero",
+      "maleEmployees": "Funcionários",
+      "femaleEmployees": "Funcionárias",
+      "maleMeanSalary": "Salário médio dos homens",
+      "femaleMeanSalary": "Salário médio das mulheres",
+      "menPaidMore": "Os homens recebem mais em média",
+      "womenPaidMore": "As mulheres recebem mais em média",
+      "noGap": "Nenhuma diferença detectada"
+    },
+    "department": {
+      "title": "Análise por departamento",
+      "department": "Departamento",
+      "employees": "Funcionários",
+      "meanSalary": "Salário médio",
+      "median": "Mediana",
+      "min": "Mín.",
+      "max": "Máx.",
+      "spread": "Amplitude"
+    },
+    "role": {
+      "title": "Análise por função / cargo",
+      "designation": "Cargo",
+      "count": "Quantidade",
+      "mean": "Média",
+      "median": "Mediana"
+    },
+    "compliance": {
+      "title": "Relatório de conformidade",
+      "generated": "Gerado",
+      "findings": "Constatações",
+      "recommendations": "Recomendações",
+      "notAvailable": "N/D"
+    },
+    "complianceMessages": {
+      "significantMean": "Diferença salarial média significativa detectada: {{value}}% ({{group}})",
+      "significantMedian": "Diferença salarial mediana significativa detectada: {{value}}%",
+      "menPaidMore": "os homens recebem mais",
+      "womenPaidMore": "as mulheres recebem mais",
+      "highVariance": "Alta variação salarial no departamento “{{department}}” (CV: {{value}}%)",
+      "acceptableGap": "A diferença salarial está dentro da faixa aceitável (até 5%)",
+      "noConcerns": "Nenhuma preocupação significativa de equidade salarial detectada",
+      "reviewDepartment": "Revise as faixas salariais do departamento “{{department}}” para garantir a equidade interna",
+      "reviewCompensation": "Faça uma revisão detalhada da remuneração nas funções com diferenças significativas",
+      "continueMonitoring": "Continue monitorando a equidade salarial trimestralmente"
+    }
+  },
+  "earnedWagePage": {
+    "title": "Acesso ao salário adquirido",
+    "description": "Pagamento sob demanda — permita que os funcionários acessem o salário adquirido antes do pagamento",
+    "actions": {
+      "approve": "Aprovar",
+      "reject": "Rejeitar",
+      "settings": "Configurações",
+      "requestAdvance": "Solicitar adiantamento"
+    },
+    "stats": {
+      "pendingRequests": "Solicitações pendentes",
+      "totalDisbursed": "Total desembolsado",
+      "avgRequest": "Solicitação média",
+      "totalRequests": "Total de solicitações"
+    },
+    "filter": {
+      "showing": "Exibindo solicitações",
+      "requests": "",
+      "clear": "Limpar filtro"
+    },
+    "balance": {
+      "title": "Seu saldo disponível",
+      "details": "Adquirido até agora: {{earned}} | Já retirado: {{withdrawn}} | Dia {{day}}/{{days}}",
+      "maxPercentage": "Máximo de {{value}}% do salário adquirido"
+    },
+    "status": {
+      "pending": "Pendente",
+      "approved": "Aprovada",
+      "disbursed": "Desembolsada",
+      "rejected": "Rejeitada",
+      "repaid": "Reembolsada",
+      "enabled": "Ativado",
+      "disabled": "Desativado"
+    },
+    "columns": {
+      "employee": "Funcionário",
+      "amount": "Valor",
+      "fee": "Taxa",
+      "status": "Status",
+      "requested": "Solicitado",
+      "reason": "Motivo"
+    },
+    "emptyRequests": "Ainda não há solicitações de adiantamento",
+    "messages": {
+      "showingAll": "Todas as solicitações são exibidas abaixo",
+      "requestSubmitted": "Solicitação de adiantamento enviada",
+      "submitFailed": "Não foi possível enviar a solicitação",
+      "requestApproved": "Solicitação aprovada",
+      "approveFailed": "Não foi possível aprovar",
+      "rejectionReason": "Motivo da rejeição (opcional):",
+      "requestRejected": "Solicitação rejeitada",
+      "rejectFailed": "Não foi possível rejeitar",
+      "settingsSaved": "Configurações salvas",
+      "settingsSaveFailed": "Não foi possível salvar as configurações"
+    },
+    "requestModal": {
+      "title": "Solicitar adiantamento salarial",
+      "available": "Disponível: {{amount}}",
+      "salaryDetails": "Salário mensal: {{salary}} | Dia {{day}}/{{days}}",
+      "unavailable": "Nenhum adiantamento disponível ainda. Verifique a configuração salarial ou o período de espera.",
+      "amount": "Valor",
+      "amountPlaceholder": "Insira o valor",
+      "reason": "Motivo (opcional)",
+      "reasonPlaceholder": "Por que você precisa deste adiantamento?",
+      "cancel": "Cancelar",
+      "submit": "Enviar solicitação"
+    },
+    "settingsModal": {
+      "title": "Configurações de acesso ao salário adquirido",
+      "enable": "Ativar acesso ao salário adquirido",
+      "maxPercentage": "% máximo do salário adquirido",
+      "cooldownDays": "Dias de espera",
+      "minAmount": "Valor mínimo",
+      "maxAmount": "Valor máximo (0 = sem limite)",
+      "feePercentage": "Taxa %",
+      "flatFee": "Taxa fixa",
+      "autoApproveBelow": "Aprovar automaticamente abaixo de (0 = desativado)",
+      "requiresApproval": "Requer aprovação do gestor",
+      "cancel": "Cancelar",
+      "save": "Salvar configurações"
+    }
+  },
+  "insurancePage": {
+    "title": "Gestão de seguros",
+    "description": "Gerencie apólices de seguro coletivo, inscrições e sinistros",
+    "actions": {
+      "edit": "Editar",
+      "deactivate": "Desativar",
+      "cancel": "Cancelar",
+      "settle": "Liquidar",
+      "approve": "Aprovar",
+      "reject": "Rejeitar",
+      "submitClaim": "Enviar sinistro",
+      "enrollEmployee": "Inscrever funcionário",
+      "newPolicy": "Nova apólice"
+    },
+    "stats": {
+      "activePolicies": "Apólices ativas",
+      "activeEnrollments": "Inscrições ativas",
+      "pendingClaims": "Sinistros pendentes",
+      "totalApproved": "Total aprovado"
+    },
+    "tabs": {
+      "policies": "Apólices ({{count}})",
+      "enrollments": "Inscrições ({{count}})",
+      "claims": "Sinistros ({{count}})"
+    },
+    "empty": {
+      "policies": "Nenhuma apólice de seguro criada",
+      "enrollments": "Nenhuma inscrição",
+      "claims": "Nenhum sinistro enviado"
+    },
+    "columns": {
+      "policyName": "Nome da apólice",
+      "number": "Número",
+      "provider": "Seguradora",
+      "type": "Tipo",
+      "coverage": "Cobertura",
+      "premiumPerEmployee": "Prêmio/funcionário",
+      "status": "Status",
+      "employee": "Funcionário",
+      "policy": "Apólice",
+      "sumInsured": "Capital segurado",
+      "premiumShare": "Parte do prêmio",
+      "nominee": "Beneficiário",
+      "claimNumber": "Sinistro nº",
+      "claimed": "Reclamado",
+      "approved": "Aprovado",
+      "submitted": "Enviado"
+    },
+    "policyTypes": {
+      "group_health": "Saúde coletiva",
+      "group_life": "Vida coletiva",
+      "disability": "Invalidez",
+      "accidental": "Acidental",
+      "travel": "Viagem"
+    },
+    "claimTypes": {
+      "hospitalization": "Hospitalização",
+      "outpatient": "Ambulatorial",
+      "dental": "Odontológico",
+      "vision": "Visão",
+      "life": "Vida",
+      "disability": "Invalidez",
+      "accidental": "Acidental",
+      "travel": "Viagem",
+      "group_health": "Saúde coletiva",
+      "group_life": "Vida coletiva"
+    },
+    "status": {
+      "active": "Ativa",
+      "expired": "Expirada",
+      "cancelled": "Cancelada",
+      "submitted": "Enviada",
+      "under_review": "Em análise",
+      "approved": "Aprovada",
+      "rejected": "Rejeitada",
+      "settled": "Liquidada",
+      "inactive": "Inativa",
+      "claimed": "Reclamada"
+    },
+    "messages": {
+      "invalidEndDate": "A data final da apólice não pode ser anterior à data inicial",
+      "renewalInPast": "A data de renovação não pode estar no passado",
+      "invalidRenewalDate": "A data de renovação deve ser igual ou posterior à data final da apólice",
+      "invalidPolicyNumber": "O número da apólice não pode começar com um sinal de menos",
+      "policyUpdated": "Apólice de seguro atualizada",
+      "policyCreated": "Apólice de seguro criada",
+      "saveFailed": "Não foi possível salvar a apólice",
+      "deactivateConfirm": "Desativar esta apólice de seguro? As inscrições existentes não serão afetadas.",
+      "policyDeactivated": "Apólice de seguro desativada",
+      "deactivateFailed": "Não foi possível desativar a apólice",
+      "employeeEnrolled": "Funcionário inscrito no seguro",
+      "enrollFailed": "Não foi possível realizar a inscrição",
+      "claimSubmitted": "Sinistro enviado",
+      "claimSubmitFailed": "Não foi possível enviar o sinistro",
+      "approvedAmountPrompt": "Valor aprovado (deixe em branco para o valor total):",
+      "claimApproved": "Sinistro aprovado",
+      "actionFailed": "A ação falhou",
+      "rejectionReason": "Motivo da rejeição:",
+      "claimRejected": "Sinistro rejeitado",
+      "claimSettled": "Sinistro liquidado",
+      "enrollmentCancelled": "Inscrição cancelada"
+    },
+    "policyModal": {
+      "editTitle": "Editar apólice de seguro",
+      "createTitle": "Criar apólice de seguro",
+      "policyName": "Nome da apólice",
+      "policyNumber": "Número da apólice",
+      "policyNumberPlaceholder": "ex.: POL-2024-001",
+      "provider": "Seguradora",
+      "type": "Tipo",
+      "totalPremium": "Prêmio total",
+      "premiumPerEmployee": "Prêmio / funcionário",
+      "coverageAmount": "Valor da cobertura",
+      "startDate": "Data inicial",
+      "endDate": "Data final",
+      "renewalDate": "Data de renovação",
+      "terms": "Termos e condições",
+      "cancel": "Cancelar",
+      "updatePolicy": "Atualizar apólice",
+      "createPolicy": "Criar apólice"
+    },
+    "enrollModal": {
+      "title": "Inscrever funcionário no seguro",
+      "employee": "Funcionário",
+      "policy": "Apólice de seguro",
+      "sumInsured": "Capital segurado",
+      "premiumShare": "Parte do prêmio do funcionário",
+      "nomineeName": "Nome do beneficiário",
+      "nomineeRelationship": "Relação com o beneficiário",
+      "relationshipPlaceholder": "ex.: cônjuge, pai ou mãe",
+      "cancel": "Cancelar",
+      "submit": "Inscrever"
+    },
+    "claimModal": {
+      "title": "Enviar sinistro de seguro",
+      "policy": "Apólice de seguro",
+      "claimType": "Tipo de sinistro",
+      "amountClaimed": "Valor reclamado",
+      "description": "Descrição",
+      "descriptionPlaceholder": "Descreva o sinistro",
+      "notes": "Notas",
+      "cancel": "Cancelar",
+      "submit": "Enviar sinistro"
+    }
+  },
+  "countryCompliancePage": {
+    "title": "Conformidade por país",
+    "description": "Consulte leis laborais, taxas fiscais e requisitos legais por país",
+    "filters": {
+      "searchPlaceholder": "Pesquisar países...",
+      "configuredOnly": "Apenas os meus países configurados ({{count}})"
+    },
+    "regions": {
+      "all": "Todas as regiões",
+      "asia": "Ásia",
+      "europe": "Europa",
+      "americas": "Américas",
+      "africa": "África",
+      "oceania": "Oceânia",
+      "middle_east": "Médio Oriente"
+    },
+    "metrics": {
+      "maxHours": "Máximo de horas de trabalho/semana",
+      "annualLeave": "Férias anuais",
+      "publicHolidays": "Feriados",
+      "noticePeriod": "Período de aviso",
+      "probation": "Período experimental",
+      "payFrequency": "Frequência de pagamento"
+    },
+    "units": {
+      "hours": "{{value}} h",
+      "days": "{{value}} dias",
+      "months": "{{value}} meses"
+    },
+    "payFrequencies": {
+      "monthly": "Mensal",
+      "biweekly": "Quinzenal",
+      "weekly": "Semanal",
+      "annual": "Anual"
+    },
+    "benefits": {
+      "title": "Benefícios legais",
+      "socialSecurity": "Segurança social",
+      "pension": "Pensão",
+      "healthInsurance": "Seguro de saúde",
+      "required": "Obrigatório",
+      "notRequired": "Não obrigatório"
+    },
+    "ratesTitle": "Taxas fiscais e de segurança social",
+    "additional": {
+      "title": "Informação adicional",
+      "taxYearStart": "Início do ano fiscal",
+      "minimumWage": "Salário mínimo (mensal)",
+      "notSet": "Não definido / Variável",
+      "countryCode": "Código do país",
+      "region": "Região"
+    },
+    "empty": {
+      "title": "Selecione um país para ver os detalhes de conformidade",
+      "description": "Consulte leis laborais, taxas fiscais e requisitos legais"
+    },
+    "complianceKeys": {
+      "income_tax": "Imposto sobre o rendimento",
+      "solidarity_surcharge": "Sobretaxa de solidariedade",
+      "health_insurance_employer": "Seguro de saúde do empregador",
+      "health_insurance_employee": "Seguro de saúde do empregado",
+      "pension_employer": "Pensão do empregador",
+      "pension_employee": "Pensão do empregado",
+      "unemployment_employer": "Seguro-desemprego do empregador",
+      "unemployment_employee": "Seguro-desemprego do empregado",
+      "care_insurance_employer": "Seguro de cuidados do empregador",
+      "care_insurance_employee": "Seguro de cuidados do empregado",
+      "employer_social_charges": "Encargos sociais do empregador",
+      "employee_social_charges": "Encargos sociais do empregado",
+      "social_security_rate": "Taxa de segurança social",
+      "social_security_cap": "Teto da segurança social",
+      "federal_tax": "Imposto federal",
+      "state_tax": "Imposto estadual",
+      "epf_employer": "EPF do empregador",
+      "epf_employee": "EPF do empregado",
+      "esi_employer": "ESI do empregador",
+      "esi_employee": "ESI do empregado"
+    }
+  },
+  "glAccountingPage": {
+    "title": "Razão geral / Contabilidade",
+    "description": "Associe componentes salariais a contas do razão e gere lançamentos contabilísticos",
+    "actions": {
+      "generateJournal": "Gerar lançamento",
+      "addMapping": "Adicionar associação",
+      "deleteMapping": "Eliminar associação",
+      "cancel": "Cancelar",
+      "saveMapping": "Guardar associação",
+      "generate": "Gerar"
+    },
+    "stats": {
+      "mappings": "Associações contabilísticas",
+      "journals": "Lançamentos contabilísticos",
+      "exported": "Exportados"
+    },
+    "tabs": {
+      "mappings": "Associações contabilísticas",
+      "journals": "Lançamentos contabilísticos",
+      "exported": "Exportados"
+    },
+    "mappingTable": {
+      "payComponent": "Componente salarial",
+      "accountCode": "Código da conta",
+      "accountName": "Nome da conta",
+      "description": "Descrição"
+    },
+    "journalTable": {
+      "date": "Data",
+      "payrollRun": "Processamento salarial",
+      "totalDebit": "Débito total",
+      "totalCredit": "Crédito total",
+      "status": "Estado",
+      "export": "Exportar"
+    },
+    "statuses": {
+      "draft": "Rascunho",
+      "posted": "Contabilizado",
+      "exported": "Exportado"
+    },
+    "empty": {
+      "mappings": "Não existem associações contabilísticas configuradas",
+      "journals": "Não foram gerados lançamentos contabilísticos",
+      "exported": "Ainda não foram exportados lançamentos"
+    },
+    "mappingModal": {
+      "title": "Adicionar associação contabilística",
+      "payComponentCode": "Código do componente salarial",
+      "payComponentPlaceholder": "por ex., BASIC, HRA, EPF, TDS",
+      "accountCode": "Código da conta",
+      "accountCodePlaceholder": "por ex., 4001",
+      "accountName": "Nome da conta",
+      "accountNamePlaceholder": "por ex., Despesa salarial",
+      "description": "Descrição"
+    },
+    "journalModal": {
+      "title": "Gerar lançamento contabilístico",
+      "payrollRun": "Processamento salarial",
+      "selectRun": "Selecione um processamento salarial...",
+      "help": "Serão gerados lançamentos a partir do processamento salarial selecionado com as associações contabilísticas configuradas."
+    },
+    "validation": {
+      "accountCode": "O código da conta deve ser um número positivo, sem sinais negativos, letras ou espaços"
+    },
+    "messages": {
+      "mappingCreated": "Associação contabilística criada",
+      "journalGenerated": "Lançamento contabilístico gerado",
+      "mappingDeleted": "Associação eliminada",
+      "failed": "A ação falhou"
+    },
+    "exports": {
+      "tallyTitle": "Exportar para Tally",
+      "quickbooksTitle": "Exportar para QuickBooks",
+      "zohoTitle": "Exportar para Zoho"
+    }
+  },
+  "globalEmployeesPage": {
+    "title": "Trabalhadores globais",
+    "description": "Gerir trabalhadores EOR, prestadores e contratações diretas em todo o mundo",
+    "actions": {
+      "addEmployee": "Adicionar trabalhador",
+      "editEmployee": "Editar trabalhador",
+      "terminateEmployee": "Terminar contrato",
+      "alreadyTerminated": "Contrato já terminado",
+      "cancel": "Cancelar",
+      "saveChanges": "Guardar alterações"
+    },
+    "filters": {
+      "searchPlaceholder": "Pesquisar por nome, e-mail ou país...",
+      "allCountries": "Todos os países",
+      "allTypes": "Todos os tipos",
+      "allStatuses": "Todos os estados"
+    },
+    "employmentTypes": {
+      "eor": "EOR",
+      "contractor": "Prestador",
+      "direct_hire": "Contratação direta"
+    },
+    "contractTypes": {
+      "fullTime": "Tempo inteiro",
+      "partTime": "Tempo parcial",
+      "fixedTerm": "Prazo fixo"
+    },
+    "statuses": {
+      "active": "Ativo",
+      "onboarding": "Integração",
+      "offboarding": "Desligamento",
+      "terminated": "Terminado"
+    },
+    "salaryFrequencies": {
+      "monthly": "Mensal",
+      "biweekly": "Quinzenal",
+      "weekly": "Semanal",
+      "annual": "Anual"
+    },
+    "salaryFrequencyShort": {
+      "monthly": "mês",
+      "biweekly": "quinz.",
+      "weekly": "sem.",
+      "annual": "ano"
+    },
+    "table": {
+      "name": "Nome",
+      "country": "País",
+      "type": "Tipo",
+      "status": "Estado",
+      "salary": "Salário",
+      "jobTitle": "Cargo",
+      "startDate": "Data de início",
+      "actions": "Ações"
+    },
+    "empty": "Não foram encontrados trabalhadores globais. Clique em «Adicionar trabalhador» para contratar o primeiro membro internacional da equipa.",
+    "modal": {
+      "addTitle": "Adicionar trabalhador global",
+      "editTitle": "Editar trabalhador global",
+      "firstName": "Nome *",
+      "lastName": "Apelido *",
+      "email": "E-mail *",
+      "country": "País *",
+      "employmentType": "Tipo de emprego *",
+      "contractType": "Tipo de contrato",
+      "jobTitle": "Cargo *",
+      "department": "Departamento",
+      "selectDepartment": "Selecionar departamento...",
+      "noDepartments": "Ainda não existem departamentos configurados — adicione-os em Definições > Departamentos",
+      "startDate": "Data de início *",
+      "salaryAmount": "Valor salarial * (na unidade monetária principal)",
+      "payFrequency": "Frequência de pagamento",
+      "bankingTax": "Dados bancários e fiscais (opcional)",
+      "taxId": "Identificação fiscal",
+      "bankName": "Nome do banco",
+      "bankNamePlaceholder": "por ex., HDFC Bank",
+      "bankAccount": "Número da conta bancária",
+      "bankAccountPlaceholder": "por ex., 12345678901234",
+      "bankRouting": "Código bancário / IFSC",
+      "bankRoutingPlaceholder": "por ex., HDFC0001234"
+    },
+    "validation": {
+      "required": "Preencha todos os campos obrigatórios"
+    },
+    "messages": {
+      "added": "Trabalhador global adicionado",
+      "updated": "Trabalhador global atualizado",
+      "addFailed": "Não foi possível adicionar o trabalhador",
+      "updateFailed": "Não foi possível atualizar o trabalhador",
+      "terminatePrompt": "Terminar o contrato de {{name}}? Introduza um motivo (obrigatório):",
+      "terminated": "Contrato do trabalhador terminado",
+      "terminateFailed": "Não foi possível terminar o contrato do trabalhador"
+    }
+  },
+  "contractorInvoicesPage": {
+    "title": "Faturas de prestadores",
+    "description": "Gerir e pagar faturas de prestadores",
+    "actions": {
+      "submitInvoice": "Enviar fatura",
+      "approve": "Aprovar",
+      "reject": "Rejeitar",
+      "markPaid": "Marcar como paga",
+      "cancel": "Cancelar"
+    },
+    "filters": {
+      "allStatuses": "Todos os estados"
+    },
+    "statuses": {
+      "pending": "Pendente",
+      "approved": "Aprovada",
+      "paid": "Paga",
+      "rejected": "Rejeitada"
+    },
+    "table": {
+      "invoiceNumber": "N.º da fatura",
+      "contractor": "Prestador",
+      "period": "Período",
+      "amount": "Valor",
+      "status": "Estado",
+      "submitted": "Enviada",
+      "actions": "Ações"
+    },
+    "empty": "Ainda não existem faturas de prestadores.",
+    "modal": {
+      "title": "Enviar fatura de prestador",
+      "contractorLabel": "Prestador *",
+      "selectContractor": "Selecione um prestador...",
+      "noContractors": "Ainda não existem prestadores — adicione um em Trabalhadores globais",
+      "amountLabel": "Valor",
+      "amountUnitHint": "unidade monetária principal",
+      "periodStart": "Início do período *",
+      "periodEnd": "Fim do período *",
+      "description": "Descrição"
+    },
+    "validation": {
+      "required": "Preencha todos os campos obrigatórios",
+      "positiveAmount": "O valor deve ser um número positivo",
+      "invalidPeriod": "A data de fim deve ser igual ou posterior à data de início"
+    },
+    "messages": {
+      "submitted": "Fatura enviada",
+      "submitFailed": "Não foi possível enviar a fatura",
+      "approved": "Fatura aprovada",
+      "approveFailed": "Não foi possível aprovar a fatura",
+      "rejectConfirm": "Rejeitar esta fatura?",
+      "rejected": "Fatura rejeitada",
+      "rejectFailed": "Não foi possível rejeitar a fatura",
+      "paid": "Fatura marcada como paga",
+      "paidFailed": "Não foi possível marcar a fatura como paga"
+    }
+  },
+  "globalPayrollDashboard": {
+    "title": "Processamento salarial global",
+    "description": "Faça a gestão da sua força de trabalho mundial em vários países, moedas e requisitos de conformidade",
+    "stats": {
+      "activeEmployees": "Trabalhadores ativos",
+      "countries": "Países",
+      "eorWorkers": "Trabalhadores EOR",
+      "contractors": "Prestadores de serviços",
+      "complianceScore": "Índice de conformidade",
+      "pendingInvoices": "Faturas pendentes",
+      "onboarding": "Integração"
+    },
+    "compliance": {
+      "good": "Bom",
+      "needsAttention": "Requer atenção"
+    },
+    "employeesByCountry": {
+      "title": "Trabalhadores por país",
+      "empty": "Ainda não existem trabalhadores. Adicione o primeiro trabalhador global."
+    },
+    "costByCurrency": {
+      "title": "Custo mensal por moeda",
+      "empty": "Ainda não existem custos de processamento salarial ativos."
+    },
+    "costAnalysis": {
+      "title": "Análise de custos por país",
+      "columns": {
+        "country": "País",
+        "employees": "Trabalhadores",
+        "averageSalary": "Salário médio",
+        "totalGross": "Bruto total",
+        "employerCost": "Custo do empregador",
+        "netPay": "Salário líquido"
+      }
+    }
+  },
+  "globalPayrollRuns": {
+    "title": "Processamentos salariais globais",
+    "description": "Processe mensalmente os salários por país, reveja, aprove e marque como pago",
+    "statusFilter": "Filtrar processamentos salariais por estado",
+    "allStatuses": "Todos os estados",
+    "empty": "Ainda não existem processamentos salariais. Crie o primeiro processamento global.",
+    "columns": {
+      "country": "País",
+      "period": "Período",
+      "status": "Estado",
+      "gross": "Bruto",
+      "net": "Líquido",
+      "deductions": "Deduções",
+      "employerCost": "Custo do empregador",
+      "actions": "Ações"
+    },
+    "actions": {
+      "view": "Ver processamento salarial",
+      "approve": "Aprovar",
+      "markPaid": "Marcar como pago"
+    },
+    "createModal": {
+      "title": "Criar processamento salarial global",
+      "country": "País *",
+      "selectCountry": "Selecione um país...",
+      "noCountries": "Nenhum país com trabalhadores EOR ou contratados diretamente ativos",
+      "calculationNotice": "As deduções serão calculadas automaticamente para todos os trabalhadores EOR e contratados diretamente ativos do país selecionado."
+    },
+    "detailModal": {
+      "title": "Processamento salarial — {{country}}",
+      "netPay": "Salário líquido",
+      "employee": "Trabalhador",
+      "tax": "Imposto",
+      "socialSecurityEmployee": "Segurança social (trabalhador)",
+      "pensionEmployee": "Pensão (trabalhador)"
+    },
+    "messages": {
+      "selectCountry": "Selecione um país",
+      "approved": "Processamento salarial aprovado",
+      "approveFailed": "Não foi possível aprovar o processamento salarial",
+      "markedPaid": "Processamento salarial marcado como pago",
+      "markPaidFailed": "Não foi possível marcar o processamento salarial como pago"
+    }
+  },
+  "announcementsPage": {
+    "title": "Anúncios",
+    "description": "Avisos para toda a empresa publicados a partir do EmpCloud",
+    "manageInEmpCloud": "Gerir no EmpCloud",
+    "empty": "Ainda não existem anúncios",
+    "postFromEmpCloud": "Publicar a partir do EmpCloud",
+    "pinned": "Fixado",
+    "archived": "Arquivado",
+    "byAuthor": "Por {{author}}",
+    "unknownAuthor": "Desconhecido",
+    "expires": "Expira em {{date}}",
+    "priorities": {
+      "low": "Baixa",
+      "normal": "Normal",
+      "high": "Alta",
+      "urgent": "Urgente"
+    },
+    "categories": {
+      "general": "Geral",
+      "hr": "Recursos humanos",
+      "policy": "Política",
+      "event": "Evento",
+      "holiday": "Feriado",
+      "maintenance": "Manutenção"
+    }
+  },
+  "notificationsPage": {
+    "title": "Notificações",
+    "description": "Todos os seus alertas e atualizações recentes num só lugar",
+    "markAllRead": "Marcar tudo como lido",
+    "bellAria": "Notificações, {{count}} não lidas",
+    "newCount": "{{count}} novas — Marcar como lidas",
+    "viewAll": "Ver todas as notificações",
+    "tabs": {
+      "all": "Todas ({{count}})",
+      "unread": "Não lidas ({{count}})"
+    },
+    "empty": {
+      "noUnread": "Não há notificações não lidas",
+      "none": "Não há notificações",
+      "caughtUp": "Está tudo em dia!",
+      "updatesHere": "As novas atualizações aparecerão aqui."
+    },
+    "items": {
+      "admin": {
+        "tdsDue": {
+          "title": "Prazo da declaração TDS",
+          "description": "O formulário 24Q do T4 do exercício 2025–26 vence em breve",
+          "time": "Ação necessária"
+        },
+        "payrollPending": {
+          "title": "Folha de {{month}} pendente",
+          "description": "Crie e processe a folha deste mês",
+          "time": "Este mês"
+        },
+        "payrollCompleted": {
+          "title": "Última folha concluída",
+          "description": "Todos os recibos foram gerados e pagos",
+          "time": "No mês passado"
+        },
+        "activeEmployees": {
+          "title": "{{count}} funcionários ativos",
+          "description": "Todos os registos legais estão atualizados",
+          "time": "Sistema"
+        }
+      },
+      "employee": {
+        "payslipAvailable": {
+          "title": "Recibo de vencimento disponível",
+          "description": "O seu último recibo está pronto para consulta",
+          "time": "Recentemente"
+        },
+        "taxReminder": {
+          "title": "Lembrete de declaração fiscal",
+          "description": "Envie os comprovativos de investimento antes do prazo",
+          "time": "Este trimestre"
+        },
+        "salaryCredited": {
+          "title": "Salário creditado",
+          "description": "O seu salário foi creditado na sua conta bancária",
+          "time": "No mês passado"
+        }
+      }
+    }
+  },
+  "selfServiceDashboard": {
+    "greeting": "Olá, {{name}}!",
+    "userFallback": "Utilizador",
+    "description": "Aqui está o seu resumo de processamento salarial",
+    "stats": {
+      "monthlyCtc": "CTC mensal",
+      "latestNetPay": "Salário líquido (mais recente)",
+      "taxRegime": "Regime fiscal",
+      "daysAtCompany": "Dias na empresa"
+    },
+    "regimes": {
+      "old": "Regime antigo",
+      "new": "Novo regime"
+    },
+    "latestPayslip": "Recibo de vencimento mais recente — {{period}}",
+    "payslip": {
+      "grossPay": "Salário bruto",
+      "deductions": "Deduções",
+      "netPay": "Salário líquido",
+      "viewAll": "Ver todos"
+    },
+    "actions": {
+      "salaryBreakdown": "Ver detalhamento salarial",
+      "taxComputation": "Cálculo fiscal",
+      "submitDeclarations": "Enviar declarações",
+      "reimbursements": "Reembolsos",
+      "profile": "O meu perfil"
+    },
+    "announcements": {
+      "title": "Anúncios da empresa",
+      "readMore": "Ler mais",
+      "fallbackTitle": "Anúncio",
+      "priorityLabel": "Prioridade {{priority}}",
+      "priorities": {
+        "low": "baixa",
+        "normal": "normal",
+        "high": "alta",
+        "urgent": "urgente"
+      }
+    }
+  },
+  "myPayslipsPage": {
+    "title": "Os meus recibos de vencimento",
+    "description": "Consulte e transfira os seus recibos de vencimento",
+    "financialYear": "Exercício {{start}}-{{end}}",
+    "financialYearFilter": "Filtrar por exercício fiscal",
+    "empty": "Ainda não há recibos de vencimento disponíveis",
+    "gross": "Bruto",
+    "net": "Líquido",
+    "actions": {
+      "hide": "Ocultar",
+      "details": "Detalhes",
+      "downloadPdf": "Transferir PDF",
+      "dispute": "Contestar recibo de vencimento"
+    },
+    "earnings": "Rendimentos",
+    "totalEarnings": "Total de rendimentos",
+    "deductions": "Deduções",
+    "totalDeductions": "Total de deduções",
+    "components": {
+      "EPF": "Fundo de previdência do trabalhador",
+      "PF": "Fundo de previdência",
+      "PF_EE": "Contribuição do trabalhador para o fundo de previdência",
+      "ESI": "Seguro estatal dos trabalhadores",
+      "PT": "Imposto profissional",
+      "TDS": "Imposto sobre o rendimento (TDS)",
+      "INCOME_TAX": "Imposto sobre o rendimento",
+      "LOP": "Perda de remuneração"
+    },
+    "dispute": {
+      "title": "Contestar recibo de vencimento",
+      "reasonRequired": "Indique um motivo",
+      "success": "A contestação foi enviada. Os RH irão analisá-la.",
+      "failed": "Não foi possível enviar a contestação",
+      "description": "Se considera que existe um erro neste recibo, descreva o problema abaixo. Os RH irão analisar e responder.",
+      "placeholder": "Descreva o problema (por exemplo, dedução incorreta ou subsídio em falta)",
+      "cancel": "Cancelar",
+      "submit": "Enviar contestação"
+    }
+  },
+  "mySalaryPage": {
+    "title": "O meu salário",
+    "description": "Detalhamento do seu CTC e da estrutura salarial",
+    "unavailable": "Nenhuma informação salarial disponível",
+    "annualSummary": "Resumo anual",
+    "annualCtcConfigured": "CTC anual (configurado)",
+    "annualGrossComponents": "Bruto anual dos componentes",
+    "roundingNotice": "Pequenas diferenças entre o CTC configurado e a soma dos componentes são normais: os valores mensais são arredondados para rupias inteiras antes da anualização.",
+    "grossSalaryAnnual": "Salário bruto (anual)",
+    "monthlyComponent": "{{component}} mensal",
+    "monthlyBreakdown": "Detalhamento salarial mensal",
+    "salaryComponents": "Componentes salariais",
+    "effectiveFrom": "Em vigor desde {{date}}",
+    "columns": {
+      "component": "Componente",
+      "monthly": "Mensal",
+      "annual": "Anual"
+    },
+    "components": {
+      "BASIC": "Salário-base",
+      "HRA": "HRA",
+      "SA": "Subsídio especial"
+    }
+  },
+  "myTaxPage": {
+    "title": "Meus impostos",
+    "description": "Cálculo fiscal do ano {{financialYear}}",
+    "form16": "Formulário 16",
+    "stats": {
+      "annualIncome": "Rendimento anual",
+      "taxableIncome": "Rendimento tributável",
+      "estimatedTax": "Imposto estimado",
+      "tdsDeductedYtd": "TDS deduzido no ano"
+    },
+    "computationTitle": "Cálculo fiscal",
+    "regimes": {
+      "new": "Novo regime",
+      "old": "Regime antigo"
+    },
+    "rows": {
+      "grossAnnualIncome": "Rendimento bruto anual",
+      "standardDeduction": "Menos: dedução padrão",
+      "chapterDeductions": "Menos: deduções do capítulo VI-A",
+      "taxableIncome": "Rendimento tributável",
+      "taxOnIncome": "Imposto sobre o rendimento",
+      "cess": "Taxa de saúde e educação (4%)",
+      "totalLiability": "Responsabilidade fiscal total",
+      "monthlyTds": "TDS mensal"
+    },
+    "tracker": {
+      "title": "Acompanhamento das deduções TDS",
+      "totalTax": "Imposto total do ano fiscal",
+      "tdsDeductedYtd": "TDS deduzido no ano",
+      "remaining": "Restante",
+      "progress": "Progresso",
+      "monthlyMessage": "Será deduzido mensalmente do seu salário um TDS de <strong>{{amount}}</strong>."
+    }
+  },
+  "myDeclarationsPage": {
+    "description": "Ano fiscal {{financialYear}} — Envie comprovativos e pedidos de investimento",
+    "actions": {
+      "quickDeclare": "Declarar tudo rapidamente",
+      "newDeclaration": "Nova declaração",
+      "cancel": "Cancelar",
+      "submitAll": "Enviar todas as declarações",
+      "submit": "Enviar declaração"
+    },
+    "stats": {
+      "totalDeclared": "Total declarado",
+      "totalApproved": "Total aprovado",
+      "pendingApproval": "Aguardando aprovação"
+    },
+    "declarations": "Declarações",
+    "empty": "Ainda não há declarações. Selecione Nova declaração para enviar o primeiro comprovativo de investimento.",
+    "proof": {
+      "submitted": "Comprovativo enviado",
+      "upload": "Carregar"
+    },
+    "quick": {
+      "title": "Declaração fiscal rápida",
+      "description": "Declare todos os investimentos de uma só vez",
+      "tip": "Dica: na Secção 80C pode deduzir até ₹1,50,000 por PPF, ELSS, LIC, etc. O NPS em 80CCD(1B) oferece uma dedução adicional de ₹50,000.",
+      "defaultDescription": "Declaração fiscal da Secção {{section}}"
+    },
+    "sections": {
+      "80C": "80C — PPF, ELSS, LIC, etc.",
+      "80CCD_1B": "80CCD(1B) — NPS",
+      "80D": "80D — Seguro médico",
+      "80E": "80E — Juros de empréstimo educativo",
+      "80G": "80G — Donativos",
+      "80TTA": "80TTA — Juros de poupança",
+      "HRA": "HRA — Renda da habitação"
+    },
+    "validation": {
+      "sectionRequired": "Selecione uma secção",
+      "fieldRequired": "Preencha este campo",
+      "validAmount": "Introduza um valor válido",
+      "nonnegativeAmount": "O valor não pode ser negativo",
+      "fileTooLarge": "O ficheiro excede 5 MB",
+      "fileType": "Apenas são permitidos ficheiros PDF, JPG ou PNG",
+      "oneAmount": "Introduza pelo menos um valor"
+    },
+    "messages": {
+      "proofUploaded": "Comprovativo carregado",
+      "proofUploadFailed": "Não foi possível carregar o comprovativo",
+      "submitted": "Declaração enviada",
+      "submitFailed": "Não foi possível enviar a declaração",
+      "submittedCount_one": "{{count}} declaração enviada",
+      "submittedCount_other": "{{count}} declarações enviadas",
+      "submitAllFailed": "Não foi possível enviar as declarações"
+    },
+    "form": {
+      "descriptionPlaceholder": "ex.: contribuição PPF",
+      "amount": "Valor",
+      "proofDocument": "Documento comprovativo",
+      "optional": "opcional",
+      "uploadProof": "Carregar documento comprovativo",
+      "fileSelected": "{{size}} KB — selecione para alterar",
+      "dropzone": "Selecione para carregar ou arraste e largue",
+      "fileHelp": "PDF, JPG ou PNG até 5 MB"
+    }
+  },
+  "myReimbursementsPage": {
+    "title": "Meus reembolsos",
+    "description": "Envie e acompanhe pedidos de despesas",
+    "newClaim": "Novo pedido",
+    "stats": {
+      "total": "Total de pedidos",
+      "pending": "Pendentes",
+      "approvedPaid": "Aprovados / pagos"
+    },
+    "empty": {
+      "title": "Nenhum pedido de reembolso",
+      "description": "Selecione Novo pedido para enviar uma despesa"
+    },
+    "columns": {
+      "category": "Categoria",
+      "description": "Descrição",
+      "amount": "Valor",
+      "date": "Data",
+      "status": "Estado"
+    },
+    "categories": {
+      "medical": "Médico",
+      "travel": "Viagem",
+      "food": "Alimentação",
+      "equipment": "Equipamento",
+      "internet": "Internet / telefone",
+      "books": "Livros e formação",
+      "other": "Outro"
+    },
+    "status": {
+      "pending": "Pendente",
+      "approved": "Aprovado",
+      "paid": "Pago",
+      "rejected": "Rejeitado"
+    },
+    "messages": {
+      "invalidAmount": "O valor deve ser zero ou positivo",
+      "submitted": "Pedido enviado para aprovação",
+      "failed": "Não foi possível enviar o pedido"
+    },
+    "modal": {
+      "title": "Enviar pedido de despesa",
+      "category": "Categoria",
+      "description": "Descrição",
+      "descriptionPlaceholder": "ex.: táxi para reunião com cliente",
+      "amount": "Valor (₹)",
+      "expenseDate": "Data da despesa",
+      "cancel": "Cancelar",
+      "submit": "Enviar pedido"
+    }
+  },
+  "holidaysPage": {
+    "title": "Calendário de feriados",
+    "configured_one": "{{year}} — {{count}} feriado configurado",
+    "configured_other": "{{year}} — {{count}} feriados configurados",
+    "noHolidays": "Sem feriados",
+    "upcoming": "Próximos feriados",
+    "past": "Feriados anteriores",
+    "actions": {
+      "add": "Adicionar feriado",
+      "remove": "Remover feriado",
+      "cancel": "Cancelar"
+    },
+    "columns": {
+      "holiday": "Feriado",
+      "date": "Data",
+      "day": "Dia",
+      "type": "Tipo"
+    },
+    "types": {
+      "national": "Nacional",
+      "regional": "Regional",
+      "optional": "Opcional / restrito"
+    },
+    "messages": {
+      "nameRequired": "O nome do feriado é obrigatório",
+      "nameLetter": "O nome do feriado deve conter pelo menos uma letra",
+      "added": "Feriado adicionado",
+      "addFailed": "Não foi possível adicionar o feriado",
+      "removed": "Feriado removido",
+      "removeFailed": "Não foi possível remover o feriado"
+    },
+    "modal": {
+      "title": "Adicionar feriado",
+      "name": "Nome do feriado",
+      "namePlaceholder": "ex.: Diwali",
+      "nameTitle": "Deve conter pelo menos uma letra",
+      "date": "Data",
+      "type": "Tipo"
+    }
+  },
+  "payrollRuns": {
+    "title": "Processamentos da folha",
+    "description": "Processamento mensal da folha",
+    "runPayroll": "Processar folha",
+    "noRuns": "Ainda não há processamentos.",
+    "runFirst": "Processar a primeira folha",
+    "totalRuns": "Total de processamentos",
+    "allPeriods": "Todos os períodos",
+    "latestNetPay": "Último pagamento líquido",
+    "noComputedRuns": "Nenhum processamento calculado",
+    "markedPaid": "Marcados como pagos",
+    "inProgress": "Em andamento",
+    "inProgressSubtitle": "Rascunho · calculado · aprovado",
+    "filterAria": "Filtrar processamentos por status",
+    "noMatches": "Nenhum processamento corresponde a este filtro.",
+    "newTitle": "Novo processamento",
+    "newDescription": "Criar um novo processamento mensal da folha",
+    "createInfo": "Cria um processamento em rascunho e calcula o bruto, as deduções e o líquido de cada funcionário ativo no mês selecionado. Você pode revisar e aprovar antes de marcar como pago.",
+    "month": "Mês",
+    "year": "Ano",
+    "payDate": "Data de pagamento",
+    "cancel": "Cancelar",
+    "createRun": "Criar processamento",
+    "created": "Processamento criado",
+    "missingReturnedId": "O processamento foi enviado, mas o servidor não retornou um identificador. Atualize a lista para verificar.",
+    "createFailed": "Não foi possível criar o processamento",
+    "missingId": "Este processamento não tem identificador — atualize a lista.",
+    "columns": {
+      "period": "Período",
+      "employees": "Funcionários",
+      "grossPay": "Pagamento bruto",
+      "deductions": "Deduções",
+      "netPay": "Pagamento líquido",
+      "status": "Status"
+    },
+    "statuses": {
+      "all": "Todos",
+      "draft": "Rascunho",
+      "processing": "Processando",
+      "computed": "Calculado",
+      "approved": "Aprovado",
+      "paid": "Pago",
+      "cancelled": "Cancelado"
+    },
+    "validation": {
+      "month": "Selecione um mês válido",
+      "year": "Informe um ano válido (2020–2100)",
+      "futurePeriod": "Não é possível criar um processamento para um período futuro",
+      "payDate": "Escolha uma data de pagamento"
+    }
+  },
+  "pagination": {
+    "range": "{{start}}–{{end}} de {{total}}",
+    "pageOf": "Página {{page}} de {{totalPages}}",
+    "previous": "Anterior",
+    "previousPage": "Página anterior",
+    "next": "Próxima",
+    "nextPage": "Próxima página"
+  },
+  "adminDeclarations": {
+    "title": "Declarações fiscais",
+    "description": "Revise as declarações de investimento enviadas pelos funcionários para {{financialYear}}.",
+    "pending": {
+      "title": "Aprovações pendentes",
+      "badge": "{{pending}} pendentes · {{count}} funcionários",
+      "badge_one": "{{pending}} pendentes · {{count}} funcionário",
+      "badge_other": "{{pending}} pendentes · {{count}} funcionários",
+      "loading": "Carregando declarações pendentes…",
+      "empty": "Não há declarações aguardando aprovação para {{financialYear}}. Tudo em dia.",
+      "declaredAmount": "{{amount}} declarado"
+    },
+    "employees": {
+      "title": "Funcionários",
+      "loading": "Carregando…",
+      "noMatches": "Nenhum funcionário correspondente.",
+      "shownOf": "{{shown}} de {{total}}"
+    },
+    "filters": {
+      "searchPlaceholder": "Nome, e-mail ou código",
+      "filterDepartment": "Filtrar por departamento",
+      "allDepartments": "Todos os departamentos",
+      "filterLocation": "Filtrar por local",
+      "allLocations": "Todos os locais",
+      "clear": "Limpar filtros"
+    },
+    "declarations": {
+      "pickEmployee": "Selecione um funcionário",
+      "approving": "Aprovando…",
+      "approvePending": "Aprovar {{count}} declarações pendentes",
+      "approvePending_one": "Aprovar {{count}} declaração pendente",
+      "approvePending_other": "Aprovar {{count}} declarações pendentes",
+      "selectPrompt": "Selecione um funcionário na lista para ver suas declarações fiscais.",
+      "loading": "Carregando declarações…",
+      "empty": "Nenhuma declaração enviada para {{financialYear}}."
+    },
+    "stats": {
+      "declared": "Declarado",
+      "approved": "Aprovado",
+      "pending": "Pendente"
+    },
+    "columns": {
+      "section": "Seção",
+      "description": "Descrição",
+      "declared": "Declarado",
+      "approved": "Aprovado",
+      "status": "Status",
+      "proof": "Comprovante",
+      "action": "Ação"
+    },
+    "statuses": {
+      "pending": "Pendente",
+      "approved": "Aprovado",
+      "rejected": "Rejeitado"
+    },
+    "proof": {
+      "view": "Visualizar"
+    },
+    "actions": {
+      "approve": "Aprovar"
+    },
+    "toasts": {
+      "noPending": "Não há declarações pendentes para aprovar.",
+      "approvedCount": "{{count}} declarações aprovadas.",
+      "approvedCount_one": "{{count}} declaração aprovada.",
+      "approvedCount_other": "{{count}} declarações aprovadas.",
+      "approveAllFailed": "Falha ao aprovar as declarações",
+      "alreadyApproved": "Já aprovada.",
+      "approvedOne": "Declaração aprovada.",
+      "approveOneFailed": "Falha ao aprovar a declaração"
+    }
+  },
+  "taxCalculator": {
+    "title": "Calculadora fiscal",
+    "description": "Projeção hipotética do imposto de renda — selecione um funcionário e recalcule com valores personalizados",
+    "financialYearShort": "Exercício {{year}}",
+    "simulationFailed": "Não foi possível calcular o imposto. Tente novamente.",
+    "newRegimeInfo": "Novo regime — aplica-se apenas a dedução padrão de ₹75.000. HRA, 80C, 80D e outras deduções do Capítulo VI-A não estão disponíveis.",
+    "steps": {
+      "employee": "Etapa 1 · Funcionário",
+      "inputs": "Etapa 2 · Dados",
+      "taxBreakdown": "Etapa 3 · Detalhamento fiscal"
+    },
+    "regimes": {
+      "new": "Novo regime",
+      "old": "Regime antigo"
+    },
+    "employee": {
+      "ctc": "CTC",
+      "select": "Pesquisar e selecionar um funcionário…",
+      "joined": "Admissão em {{date}}",
+      "monthsLeft": "Restam {{count}} meses neste exercício",
+      "monthsLeft_one": "Resta {{count}} mês neste exercício",
+      "monthsLeft_other": "Restam {{count}} meses neste exercício",
+      "midFyJoiner": "Admissão no meio do exercício",
+      "searchPlaceholder": "Pesquisar nome, e-mail ou código…",
+      "noMatches": "Nenhum funcionário corresponde a “{{search}}”"
+    },
+    "empty": {
+      "title": "Selecione um funcionário para começar",
+      "description": "A calculadora carrega o salário, o regime e as declarações aprovadas para que você possa alterar qualquer valor e ver o TDS mensal resultante."
+    },
+    "inputs": {
+      "reset": "Restaurar valores salvos",
+      "loadingSaved": "Carregando valores salvos…",
+      "noSalary": "Nenhuma estrutura salarial ativa foi atribuída. Todos os campos começam em zero — informe os valores manualmente para projetar o imposto.",
+      "midFyTitle": "Admissão no meio do exercício — registre o Formulário 12B abaixo",
+      "midFyDescription": "Este funcionário entrou no meio do exercício {{financialYear}}. Sem a renda e o TDS do empregador anterior, o sistema distribuirá todo o imposto anual por apenas {{count}} meses e reterá a mais.",
+      "midFyDescription_one": "Este funcionário entrou no meio do exercício {{financialYear}}. Sem a renda e o TDS do empregador anterior, o sistema aplicará todo o imposto anual em apenas {{count}} mês e reterá a mais.",
+      "midFyDescription_other": "Este funcionário entrou no meio do exercício {{financialYear}}. Sem a renda e o TDS do empregador anterior, o sistema distribuirá todo o imposto anual por apenas {{count}} meses e reterá a mais.",
+      "regime": "Regime",
+      "compare": "Comparar antigo e novo",
+      "pan": "PAN",
+      "panHint": "taxa fixa de 20% da 206AA se estiver vazio",
+      "annualGross": "Bruto anual",
+      "annualBasic": "Salário-base anual",
+      "annualHra": "HRA anual",
+      "employeePfAnnual": "PF do funcionário (anual)"
+    },
+    "priorEmployer": {
+      "title": "Empregador anterior (Formulário 12B)",
+      "save": "Salvar no perfil",
+      "saved": "TDS do empregador anterior salvo",
+      "saveFailed": "Falha ao salvar o TDS anterior",
+      "description": "Renda recebida e TDS retido pelo empregador anterior neste exercício. Os valores salvos seguem para a próxima folha para evitar retenção duplicada.",
+      "gross": "Bruto do empregador anterior (neste exercício)",
+      "tds": "TDS do empregador anterior",
+      "source": "Fonte / observações (opcional)",
+      "sourcePlaceholder": "ex.: “Formulário 12B enviado em 01/09/2026”"
+    },
+    "oldRegime": {
+      "title": "Dados adicionais do regime antigo",
+      "annualRent": "Aluguel anual pago",
+      "metro": "Cidade metropolitana (limite de HRA de 50% do básico)",
+      "declarations": "Declarações do Capítulo VI-A",
+      "add": "Adicionar",
+      "noDeclarations": "Nenhuma declaração. Clique em “Adicionar” para simular 80C, 80D, 80CCD(1B) etc.",
+      "remove": "Remover"
+    },
+    "actions": {
+      "compareRegimes": "Comparar regimes",
+      "calculate": "Calcular"
+    },
+    "validation": {
+      "invalidPan": "O formato do PAN parece inválido — esperado: ABCDE1234F.",
+      "section80CCap": "O total da 80C é {{amount}} — apenas ₹1,50,000 são dedutíveis (limite).",
+      "npsCap": "O NPS 80CCD(1B) tem limite de ₹50.000.",
+      "hraNeedsRent": "A isenção de HRA exige aluguel pago — informe o aluguel anual para solicitá-la."
+    },
+    "results": {
+      "calculating": "Calculando…",
+      "clickCalculate": "Clique em Calcular para projetar o imposto",
+      "enterAnnualGross": "Informe o bruto anual para projetar o imposto",
+      "section206aaTitle": "Seção 206AA aplicada",
+      "section206aaDetail": "O PAN está ausente, portanto 20% do bruto anual são retidos independentemente do regime ou das declarações.",
+      "sameTax": "Os dois regimes resultam no mesmo imposto",
+      "saves": "{{regime}} economiza {{amount}}",
+      "recommended": "Recomendado:",
+      "monthlyTds": "TDS mensal",
+      "tapRegime": "Selecione um regime para ver o detalhamento completo",
+      "grossAnnualIncome": "Renda bruta anual",
+      "less": "Menos: {{item}}",
+      "taxableIncome": "Renda tributável",
+      "taxOnIncome": "Imposto sobre a renda (após abatimento 87A)",
+      "surcharge": "Sobretaxa",
+      "cess": "Taxa de saúde e educação (4%)",
+      "totalAnnualTax": "Imposto anual total",
+      "tdsPaidYtd": "TDS pago no ano",
+      "remainingTax": "Imposto restante",
+      "savingSuggestion": "Invista mais {{investment}} de acordo com a Seção 80C para economizar aproximadamente {{saving}} em impostos."
+    },
+    "sections": {
+      "80C": "PPF / ELSS / LIC / principal",
+      "80CCD_1B": "NPS adicional",
+      "80D": "Seguro médico",
+      "80E": "Juros de empréstimo educacional",
+      "80G": "Doações",
+      "80TTA": "Juros de poupança"
+    }
+  },
+  "taxOverview": {
+    "title": "Visão geral fiscal",
+    "financialYear": "Exercício fiscal {{start}}-{{end}}",
+    "description": "Resumo do imposto de renda do {{fy}}",
+    "missingPanCount": "{{count}} funcionários nesta página sem PAN válido",
+    "missingPanCount_one": "{{count}} funcionário nesta página sem PAN válido",
+    "missingPanCount_other": "{{count}} funcionários nesta página sem PAN válido",
+    "missingPanDetail": "O TDS desses funcionários está sendo retido à taxa fixa de 20% da Seção 206AA. Peça a cada funcionário que atualize o PAN no perfil para que as faixas padrão sejam aplicadas.",
+    "summaryTitle": "Resumo fiscal dos funcionários",
+    "regimeSuffix": "Regime {{regime}}",
+    "noSalaryStructure": "Nenhuma estrutura salarial atribuída",
+    "empty": "Nenhum funcionário encontrado.",
+    "stats": {
+      "totalEmployees": "Total de funcionários",
+      "estimatedTaxPage": "Imposto estimado (página)",
+      "tdsDeductedYtdPage": "TDS retido no ano (página)",
+      "pageOf": "página {{page}} de {{totalPages}}",
+      "newRegimePage": "Novo regime (página)",
+      "optedIn": "funcionários aderiram"
+    },
+    "filters": {
+      "searchPlaceholder": "Pesquisar por nome, e-mail, código ou cargo…",
+      "filterDepartment": "Filtrar por departamento",
+      "allDepartments": "Todos os departamentos",
+      "filterLocation": "Filtrar por local",
+      "allLocations": "Todos os locais",
+      "clear": "Limpar filtros"
+    },
+    "columns": {
+      "employee": "Funcionário",
+      "regime": "Regime",
+      "estimatedTax": "Imposto estimado",
+      "tdsDeductedYtd": "TDS retido no ano"
+    },
+    "pan": {
+      "label": "PAN",
+      "invalidTitle": "PAN inválido — TDS retido à taxa fixa de 20% da Seção 206AA.",
+      "missing": "Sem PAN"
+    },
+    "regimes": {
+      "new": "Novo",
+      "old": "Antigo"
+    }
+  },
+  "payslipList": {
+    "title": "Holerites",
+    "count": "{{count}} holerites",
+    "count_one": "{{count}} holerite",
+    "count_other": "{{count}} holerites",
+    "loading": "Carregando…",
+    "firstOf": "Primeiros {{loaded}} de {{total}} holerites — refine os filtros",
+    "filteredOf": "{{filtered}} de {{total}} holerites",
+    "exportAll": "Exportar tudo",
+    "exportSuccess": "CSV de holerites exportado",
+    "exportFailed": "Falha na exportação",
+    "emptyTitle": "Nenhum holerite para esta seleção.",
+    "emptyHint": "Tente outro mês ou ano.",
+    "cappedNotice": "Exibindo os primeiros {{loaded}} de {{total}} holerites — os totais refletem esta visualização. Filtre por mês, ano ou departamento para obter valores exatos.",
+    "excludedTotals": "Os totais excluem {{count}} holerites contestados ou cancelados.",
+    "excludedTotals_one": "Os totais excluem {{count}} holerite contestado ou cancelado.",
+    "excludedTotals_other": "Os totais excluem {{count}} holerites contestados ou cancelados.",
+    "emptyFiltered": "Nenhum holerite corresponde aos filtros.",
+    "filters": {
+      "search": "Pesquisar",
+      "searchPlaceholder": "Nome ou código…",
+      "department": "Departamento",
+      "allDepartments": "Todos os departamentos",
+      "location": "Local",
+      "allLocations": "Todos os locais",
+      "month": "Mês",
+      "allMonths": "Todos os meses",
+      "year": "Ano",
+      "allYears": "Todos os anos"
+    },
+    "stats": {
+      "payslips": "Holerites",
+      "inView": "na visualização",
+      "of": "de {{count}}",
+      "gross": "Bruto",
+      "grossEarnings": "rendimentos brutos",
+      "deductions": "Deduções",
+      "totalDeductions": "deduções totais",
+      "netPay": "Pagamento líquido",
+      "takeHome": "valor líquido"
+    },
+    "columns": {
+      "employee": "Funcionário",
+      "period": "Período",
+      "days": "Dias",
+      "gross": "Bruto",
+      "deductions": "Deduções",
+      "netPay": "Pagamento líquido",
+      "status": "Status"
+    },
+    "statuses": {
+      "draft": "Rascunho",
+      "generated": "Gerado",
+      "sent": "Enviado",
+      "viewed": "Visualizado",
+      "paid": "Pago",
+      "disputed": "Contestado",
+      "resolved": "Resolvido",
+      "cancelled": "Cancelado",
+      "pending": "Pendente",
+      "rejected": "Rejeitado"
+    },
+    "actions": {
+      "view": "Visualizar",
+      "downloadPdf": "Baixar PDF"
+    },
+    "modal": {
+      "fallbackTitle": "Holerite",
+      "lopNotice": "{{paid}} de {{total}} dias pagos — {{lop}} dias LOP descontados",
+      "earnings": "Rendimentos",
+      "grossPay": "Pagamento bruto",
+      "deductions": "Deduções",
+      "totalDeductions": "Total de deduções",
+      "netPay": "Pagamento líquido",
+      "printSavePdf": "Imprimir / salvar PDF",
+      "close": "Fechar"
+    }
+  },
+  "salaryStructures": {
+    "title": "Estruturas salariais",
+    "configured": "{{count}} estruturas configuradas",
+    "configured_one": "{{count}} estrutura configurada",
+    "configured_other": "{{count}} estruturas configuradas",
+    "newStructure": "Nova estrutura",
+    "noStructures": "Ainda não há estruturas salariais.",
+    "createFirst": "Criar a primeira estrutura",
+    "editTitle": "Editar estrutura salarial",
+    "newTitle": "Nova estrutura salarial",
+    "structureName": "Nome da estrutura",
+    "structureNamePlaceholder": "ex.: CTC padrão da Índia",
+    "description": "Descrição",
+    "descriptionPlaceholder": "Para funcionários em tempo integral",
+    "components": "Componentes",
+    "nightHelpAria": "Ajuda sobre cálculo do adicional noturno",
+    "nightHelpTitle": "Como o adicional noturno é calculado",
+    "nightOvertimeHelp": "Como o adicional noturno e as horas extras são calculados",
+    "addPresetAria": "Adicionar componente predefinido",
+    "addPreset": "+ Adicionar predefinição…",
+    "custom": "Personalizado",
+    "componentName": "Nome do componente",
+    "auto": "automático",
+    "nightRatePlaceholder": "₹/noite",
+    "dayRatePlaceholder": "₹/dia",
+    "percentPlaceholder": "% ex.: 10",
+    "multiplierPlaceholder": "ex.: 2",
+    "autoTitle": "Preenchido automaticamente pelo CTC na atribuição",
+    "info": "Informações",
+    "noteTitle": "Nota:",
+    "noteText": "As deduções legais (EPF, ESI, PT e TDS) são calculadas automaticamente. Use Dedução para deduções recorrentes não legais e Saldo em um ganho para absorver o CTC restante.",
+    "cancel": "Cancelar",
+    "updateStructure": "Atualizar estrutura",
+    "createStructure": "Criar estrutura",
+    "gotIt": "Entendi",
+    "deleteTitle": "Excluir a estrutura salarial?",
+    "deleteDescription": "“{{name}}” será removida. Funcionários já atribuídos mantêm o salário e os holerites calculados não serão afetados.",
+    "delete": "Excluir",
+    "active": "Ativa",
+    "inactive": "Inativa",
+    "default": "Padrão",
+    "defaultStructureName": "Estrutura CTC padrão",
+    "defaultStructureDescription": "Estrutura salarial padrão com componentes Básico, HRA, SA, PF e ESI",
+    "noComponents": "Sem componentes",
+    "noComponentsDefined": "Nenhum componente definido",
+    "duplicate": "Duplicar",
+    "duplicateAria": "Duplicar estrutura",
+    "edit": "Editar",
+    "editAria": "Editar estrutura",
+    "deleteAria": "Excluir estrutura",
+    "collapse": "Recolher",
+    "expand": "Expandir",
+    "statutoryNote": "EPF, ESI, imposto profissional e TDS são calculados automaticamente durante a folha — não fazem parte da estrutura salarial.",
+    "created": "Estrutura salarial criada",
+    "updated": "Estrutura salarial atualizada",
+    "deleted": "Estrutura salarial excluída",
+    "duplicated": "Estrutura duplicada",
+    "saveFailed": "Falha ao salvar",
+    "deleteFailed": "Falha ao excluir",
+    "duplicateFailed": "Falha ao duplicar",
+    "copyName": "{{name}} (cópia)",
+    "columns": {
+      "name": "Nome",
+      "code": "Código",
+      "type": "Tipo",
+      "calc": "Cálculo",
+      "value": "Valor",
+      "percentOf": "% de",
+      "component": "Componente",
+      "calculation": "Cálculo"
+    },
+    "types": {
+      "earning": "Ganho",
+      "deduction": "Dedução",
+      "reimbursement": "Reembolso",
+      "reimbursementShort": "Reemb."
+    },
+    "counts": {
+      "earning": "{{count}} ganhos",
+      "earning_one": "{{count}} ganho",
+      "earning_other": "{{count}} ganhos",
+      "deduction": "{{count}} deduções",
+      "deduction_one": "{{count}} dedução",
+      "deduction_other": "{{count}} deduções",
+      "reimbursement": "{{count}} reembolsos",
+      "reimbursement_one": "{{count}} reembolso",
+      "reimbursement_other": "{{count}} reembolsos",
+      "earningLabel": "ganhos",
+      "earningLabel_one": "ganho",
+      "earningLabel_other": "ganhos",
+      "deductionLabel": "deduções",
+      "deductionLabel_one": "dedução",
+      "deductionLabel_other": "deduções"
+    },
+    "calcs": {
+      "perNight": "Por noite ₹",
+      "dayPay": "× pagamento diário",
+      "netPayPercent": "% do líquido",
+      "perOtDay": "Por dia extra ₹",
+      "fixed": "Fixo",
+      "balance": "Saldo"
+    },
+    "calculationText": {
+      "percentageOf": "{{value}}% de {{base}}",
+      "fixed": "Fixo ₹{{value}}",
+      "perNight": "₹{{value}} / noite",
+      "wholeSalaryNight": "{{value}}× salário total (turno noturno)",
+      "netPayNight": "{{value}}% do líquido (turno noturno)",
+      "perOtDay": "₹{{value}} / dia extra",
+      "dayPayOt": "{{value}}× pagamento diário / dia extra",
+      "balancing": "Saldo"
+    },
+    "presetNames": {
+      "BASIC": "Salário básico",
+      "HRA": "Auxílio-moradia",
+      "SA": "Auxílio especial",
+      "CA": "Auxílio-transporte",
+      "MA": "Auxílio médico",
+      "LTA": "Auxílio-viagem",
+      "BONUS": "Bônus por desempenho",
+      "NIGHT_ALLOW": "Adicional noturno",
+      "OVERTIME": "Horas extras",
+      "CANTEEN": "Dedução de cantina",
+      "WELFARE": "Fundo de bem-estar",
+      "ADV_REC": "Recuperação de adiantamento"
+    },
+    "validation": {
+      "singleBalance": "Apenas um componente pode usar o cálculo de Saldo.",
+      "balanceEarning": "Saldo só é válido para ganhos ({{code}}).",
+      "percentage": "{{code}}: o percentual deve ficar entre 0 e 100.",
+      "percentageBase": "{{code}}: escolha uma base para % de (ex.: CTC, BASIC).",
+      "fixedEarning": "{{code}}: o ganho fixo deve ser maior que 0.",
+      "nightRate": "{{code}}: informe um valor por noite maior que 0.",
+      "nightMultiplier": "{{code}}: o multiplicador noturno deve ser pelo menos 1.",
+      "netPercentage": "{{code}}: informe um percentual líquido entre 0 e 100.",
+      "overtimeRate": "{{code}}: informe um valor por dia extra maior que 0.",
+      "overtimeMultiplier": "{{code}}: o multiplicador de horas extras deve ser pelo menos 1."
+    },
+    "help": {
+      "title": "Adicional noturno e horas extras — modos de cálculo",
+      "intro": "O adicional noturno é pago apenas nos dias trabalhados em turno marcado como is_night_shift = 1. Dias LOP não contam.",
+      "modeValue": "Modo + valor",
+      "allowanceAdded": "Adicional incluído",
+      "perNight": "Por noite",
+      "flatExample": "₹250 fixos × 22 noites",
+      "addedOnBase": "adicionado ao salário-base",
+      "double": "dobro",
+      "doubleFormula": "base 166.666 × (2 − 1)",
+      "doubleTotal": "→ bruto total = base × 2 = 333.332",
+      "oneHalfFormula": "base 166.666 × (1,5 − 1)",
+      "oneHalfTotal": "→ bruto total = base × 1,5 = 250.000",
+      "howModesWork": "Como cada modo funciona:",
+      "perNightExplanation": "Por noite ₹ — valor fixo por noite trabalhada, somado ao salário normal.",
+      "dayPayExplanation": "× pagamento diário — todo o salário do funcionário noturno é pago pelo multiplicador. É necessária ao menos uma noite trabalhada.",
+      "exampleBase": "Bruto mensal-base do exemplo: ₹166.666.",
+      "overtimeTitle": "Horas extras (folga ou feriado trabalhado):",
+      "overtimeCount": "Dias extras são presenças em folga ou feriado, marcadas automaticamente como WOT/HOT.",
+      "perOtExplanation": "Por dia extra ₹ — valor fixo por dia extra.",
+      "otDayPayExplanation": "× pagamento diário — multiplicador do salário diário para cada dia extra.",
+      "notesTitle": "Observações.",
+      "notesText": "O adicional é tributável; EPF e TDS não simplesmente dobram. Uma noite só conta quando realmente trabalhada (meio dia = 0,5)."
+    }
+  }
+}

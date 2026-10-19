@@ -4,6 +4,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { apiGet } from "@/api/client";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Globe,
   Users,
@@ -50,6 +51,12 @@ const COUNTRY_FLAGS: Record<string, string> = {
 };
 
 export function GlobalDashboardPage() {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
+  const formatCount = (value: number) => new Intl.NumberFormat(language).format(value);
+  const formatAmount = (value: number) =>
+    new Intl.NumberFormat(language, { maximumFractionDigits: 2 }).format(value / 100);
+
   const { data: dashRes, isLoading } = useQuery({
     queryKey: ["global-dashboard"],
     queryFn: () => apiGet<any>("/global/dashboard"),
@@ -74,8 +81,8 @@ export function GlobalDashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Global Payroll"
-        description="Manage your worldwide workforce across countries, currencies, and compliance requirements"
+        title={t("globalPayrollDashboard.title")}
+        description={t("globalPayrollDashboard.description")}
       />
 
       {/* Stats — each card links to the drill-down page (#115) */}
@@ -84,27 +91,39 @@ export function GlobalDashboardPage() {
           to="/global-payroll/employees?status=active"
           className="block transition hover:-translate-y-0.5"
         >
-          <StatCard title="Active Employees" value={String(dash?.totalActive || 0)} icon={Users} />
+          <StatCard
+            title={t("globalPayrollDashboard.stats.activeEmployees")}
+            value={formatCount(dash?.totalActive || 0)}
+            icon={Users}
+          />
         </Link>
         <Link
           to="/global-payroll/compliance?configured=true"
           className="block transition hover:-translate-y-0.5"
         >
-          <StatCard title="Countries" value={String(dash?.totalCountries || 0)} icon={Globe} />
+          <StatCard
+            title={t("globalPayrollDashboard.stats.countries")}
+            value={formatCount(dash?.totalCountries || 0)}
+            icon={Globe}
+          />
         </Link>
         <Link
           to="/global-payroll/employees?employmentType=eor"
           className="block transition hover:-translate-y-0.5"
         >
-          <StatCard title="EOR Workers" value={String(dash?.totalEOR || 0)} icon={UserCheck} />
+          <StatCard
+            title={t("globalPayrollDashboard.stats.eorWorkers")}
+            value={formatCount(dash?.totalEOR || 0)}
+            icon={UserCheck}
+          />
         </Link>
         <Link
           to="/global-payroll/employees?employmentType=contractor"
           className="block transition hover:-translate-y-0.5"
         >
           <StatCard
-            title="Contractors"
-            value={String(dash?.totalContractors || 0)}
+            title={t("globalPayrollDashboard.stats.contractors")}
+            value={formatCount(dash?.totalContractors || 0)}
             icon={Briefcase}
           />
         </Link>
@@ -118,13 +137,16 @@ export function GlobalDashboardPage() {
             dedicated compliance-breakdown page to link to. */}
         <div>
           <StatCard
-            title="Compliance Score"
+            title={t("globalPayrollDashboard.stats.complianceScore")}
             value={`${dash?.compliancePercentage || 0}%`}
             icon={ShieldCheck}
             trend={
               dash?.compliancePercentage >= 80
-                ? { value: "Good", positive: true }
-                : { value: "Needs attention", positive: false }
+                ? { value: t("globalPayrollDashboard.compliance.good"), positive: true }
+                : {
+                    value: t("globalPayrollDashboard.compliance.needsAttention"),
+                    positive: false,
+                  }
             }
           />
         </div>
@@ -133,8 +155,8 @@ export function GlobalDashboardPage() {
           className="block transition hover:-translate-y-0.5"
         >
           <StatCard
-            title="Pending Invoices"
-            value={String(dash?.pendingInvoices || 0)}
+            title={t("globalPayrollDashboard.stats.pendingInvoices")}
+            value={formatCount(dash?.pendingInvoices || 0)}
             icon={FileText}
           />
         </Link>
@@ -143,8 +165,8 @@ export function GlobalDashboardPage() {
           className="block transition hover:-translate-y-0.5"
         >
           <StatCard
-            title="Onboarding"
-            value={String(dash?.totalOnboarding || 0)}
+            title={t("globalPayrollDashboard.stats.onboarding")}
+            value={formatCount(dash?.totalOnboarding || 0)}
             icon={TrendingUp}
           />
         </Link>
@@ -156,7 +178,7 @@ export function GlobalDashboardPage() {
           <CardContent className="p-6">
             <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
               <MapPin className="mr-2 inline h-5 w-5" />
-              Employees by Country
+              {t("globalPayrollDashboard.employeesByCountry.title")}
             </h3>
             {dash?.employeesByCountry?.length > 0 ? (
               <div className="space-y-3">
@@ -178,7 +200,7 @@ export function GlobalDashboardPage() {
                         />
                       </div>
                       <span className="w-8 text-right text-sm font-semibold text-gray-900 dark:text-white">
-                        {c.count}
+                        {formatCount(c.count)}
                       </span>
                     </div>
                   </div>
@@ -186,7 +208,7 @@ export function GlobalDashboardPage() {
               </div>
             ) : (
               <p className="text-sm text-gray-500">
-                No employees yet. Add your first global employee.
+                {t("globalPayrollDashboard.employeesByCountry.empty")}
               </p>
             )}
           </CardContent>
@@ -197,7 +219,7 @@ export function GlobalDashboardPage() {
           <CardContent className="p-6">
             <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
               <TrendingUp className="mr-2 inline h-5 w-5" />
-              Monthly Cost by Currency
+              {t("globalPayrollDashboard.costByCurrency.title")}
             </h3>
             {dash?.costByCurrency && Object.keys(dash.costByCurrency).length > 0 ? (
               <div className="space-y-3">
@@ -212,13 +234,15 @@ export function GlobalDashboardPage() {
                         {currency}
                       </span>
                       <span className="text-sm font-bold text-gray-900 dark:text-white">
-                        {currency} {((amount as number) / 100).toLocaleString()}
+                        {currency} {formatAmount(amount as number)}
                       </span>
                     </div>
                   ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No active payroll costs yet.</p>
+              <p className="text-sm text-gray-500">
+                {t("globalPayrollDashboard.costByCurrency.empty")}
+              </p>
             )}
           </CardContent>
         </Card>
@@ -229,18 +253,30 @@ export function GlobalDashboardPage() {
         <Card>
           <CardContent className="p-6">
             <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-              Cost Analysis by Country
+              {t("globalPayrollDashboard.costAnalysis.title")}
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="pb-3 font-medium text-gray-500">Country</th>
-                    <th className="pb-3 text-right font-medium text-gray-500">Employees</th>
-                    <th className="pb-3 text-right font-medium text-gray-500">Avg Salary</th>
-                    <th className="pb-3 text-right font-medium text-gray-500">Total Gross</th>
-                    <th className="pb-3 text-right font-medium text-gray-500">Employer Cost</th>
-                    <th className="pb-3 text-right font-medium text-gray-500">Net Pay</th>
+                    <th className="pb-3 font-medium text-gray-500">
+                      {t("globalPayrollDashboard.costAnalysis.columns.country")}
+                    </th>
+                    <th className="pb-3 text-right font-medium text-gray-500">
+                      {t("globalPayrollDashboard.costAnalysis.columns.employees")}
+                    </th>
+                    <th className="pb-3 text-right font-medium text-gray-500">
+                      {t("globalPayrollDashboard.costAnalysis.columns.averageSalary")}
+                    </th>
+                    <th className="pb-3 text-right font-medium text-gray-500">
+                      {t("globalPayrollDashboard.costAnalysis.columns.totalGross")}
+                    </th>
+                    <th className="pb-3 text-right font-medium text-gray-500">
+                      {t("globalPayrollDashboard.costAnalysis.columns.employerCost")}
+                    </th>
+                    <th className="pb-3 text-right font-medium text-gray-500">
+                      {t("globalPayrollDashboard.costAnalysis.columns.netPay")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -250,22 +286,22 @@ export function GlobalDashboardPage() {
                         <span className="mr-2">{COUNTRY_FLAGS[cb.code] || ""}</span>
                         {cb.name}
                       </td>
-                      <td className="py-3 text-right">{cb.employee_count}</td>
+                      <td className="py-3 text-right">{formatCount(cb.employee_count)}</td>
                       <td className="py-3 text-right">
                         {cb.currency_symbol}
-                        {(cb.avg_salary / 100).toLocaleString()}
+                        {formatAmount(cb.avg_salary)}
                       </td>
                       <td className="py-3 text-right">
                         {cb.currency_symbol}
-                        {(cb.total_gross / 100).toLocaleString()}
+                        {formatAmount(cb.total_gross)}
                       </td>
                       <td className="py-3 text-right font-medium text-red-600">
                         {cb.currency_symbol}
-                        {(cb.total_employer_cost / 100).toLocaleString()}
+                        {formatAmount(cb.total_employer_cost)}
                       </td>
                       <td className="py-3 text-right text-green-600">
                         {cb.currency_symbol}
-                        {(cb.total_net / 100).toLocaleString()}
+                        {formatAmount(cb.total_net)}
                       </td>
                     </tr>
                   ))}

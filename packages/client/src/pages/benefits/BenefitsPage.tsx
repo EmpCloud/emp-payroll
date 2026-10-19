@@ -24,23 +24,14 @@ import {
   Trash2,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
-const PLAN_TYPES = [
-  { value: "health", label: "Health" },
-  { value: "dental", label: "Dental" },
-  { value: "vision", label: "Vision" },
-  { value: "life", label: "Life Insurance" },
-  { value: "disability", label: "Disability" },
-  { value: "retirement", label: "Retirement" },
-];
+const PLAN_TYPES = ["health", "dental", "vision", "life", "disability", "retirement"];
 
-const COVERAGE_TYPES = [
-  { value: "individual", label: "Individual" },
-  { value: "family", label: "Family" },
-  { value: "individual_plus_spouse", label: "Individual + Spouse" },
-];
+const COVERAGE_TYPES = ["individual", "family", "individual_plus_spouse"];
 
 export function BenefitsPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<"plans" | "enrollments" | "pending">("plans");
   const [showCreatePlan, setShowCreatePlan] = useState(false);
   const [showEnroll, setShowEnroll] = useState(false);
@@ -82,7 +73,7 @@ export function BenefitsPage() {
     const end = String(fd.get("enrollmentPeriodEnd") || "");
     // Client-side guard for #15 — server also rejects, but we fail fast.
     if (start && end && new Date(end).getTime() < new Date(start).getTime()) {
-      toast.error("Enrollment end date cannot be before start date");
+      toast.error(t("benefitsPage.messages.invalidEnrollmentDates"));
       return;
     }
     setCreating(true);
@@ -99,30 +90,32 @@ export function BenefitsPage() {
     try {
       if (editingPlan) {
         await apiPut(`/benefits/plans/${editingPlan.id}`, payload);
-        toast.success("Benefit plan updated");
+        toast.success(t("benefitsPage.messages.planUpdated"));
       } else {
         await apiPost("/benefits/plans", payload);
-        toast.success("Benefit plan created");
+        toast.success(t("benefitsPage.messages.planCreated"));
       }
       closePlanModal();
       qc.invalidateQueries({ queryKey: ["benefit-plans"] });
       qc.invalidateQueries({ queryKey: ["benefits-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to save plan");
+      toast.error(err.response?.data?.error?.message || t("benefitsPage.messages.savePlanFailed"));
     } finally {
       setCreating(false);
     }
   }
 
   async function deletePlan(id: string) {
-    if (!confirm("Deactivate this benefit plan? Existing enrollments are unaffected.")) return;
+    if (!confirm(t("benefitsPage.messages.deactivateConfirm"))) return;
     try {
       await apiDelete(`/benefits/plans/${id}`);
-      toast.success("Benefit plan deactivated");
+      toast.success(t("benefitsPage.messages.planDeactivated"));
       qc.invalidateQueries({ queryKey: ["benefit-plans"] });
       qc.invalidateQueries({ queryKey: ["benefits-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to deactivate plan");
+      toast.error(
+        err.response?.data?.error?.message || t("benefitsPage.messages.deactivateFailed"),
+      );
     }
   }
 
@@ -140,12 +133,12 @@ export function BenefitsPage() {
         premiumEmployeeShare: Number(fd.get("premiumEmployeeShare") || 0),
         premiumEmployerShare: Number(fd.get("premiumEmployerShare") || 0),
       });
-      toast.success("Employee enrolled in benefit plan");
+      toast.success(t("benefitsPage.messages.employeeEnrolled"));
       setShowEnroll(false);
       qc.invalidateQueries({ queryKey: ["benefit-enrollments"] });
       qc.invalidateQueries({ queryKey: ["benefits-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to enroll");
+      toast.error(err.response?.data?.error?.message || t("benefitsPage.messages.enrollFailed"));
     } finally {
       setCreating(false);
     }
@@ -154,42 +147,48 @@ export function BenefitsPage() {
   async function cancelEnrollment(id: string) {
     try {
       await apiPost(`/benefits/enrollments/${id}/cancel`);
-      toast.success("Enrollment cancelled");
+      toast.success(t("benefitsPage.messages.enrollmentCancelled"));
       qc.invalidateQueries({ queryKey: ["benefit-enrollments"] });
       qc.invalidateQueries({ queryKey: ["benefits-dashboard"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed");
+      toast.error(err.response?.data?.error?.message || t("benefitsPage.messages.actionFailed"));
     }
   }
 
   const planColumns = [
     {
       key: "name",
-      header: "Plan Name",
+      header: t("benefitsPage.columns.planName"),
       render: (r: any) => <span className="font-medium text-gray-900">{r.name}</span>,
     },
     {
       key: "type",
-      header: "Type",
-      render: (r: any) => <Badge variant="draft">{r.type}</Badge>,
+      header: t("benefitsPage.columns.type"),
+      render: (r: any) => (
+        <Badge variant="draft">
+          {t(`benefitsPage.planTypes.${String(r.type).toLowerCase()}`, {
+            defaultValue: r.type,
+          })}
+        </Badge>
+      ),
     },
-    { key: "provider", header: "Provider" },
+    { key: "provider", header: t("benefitsPage.columns.provider") },
     {
       key: "premium_amount",
-      header: "Premium",
+      header: t("benefitsPage.columns.premium"),
       render: (r: any) => formatCurrency(r.premium_amount),
     },
     {
       key: "employer_contribution",
-      header: "Employer Share",
+      header: t("benefitsPage.columns.employerShare"),
       render: (r: any) => formatCurrency(r.employer_contribution),
     },
     {
       key: "status",
-      header: "Status",
+      header: t("benefitsPage.columns.status"),
       render: (r: any) => (
         <Badge variant={r.is_active ? "active" : "inactive"}>
-          {r.is_active ? "Active" : "Inactive"}
+          {r.is_active ? t("benefitsPage.status.active") : t("benefitsPage.status.inactive")}
         </Badge>
       ),
     },
@@ -201,7 +200,7 @@ export function BenefitsPage() {
           <Button
             variant="ghost"
             size="sm"
-            title="Edit"
+            title={t("benefitsPage.actions.edit")}
             onClick={() => {
               setEditingPlan(r);
               setShowCreatePlan(true);
@@ -217,7 +216,7 @@ export function BenefitsPage() {
             <Button
               variant="ghost"
               size="sm"
-              title="Deactivate"
+              title={t("benefitsPage.actions.deactivate")}
               onClick={() => deletePlan(r.id)}
               className="text-red-600"
             >
@@ -240,7 +239,7 @@ export function BenefitsPage() {
   const enrollColumns = [
     {
       key: "employee",
-      header: "Employee",
+      header: t("benefitsPage.columns.employee"),
       render: (r: any) => {
         const emp = employeeById[String(r.empcloud_user_id)];
         const fullName = emp
@@ -248,7 +247,9 @@ export function BenefitsPage() {
           : "";
         return (
           <div>
-            <p className="font-medium text-gray-900">{fullName || `User #${r.empcloud_user_id}`}</p>
+            <p className="font-medium text-gray-900">
+              {fullName || t("benefitsPage.fallbackUser", { id: r.empcloud_user_id })}
+            </p>
             {(emp?.employee_code || emp?.emp_code) && (
               <p className="text-xs text-gray-500">{emp.employee_code || emp.emp_code}</p>
             )}
@@ -258,7 +259,7 @@ export function BenefitsPage() {
     },
     {
       key: "plan",
-      header: "Plan",
+      header: t("benefitsPage.columns.plan"),
       render: (r: any) => {
         const plan = plans.find((p: any) => p.id === r.plan_id);
         return plan?.name || r.plan_id?.slice(0, 8);
@@ -266,29 +267,37 @@ export function BenefitsPage() {
     },
     {
       key: "coverage_type",
-      header: "Coverage",
-      render: (r: any) => <Badge variant="draft">{r.coverage_type.replace(/_/g, " ")}</Badge>,
+      header: t("benefitsPage.columns.coverage"),
+      render: (r: any) => (
+        <Badge variant="draft">
+          {t(`benefitsPage.coverageTypes.${String(r.coverage_type).toLowerCase()}`, {
+            defaultValue: String(r.coverage_type).replace(/_/g, " "),
+          })}
+        </Badge>
+      ),
     },
     {
       key: "premium_employee_share",
-      header: "Employee Share",
+      header: t("benefitsPage.columns.employeeShare"),
       render: (r: any) => formatCurrency(r.premium_employee_share),
     },
     {
       key: "premium_employer_share",
-      header: "Employer Share",
+      header: t("benefitsPage.columns.employerShare"),
       render: (r: any) => formatCurrency(r.premium_employer_share),
     },
     {
       key: "status",
-      header: "Status",
+      header: t("benefitsPage.columns.status"),
       render: (r: any) => (
         <Badge
           variant={
             r.status === "enrolled" ? "active" : r.status === "pending" ? "draft" : "inactive"
           }
         >
-          {r.status}
+          {t(`benefitsPage.status.${String(r.status).toLowerCase()}`, {
+            defaultValue: r.status,
+          })}
         </Badge>
       ),
     },
@@ -303,7 +312,7 @@ export function BenefitsPage() {
             onClick={() => cancelEnrollment(r.id)}
             className="text-red-600"
           >
-            Cancel
+            {t("benefitsPage.actions.cancel")}
           </Button>
         ) : null,
     },
@@ -312,15 +321,15 @@ export function BenefitsPage() {
   return (
     <div>
       <PageHeader
-        title="Benefits Administration"
-        description="Manage benefit plans and employee enrollments"
+        title={t("benefitsPage.title")}
+        description={t("benefitsPage.description")}
         actions={
           <div className="flex gap-2">
             <Button onClick={() => setShowEnroll(true)}>
-              <UserPlus className="mr-2 h-4 w-4" /> Enroll Employee
+              <UserPlus className="mr-2 h-4 w-4" /> {t("benefitsPage.enrollEmployee")}
             </Button>
             <Button onClick={() => setShowCreatePlan(true)}>
-              <Plus className="mr-2 h-4 w-4" /> New Plan
+              <Plus className="mr-2 h-4 w-4" /> {t("benefitsPage.newPlan")}
             </Button>
           </div>
         }
@@ -329,19 +338,19 @@ export function BenefitsPage() {
       {/* Stats — cards drill into the matching tab (#84) */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Active Plans"
+          title={t("benefitsPage.stats.activePlans")}
           value={stats.totalPlans || 0}
           icon={Shield}
           onClick={() => setTab("plans")}
         />
         <StatCard
-          title="Enrolled"
+          title={t("benefitsPage.stats.enrolled")}
           value={stats.totalEnrolled || 0}
           icon={Users}
           onClick={() => setTab("enrollments")}
         />
         <StatCard
-          title="Pending"
+          title={t("benefitsPage.stats.pending")}
           value={stats.totalPending || 0}
           icon={Heart}
           onClick={() => setTab("pending")}
@@ -352,7 +361,7 @@ export function BenefitsPage() {
             as a plain non-interactive card so the value is informative
             without redirecting (#233). */}
         <StatCard
-          title="Monthly Employer Cost"
+          title={t("benefitsPage.stats.monthlyEmployerCost")}
           value={formatCurrency(stats.totalEmployerCost || 0)}
           icon={DollarSign}
         />
@@ -367,19 +376,19 @@ export function BenefitsPage() {
           onClick={() => setTab("plans")}
           className={`px-4 py-2 text-sm font-medium ${tab === "plans" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
         >
-          Plans ({plans.length})
+          {t("benefitsPage.tabs.plans", { count: plans.length })}
         </button>
         <button
           onClick={() => setTab("enrollments")}
           className={`px-4 py-2 text-sm font-medium ${tab === "enrollments" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
         >
-          Enrollments ({enrollments.length})
+          {t("benefitsPage.tabs.enrollments", { count: enrollments.length })}
         </button>
         <button
           onClick={() => setTab("pending")}
           className={`px-4 py-2 text-sm font-medium ${tab === "pending" ? "border-brand-600 text-brand-600 border-b-2" : "text-gray-500"}`}
         >
-          Pending ({stats.totalPending || 0})
+          {t("benefitsPage.tabs.pending", { count: stats.totalPending || 0 })}
         </button>
       </div>
 
@@ -394,7 +403,7 @@ export function BenefitsPage() {
               <DataTable
                 columns={planColumns}
                 data={plans}
-                emptyMessage="No benefit plans created yet"
+                emptyMessage={t("benefitsPage.empty.plans")}
               />
             )}
           </CardContent>
@@ -412,7 +421,7 @@ export function BenefitsPage() {
               <DataTable
                 columns={enrollColumns}
                 data={enrollments}
-                emptyMessage="No enrollments yet"
+                emptyMessage={t("benefitsPage.empty.enrollments")}
               />
             )}
           </CardContent>
@@ -430,7 +439,7 @@ export function BenefitsPage() {
               <DataTable
                 columns={enrollColumns}
                 data={enrollments.filter((e: any) => e.status === "pending")}
-                emptyMessage="No pending enrollments"
+                emptyMessage={t("benefitsPage.empty.pending")}
               />
             )}
           </CardContent>
@@ -441,27 +450,43 @@ export function BenefitsPage() {
       <Modal
         open={showCreatePlan}
         onClose={closePlanModal}
-        title={editingPlan ? "Edit Benefit Plan" : "Create Benefit Plan"}
+        title={
+          editingPlan
+            ? t("benefitsPage.planModal.editTitle")
+            : t("benefitsPage.planModal.createTitle")
+        }
         key={editingPlan?.id || "new-plan"}
       >
         <form onSubmit={handlePlanSubmit} className="space-y-4">
-          <Input label="Plan Name" name="name" defaultValue={editingPlan?.name || ""} required />
+          <Input
+            label={t("benefitsPage.planModal.planName")}
+            name="name"
+            defaultValue={editingPlan?.name || ""}
+            required
+          />
           <SelectField
-            label="Type"
+            label={t("benefitsPage.planModal.type")}
             name="type"
-            options={PLAN_TYPES}
+            options={PLAN_TYPES.map((value) => ({
+              value,
+              label: t(`benefitsPage.planTypes.${value}`),
+            }))}
             defaultValue={editingPlan?.type || ""}
             required
           />
-          <Input label="Provider" name="provider" defaultValue={editingPlan?.provider || ""} />
           <Input
-            label="Description"
+            label={t("benefitsPage.planModal.provider")}
+            name="provider"
+            defaultValue={editingPlan?.provider || ""}
+          />
+          <Input
+            label={t("benefitsPage.planModal.description")}
             name="description"
             defaultValue={editingPlan?.description || ""}
           />
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Monthly Premium"
+              label={t("benefitsPage.planModal.monthlyPremium")}
               name="premiumAmount"
               type="number"
               step="0.01"
@@ -469,7 +494,7 @@ export function BenefitsPage() {
               defaultValue={editingPlan?.premium_amount ?? ""}
             />
             <Input
-              label="Employer Contribution"
+              label={t("benefitsPage.planModal.employerContribution")}
               name="employerContribution"
               type="number"
               step="0.01"
@@ -479,7 +504,7 @@ export function BenefitsPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Enrollment Start"
+              label={t("benefitsPage.planModal.enrollmentStart")}
               name="enrollmentPeriodStart"
               type="date"
               defaultValue={
@@ -498,7 +523,7 @@ export function BenefitsPage() {
               }}
             />
             <Input
-              label="Enrollment End"
+              label={t("benefitsPage.planModal.enrollmentEnd")}
               name="enrollmentPeriodEnd"
               type="date"
               defaultValue={
@@ -510,11 +535,13 @@ export function BenefitsPage() {
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={closePlanModal}>
-              Cancel
+              {t("benefitsPage.planModal.cancel")}
             </Button>
             <Button type="submit" disabled={creating}>
               {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {editingPlan ? "Update Plan" : "Create Plan"}
+              {editingPlan
+                ? t("benefitsPage.planModal.updatePlan")
+                : t("benefitsPage.planModal.createPlan")}
             </Button>
           </div>
         </form>
@@ -524,11 +551,11 @@ export function BenefitsPage() {
       <Modal
         open={showEnroll}
         onClose={() => setShowEnroll(false)}
-        title="Enroll Employee in Benefit Plan"
+        title={t("benefitsPage.enrollModal.title")}
       >
         <form onSubmit={handleEnroll} className="space-y-4">
           <SelectField
-            label="Employee"
+            label={t("benefitsPage.enrollModal.employee")}
             name="employeeId"
             options={employees.map((e: any) => ({
               value: String(e.empcloud_user_id || e.id),
@@ -537,33 +564,43 @@ export function BenefitsPage() {
             required
           />
           <SelectField
-            label="Benefit Plan"
+            label={t("benefitsPage.enrollModal.benefitPlan")}
             name="planId"
             options={plans
               .filter((p: any) => p.is_active)
               .map((p: any) => ({
                 value: p.id,
-                label: `${p.name} (${p.type})`,
+                label: `${p.name} (${t(`benefitsPage.planTypes.${String(p.type).toLowerCase()}`, {
+                  defaultValue: p.type,
+                })})`,
               }))}
             required
           />
           <SelectField
-            label="Coverage Type"
+            label={t("benefitsPage.enrollModal.coverageType")}
             name="coverageType"
-            options={COVERAGE_TYPES}
+            options={COVERAGE_TYPES.map((value) => ({
+              value,
+              label: t(`benefitsPage.coverageTypes.${value}`),
+            }))}
             required
           />
-          <Input label="Start Date" name="startDate" type="date" required />
+          <Input
+            label={t("benefitsPage.enrollModal.startDate")}
+            name="startDate"
+            type="date"
+            required
+          />
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Employee Premium Share"
+              label={t("benefitsPage.enrollModal.employeePremiumShare")}
               name="premiumEmployeeShare"
               type="number"
               step="0.01"
               defaultValue="0"
             />
             <Input
-              label="Employer Premium Share"
+              label={t("benefitsPage.enrollModal.employerPremiumShare")}
               name="premiumEmployerShare"
               type="number"
               step="0.01"
@@ -572,11 +609,11 @@ export function BenefitsPage() {
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setShowEnroll(false)}>
-              Cancel
+              {t("benefitsPage.enrollModal.cancel")}
             </Button>
             <Button type="submit" disabled={creating}>
               {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Enroll
+              {t("benefitsPage.enrollModal.submit")}
             </Button>
           </div>
         </form>

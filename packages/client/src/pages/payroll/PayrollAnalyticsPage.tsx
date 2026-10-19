@@ -28,6 +28,7 @@ import {
   Building2,
   BarChart3,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 /** Coloured icon chip for card titles (matches the rest of the app). */
 function SectionIcon({ icon: Icon, className }: { icon: any; className?: string }) {
@@ -83,24 +84,17 @@ function ChartEmpty({ icon: Icon, text }: { icon: any; text: string }) {
   );
 }
 
-const MONTHS = [
-  "",
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
+function formatPeriod(month: number, year: number, language: string) {
+  return new Intl.DateTimeFormat(language, {
+    month: "short",
+    year: "numeric",
+  }).format(new Date(year, month - 1, 1));
+}
 
 export function PayrollAnalyticsPage() {
+  const { t, i18n } = useTranslation();
   const { data: res, isLoading } = usePayrollRuns();
+  const language = i18n.resolvedLanguage || i18n.language;
 
   if (isLoading) {
     return (
@@ -115,7 +109,7 @@ export function PayrollAnalyticsPage() {
     .sort((a: any, b: any) => (a.year === b.year ? a.month - b.month : a.year - b.year));
 
   const trendData = runs.map((r: any) => ({
-    period: `${MONTHS[r.month]} ${r.year}`,
+    period: formatPeriod(r.month, r.year, language),
     gross: Number(r.total_gross),
     deductions: Number(r.total_deductions),
     net: Number(r.total_net),
@@ -171,10 +165,18 @@ export function PayrollAnalyticsPage() {
   // Cost breakdown for latest
   const costBreakdown = latest
     ? [
-        { name: "Net Pay", value: Number(latest.total_net), fill: "#6366F1" },
-        { name: "Deductions", value: Number(latest.total_deductions), fill: "#F59E0B" },
         {
-          name: "Employer Contributions",
+          name: t("payrollAnalytics.series.netPay"),
+          value: Number(latest.total_net),
+          fill: "#6366F1",
+        },
+        {
+          name: t("payrollAnalytics.series.deductions"),
+          value: Number(latest.total_deductions),
+          fill: "#F59E0B",
+        },
+        {
+          name: t("payrollAnalytics.series.employerContributions"),
           value: Number(latest.total_employer_contributions || 0),
           fill: "#10B981",
         },
@@ -183,7 +185,10 @@ export function PayrollAnalyticsPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Payroll Analytics" description="Cost trends, comparisons, and insights" />
+      <PageHeader
+        title={t("payrollAnalytics.title")}
+        description={t("payrollAnalytics.description")}
+      />
       {/* BUG-022 — Distortion banner. Headcount on this page is the
           number of employees who APPEAR in each payroll run, not the
           org's total active headcount. Employees skipped during compute
@@ -195,12 +200,7 @@ export function PayrollAnalyticsPage() {
           wants the comparison, they just need the caveat. */}
       <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-900">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-        <span>
-          Numbers below reflect employees included in each payroll run. Employees skipped during
-          compute (no active salary structure, hired after the pay period, exited before it) are not
-          counted, so headcount and per-employee averages can shift between months independently of
-          actual hiring activity.
-        </span>
+        <span>{t("payrollAnalytics.notice")}</span>
       </div>
 
       {/* BUG-017 — Identify the source run on every KPI subtitle. The
@@ -212,21 +212,29 @@ export function PayrollAnalyticsPage() {
           correlate the figure with a specific run row. */}
       {(() => {
         const sourceLabel = latest
-          ? `${MONTHS[latest.month]} ${latest.year} · ${latest.status}`
-          : "no runs yet";
+          ? `${formatPeriod(latest.month, latest.year, language)} · ${t(
+              `payrollAnalytics.statuses.${latest.status}`,
+              { defaultValue: latest.status },
+            )}`
+          : t("payrollAnalytics.noRuns");
         return (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              title="Avg Net Pay / Employee"
+              title={t("payrollAnalytics.avgNetPayPerEmployee")}
               value={formatCurrency(avgPerEmployee)}
               subtitle={
-                latest ? `${latest.employee_count} employees · ${sourceLabel}` : sourceLabel
+                latest
+                  ? t("payrollAnalytics.employeeSource", {
+                      count: latest.employee_count,
+                      source: sourceLabel,
+                    })
+                  : sourceLabel
               }
               icon={Users}
               accentClassName="bg-emerald-50 text-emerald-600"
             />
             <StatCard
-              title="Gross Pay Change"
+              title={t("payrollAnalytics.grossPayChange")}
               value={
                 grossChange === null
                   ? "—"
@@ -234,27 +242,27 @@ export function PayrollAnalyticsPage() {
               }
               subtitle={
                 headcountUnstable
-                  ? "headcount changed >25% — comparison suppressed"
-                  : `vs previous month · ${sourceLabel}`
+                  ? t("payrollAnalytics.headcountSuppressed")
+                  : t("payrollAnalytics.vsPrevious", { source: sourceLabel })
               }
               icon={(grossChange ?? 0) >= 0 ? TrendingUp : TrendingDown}
             />
             <StatCard
-              title="Net Pay Change"
+              title={t("payrollAnalytics.netPayChange")}
               value={
                 netChange === null ? "—" : `${netChange >= 0 ? "+" : ""}${netChange.toFixed(1)}%`
               }
               subtitle={
                 headcountUnstable
-                  ? "headcount changed >25% — comparison suppressed"
-                  : `vs previous month · ${sourceLabel}`
+                  ? t("payrollAnalytics.headcountSuppressed")
+                  : t("payrollAnalytics.vsPrevious", { source: sourceLabel })
               }
               icon={(netChange ?? 0) >= 0 ? TrendingUp : TrendingDown}
             />
             <StatCard
-              title="Deduction Rate"
+              title={t("payrollAnalytics.deductionRate")}
               value={deductionRate === null ? "—" : `${Math.round(deductionRate)}%`}
-              subtitle={`of gross pay · ${sourceLabel}`}
+              subtitle={t("payrollAnalytics.ofGrossPay", { source: sourceLabel })}
               icon={Wallet}
               accentClassName="bg-amber-50 text-amber-600"
             />
@@ -266,7 +274,7 @@ export function PayrollAnalyticsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <SectionIcon icon={TrendingUp} /> Payroll Cost Trend
+            <SectionIcon icon={TrendingUp} /> {t("payrollAnalytics.payrollCostTrend")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -308,7 +316,7 @@ export function PayrollAnalyticsPage() {
                   <Area
                     type="monotone"
                     dataKey="gross"
-                    name="Gross"
+                    name={t("payrollAnalytics.series.gross")}
                     stroke="#6366F1"
                     strokeWidth={2}
                     fill="url(#aGross)"
@@ -317,7 +325,7 @@ export function PayrollAnalyticsPage() {
                   <Area
                     type="monotone"
                     dataKey="net"
-                    name="Net"
+                    name={t("payrollAnalytics.series.net")}
                     stroke="#10B981"
                     strokeWidth={2}
                     fill="url(#aNet)"
@@ -326,7 +334,7 @@ export function PayrollAnalyticsPage() {
                   <Area
                     type="monotone"
                     dataKey="deductions"
-                    name="Deductions"
+                    name={t("payrollAnalytics.series.deductions")}
                     stroke="#F59E0B"
                     strokeWidth={2}
                     fill="url(#aDed)"
@@ -335,10 +343,7 @@ export function PayrollAnalyticsPage() {
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <ChartEmpty
-                icon={TrendingUp}
-                text="Need at least 1 completed payroll run for analytics"
-              />
+              <ChartEmpty icon={TrendingUp} text={t("payrollAnalytics.needCompletedRun")} />
             )}
           </div>
         </CardContent>
@@ -349,8 +354,8 @@ export function PayrollAnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <SectionIcon icon={Wallet} className="bg-amber-50 text-amber-600" /> Cost Breakdown
-              (Latest)
+              <SectionIcon icon={Wallet} className="bg-amber-50 text-amber-600" />
+              {t("payrollAnalytics.costBreakdownLatest")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -382,7 +387,12 @@ export function PayrollAnalyticsPage() {
                       content={<ChartTooltip formatter={formatCurrency} />}
                       cursor={{ fill: "rgba(99,102,241,0.06)" }}
                     />
-                    <Bar dataKey="value" name="Amount" radius={[0, 6, 6, 0]} maxBarSize={30}>
+                    <Bar
+                      dataKey="value"
+                      name={t("payrollAnalytics.series.amount")}
+                      radius={[0, 6, 6, 0]}
+                      maxBarSize={30}
+                    >
                       {costBreakdown.map((entry, i) => (
                         <Cell key={i} fill={entry.fill} />
                       ))}
@@ -390,7 +400,7 @@ export function PayrollAnalyticsPage() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <ChartEmpty icon={Wallet} text="No data yet" />
+                <ChartEmpty icon={Wallet} text={t("payrollAnalytics.noData")} />
               )}
             </div>
           </CardContent>
@@ -400,7 +410,8 @@ export function PayrollAnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <SectionIcon icon={Users} className="bg-sky-50 text-sky-600" /> Headcount Trend
+              <SectionIcon icon={Users} className="bg-sky-50 text-sky-600" />
+              {t("payrollAnalytics.headcountTrend")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -427,7 +438,7 @@ export function PayrollAnalyticsPage() {
                     <Line
                       type="monotone"
                       dataKey="employees"
-                      name="Employees"
+                      name={t("payrollAnalytics.series.employees")}
                       stroke="#6366F1"
                       strokeWidth={2.5}
                       dot={{ r: 3, fill: "#6366F1", strokeWidth: 0 }}
@@ -436,7 +447,7 @@ export function PayrollAnalyticsPage() {
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <ChartEmpty icon={Users} text="No data yet" />
+                <ChartEmpty icon={Users} text={t("payrollAnalytics.noData")} />
               )}
             </div>
           </CardContent>
@@ -448,7 +459,7 @@ export function PayrollAnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <SectionIcon icon={BarChart3} /> Month-over-Month Comparison
+              <SectionIcon icon={BarChart3} /> {t("payrollAnalytics.monthComparison")}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -456,14 +467,30 @@ export function PayrollAnalyticsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-400">
-                    <th className="px-6 py-3 text-left font-semibold">Period</th>
-                    <th className="px-6 py-3 text-right font-semibold">Employees</th>
-                    <th className="px-6 py-3 text-right font-semibold">Gross Pay</th>
-                    <th className="px-6 py-3 text-right font-semibold">Deductions</th>
-                    <th className="px-6 py-3 text-right font-semibold">Net Pay</th>
-                    <th className="px-6 py-3 text-right font-semibold">Avg/Employee</th>
-                    <th className="px-6 py-3 text-right font-semibold">Gross %</th>
-                    <th className="px-6 py-3 text-right font-semibold">Net %</th>
+                    <th className="px-6 py-3 text-left font-semibold">
+                      {t("payrollAnalytics.columns.period")}
+                    </th>
+                    <th className="px-6 py-3 text-right font-semibold">
+                      {t("payrollAnalytics.columns.employees")}
+                    </th>
+                    <th className="px-6 py-3 text-right font-semibold">
+                      {t("payrollAnalytics.columns.grossPay")}
+                    </th>
+                    <th className="px-6 py-3 text-right font-semibold">
+                      {t("payrollAnalytics.columns.deductions")}
+                    </th>
+                    <th className="px-6 py-3 text-right font-semibold">
+                      {t("payrollAnalytics.columns.netPay")}
+                    </th>
+                    <th className="px-6 py-3 text-right font-semibold">
+                      {t("payrollAnalytics.columns.avgPerEmployee")}
+                    </th>
+                    <th className="px-6 py-3 text-right font-semibold">
+                      {t("payrollAnalytics.columns.grossPercent")}
+                    </th>
+                    <th className="px-6 py-3 text-right font-semibold">
+                      {t("payrollAnalytics.columns.netPercent")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -490,7 +517,7 @@ export function PayrollAnalyticsPage() {
                       return (
                         <tr key={r.id} className="transition-colors hover:bg-gray-50/70">
                           <td className="whitespace-nowrap px-6 py-3 font-medium text-gray-900">
-                            {MONTHS[r.month]} {r.year}
+                            {formatPeriod(r.month, r.year, language)}
                           </td>
                           <td className="px-6 py-3 text-right tabular-nums">{r.employee_count}</td>
                           <td className="px-6 py-3 text-right tabular-nums">
@@ -542,8 +569,8 @@ export function PayrollAnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <SectionIcon icon={Building2} className="bg-emerald-50 text-emerald-600" /> Total
-              Employer Cost (Gross + Contributions)
+              <SectionIcon icon={Building2} className="bg-emerald-50 text-emerald-600" />
+              {t("payrollAnalytics.totalEmployerCost")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -574,10 +601,16 @@ export function PayrollAnalyticsPage() {
                     cursor={{ fill: "rgba(99,102,241,0.06)" }}
                   />
                   <Legend iconType="circle" formatter={legendLabel} />
-                  <Bar dataKey="net" name="Net Pay" stackId="a" fill="#6366F1" maxBarSize={40} />
+                  <Bar
+                    dataKey="net"
+                    name={t("payrollAnalytics.series.netPay")}
+                    stackId="a"
+                    fill="#6366F1"
+                    maxBarSize={40}
+                  />
                   <Bar
                     dataKey="deductions"
-                    name="Deductions"
+                    name={t("payrollAnalytics.series.deductions")}
                     stackId="a"
                     fill="#F59E0B"
                     radius={[6, 6, 0, 0]}
@@ -585,7 +618,7 @@ export function PayrollAnalyticsPage() {
                   />
                   <Bar
                     dataKey="employerCost"
-                    name="Employer Cost"
+                    name={t("payrollAnalytics.series.employerCost")}
                     fill="#10B981"
                     radius={[6, 6, 0, 0]}
                     maxBarSize={40}

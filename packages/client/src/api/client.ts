@@ -23,6 +23,7 @@ api.interceptors.request.use((config) => {
 // toast / do one redirect — not N. The full page reload from
 // location.replace() resets every other in-flight axios request anyway.
 let forceLogoutInFlight = false;
+let refreshPromise: Promise<string> | null = null;
 
 // Endpoints whose own 401 means "wrong credentials" or "token exchange
 // rejected" — surfacing the toast + redirect for these would be wrong.
@@ -34,6 +35,32 @@ const AUTH_ENDPOINT_PARTS = [
   "/auth/reset-password",
 ];
 const isAuthEndpoint = (url: string) => AUTH_ENDPOINT_PARTS.some((p) => url.includes(p));
+
+async function refreshAccessToken(): Promise<string> {
+  if (refreshPromise) return refreshPromise;
+
+  const refreshToken = localStorage.getItem("refresh_token");
+  if (!refreshToken) throw new Error("No refresh token available");
+
+  // Use the base axios client here so the refresh request does not enter this
+  // instance's response interceptor and recurse on a rejected refresh token.
+  refreshPromise = axios
+    .post(`${API_BASE}/auth/refresh-token`, { refreshToken })
+    .then(({ data }) => {
+      const tokens = data?.data;
+      if (!tokens?.accessToken || !tokens?.refreshToken) {
+        throw new Error("Refresh response did not contain tokens");
+      }
+      localStorage.setItem("access_token", tokens.accessToken);
+      localStorage.setItem("refresh_token", tokens.refreshToken);
+      return tokens.accessToken as string;
+    })
+    .finally(() => {
+      refreshPromise = null;
+    });
+
+  return refreshPromise;
+}
 
 /**
  * Hard logout used when the access token is rejected by the server (expired,
@@ -84,7 +111,20 @@ api.interceptors.response.use(
   async (error) => {
     const requestUrl = error.config?.url || "";
     if (error.response?.status === 401 && !isAuthEndpoint(requestUrl)) {
-      forceLogout();
+      const originalRequest = error.config as typeof error.config & { _retry?: boolean };
+      if (!originalRequest?._retry && localStorage.getItem("refresh_token")) {
+        originalRequest._retry = true;
+        try {
+          const accessToken = await refreshAccessToken();
+          originalRequest.headers = originalRequest.headers || {};
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          return api(originalRequest);
+        } catch {
+          forceLogout();
+        }
+      } else {
+        forceLogout();
+      }
     }
     return Promise.reject(error);
   },

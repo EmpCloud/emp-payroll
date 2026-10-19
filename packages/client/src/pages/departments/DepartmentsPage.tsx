@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -10,7 +11,6 @@ import {
   useDeleteDepartment,
   useEmployees,
 } from "@/api/hooks";
-import { formatDate } from "@/lib/utils";
 import { Plus, Trash2, Loader2, Building2, Users, Search } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -47,6 +47,7 @@ interface Dept {
 }
 
 export function DepartmentsPage() {
+  const { t } = useTranslation();
   const { data: res, isLoading } = useDepartments();
   const { data: empRes } = useEmployees({ limit: 500 });
   const createMut = useCreateDepartment();
@@ -78,21 +79,22 @@ export function DepartmentsPage() {
     if (!q) return departments;
     return departments.filter((d) => d.name.toLowerCase().includes(q));
   }, [departments, search]);
+  const deleteMemberCount = deleteTarget ? (membersByDept.get(deleteTarget.name)?.length ?? 0) : 0;
 
   async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const name = ((fd.get("name") as string) || "").trim();
     if (!name) {
-      toast.error("Department name is required");
+      toast.error(t("departmentsPage.nameRequired"));
       return;
     }
     try {
       await createMut.mutateAsync({ name });
-      toast.success("Department added");
+      toast.success(t("departmentsPage.added"));
       setShowAdd(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.error?.message || "Failed to add department");
+      toast.error(err?.response?.data?.error?.message || t("departmentsPage.addFailed"));
     }
   }
 
@@ -100,10 +102,10 @@ export function DepartmentsPage() {
     if (!deleteTarget) return;
     try {
       await deleteMut.mutateAsync(deleteTarget.id);
-      toast.success("Department removed");
+      toast.success(t("departmentsPage.removed"));
       setDeleteTarget(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.error?.message || "Failed to remove department");
+      toast.error(err?.response?.data?.error?.message || t("departmentsPage.removeFailed"));
     }
   }
 
@@ -118,11 +120,11 @@ export function DepartmentsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Departments"
-        description={`${departments.length} department${departments.length === 1 ? "" : "s"} · ${employees.length} employee${employees.length === 1 ? "" : "s"} · from EmpCloud`}
+        title={t("departmentsPage.title")}
+        description={`${t("departmentsPage.departmentCount", { count: departments.length })} · ${t("departmentsPage.employeeCount", { count: employees.length })} · ${t("departmentsPage.fromEmpCloud")}`}
         actions={
           <Button size="sm" onClick={() => setShowAdd(true)}>
-            <Plus className="h-4 w-4" /> Add Department
+            <Plus className="h-4 w-4" /> {t("departmentsPage.addDepartment")}
           </Button>
         }
       />
@@ -132,9 +134,9 @@ export function DepartmentsPage() {
           <div className="rounded-full bg-gray-50 p-3">
             <Building2 className="h-6 w-6 text-gray-300" />
           </div>
-          <p className="text-sm text-gray-500">No departments yet.</p>
+          <p className="text-sm text-gray-500">{t("departmentsPage.noDepartments")}</p>
           <Button size="sm" variant="outline" onClick={() => setShowAdd(true)}>
-            <Plus className="h-4 w-4" /> Add your first department
+            <Plus className="h-4 w-4" /> {t("departmentsPage.addFirst")}
           </Button>
         </div>
       ) : (
@@ -145,8 +147,8 @@ export function DepartmentsPage() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search departments…"
-                aria-label="Search departments"
+                placeholder={t("departmentsPage.searchPlaceholder")}
+                aria-label={t("departmentsPage.searchAria")}
                 className="focus:border-brand-300 focus:ring-brand-100 w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:ring-2"
               />
             </div>
@@ -186,7 +188,7 @@ export function DepartmentsPage() {
 
           {filtered.length === 0 && (
             <div className="rounded-xl border border-gray-200 bg-white py-12 text-center text-sm text-gray-400">
-              No departments match “{search}”.
+              {t("departmentsPage.noSearchMatches", { query: search })}
             </div>
           )}
         </>
@@ -196,33 +198,30 @@ export function DepartmentsPage() {
       <Modal
         open={showAdd}
         onClose={() => setShowAdd(false)}
-        title="Add Department"
-        description="Syncs to EmpCloud and becomes selectable on employee profiles, the org chart, and reports."
+        title={t("departmentsPage.addDepartment")}
+        description={t("departmentsPage.addDescription")}
       >
         <form onSubmit={handleAdd} className="space-y-4">
           <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
             <span className="bg-brand-50 text-brand-600 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
               <Building2 className="h-[18px] w-[18px]" />
             </span>
-            <p className="text-xs text-gray-500">
-              Names should be unique within your organization. You can remove a department later
-              without affecting existing payroll records.
-            </p>
+            <p className="text-xs text-gray-500">{t("departmentsPage.uniqueNamesHelp")}</p>
           </div>
           <Input
             id="dept_name"
             name="name"
-            label="Department Name"
-            placeholder="e.g. Engineering"
+            label={t("departmentsPage.departmentName")}
+            placeholder={t("departmentsPage.namePlaceholder")}
             required
             autoFocus
           />
           <div className="flex justify-end gap-3">
             <Button variant="outline" type="button" onClick={() => setShowAdd(false)}>
-              Cancel
+              {t("departmentsPage.cancel")}
             </Button>
             <Button type="submit" loading={createMut.isPending}>
-              <Plus className="h-4 w-4" /> Add Department
+              <Plus className="h-4 w-4" /> {t("departmentsPage.addDepartment")}
             </Button>
           </div>
         </form>
@@ -232,25 +231,18 @@ export function DepartmentsPage() {
       <Modal
         open={!!deleteTarget}
         onClose={() => !deleteMut.isPending && setDeleteTarget(null)}
-        title="Remove department?"
+        title={t("departmentsPage.removeTitle")}
         description={
           deleteTarget
-            ? `“${deleteTarget.name}” will be removed from your organization.`
+            ? t("departmentsPage.removeDescription", { name: deleteTarget.name })
             : undefined
         }
         className="max-w-md"
       >
-        {deleteTarget && (membersByDept.get(deleteTarget.name)?.length ?? 0) > 0 && (
+        {deleteMemberCount > 0 && (
           <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800">
             <Users className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-            <span>
-              <strong className="tabular-nums">
-                {membersByDept.get(deleteTarget.name)!.length}
-              </strong>{" "}
-              {membersByDept.get(deleteTarget.name)!.length === 1 ? "employee is" : "employees are"}{" "}
-              currently in this department. Their records are kept, but they’ll show no department
-              until reassigned.
-            </span>
+            <span>{t("departmentsPage.deleteWarning", { count: deleteMemberCount })}</span>
           </div>
         )}
         <div className="flex justify-end gap-3">
@@ -259,10 +251,10 @@ export function DepartmentsPage() {
             onClick={() => setDeleteTarget(null)}
             disabled={deleteMut.isPending}
           >
-            Cancel
+            {t("departmentsPage.cancel")}
           </Button>
           <Button variant="danger" onClick={confirmDelete} loading={deleteMut.isPending}>
-            <Trash2 className="h-4 w-4" /> Remove
+            <Trash2 className="h-4 w-4" /> {t("departmentsPage.remove")}
           </Button>
         </div>
       </Modal>
@@ -289,8 +281,10 @@ function DeptCard({
   muted?: boolean;
   onDelete?: () => void;
 }) {
+  const { t, i18n } = useTranslation();
   const shown = members.slice(0, 5);
   const extra = count - shown.length;
+  const displayName = name === UNASSIGNED ? t("common.unassigned") : name;
   return (
     <div className="group overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
       <div className={`h-1 w-full bg-gradient-to-r ${grad}`} />
@@ -305,19 +299,19 @@ function DeptCard({
             <div className="min-w-0">
               <p
                 className={`truncate font-semibold ${muted ? "text-gray-500" : "text-gray-900"}`}
-                title={name}
+                title={displayName}
               >
-                {name}
+                {displayName}
               </p>
               <p className="text-xs tabular-nums text-gray-500">
-                {count} {count === 1 ? "employee" : "employees"}
+                {t("departmentsPage.employeeCount", { count })}
               </p>
             </div>
           </div>
           {onDelete && (
             <button
               onClick={onDelete}
-              aria-label={`Remove ${name}`}
+              aria-label={t("departmentsPage.removeAria", { name })}
               className="focus-visible:ring-brand-500 shrink-0 rounded p-1.5 text-gray-300 opacity-0 transition hover:bg-red-50 hover:text-red-600 focus:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 group-hover:opacity-100"
             >
               <Trash2 className="h-4 w-4" />
@@ -328,7 +322,7 @@ function DeptCard({
         <div className="mt-3 flex min-h-[2rem] items-center">
           {count === 0 ? (
             <span className="flex items-center gap-1.5 text-xs text-gray-400">
-              <Users className="h-3.5 w-3.5" /> No members yet
+              <Users className="h-3.5 w-3.5" /> {t("departmentsPage.noMembers")}
             </span>
           ) : (
             <div className="flex items-center">
@@ -352,7 +346,15 @@ function DeptCard({
         </div>
 
         {createdAt && (
-          <p className="mt-3 text-[11px] text-gray-400">Created {formatDate(createdAt)}</p>
+          <p className="mt-3 text-[11px] text-gray-400">
+            {t("departmentsPage.created", {
+              date: new Intl.DateTimeFormat(i18n.resolvedLanguage || i18n.language, {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              }).format(new Date(createdAt)),
+            })}
+          </p>
         )}
       </div>
     </div>

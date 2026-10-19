@@ -3,21 +3,16 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
 import { formatCurrency } from "@/lib/utils";
-import { useMyTaxComputation, useMySalary } from "@/api/hooks";
-import { getUser } from "@/api/auth";
-import { apiGet } from "@/api/client";
-import { useQuery } from "@tanstack/react-query";
+import { useMyProfile, useMyTaxComputation, useMySalary } from "@/api/hooks";
 import { Button } from "@/components/ui/Button";
 import { Calculator, IndianRupee, TrendingDown, FileText, Loader2, Download } from "lucide-react";
+import { Trans, useTranslation } from "react-i18next";
 
 export function MyTaxPage() {
-  const user = getUser();
+  const { t } = useTranslation();
   const { data: salRes } = useMySalary();
   const { data: taxRes, isLoading } = useMyTaxComputation();
-  const { data: regimeRes } = useQuery({
-    queryKey: ["my-regime"],
-    queryFn: () => apiGet<any>("/self-service/tax/regime"),
-  });
+  const { data: profileRes } = useMyProfile();
 
   if (isLoading) {
     return (
@@ -29,7 +24,13 @@ export function MyTaxPage() {
 
   const salary = salRes?.data;
   const taxComp = taxRes?.data;
-  const regime = regimeRes?.data?.regime || "new";
+  const profile = profileRes?.data;
+  const taxInfo =
+    typeof profile?.tax_info === "string" ? JSON.parse(profile.tax_info) : profile?.tax_info || {};
+  const regime = taxComp?.regime || taxInfo.regime || "new";
+  const now = new Date();
+  const financialYearStart = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+  const financialYearLabel = `${financialYearStart}-${String(financialYearStart + 1).slice(-2)}`;
 
   // Use tax computation if available, otherwise estimate from salary
   const annualGross = taxComp
@@ -42,20 +43,26 @@ export function MyTaxPage() {
     ? Number(taxComp.taxable_income)
     : Math.max(0, annualGross - standardDeduction);
 
-  // Mirrors india-tax.service.computeTax for the new regime so the
-  // self-service preview matches the server's TDS calculation. Without the
-  // 87A rebate + marginal-relief steps, low-income employees saw a non-zero
-  // monthly TDS here while the actual payslip showed zero.
-  function estimateTax(income: number): number {
-    const slabs = [
-      { limit: 400000, rate: 0 },
-      { limit: 800000, rate: 5 },
-      { limit: 1200000, rate: 10 },
-      { limit: 1600000, rate: 15 },
-      { limit: 2000000, rate: 20 },
-      { limit: 2400000, rate: 25 },
-      { limit: Infinity, rate: 30 },
-    ];
+  // Mirrors india-tax.service.computeTax for both regimes so the fallback
+  // preview remains consistent even before a persisted computation exists.
+  function estimateTax(income: number, selectedRegime: string): number {
+    const slabs =
+      selectedRegime === "old"
+        ? [
+            { limit: 250000, rate: 0 },
+            { limit: 500000, rate: 5 },
+            { limit: 1000000, rate: 20 },
+            { limit: Infinity, rate: 30 },
+          ]
+        : [
+            { limit: 400000, rate: 0 },
+            { limit: 800000, rate: 5 },
+            { limit: 1200000, rate: 10 },
+            { limit: 1600000, rate: 15 },
+            { limit: 2000000, rate: 20 },
+            { limit: 2400000, rate: 25 },
+            { limit: Infinity, rate: 30 },
+          ];
     let tax = 0,
       prev = 0;
     for (const slab of slabs) {
@@ -63,15 +70,17 @@ export function MyTaxPage() {
       tax += ((Math.min(income, slab.limit) - prev) * slab.rate) / 100;
       prev = slab.limit;
     }
-    if (income <= 1200000) {
+    if (selectedRegime === "old" && income <= 500000) {
+      tax = Math.max(0, tax - 12500);
+    } else if (selectedRegime !== "old" && income <= 1200000) {
       tax = Math.max(0, tax - 60000);
-    } else if (income <= 1275000) {
+    } else if (selectedRegime !== "old" && income <= 1275000) {
       tax = Math.min(tax, income - 1200000);
     }
     return Math.round(tax);
   }
 
-  const taxOnIncome = taxComp ? Number(taxComp.tax_on_income) : estimateTax(taxableIncome);
+  const taxOnIncome = taxComp ? Number(taxComp.tax_on_income) : estimateTax(taxableIncome, regime);
   const cess = taxComp ? Number(taxComp.health_and_education_cess) : Math.round(taxOnIncome * 0.04);
   const totalTax = taxComp ? Number(taxComp.total_tax) : taxOnIncome + cess;
   const taxPaid = taxComp ? Number(taxComp.tax_already_paid) : 0;
@@ -82,8 +91,8 @@ export function MyTaxPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="My Tax"
-        description="FY 2025-26 tax computation"
+        title={t("myTaxPage.title")}
+        description={t("myTaxPage.description", { financialYear: financialYearLabel })}
         actions={
           <Button
             variant="outline"
@@ -93,47 +102,71 @@ export function MyTaxPage() {
               window.open(url, "_blank");
             }}
           >
-            <Download className="h-4 w-4" /> Form 16
+            <Download className="h-4 w-4" /> {t("myTaxPage.form16")}
           </Button>
         }
       />
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Annual Income" value={formatCurrency(annualGross)} icon={IndianRupee} />
-        <StatCard title="Taxable Income" value={formatCurrency(taxableIncome)} icon={Calculator} />
-        <StatCard title="Estimated Tax" value={formatCurrency(totalTax)} icon={TrendingDown} />
-        <StatCard title="TDS Deducted YTD" value={formatCurrency(taxPaid)} icon={FileText} />
+        <StatCard
+          title={t("myTaxPage.stats.annualIncome")}
+          value={formatCurrency(annualGross)}
+          icon={IndianRupee}
+        />
+        <StatCard
+          title={t("myTaxPage.stats.taxableIncome")}
+          value={formatCurrency(taxableIncome)}
+          icon={Calculator}
+        />
+        <StatCard
+          title={t("myTaxPage.stats.estimatedTax")}
+          value={formatCurrency(totalTax)}
+          icon={TrendingDown}
+        />
+        <StatCard
+          title={t("myTaxPage.stats.tdsDeductedYtd")}
+          value={formatCurrency(taxPaid)}
+          icon={FileText}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Tax Computation</CardTitle>
+              <CardTitle>{t("myTaxPage.computationTitle")}</CardTitle>
               <Badge variant={regime === "new" ? "approved" : "pending"}>
-                {regime === "new" ? "New Regime" : "Old Regime"}
+                {t(`myTaxPage.regimes.${regime}`, { defaultValue: regime })}
               </Badge>
             </div>
           </CardHeader>
           <CardContent>
             <dl className="space-y-3">
               {[
-                { label: "Gross Annual Income", value: annualGross, bold: false },
-                { label: "Less: Standard Deduction", value: -standardDeduction, bold: false },
+                {
+                  label: t("myTaxPage.rows.grossAnnualIncome"),
+                  value: annualGross,
+                  bold: false,
+                },
+                {
+                  label: t("myTaxPage.rows.standardDeduction"),
+                  value: -standardDeduction,
+                  bold: false,
+                },
                 ...(taxComp && Number(taxComp.total_deductions) > 0
                   ? [
                       {
-                        label: "Less: Chapter VI-A Deductions",
+                        label: t("myTaxPage.rows.chapterDeductions"),
                         value: -Number(taxComp.total_deductions),
                         bold: false,
                       },
                     ]
                   : []),
-                { label: "Taxable Income", value: taxableIncome, bold: true },
-                { label: "Tax on Income", value: taxOnIncome, bold: false },
-                { label: "Health & Education Cess (4%)", value: cess, bold: false },
-                { label: "Total Tax Liability", value: totalTax, bold: true },
-                { label: "Monthly TDS", value: monthlyTds, bold: true },
+                { label: t("myTaxPage.rows.taxableIncome"), value: taxableIncome, bold: true },
+                { label: t("myTaxPage.rows.taxOnIncome"), value: taxOnIncome, bold: false },
+                { label: t("myTaxPage.rows.cess"), value: cess, bold: false },
+                { label: t("myTaxPage.rows.totalLiability"), value: totalTax, bold: true },
+                { label: t("myTaxPage.rows.monthlyTds"), value: monthlyTds, bold: true },
               ].map((row) => (
                 <div
                   key={row.label}
@@ -153,26 +186,26 @@ export function MyTaxPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>TDS Deduction Tracker</CardTitle>
+            <CardTitle>{t("myTaxPage.tracker.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Total Tax for FY</span>
+                <span className="text-gray-500">{t("myTaxPage.tracker.totalTax")}</span>
                 <span className="font-semibold">{formatCurrency(totalTax)}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">TDS Deducted YTD</span>
+                <span className="text-gray-500">{t("myTaxPage.tracker.tdsDeductedYtd")}</span>
                 <span className="font-semibold text-green-600">{formatCurrency(taxPaid)}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Remaining</span>
+                <span className="text-gray-500">{t("myTaxPage.tracker.remaining")}</span>
                 <span className="font-semibold text-orange-600">{formatCurrency(remaining)}</span>
               </div>
 
               <div>
                 <div className="mb-1 flex justify-between text-xs text-gray-500">
-                  <span>Progress</span>
+                  <span>{t("myTaxPage.tracker.progress")}</span>
                   <span>{progressPct}%</span>
                 </div>
                 <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100">
@@ -184,8 +217,11 @@ export function MyTaxPage() {
               </div>
 
               <div className="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
-                Monthly TDS of <strong>{formatCurrency(monthlyTds)}</strong> will be deducted from
-                your salary each month.
+                <Trans
+                  i18nKey="myTaxPage.tracker.monthlyMessage"
+                  values={{ amount: formatCurrency(monthlyTds) }}
+                  components={{ strong: <strong /> }}
+                />
               </div>
             </div>
           </CardContent>

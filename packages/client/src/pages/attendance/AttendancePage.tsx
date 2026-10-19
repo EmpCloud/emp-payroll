@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -23,21 +24,17 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-const MONTHS = [
-  "",
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
+const MONTH_NUMBERS = Array.from({ length: 12 }, (_, index) => index + 1);
+
+function formatMonth(month: number, language: string): string {
+  return new Intl.DateTimeFormat(language, { month: "long" }).format(new Date(2020, month - 1, 1));
+}
+
+function formatPeriod(month: number, year: number, language: string): string {
+  return new Intl.DateTimeFormat(language, { month: "long", year: "numeric" }).format(
+    new Date(year, month - 1, 1),
+  );
+}
 
 // Default workdays count for a month, used as the prefilled value on the
 // Mark All / Mark Attendance modals. Skips weekends; HR can override.
@@ -52,6 +49,8 @@ function defaultWorkdays(month: number, year: number): number {
 }
 
 export function AttendancePage() {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
   const qc = useQueryClient();
   const { data: empRes, isLoading: empLoading } = useEmployees({ limit: 1000 });
   const employees = empRes?.data?.data || [];
@@ -92,7 +91,7 @@ export function AttendancePage() {
 
   // Fetch attendance for all employees in bulk for the SELECTED period.
   const { data: attendanceData, isLoading: attLoading } = useQuery({
-    queryKey: ["attendance-all", month, year],
+    queryKey: ["attendance-all", month, year, language],
     queryFn: async () => {
       const res = await apiGet<any>("/attendance/summary/bulk", { month, year });
       const records = res.data?.data || [];
@@ -106,7 +105,7 @@ export function AttendancePage() {
           employee_name: emp
             ? `${emp.first_name} ${emp.last_name}`
             : `${r.first_name || ""} ${r.last_name || ""}`.trim() ||
-              `Employee #${r.empcloud_user_id}`,
+              t("attendancePage.employeeFallback", { id: r.empcloud_user_id }),
           department: emp?.department || null,
           location: emp?.location || emp?.location_name || null,
           emp_code: emp?.emp_code || r.emp_code || null,
@@ -159,7 +158,7 @@ export function AttendancePage() {
   const columns = [
     {
       key: "employee_name",
-      header: "Employee",
+      header: t("attendancePage.columns.employee"),
       render: (row: any) => (
         <div>
           <p className="font-medium text-gray-900">{row.employee_name}</p>
@@ -171,15 +170,19 @@ export function AttendancePage() {
         </div>
       ),
     },
-    { key: "total_days", header: "Working Days", render: (row: any) => row.total_days },
+    {
+      key: "total_days",
+      header: t("attendancePage.columns.workingDays"),
+      render: (row: any) => row.total_days,
+    },
     {
       key: "present_days",
-      header: "Present",
+      header: t("attendancePage.columns.present"),
       render: (row: any) => <span className="font-medium text-green-600">{row.present_days}</span>,
     },
     {
       key: "absent_days",
-      header: "Absent",
+      header: t("attendancePage.columns.absent"),
       render: (row: any) => (
         <span
           className={Number(row.absent_days) > 0 ? "font-medium text-red-600" : "text-gray-400"}
@@ -190,20 +193,22 @@ export function AttendancePage() {
     },
     {
       key: "lop_days",
-      header: "LOP Days",
+      header: t("attendancePage.columns.lopDays"),
       render: (row: any) =>
         Number(row.lop_days) > 0 ? (
-          <Badge variant="danger">{row.lop_days} LOP</Badge>
+          <Badge variant="danger">{t("attendancePage.lopValue", { count: row.lop_days })}</Badge>
         ) : (
           <span className="text-gray-400">0</span>
         ),
     },
     {
       key: "overtime_hours",
-      header: "Overtime (hrs)",
+      header: t("attendancePage.columns.overtimeHours"),
       render: (row: any) =>
         Number(row.overtime_hours) > 0 ? (
-          <span className="font-medium text-blue-600">{row.overtime_hours}h</span>
+          <span className="font-medium text-blue-600">
+            {t("attendancePage.hoursValue", { count: row.overtime_hours })}
+          </span>
         ) : (
           <span className="text-gray-400">—</span>
         ),
@@ -213,15 +218,17 @@ export function AttendancePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Attendance"
-        description={`${MONTHS[month]} ${year} attendance summary`}
+        title={t("attendancePage.title")}
+        description={t("attendancePage.summary", {
+          period: formatPeriod(month, year, language),
+        })}
         actions={
           <div className="flex gap-3">
             <Button variant="outline" size="sm" onClick={() => setMarkAllOpen(true)}>
-              <PlusCircle className="h-4 w-4" /> Mark All Present
+              <PlusCircle className="h-4 w-4" /> {t("attendancePage.markAllPresent")}
             </Button>
             <Button size="sm" onClick={() => setMarkSingleOpen(true)}>
-              <Upload className="h-4 w-4" /> Mark Attendance
+              <Upload className="h-4 w-4" /> {t("attendancePage.markAttendance")}
             </Button>
           </div>
         }
@@ -234,14 +241,19 @@ export function AttendancePage() {
             variant="outline"
             size="sm"
             onClick={() => shiftMonth(-1)}
-            aria-label="Previous month"
+            aria-label={t("attendancePage.previousMonth")}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="min-w-[140px] text-center text-sm font-medium text-gray-900">
-            {MONTHS[month]} {year}
+            {formatPeriod(month, year, language)}
           </span>
-          <Button variant="outline" size="sm" onClick={() => shiftMonth(1)} aria-label="Next month">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => shiftMonth(1)}
+            aria-label={t("attendancePage.nextMonth")}
+          >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -250,7 +262,7 @@ export function AttendancePage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="search"
-            placeholder="Search by name or code..."
+            placeholder={t("attendancePage.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="focus:border-brand-500 focus:ring-brand-500 block w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm shadow-sm focus:outline-none focus:ring-1"
@@ -261,9 +273,9 @@ export function AttendancePage() {
           value={departmentFilter}
           onChange={(e) => setDepartmentFilter(e.target.value)}
           className="focus:border-brand-500 focus:ring-brand-500 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1"
-          aria-label="Filter by department"
+          aria-label={t("attendancePage.filterDepartment")}
         >
-          <option value="">All departments</option>
+          <option value="">{t("attendancePage.allDepartments")}</option>
           {departments.map((d) => (
             <option key={d} value={d}>
               {d}
@@ -275,9 +287,9 @@ export function AttendancePage() {
           value={locationFilter}
           onChange={(e) => setLocationFilter(e.target.value)}
           className="focus:border-brand-500 focus:ring-brand-500 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1"
-          aria-label="Filter by location"
+          aria-label={t("attendancePage.filterLocation")}
         >
-          <option value="">All locations</option>
+          <option value="">{t("attendancePage.allLocations")}</option>
           {locations.map((l) => (
             <option key={l} value={l}>
               {l}
@@ -295,20 +307,40 @@ export function AttendancePage() {
               setLocationFilter("");
             }}
           >
-            Clear filters
+            {t("attendancePage.clearFilters")}
           </Button>
         )}
 
         <span className="ml-auto text-xs text-gray-500">
-          {filtered.length} of {attendance.length} employees
+          {t("attendancePage.employeesShown", {
+            count: attendance.length,
+            visible: filtered.length,
+            total: attendance.length,
+          })}
         </span>
       </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Total Present Days" value={String(totalPresent)} icon={UserCheck} />
-        <StatCard title="Total Absent Days" value={String(totalAbsent)} icon={UserX} />
-        <StatCard title="LOP Days" value={String(totalLop)} icon={CalendarDays} />
-        <StatCard title="Overtime Hours" value={`${totalOT}h`} icon={Clock} />
+        <StatCard
+          title={t("attendancePage.totalPresentDays")}
+          value={String(totalPresent)}
+          icon={UserCheck}
+        />
+        <StatCard
+          title={t("attendancePage.totalAbsentDays")}
+          value={String(totalAbsent)}
+          icon={UserX}
+        />
+        <StatCard
+          title={t("attendancePage.lopDays")}
+          value={String(totalLop)}
+          icon={CalendarDays}
+        />
+        <StatCard
+          title={t("attendancePage.overtimeHours")}
+          value={t("attendancePage.hoursValue", { count: totalOT })}
+          icon={Clock}
+        />
       </div>
 
       {isLoading ? (
@@ -326,8 +358,8 @@ export function AttendancePage() {
       <Modal
         open={markAllOpen}
         onClose={() => setMarkAllOpen(false)}
-        title="Mark All Present"
-        description="Bulk mark all employees as present for the chosen month."
+        title={t("attendancePage.markAllPresent")}
+        description={t("attendancePage.markAllDescription")}
         className="max-w-lg"
       >
         <MarkAllForm
@@ -345,8 +377,8 @@ export function AttendancePage() {
       <Modal
         open={markSingleOpen}
         onClose={() => setMarkSingleOpen(false)}
-        title="Mark Attendance"
-        description="Record attendance for a single employee."
+        title={t("attendancePage.markAttendance")}
+        description={t("attendancePage.markSingleDescription")}
         className="max-w-lg"
       >
         <MarkSingleForm
@@ -384,6 +416,8 @@ function MarkAllForm({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
   const [month, setMonth] = useState(defaultMonth);
   const [year, setYear] = useState(defaultYear);
   // #373 — Hold the working-days field as a STRING, not a number. With a
@@ -415,13 +449,11 @@ function MarkAllForm({
         e.preventDefault();
         const td = Math.floor(Number(totalDaysStr));
         if (!Number.isFinite(td) || td < 1 || td > 31) {
-          toast.error("Working days must be a whole number between 1 and 31");
+          toast.error(t("attendancePage.workingDaysInvalid"));
           return;
         }
         if (employees.length === 0) {
-          toast.error(
-            "No employees found in payroll. Apply EmpCloud users to payroll first (Settings > Employees).",
-          );
+          toast.error(t("attendancePage.noPayrollEmployees"));
           return;
         }
         setMarking(true);
@@ -453,29 +485,44 @@ function MarkAllForm({
           const preserved = Number(data.empcloudPreserved || 0);
           if (failures.length > 0) {
             toast.error(
-              `Marked locally for ${employees.length} employees, but EmpCloud sync failed for ${failures.length} (dashboard may not reflect the change yet).`,
+              t("attendancePage.bulkSyncFailed", {
+                employeeCount: employees.length,
+                failureCount: failures.length,
+              }),
               { duration: 8000 },
             );
           } else if (inserted === 0 && preserved > 0) {
             // Informational, not an error — every workday already had a record
             // and overwrite was off, so they were preserved (#404).
             toast(
-              `Every workday in ${MONTHS[month]} ${year} already has a record on EmpCloud (${preserved} preserved), so nothing changed. Tick "Overwrite existing records" below to replace them.`,
+              t("attendancePage.nothingChangedAll", {
+                period: formatPeriod(month, year, language),
+                preserved,
+              }),
               { icon: "ℹ️", duration: 9000 },
             );
           } else if (overwrite) {
             toast.success(
-              `Marked ${employees.length} employees present for ${MONTHS[month]} ${year} (existing days overwritten).`,
+              t("attendancePage.markedAllOverwrite", {
+                count: employees.length,
+                period: formatPeriod(month, year, language),
+              }),
             );
           } else {
             toast.success(
-              `Marked ${employees.length} employees for ${MONTHS[month]} ${year} — ${inserted} new EmpCloud rows added${preserved > 0 ? `, ${preserved} existing rows preserved` : ""}.`,
+              t("attendancePage.markedAllSuccess", {
+                count: employees.length,
+                period: formatPeriod(month, year, language),
+                inserted,
+                preservedText:
+                  preserved > 0 ? t("attendancePage.preservedSuffix", { count: preserved }) : "",
+              }),
             );
           }
           onClose();
           onSuccess();
         } catch (err: any) {
-          toast.error(err.response?.data?.error?.message || "Failed to mark attendance");
+          toast.error(err.response?.data?.error?.message || t("attendancePage.markFailed"));
         } finally {
           setMarking(false);
         }
@@ -485,7 +532,7 @@ function MarkAllForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label htmlFor="markAllMonth" className="mb-1 block text-sm font-medium text-gray-700">
-            Month
+            {t("attendancePage.month")}
           </label>
           <select
             id="markAllMonth"
@@ -493,16 +540,16 @@ function MarkAllForm({
             onChange={(e) => setMonthYear(Number(e.target.value), year)}
             className="focus:border-brand-500 focus:ring-brand-500 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1"
           >
-            {MONTHS.slice(1).map((m, i) => (
-              <option key={m} value={i + 1}>
-                {m}
+            {MONTH_NUMBERS.map((monthNumber) => (
+              <option key={monthNumber} value={monthNumber}>
+                {formatMonth(monthNumber, language)}
               </option>
             ))}
           </select>
         </div>
         <Input
           id="markAllYear"
-          label="Year"
+          label={t("attendancePage.year")}
           type="number"
           value={year}
           min={2000}
@@ -521,7 +568,7 @@ function MarkAllForm({
       <Input
         id="totalDays"
         name="totalDays"
-        label="Working Days in Month"
+        label={t("attendancePage.workingDaysInMonth")}
         type="number"
         min={1}
         max={31}
@@ -534,8 +581,11 @@ function MarkAllForm({
         required
       />
       <p className="text-sm text-gray-500">
-        This will mark all {employees.length} active employees as present for {totalDaysStr || 0}{" "}
-        days in {MONTHS[month]} {year}. You can edit individual records afterwards.
+        {t("attendancePage.markAllHelp", {
+          count: employees.length,
+          days: totalDaysStr || 0,
+          period: formatPeriod(month, year, language),
+        })}
       </p>
       <label className="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
         <input
@@ -545,19 +595,18 @@ function MarkAllForm({
           className="text-brand-600 focus:ring-brand-500 mt-0.5 h-4 w-4 rounded border-gray-300"
         />
         <span className="text-sm text-gray-700">
-          Overwrite existing records for this month
+          {t("attendancePage.overwriteExisting")}
           <span className="mt-0.5 block text-xs text-gray-500">
-            Off by default so employees' own check-ins are kept. Tick this to replace
-            already-recorded days with "present".
+            {t("attendancePage.overwriteAllHelp")}
           </span>
         </span>
       </label>
       <div className="flex justify-end gap-3">
         <Button variant="outline" type="button" onClick={onClose}>
-          Cancel
+          {t("attendancePage.cancel")}
         </Button>
         <Button type="submit" loading={marking}>
-          Mark All Present
+          {t("attendancePage.markAllPresent")}
         </Button>
       </div>
     </form>
@@ -584,6 +633,8 @@ function MarkSingleForm({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
   const [month, setMonth] = useState(defaultMonth);
   const [year, setYear] = useState(defaultYear);
   // #373 — String-backed numeric inputs so the user can clear, partially
@@ -622,15 +673,15 @@ function MarkSingleForm({
         const overtimeHours = Number(fd.get("overtimeHours") || 0);
 
         if (!employeeId) {
-          toast.error("Please select an employee");
+          toast.error(t("attendancePage.selectEmployeeRequired"));
           return;
         }
         if (!Number.isFinite(td) || td < 1 || td > 31) {
-          toast.error("Working days must be a whole number between 1 and 31");
+          toast.error(t("attendancePage.workingDaysInvalid"));
           return;
         }
         if (!Number.isFinite(pd) || pd < 0 || pd > td) {
-          toast.error("Present days must be between 0 and working days");
+          toast.error(t("attendancePage.presentDaysInvalid"));
           return;
         }
 
@@ -660,7 +711,9 @@ function MarkSingleForm({
           const preserved = Number(data.empcloudPreserved || 0);
           if (failures.length > 0) {
             toast.error(
-              `Marked locally, but EmpCloud sync failed (${failures[0]?.message || "unknown error"}). The dashboard may not reflect this until EmpCloud is reachable.`,
+              t("attendancePage.singleSyncFailed", {
+                error: failures[0]?.message || t("attendancePage.unknownError"),
+              }),
               { duration: 8000 },
             );
           } else if (inserted === 0 && preserved > 0) {
@@ -668,22 +721,33 @@ function MarkSingleForm({
             // off, so we preserved them. Guide the user to the overwrite option
             // instead of showing a red failure (#404).
             toast(
-              `${MONTHS[month]} ${year} already has ${preserved} attendance record(s) for this employee, so nothing was changed. Tick "Overwrite existing records" below and save again to replace them.`,
+              t("attendancePage.nothingChangedSingle", {
+                period: formatPeriod(month, year, language),
+                preserved,
+              }),
               { icon: "ℹ️", duration: 9000 },
             );
           } else if (overwrite) {
             toast.success(
-              `Attendance for ${MONTHS[month]} ${year} updated (${inserted} day(s) set).`,
+              t("attendancePage.singleOverwriteSuccess", {
+                period: formatPeriod(month, year, language),
+                count: inserted,
+              }),
             );
           } else {
             toast.success(
-              `Attendance recorded for ${MONTHS[month]} ${year} — ${inserted} new EmpCloud rows added${preserved > 0 ? `, ${preserved} existing rows preserved` : ""}.`,
+              t("attendancePage.singleSuccess", {
+                period: formatPeriod(month, year, language),
+                inserted,
+                preservedText:
+                  preserved > 0 ? t("attendancePage.preservedSuffix", { count: preserved }) : "",
+              }),
             );
           }
           onClose();
           onSuccess();
         } catch (err: any) {
-          toast.error(err.response?.data?.error?.message || "Failed to mark attendance");
+          toast.error(err.response?.data?.error?.message || t("attendancePage.markFailed"));
         } finally {
           setMarking(false);
         }
@@ -693,7 +757,7 @@ function MarkSingleForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label htmlFor="markSingleMonth" className="mb-1 block text-sm font-medium text-gray-700">
-            Month
+            {t("attendancePage.month")}
           </label>
           <select
             id="markSingleMonth"
@@ -701,16 +765,16 @@ function MarkSingleForm({
             onChange={(e) => setMonthYear(Number(e.target.value), year)}
             className="focus:border-brand-500 focus:ring-brand-500 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1"
           >
-            {MONTHS.slice(1).map((m, i) => (
-              <option key={m} value={i + 1}>
-                {m}
+            {MONTH_NUMBERS.map((monthNumber) => (
+              <option key={monthNumber} value={monthNumber}>
+                {formatMonth(monthNumber, language)}
               </option>
             ))}
           </select>
         </div>
         <Input
           id="markSingleYear"
-          label="Year"
+          label={t("attendancePage.year")}
           type="number"
           value={year}
           min={2000}
@@ -727,7 +791,7 @@ function MarkSingleForm({
       </div>
       <div>
         <label htmlFor="employeeId" className="mb-1 block text-sm font-medium text-gray-700">
-          Employee
+          {t("attendancePage.employee")}
         </label>
         <select
           id="employeeId"
@@ -737,7 +801,7 @@ function MarkSingleForm({
           className="focus:border-brand-500 focus:ring-brand-500 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1"
         >
           <option value="" disabled>
-            Select an employee
+            {t("attendancePage.selectEmployee")}
           </option>
           {employees.map((emp: any) => (
             <option key={emp.id} value={emp.id}>
@@ -751,7 +815,7 @@ function MarkSingleForm({
         <Input
           id="totalDays"
           name="totalDays"
-          label="Working Days"
+          label={t("attendancePage.workingDays")}
           type="number"
           min={1}
           max={31}
@@ -766,7 +830,7 @@ function MarkSingleForm({
         <Input
           id="presentDays"
           name="presentDays"
-          label="Present Days"
+          label={t("attendancePage.presentDays")}
           type="number"
           min={0}
           max={31}
@@ -779,7 +843,7 @@ function MarkSingleForm({
         <Input
           id="absentDays"
           name="absentDays"
-          label="Absent Days"
+          label={t("attendancePage.absentDays")}
           type="number"
           min={0}
           max={31}
@@ -790,7 +854,7 @@ function MarkSingleForm({
         <Input
           id="lopDays"
           name="lopDays"
-          label="LOP Days"
+          label={t("attendancePage.lopDays")}
           type="number"
           min={0}
           max={31}
@@ -801,7 +865,7 @@ function MarkSingleForm({
         <Input
           id="overtimeHours"
           name="overtimeHours"
-          label="Overtime Hours"
+          label={t("attendancePage.overtimeHours")}
           type="number"
           min={0}
           step="0.1"
@@ -817,19 +881,18 @@ function MarkSingleForm({
           className="text-brand-600 focus:ring-brand-500 mt-0.5 h-4 w-4 rounded border-gray-300"
         />
         <span className="text-sm text-gray-700">
-          Overwrite existing records for this month
+          {t("attendancePage.overwriteExisting")}
           <span className="mt-0.5 block text-xs text-gray-500">
-            By default, days already recorded on EmpCloud (e.g. the employee's own check-ins) are
-            preserved. Tick this to replace them with the values above.
+            {t("attendancePage.overwriteSingleHelp")}
           </span>
         </span>
       </label>
       <div className="flex justify-end gap-3">
         <Button variant="outline" type="button" onClick={onClose}>
-          Cancel
+          {t("attendancePage.cancel")}
         </Button>
         <Button type="submit" loading={marking}>
-          Save Attendance
+          {t("attendancePage.saveAttendance")}
         </Button>
       </div>
     </form>

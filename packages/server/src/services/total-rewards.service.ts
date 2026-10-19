@@ -2,6 +2,292 @@ import { getDB } from "../db/adapters";
 import { AppError } from "../api/middleware/error.middleware";
 import { findUsersByOrgId, getEmpCloudDB } from "../db/empcloud";
 
+const totalRewardsPrintLabels = {
+  en: {
+    print: "Print / Save as PDF",
+    title: "Total Rewards Statement",
+    financialYear: "Financial Year",
+    totalValue: "Total Rewards Value",
+    compensationSummary: "Compensation Summary",
+    annualCtc: "Annual CTC",
+    benefitsValue: "Benefits Value",
+    reimbursements: "Reimbursements",
+    ytdEarnings: "YTD Earnings",
+    month: "month",
+    months: "months",
+    grossEarnings: "Gross Earnings",
+    totalDeductions: "Total Deductions",
+    netPay: "Net Pay",
+    taxPaid: "Tax Paid",
+    salaryComponents: "Salary Components",
+    component: "Component",
+    monthly: "Monthly",
+    annual: "Annual",
+    totalCtc: "Total CTC",
+    benefits: "Benefits",
+    plan: "Plan",
+    type: "Type",
+    coverage: "Coverage",
+    employerShare: "Annual Employer Share",
+    noBenefits: "No benefits enrolled",
+    confidential: "This is a confidential document.",
+    generatedOn: "Generated on",
+  },
+  es: {
+    print: "Imprimir / Guardar como PDF",
+    title: "Extracto de recompensas totales",
+    financialYear: "Ejercicio fiscal",
+    totalValue: "Valor total de recompensas",
+    compensationSummary: "Resumen de compensación",
+    annualCtc: "CTC anual",
+    benefitsValue: "Valor de los beneficios",
+    reimbursements: "Reembolsos",
+    ytdEarnings: "Ingresos acumulados",
+    month: "mes",
+    months: "meses",
+    grossEarnings: "Ingresos brutos",
+    totalDeductions: "Deducciones totales",
+    netPay: "Pago neto",
+    taxPaid: "Impuestos pagados",
+    salaryComponents: "Componentes salariales",
+    component: "Componente",
+    monthly: "Mensual",
+    annual: "Anual",
+    totalCtc: "CTC total",
+    benefits: "Beneficios",
+    plan: "Plan",
+    type: "Tipo",
+    coverage: "Cobertura",
+    employerShare: "Aporte anual del empleador",
+    noBenefits: "Sin beneficios inscritos",
+    confidential: "Este documento es confidencial.",
+    generatedOn: "Generado el",
+  },
+  de: {
+    print: "Drucken / Als PDF speichern",
+    title: "Gesamtvergütungsnachweis",
+    financialYear: "Geschäftsjahr",
+    totalValue: "Gesamtwert der Vergütung",
+    compensationSummary: "Vergütungsübersicht",
+    annualCtc: "Jährliche CTC",
+    benefitsValue: "Wert der Zusatzleistungen",
+    reimbursements: "Erstattungen",
+    ytdEarnings: "Jahresverdienst bis heute",
+    month: "Monat",
+    months: "Monate",
+    grossEarnings: "Bruttoverdienst",
+    totalDeductions: "Gesamtabzüge",
+    netPay: "Nettolohn",
+    taxPaid: "Gezahlte Steuer",
+    salaryComponents: "Gehaltsbestandteile",
+    component: "Bestandteil",
+    monthly: "Monatlich",
+    annual: "Jährlich",
+    totalCtc: "Gesamt-CTC",
+    benefits: "Zusatzleistungen",
+    plan: "Plan",
+    type: "Typ",
+    coverage: "Deckung",
+    employerShare: "Jährlicher Arbeitgeberanteil",
+    noBenefits: "Keine Zusatzleistungen",
+    confidential: "Dieses Dokument ist vertraulich.",
+    generatedOn: "Erstellt am",
+  },
+  fr: {
+    print: "Imprimer / Enregistrer en PDF",
+    title: "Relevé de rémunération globale",
+    financialYear: "Exercice fiscal",
+    totalValue: "Valeur totale de la rémunération",
+    compensationSummary: "Résumé de la rémunération",
+    annualCtc: "CTC annuel",
+    benefitsValue: "Valeur des avantages",
+    reimbursements: "Remboursements",
+    ytdEarnings: "Revenus cumulés",
+    month: "mois",
+    months: "mois",
+    grossEarnings: "Revenus bruts",
+    totalDeductions: "Total des retenues",
+    netPay: "Salaire net",
+    taxPaid: "Impôt payé",
+    salaryComponents: "Composantes salariales",
+    component: "Composante",
+    monthly: "Mensuel",
+    annual: "Annuel",
+    totalCtc: "CTC total",
+    benefits: "Avantages",
+    plan: "Régime",
+    type: "Type",
+    coverage: "Couverture",
+    employerShare: "Part annuelle de l’employeur",
+    noBenefits: "Aucun avantage souscrit",
+    confidential: "Ce document est confidentiel.",
+    generatedOn: "Généré le",
+  },
+  pt: {
+    print: "Imprimir / Salvar como PDF",
+    title: "Demonstrativo de recompensas totais",
+    financialYear: "Exercício fiscal",
+    totalValue: "Valor total das recompensas",
+    compensationSummary: "Resumo da remuneração",
+    annualCtc: "CTC anual",
+    benefitsValue: "Valor dos benefícios",
+    reimbursements: "Reembolsos",
+    ytdEarnings: "Ganhos acumulados",
+    month: "mês",
+    months: "meses",
+    grossEarnings: "Ganhos brutos",
+    totalDeductions: "Deduções totais",
+    netPay: "Pagamento líquido",
+    taxPaid: "Imposto pago",
+    salaryComponents: "Componentes salariais",
+    component: "Componente",
+    monthly: "Mensal",
+    annual: "Anual",
+    totalCtc: "CTC total",
+    benefits: "Benefícios",
+    plan: "Plano",
+    type: "Tipo",
+    coverage: "Cobertura",
+    employerShare: "Contribuição anual do empregador",
+    noBenefits: "Nenhum benefício contratado",
+    confidential: "Este documento é confidencial.",
+    generatedOn: "Gerado em",
+  },
+  hi: {
+    print: "प्रिंट / PDF के रूप में सहेजें",
+    title: "कुल पुरस्कार विवरण",
+    financialYear: "वित्त वर्ष",
+    totalValue: "कुल पुरस्कार मूल्य",
+    compensationSummary: "मुआवज़ा सारांश",
+    annualCtc: "वार्षिक CTC",
+    benefitsValue: "लाभ मूल्य",
+    reimbursements: "प्रतिपूर्ति",
+    ytdEarnings: "वर्ष-से-अब-तक आय",
+    month: "माह",
+    months: "माह",
+    grossEarnings: "सकल आय",
+    totalDeductions: "कुल कटौतियाँ",
+    netPay: "शुद्ध वेतन",
+    taxPaid: "भुगतान किया कर",
+    salaryComponents: "वेतन घटक",
+    component: "घटक",
+    monthly: "मासिक",
+    annual: "वार्षिक",
+    totalCtc: "कुल CTC",
+    benefits: "लाभ",
+    plan: "योजना",
+    type: "प्रकार",
+    coverage: "कवरेज",
+    employerShare: "वार्षिक नियोक्ता अंश",
+    noBenefits: "कोई लाभ नामांकित नहीं",
+    confidential: "यह एक गोपनीय दस्तावेज़ है।",
+    generatedOn: "निर्माण तिथि",
+  },
+  ja: {
+    print: "印刷 / PDFとして保存",
+    title: "総報酬明細",
+    financialYear: "会計年度",
+    totalValue: "総報酬額",
+    compensationSummary: "報酬概要",
+    annualCtc: "年間CTC",
+    benefitsValue: "福利厚生額",
+    reimbursements: "経費精算",
+    ytdEarnings: "年初来収入",
+    month: "か月",
+    months: "か月",
+    grossEarnings: "総支給額",
+    totalDeductions: "控除合計",
+    netPay: "手取り額",
+    taxPaid: "納税額",
+    salaryComponents: "給与項目",
+    component: "項目",
+    monthly: "月額",
+    annual: "年額",
+    totalCtc: "CTC合計",
+    benefits: "福利厚生",
+    plan: "プラン",
+    type: "種類",
+    coverage: "対象",
+    employerShare: "会社年間負担額",
+    noBenefits: "加入中の福利厚生はありません",
+    confidential: "この文書は機密情報です。",
+    generatedOn: "作成日",
+  },
+  zh: {
+    print: "打印 / 另存为PDF",
+    title: "总薪酬报告",
+    financialYear: "财年",
+    totalValue: "总薪酬价值",
+    compensationSummary: "薪酬摘要",
+    annualCtc: "年度CTC",
+    benefitsValue: "福利价值",
+    reimbursements: "报销",
+    ytdEarnings: "本年累计收入",
+    month: "个月",
+    months: "个月",
+    grossEarnings: "总收入",
+    totalDeductions: "扣款总额",
+    netPay: "净薪资",
+    taxPaid: "已缴税款",
+    salaryComponents: "薪资组成",
+    component: "项目",
+    monthly: "月度",
+    annual: "年度",
+    totalCtc: "CTC合计",
+    benefits: "福利",
+    plan: "计划",
+    type: "类型",
+    coverage: "保障范围",
+    employerShare: "雇主年度缴费",
+    noBenefits: "尚未参加福利计划",
+    confidential: "本文档为保密文件。",
+    generatedOn: "生成日期",
+  },
+  ar: {
+    print: "طباعة / حفظ بصيغة PDF",
+    title: "كشف المكافآت الإجمالية",
+    financialYear: "السنة المالية",
+    totalValue: "قيمة المكافآت الإجمالية",
+    compensationSummary: "ملخص التعويض",
+    annualCtc: "التكلفة السنوية",
+    benefitsValue: "قيمة المزايا",
+    reimbursements: "التعويضات",
+    ytdEarnings: "أرباح السنة حتى تاريخه",
+    month: "شهر",
+    months: "أشهر",
+    grossEarnings: "إجمالي الأرباح",
+    totalDeductions: "إجمالي الاستقطاعات",
+    netPay: "صافي الأجر",
+    taxPaid: "الضريبة المدفوعة",
+    salaryComponents: "مكونات الراتب",
+    component: "المكون",
+    monthly: "شهري",
+    annual: "سنوي",
+    totalCtc: "إجمالي التكلفة",
+    benefits: "المزايا",
+    plan: "الخطة",
+    type: "النوع",
+    coverage: "التغطية",
+    employerShare: "حصة صاحب العمل السنوية",
+    noBenefits: "لا توجد مزايا مشتركة",
+    confidential: "هذه وثيقة سرية.",
+    generatedOn: "تاريخ الإنشاء",
+  },
+} as const;
+
+type PrintLanguage = keyof typeof totalRewardsPrintLabels;
+const printLocales: Record<PrintLanguage, string> = {
+  en: "en-IN",
+  es: "es-ES",
+  de: "de-DE",
+  fr: "fr-FR",
+  pt: "pt-PT",
+  hi: "hi-IN",
+  ja: "ja-JP",
+  zh: "zh-CN",
+  ar: "ar",
+};
+
 export class TotalRewardsService {
   private db = getDB();
 
@@ -198,10 +484,20 @@ export class TotalRewardsService {
     orgId: string,
     employeeId: string,
     financialYear?: string,
+    language?: string,
   ): Promise<string> {
     const statement = await this.generateStatement(orgId, employeeId, financialYear);
+    const requestedLanguage = (language || "en").toLowerCase().split("-")[0];
+    const lang: PrintLanguage = Object.prototype.hasOwnProperty.call(
+      totalRewardsPrintLabels,
+      requestedLanguage,
+    )
+      ? (requestedLanguage as PrintLanguage)
+      : "en";
+    const labels = totalRewardsPrintLabels[lang];
+    const locale = printLocales[lang];
     const fmt = (n: number) =>
-      new Intl.NumberFormat("en-IN", {
+      new Intl.NumberFormat(locale, {
         style: "currency",
         currency: "INR",
         maximumFractionDigits: 0,
@@ -220,13 +516,13 @@ export class TotalRewardsService {
           (b: any) =>
             `<tr><td>${b.planName}</td><td>${b.type}</td><td>${b.coverageType}</td><td class="amt">${fmt(b.annualEmployerShare)}</td></tr>`,
         )
-        .join("") || '<tr><td colspan="4" class="center">No benefits enrolled</td></tr>';
+        .join("") || `<tr><td colspan="4" class="center">${labels.noBenefits}</td></tr>`;
 
     return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${lang}" dir="${lang === "ar" ? "rtl" : "ltr"}">
 <head>
 <meta charset="UTF-8">
-<title>Total Rewards Statement — ${statement.employee.name}</title>
+<title>${labels.title} — ${statement.employee.name}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; color: #1a1a1a; padding: 40px; max-width: 900px; margin: 0 auto; }
@@ -259,12 +555,12 @@ export class TotalRewardsService {
 </style>
 </head>
 <body>
-  <button class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>
+  <button class="print-btn no-print" onclick="window.print()">${labels.print}</button>
 
   <div class="header">
     <div>
-      <div class="title">Total Rewards Statement</div>
-      <div class="subtitle">Financial Year: ${statement.financialYear}</div>
+      <div class="title">${labels.title}</div>
+      <div class="subtitle">${labels.financialYear}: ${statement.financialYear}</div>
     </div>
     <div style="text-align: right;">
       <div style="font-weight: 600;">${statement.employee.name}</div>
@@ -273,45 +569,45 @@ export class TotalRewardsService {
   </div>
 
   <div class="grand-total">
-    <div class="label">Total Rewards Value</div>
+    <div class="label">${labels.totalValue}</div>
     <div class="amount">${fmt(statement.totalRewards.grandTotal)}</div>
   </div>
 
   <div class="info-grid">
     <div class="info-box">
-      <h4>Compensation Summary</h4>
-      <div class="info-row"><span class="label">Annual CTC</span><span class="value">${fmt(statement.totalRewards.directCompensation)}</span></div>
-      <div class="info-row"><span class="label">Benefits Value</span><span class="value">${fmt(statement.totalRewards.benefitsValue)}</span></div>
-      <div class="info-row"><span class="label">Reimbursements</span><span class="value">${fmt(statement.totalRewards.reimbursements)}</span></div>
+      <h4>${labels.compensationSummary}</h4>
+      <div class="info-row"><span class="label">${labels.annualCtc}</span><span class="value">${fmt(statement.totalRewards.directCompensation)}</span></div>
+      <div class="info-row"><span class="label">${labels.benefitsValue}</span><span class="value">${fmt(statement.totalRewards.benefitsValue)}</span></div>
+      <div class="info-row"><span class="label">${labels.reimbursements}</span><span class="value">${fmt(statement.totalRewards.reimbursements)}</span></div>
     </div>
     <div class="info-box">
-      <h4>YTD Earnings (${statement.ytdEarnings.monthsProcessed} months)</h4>
-      <div class="info-row"><span class="label">Gross Earnings</span><span class="value">${fmt(statement.ytdEarnings.grossEarnings)}</span></div>
-      <div class="info-row"><span class="label">Total Deductions</span><span class="value">${fmt(statement.ytdEarnings.totalDeductions)}</span></div>
-      <div class="info-row"><span class="label">Net Pay</span><span class="value">${fmt(statement.ytdEarnings.netPay)}</span></div>
-      <div class="info-row"><span class="label">Tax Paid</span><span class="value">${fmt(statement.ytdEarnings.taxPaid)}</span></div>
+      <h4>${labels.ytdEarnings} (${statement.ytdEarnings.monthsProcessed} ${statement.ytdEarnings.monthsProcessed === 1 ? labels.month : labels.months})</h4>
+      <div class="info-row"><span class="label">${labels.grossEarnings}</span><span class="value">${fmt(statement.ytdEarnings.grossEarnings)}</span></div>
+      <div class="info-row"><span class="label">${labels.totalDeductions}</span><span class="value">${fmt(statement.ytdEarnings.totalDeductions)}</span></div>
+      <div class="info-row"><span class="label">${labels.netPay}</span><span class="value">${fmt(statement.ytdEarnings.netPay)}</span></div>
+      <div class="info-row"><span class="label">${labels.taxPaid}</span><span class="value">${fmt(statement.ytdEarnings.taxPaid)}</span></div>
     </div>
   </div>
 
   <div class="section">
-    <h3>Salary Components</h3>
+    <h3>${labels.salaryComponents}</h3>
     <table>
-      <tr><th>Component</th><th class="amt">Monthly</th><th class="amt">Annual</th></tr>
+      <tr><th>${labels.component}</th><th class="amt">${labels.monthly}</th><th class="amt">${labels.annual}</th></tr>
       ${compRows}
-      <tr class="total-row"><td>Total CTC</td><td class="amt">${fmt(statement.compensation.monthlyGross)}</td><td class="amt">${fmt(statement.compensation.annualCTC)}</td></tr>
+      <tr class="total-row"><td>${labels.totalCtc}</td><td class="amt">${fmt(statement.compensation.monthlyGross)}</td><td class="amt">${fmt(statement.compensation.annualCTC)}</td></tr>
     </table>
   </div>
 
   <div class="section">
-    <h3>Benefits</h3>
+    <h3>${labels.benefits}</h3>
     <table>
-      <tr><th>Plan</th><th>Type</th><th>Coverage</th><th class="amt">Annual Employer Share</th></tr>
+      <tr><th>${labels.plan}</th><th>${labels.type}</th><th>${labels.coverage}</th><th class="amt">${labels.employerShare}</th></tr>
       ${benefitRows}
     </table>
   </div>
 
   <div class="footer">
-    This is a confidential document. | Generated on ${new Date().toLocaleDateString("en-IN")}
+    ${labels.confidential} | ${labels.generatedOn} ${new Date().toLocaleDateString(locale)}
   </div>
 </body>
 </html>`;

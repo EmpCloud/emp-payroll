@@ -15,10 +15,12 @@ import { useEmployees, useDepartments, useLocations } from "@/api/hooks";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Banknote, Clock, CheckCircle2, Loader2, Search, Pencil, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 const PAGE_SIZE = 20;
 
 export function LoansPage() {
+  const { t } = useTranslation();
   const [showCreateLoan, setShowCreateLoan] = useState(false);
   const [showCreateAdvance, setShowCreateAdvance] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -129,15 +131,15 @@ export function LoansPage() {
     // Client-side guard: amount, tenure, and interest must be non-negative.
     // Tenure must additionally be at least 1 so EMI math stays finite. (#70)
     if (!Number.isFinite(amount) || amount < 0) {
-      toast.error("Amount must be zero or greater");
+      toast.error(t("loansPage.validation.amountNonNegative"));
       return;
     }
     if (!Number.isFinite(tenure) || tenure < 1) {
-      toast.error("Tenure must be at least 1 month");
+      toast.error(t("loansPage.validation.tenureMinimum"));
       return;
     }
     if (!Number.isFinite(interest) || interest < 0) {
-      toast.error("Interest rate must be zero or greater");
+      toast.error(t("loansPage.validation.interestNonNegative"));
       return;
     }
 
@@ -149,11 +151,11 @@ export function LoansPage() {
     if (customEmiRaw) {
       const v = Number(customEmiRaw);
       if (!Number.isFinite(v) || v <= 0) {
-        toast.error("Custom monthly EMI must be greater than zero");
+        toast.error(t("loansPage.validation.customEmiPositive"));
         return;
       }
       if (v > amount) {
-        toast.error("Custom monthly EMI cannot exceed the loan amount");
+        toast.error(t("loansPage.validation.customEmiMaximum"));
         return;
       }
       customEmiAmount = Math.round(v);
@@ -172,7 +174,9 @@ export function LoansPage() {
         notes: fd.get("notes"),
         ...(customEmiAmount !== undefined ? { customEmiAmount } : {}),
       });
-      toast.success(isAdvance ? "Advance created" : "Loan created");
+      toast.success(
+        t(isAdvance ? "loansPage.messages.advanceCreated" : "loansPage.messages.loanCreated"),
+      );
       setShowCreateLoan(false);
       setShowCreateAdvance(false);
       qc.invalidateQueries({ queryKey: ["loans"] });
@@ -180,7 +184,7 @@ export function LoansPage() {
       qc.invalidateQueries({ queryKey: ["loans-summary-active"] });
       qc.invalidateQueries({ queryKey: ["loans-summary-completed"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed");
+      toast.error(err.response?.data?.error?.message || t("loansPage.messages.failed"));
     } finally {
       setCreating(false);
     }
@@ -189,12 +193,12 @@ export function LoansPage() {
   async function recordPayment(id: string) {
     try {
       await apiPost(`/loans/${id}/payment`);
-      toast.success("Payment recorded");
+      toast.success(t("loansPage.messages.paymentRecorded"));
       qc.invalidateQueries({ queryKey: ["loans"] });
       qc.invalidateQueries({ queryKey: ["loans-summary-active"] });
       qc.invalidateQueries({ queryKey: ["loans-summary-completed"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed");
+      toast.error(err.response?.data?.error?.message || t("loansPage.messages.failed"));
     }
   }
 
@@ -207,15 +211,15 @@ export function LoansPage() {
     const tenure = isAdvance ? 1 : Number(fd.get("tenure"));
     const interest = isAdvance ? 0 : Number(fd.get("interest") || 0);
     if (!Number.isFinite(amount) || amount < 0) {
-      toast.error("Amount must be zero or greater");
+      toast.error(t("loansPage.validation.amountNonNegative"));
       return;
     }
     if (!Number.isFinite(tenure) || tenure < 1) {
-      toast.error("Tenure must be at least 1 month");
+      toast.error(t("loansPage.validation.tenureMinimum"));
       return;
     }
     if (!Number.isFinite(interest) || interest < 0) {
-      toast.error("Interest rate must be zero or greater");
+      toast.error(t("loansPage.validation.interestNonNegative"));
       return;
     }
     // Custom EMI editor:
@@ -231,11 +235,11 @@ export function LoansPage() {
     } else {
       const v = Number(customEmiRawEdit);
       if (!Number.isFinite(v) || v <= 0) {
-        toast.error("Custom monthly EMI must be greater than zero");
+        toast.error(t("loansPage.validation.customEmiPositive"));
         return;
       }
       if (v > amount) {
-        toast.error("Custom monthly EMI cannot exceed the loan amount");
+        toast.error(t("loansPage.validation.customEmiMaximum"));
         return;
       }
       customEmiAmount = Math.round(v);
@@ -253,13 +257,15 @@ export function LoansPage() {
         notes: fd.get("notes"),
         customEmiAmount,
       });
-      toast.success(isAdvance ? "Advance updated" : "Loan updated");
+      toast.success(
+        t(isAdvance ? "loansPage.messages.advanceUpdated" : "loansPage.messages.loanUpdated"),
+      );
       setEditLoan(null);
       qc.invalidateQueries({ queryKey: ["loans"] });
       qc.invalidateQueries({ queryKey: ["loans-summary-active"] });
       qc.invalidateQueries({ queryKey: ["loans-summary-completed"] });
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to update loan");
+      toast.error(err.response?.data?.error?.message || t("loansPage.messages.updateFailed"));
     } finally {
       setEditing(false);
     }
@@ -270,14 +276,14 @@ export function LoansPage() {
     setDeleting(true);
     try {
       await apiDelete(`/loans/${deleteTarget.id}`);
-      toast.success("Loan deleted");
+      toast.success(t("loansPage.messages.deleted"));
       qc.invalidateQueries({ queryKey: ["loans"] });
       qc.invalidateQueries({ queryKey: ["loans-summary"] });
       qc.invalidateQueries({ queryKey: ["loans-summary-active"] });
       qc.invalidateQueries({ queryKey: ["loans-summary-completed"] });
       setDeleteTarget(null);
     } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || "Failed to delete loan");
+      toast.error(err.response?.data?.error?.message || t("loansPage.messages.deleteFailed"));
     } finally {
       setDeleting(false);
     }
@@ -285,11 +291,13 @@ export function LoansPage() {
 
   const employees = Array.isArray(empRes?.data?.data) ? empRes.data.data : [];
   const hasEmployees = employees.length > 0;
+  const typeLabel = (type: string) =>
+    t(`loansPage.types.${type}`, { defaultValue: type.replace(/_/g, " ") });
 
   const columns = [
     {
       key: "employee",
-      header: "Employee",
+      header: t("loansPage.columns.employee"),
       render: (r: any) => (
         <div>
           <p className="font-medium text-gray-900">{r.employee_name}</p>
@@ -299,13 +307,13 @@ export function LoansPage() {
     },
     {
       key: "type",
-      header: "Type",
-      render: (r: any) => <Badge variant="draft">{r.type.replace("_", " ")}</Badge>,
+      header: t("loansPage.columns.type"),
+      render: (r: any) => <Badge variant="draft">{typeLabel(r.type)}</Badge>,
     },
-    { key: "description", header: "Description" },
+    { key: "description", header: t("loansPage.columns.description") },
     {
       key: "principal_amount",
-      header: "Principal",
+      header: t("loansPage.columns.principal"),
       className: "text-right",
       render: (r: any) => (
         <span className="tabular-nums">{formatCurrency(r.principal_amount)}</span>
@@ -313,7 +321,7 @@ export function LoansPage() {
     },
     {
       key: "outstanding_amount",
-      header: "Outstanding",
+      header: t("loansPage.columns.outstanding"),
       className: "text-right",
       render: (r: any) => (
         <span
@@ -329,7 +337,7 @@ export function LoansPage() {
     },
     {
       key: "emi_amount",
-      header: "Deduction",
+      header: t("loansPage.columns.deduction"),
       className: "text-right",
       render: (r: any) => (
         <div>
@@ -338,22 +346,28 @@ export function LoansPage() {
           </div>
           {r.custom_emi_amount != null && (
             <div className="text-[10px] uppercase tracking-wide text-amber-600">
-              Custom (default {formatCurrency(r.emi_amount)})
+              {t("loansPage.deduction.customDefault", {
+                amount: formatCurrency(r.emi_amount),
+              })}
             </div>
           )}
           {r.type !== "loan" && (
-            <div className="text-[10px] uppercase tracking-wide text-gray-500">One-time</div>
+            <div className="text-[10px] uppercase tracking-wide text-gray-500">
+              {t("loansPage.deduction.oneTime")}
+            </div>
           )}
         </div>
       ),
     },
     {
       key: "progress",
-      header: "Progress",
+      header: t("loansPage.columns.progress"),
       render: (r: any) =>
         r.type !== "loan" ? (
           <span className="text-xs text-gray-500">
-            {r.status === "completed" ? "Recovered" : "Pending recovery"}
+            {r.status === "completed"
+              ? t("loansPage.progress.recovered")
+              : t("loansPage.progress.pendingRecovery")}
           </span>
         ) : (
           <div className="w-20">
@@ -371,14 +385,14 @@ export function LoansPage() {
     },
     {
       key: "status",
-      header: "Status",
+      header: t("loansPage.columns.status"),
       render: (r: any) => (
         <Badge
           variant={
             r.status === "active" ? "active" : r.status === "completed" ? "approved" : "inactive"
           }
         >
-          {r.status}
+          {t(`loansPage.statuses.${r.status}`, { defaultValue: r.status })}
         </Badge>
       ),
     },
@@ -393,13 +407,23 @@ export function LoansPage() {
               size="sm"
               onClick={() => recordPayment(r.id)}
               className="text-green-600"
-              title={r.type === "loan" ? "Record EMI payment" : "Record advance recovery"}
+              title={
+                r.type === "loan"
+                  ? t("loansPage.actions.recordEmiPayment")
+                  : t("loansPage.actions.recordAdvanceRecovery")
+              }
             >
-              <CheckCircle2 className="h-4 w-4" /> {r.type === "loan" ? "Pay" : "Recover"}
+              <CheckCircle2 className="h-4 w-4" />
+              {r.type === "loan" ? t("loansPage.actions.pay") : t("loansPage.actions.recover")}
             </Button>
           )}
           {r.status !== "cancelled" && (
-            <Button variant="ghost" size="sm" onClick={() => setEditLoan(r)} title="Edit loan">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setEditLoan(r)}
+              title={t("loansPage.actions.edit")}
+            >
               <Pencil className="h-4 w-4" />
             </Button>
           )}
@@ -408,7 +432,7 @@ export function LoansPage() {
             size="sm"
             onClick={() => setDeleteTarget(r)}
             className="text-red-500 hover:text-red-600"
-            title="Delete loan"
+            title={t("loansPage.actions.delete")}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -427,15 +451,15 @@ export function LoansPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Loans & Advances"
-        description={`${total} of ${totalLoans} loan and advance record${totalLoans === 1 ? "" : "s"}`}
+        title={t("loansPage.title")}
+        description={t("loansPage.recordsShown", { visible: total, total: totalLoans })}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setShowCreateAdvance(true)}>
-              <Plus className="h-4 w-4" /> Add Advance
+              <Plus className="h-4 w-4" /> {t("loansPage.addAdvance")}
             </Button>
             <Button size="sm" onClick={() => setShowCreateLoan(true)}>
-              <Plus className="h-4 w-4" /> Add Loan
+              <Plus className="h-4 w-4" /> {t("loansPage.addLoan")}
             </Button>
           </div>
         }
@@ -443,11 +467,15 @@ export function LoansPage() {
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <Link to="/loans?status=active" className={cardLinkCls}>
-          <StatCard title="Active Loans & Advances" value={String(activeCount)} icon={Banknote} />
+          <StatCard
+            title={t("loansPage.cards.active")}
+            value={String(activeCount)}
+            icon={Banknote}
+          />
         </Link>
         <Link to="/loans?status=active" className={cardLinkCls}>
           <StatCard
-            title="Outstanding"
+            title={t("loansPage.cards.outstanding")}
             value={formatCurrency(totalOutstanding)}
             icon={Clock}
             accentClassName="bg-amber-50 text-amber-600"
@@ -455,16 +483,16 @@ export function LoansPage() {
         </Link>
         <Link to="/loans?status=active" className={cardLinkCls}>
           <StatCard
-            title="Monthly Deductions"
+            title={t("loansPage.cards.monthlyDeductions")}
             value={formatCurrency(totalEMI)}
-            subtitle="total across all"
+            subtitle={t("loansPage.cards.totalAcrossAll")}
             icon={Banknote}
             accentClassName="bg-sky-50 text-sky-600"
           />
         </Link>
         <Link to="/loans?status=completed" className={cardLinkCls}>
           <StatCard
-            title="Completed"
+            title={t("loansPage.cards.completed")}
             value={String(completedCount)}
             icon={CheckCircle2}
             accentClassName="bg-emerald-50 text-emerald-600"
@@ -478,7 +506,7 @@ export function LoansPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by employee name, code, or designation..."
+            placeholder={t("loansPage.searchPlaceholder")}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="focus:border-brand-500 focus:ring-brand-500 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
@@ -488,9 +516,9 @@ export function LoansPage() {
           value={departmentId}
           onChange={(e) => setDepartmentId(e.target.value)}
           className="focus:border-brand-500 focus:ring-brand-500 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-          aria-label="Filter by department"
+          aria-label={t("loansPage.filterDepartment")}
         >
-          <option value="">All departments</option>
+          <option value="">{t("loansPage.allDepartments")}</option>
           {departments.map((d) => (
             <option key={d.id} value={d.id}>
               {d.name}
@@ -501,9 +529,9 @@ export function LoansPage() {
           value={locationId}
           onChange={(e) => setLocationId(e.target.value)}
           className="focus:border-brand-500 focus:ring-brand-500 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-          aria-label="Filter by location"
+          aria-label={t("loansPage.filterLocation")}
         >
-          <option value="">All locations</option>
+          <option value="">{t("loansPage.allLocations")}</option>
           {locations.map((l) => (
             <option key={l.id} value={l.id}>
               {l.name}
@@ -519,7 +547,7 @@ export function LoansPage() {
             onClick={() => setFilter(f)}
             className={`rounded-full px-3 py-1 text-xs font-medium ${filter === f ? "bg-brand-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
           >
-            {f || "All"}
+            {f ? t(`loansPage.statuses.${f}`, { defaultValue: f }) : t("loansPage.filters.all")}
           </button>
         ))}
         {(search || departmentId || locationId) && (
@@ -533,7 +561,7 @@ export function LoansPage() {
             }}
             className="ml-auto text-xs text-gray-500 underline hover:text-gray-700"
           >
-            Clear filters
+            {t("loansPage.clearFilters")}
           </button>
         )}
       </div>
@@ -548,7 +576,7 @@ export function LoansPage() {
             columns={columns}
             data={loans}
             paginated={false}
-            emptyMessage="No loans or advances found"
+            emptyMessage={t("loansPage.noRecords")}
           />
           <Pagination
             page={page}
@@ -564,7 +592,7 @@ export function LoansPage() {
       <Modal
         open={showCreateLoan}
         onClose={() => setShowCreateLoan(false)}
-        title="Add Loan"
+        title={t("loansPage.addLoan")}
         className="max-w-lg"
       >
         <form onSubmit={(e) => handleCreate(e, "loan")} className="space-y-4">
@@ -572,7 +600,7 @@ export function LoansPage() {
             <SelectField
               id="employeeId"
               name="employeeId"
-              label="Employee"
+              label={t("loansPage.fields.employee")}
               required
               options={employees.map((e: any) => ({
                 value: e.id,
@@ -584,24 +612,26 @@ export function LoansPage() {
             // as an empty / frozen dropdown; show a disabled state with a
             // helpful message instead. (#70)
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700">Employee</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t("loansPage.fields.employee")}
+              </label>
               <div className="block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500">
-                There is no employee
+                {t("loansPage.form.noEmployee")}
               </div>
             </div>
           )}
           <Input
             id="description"
             name="description"
-            label="Description"
-            placeholder="e.g. Medical emergency"
+            label={t("loansPage.fields.description")}
+            placeholder={t("loansPage.form.descriptionPlaceholder")}
             required
           />
           <div className="grid grid-cols-2 gap-4">
             <Input
               id="amount"
               name="amount"
-              label="Amount (₹)"
+              label={t("loansPage.fields.amount")}
               type="number"
               min="0"
               step="1"
@@ -611,7 +641,7 @@ export function LoansPage() {
             <Input
               id="tenure"
               name="tenure"
-              label="Tenure (months)"
+              label={t("loansPage.fields.tenure")}
               type="number"
               min="1"
               step="1"
@@ -623,7 +653,7 @@ export function LoansPage() {
             <Input
               id="interest"
               name="interest"
-              label="Interest Rate (%)"
+              label={t("loansPage.fields.interestRate")}
               type="number"
               min="0"
               step="0.01"
@@ -633,7 +663,7 @@ export function LoansPage() {
             <Input
               id="startDate"
               name="startDate"
-              label="Start Date"
+              label={t("loansPage.fields.startDate")}
               type="date"
               defaultValue={new Date().toISOString().slice(0, 10)}
               required
@@ -642,28 +672,27 @@ export function LoansPage() {
           <Input
             id="customEmi"
             name="customEmi"
-            label="Custom Monthly EMI (₹) — optional"
+            label={t("loansPage.fields.customMonthlyEmi")}
             type="number"
             min="1"
             step="1"
-            placeholder="Leave blank to use tenure-based EMI"
+            placeholder={t("loansPage.form.customEmiPlaceholder")}
           />
           <div className="-mt-2 text-xs text-gray-500">
-            Override the monthly deduction. The last instalment auto-settles whatever's left (e.g.
-            ₹28,734 loan with ₹10,000 custom EMI → ₹10,000 + ₹10,000 + ₹8,734).
+            {t("loansPage.form.customEmiHelpCreate")}
           </div>
           <Input
             id="notes"
             name="notes"
-            label="Notes (optional)"
-            placeholder="Any additional notes"
+            label={t("loansPage.fields.notes")}
+            placeholder={t("loansPage.form.notesPlaceholder")}
           />
           <div className="flex justify-end gap-3">
             <Button variant="outline" type="button" onClick={() => setShowCreateLoan(false)}>
-              Cancel
+              {t("loansPage.actions.cancel")}
             </Button>
             <Button type="submit" loading={creating} disabled={!hasEmployees}>
-              Add Loan
+              {t("loansPage.addLoan")}
             </Button>
           </div>
         </form>
@@ -672,8 +701,8 @@ export function LoansPage() {
       <Modal
         open={showCreateAdvance}
         onClose={() => setShowCreateAdvance(false)}
-        title="Add Advance"
-        description="Add a one-time salary advance. The full amount will be recovered in one payroll period."
+        title={t("loansPage.addAdvance")}
+        description={t("loansPage.advanceModal.description")}
         className="max-w-lg"
       >
         <form onSubmit={(e) => handleCreate(e, "advance")} className="space-y-4">
@@ -681,7 +710,7 @@ export function LoansPage() {
             <SelectField
               id="advanceEmployeeId"
               name="employeeId"
-              label="Employee"
+              label={t("loansPage.fields.employee")}
               required
               options={employees.map((employee: any) => ({
                 value: employee.id,
@@ -690,32 +719,34 @@ export function LoansPage() {
             />
           ) : (
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700">Employee</label>
+              <label className="block text-sm font-medium text-gray-700">
+                {t("loansPage.fields.employee")}
+              </label>
               <div className="block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500">
-                There is no employee
+                {t("loansPage.form.noEmployee")}
               </div>
             </div>
           )}
           <SelectField
             id="advanceType"
             name="advanceType"
-            label="Advance Type"
+            label={t("loansPage.fields.advanceType")}
             options={[
-              { value: "salary_advance", label: "Salary Advance" },
-              { value: "emergency", label: "Emergency Advance" },
+              { value: "salary_advance", label: t("loansPage.types.salary_advance") },
+              { value: "emergency", label: t("loansPage.types.emergency") },
             ]}
           />
           <Input
             id="advanceDescription"
             name="description"
-            label="Reason"
-            placeholder="e.g. Medical emergency"
+            label={t("loansPage.fields.reason")}
+            placeholder={t("loansPage.form.descriptionPlaceholder")}
             required
           />
           <Input
             id="advanceAmount"
             name="amount"
-            label="Advance Amount (₹)"
+            label={t("loansPage.fields.advanceAmount")}
             type="number"
             min="0"
             step="1"
@@ -725,7 +756,7 @@ export function LoansPage() {
           <Input
             id="advanceStartDate"
             name="startDate"
-            label="Recovery Date"
+            label={t("loansPage.fields.recoveryDate")}
             type="date"
             defaultValue={new Date().toISOString().slice(0, 10)}
             required
@@ -733,15 +764,15 @@ export function LoansPage() {
           <Input
             id="advanceNotes"
             name="notes"
-            label="Notes (optional)"
-            placeholder="Any additional notes"
+            label={t("loansPage.fields.notes")}
+            placeholder={t("loansPage.form.notesPlaceholder")}
           />
           <div className="flex justify-end gap-3">
             <Button variant="outline" type="button" onClick={() => setShowCreateAdvance(false)}>
-              Cancel
+              {t("loansPage.actions.cancel")}
             </Button>
             <Button type="submit" loading={creating} disabled={!hasEmployees}>
-              Add Advance
+              {t("loansPage.addAdvance")}
             </Button>
           </div>
         </form>
@@ -750,7 +781,11 @@ export function LoansPage() {
       <Modal
         open={!!editLoan}
         onClose={() => setEditLoan(null)}
-        title={editLoan?.type === "loan" ? "Edit Loan" : "Edit Advance"}
+        title={
+          editLoan?.type === "loan"
+            ? t("loansPage.editModal.loanTitle")
+            : t("loansPage.editModal.advanceTitle")
+        }
         className="max-w-lg"
       >
         {editLoan && (
@@ -767,18 +802,18 @@ export function LoansPage() {
               <SelectField
                 id="editType"
                 name="type"
-                label="Advance Type"
+                label={t("loansPage.fields.advanceType")}
                 defaultValue={editLoan.type}
                 options={[
-                  { value: "salary_advance", label: "Salary Advance" },
-                  { value: "emergency", label: "Emergency Advance" },
+                  { value: "salary_advance", label: t("loansPage.types.salary_advance") },
+                  { value: "emergency", label: t("loansPage.types.emergency") },
                 ]}
               />
             )}
             <Input
               id="editDescription"
               name="description"
-              label="Description"
+              label={t("loansPage.fields.description")}
               defaultValue={editLoan.description || ""}
               required
             />
@@ -786,7 +821,7 @@ export function LoansPage() {
               <Input
                 id="editAmount"
                 name="amount"
-                label="Amount (₹)"
+                label={t("loansPage.fields.amount")}
                 type="number"
                 min="0"
                 step="1"
@@ -797,7 +832,7 @@ export function LoansPage() {
                 <Input
                   id="editTenure"
                   name="tenure"
-                  label="Tenure (months)"
+                  label={t("loansPage.fields.tenure")}
                   type="number"
                   min="1"
                   step="1"
@@ -811,7 +846,7 @@ export function LoansPage() {
                 <Input
                   id="editInterest"
                   name="interest"
-                  label="Interest Rate (%)"
+                  label={t("loansPage.fields.interestRate")}
                   type="number"
                   min="0"
                   step="0.01"
@@ -821,7 +856,11 @@ export function LoansPage() {
               <Input
                 id="editStartDate"
                 name="startDate"
-                label={editLoan.type === "loan" ? "Start Date" : "Recovery Date"}
+                label={
+                  editLoan.type === "loan"
+                    ? t("loansPage.fields.startDate")
+                    : t("loansPage.fields.recoveryDate")
+                }
                 type="date"
                 defaultValue={String(editLoan.start_date || "").slice(0, 10)}
                 required
@@ -831,38 +870,38 @@ export function LoansPage() {
               <Input
                 id="editCustomEmi"
                 name="customEmi"
-                label="Custom Monthly EMI (₹) — optional"
+                label={t("loansPage.fields.customMonthlyEmi")}
                 type="number"
                 min="1"
                 step="1"
                 defaultValue={editLoan.custom_emi_amount ?? ""}
-                placeholder="Leave blank to use tenure-based EMI"
+                placeholder={t("loansPage.form.customEmiPlaceholder")}
               />
             )}
             {editLoan.type === "loan" && (
               <div className="-mt-2 text-xs text-gray-500">
-                Override the monthly deduction. Last instalment auto-settles whatever's left. Clear
-                the field to fall back to the tenure-based EMI.
+                {t("loansPage.form.customEmiHelpEdit")}
               </div>
             )}
             <Input
               id="editNotes"
               name="notes"
-              label="Notes (optional)"
+              label={t("loansPage.fields.notes")}
               defaultValue={editLoan.notes || ""}
             />
             {Number(editLoan.installments_paid) > 0 && (
               <p className="text-xs text-amber-600">
-                {editLoan.installments_paid} EMI(s) already paid — outstanding will be recalculated
-                from the new amount, keeping the amount already repaid.
+                {t("loansPage.form.paidInstallmentsNotice", {
+                  count: editLoan.installments_paid,
+                })}
               </p>
             )}
             <div className="flex justify-end gap-3">
               <Button variant="outline" type="button" onClick={() => setEditLoan(null)}>
-                Cancel
+                {t("loansPage.actions.cancel")}
               </Button>
               <Button type="submit" loading={editing}>
-                Save Changes
+                {t("loansPage.actions.saveChanges")}
               </Button>
             </div>
           </form>
@@ -874,10 +913,10 @@ export function LoansPage() {
       <Modal
         open={!!deleteTarget}
         onClose={() => (deleting ? null : setDeleteTarget(null))}
-        title="Delete loan?"
+        title={t("loansPage.deleteModal.title")}
         description={
           deleteTarget
-            ? `${String(deleteTarget.type || "loan").replace(/_/g, " ")}${deleteTarget.employee_name ? " · " + deleteTarget.employee_name : ""}${deleteTarget.principal_amount ? " · " + formatCurrency(deleteTarget.principal_amount) : ""}`
+            ? `${typeLabel(String(deleteTarget.type || "loan"))}${deleteTarget.employee_name ? " · " + deleteTarget.employee_name : ""}${deleteTarget.principal_amount ? " · " + formatCurrency(deleteTarget.principal_amount) : ""}`
             : undefined
         }
       >
@@ -886,29 +925,29 @@ export function LoansPage() {
             {Number(deleteTarget.outstanding_amount) > 0 && deleteTarget.status !== "cancelled" ? (
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
                 <p className="font-medium">
-                  {formatCurrency(deleteTarget.outstanding_amount)} still outstanding.
+                  {t("loansPage.deleteModal.outstandingTitle", {
+                    amount: formatCurrency(deleteTarget.outstanding_amount),
+                  })}
                 </p>
                 <p className="mt-1 text-xs leading-relaxed">
-                  Deleting removes the loan record and stops future EMI deductions. Any EMI already
-                  deducted on past payslips is unaffected. This cannot be undone.
+                  {t("loansPage.deleteModal.outstandingWarning")}
                 </p>
               </div>
             ) : (
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                This permanently removes the loan record. Any EMI already deducted on past payslips
-                is unaffected. This cannot be undone.
+                {t("loansPage.deleteModal.warning")}
               </p>
             )}
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
-                Cancel
+                {t("loansPage.actions.cancel")}
               </Button>
               <Button
                 onClick={performDelete}
                 loading={deleting}
                 className="bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500"
               >
-                <Trash2 className="h-4 w-4" /> Delete
+                <Trash2 className="h-4 w-4" /> {t("loansPage.actions.delete")}
               </Button>
             </div>
           </div>

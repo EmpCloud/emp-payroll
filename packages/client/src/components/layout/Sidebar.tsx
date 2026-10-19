@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { getUser, logout } from "@/api/auth";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard,
   Users,
@@ -301,14 +302,58 @@ const SCROLLBAR =
 const FOCUS =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-gray-900";
 
-const roleLabel = (role: Role) =>
-  role === "org_admin"
-    ? "Org Admin"
-    : role === "hr_admin"
-      ? "Admin"
-      : role === "hr_manager"
-        ? "Manager"
-        : "Employee";
+const SECTION_KEYS: Record<string, string> = {
+  Overview: "overview",
+  People: "people",
+  Payroll: "payroll",
+  Compliance: "compliance",
+  "Pay & Benefits": "payBenefits",
+  Workplace: "workplace",
+  "Global Payroll": "globalPayroll",
+  Admin: "admin",
+  "Self-Service": "selfService",
+};
+
+const ITEM_KEYS: Record<string, string> = {
+  Dashboard: "dashboard",
+  Employees: "employees",
+  "Org Chart": "orgChart",
+  Departments: "departments",
+  Attendance: "attendance",
+  Structures: "structures",
+  "Payroll Runs": "payrollRuns",
+  Analytics: "analytics",
+  Payslips: "payslips",
+  Tax: "tax",
+  "Tax Calculator": "taxCalculator",
+  "Tax Declarations": "taxDeclarations",
+  Reimbursements: "reimbursements",
+  Loans: "loans",
+  Benefits: "benefits",
+  Benchmarks: "benchmarks",
+  "Pay Equity": "payEquity",
+  "Total Rewards": "totalRewards",
+  "Earned Wage Access": "earnedWageAccess",
+  Insurance: "insurance",
+  Holidays: "holidays",
+  Announcements: "announcements",
+  "Global Dashboard": "globalDashboard",
+  "Global Employees": "globalEmployees",
+  "Contractor Invoices": "contractorInvoices",
+  "Country Compliance": "countryCompliance",
+  "GL / Accounting": "glAccounting",
+  Reports: "reports",
+  "Audit Log": "auditLog",
+  System: "system",
+  Settings: "settings",
+  "My Dashboard": "myDashboard",
+  "My Payslips": "myPayslips",
+  "My Salary": "mySalary",
+  "My Tax": "myTax",
+  Declarations: "declarations",
+  "My Claims": "myClaims",
+  "My Profile": "myProfile",
+};
 
 function initials(first?: string, last?: string) {
   return `${(first?.[0] ?? "").toUpperCase()}${(last?.[0] ?? "").toUpperCase()}` || "U";
@@ -324,9 +369,22 @@ function Glyph({ icon: Icon, className }: { icon: any; className?: string }) {
 }
 
 export function Sidebar() {
+  const { t } = useTranslation();
   const user = getUser();
   const role = (user?.role || "employee") as Role;
   const { pathname } = useLocation();
+  const itemLabel = (item: NavItem) =>
+    t(`sidebar.items.${ITEM_KEYS[item.label]}`, { defaultValue: item.label });
+  const sectionLabel = (section: string) =>
+    t(`sidebar.sections.${SECTION_KEYS[section]}`, { defaultValue: section });
+  const translatedRole =
+    role === "org_admin"
+      ? t("roles.org_admin")
+      : role === "hr_admin"
+        ? t("roles.admin")
+        : role === "hr_manager"
+          ? t("roles.manager")
+          : t("roles.employee");
 
   const visibleItems = useMemo(
     () => navItems.filter((item) => !item.roles || item.roles.includes(role)),
@@ -419,7 +477,9 @@ export function Sidebar() {
   const q = query.trim().toLowerCase();
   const searchResults = q
     ? visibleItems.filter(
-        (i) => i.label.toLowerCase().includes(q) || i.section.toLowerCase().includes(q),
+        (i) =>
+          itemLabel(i).toLowerCase().includes(q) ||
+          sectionLabel(i.section).toLowerCase().includes(q),
       )
     : null;
 
@@ -458,15 +518,15 @@ export function Sidebar() {
             <p className="truncate text-[15px] font-bold leading-tight text-gray-900 dark:text-white">
               EMP Payroll
             </p>
-            <p className="truncate text-xs text-gray-500 dark:text-gray-400">{roleLabel(role)}</p>
+            <p className="truncate text-xs text-gray-500 dark:text-gray-400">{translatedRole}</p>
           </div>
         )}
         {!rail && (
           <button
             type="button"
             onClick={toggleRail}
-            title="Collapse sidebar"
-            aria-label="Collapse sidebar"
+            title={t("sidebar.collapse")}
+            aria-label={t("sidebar.collapse")}
             className={cn(
               "rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-200",
               FOCUS,
@@ -486,7 +546,7 @@ export function Sidebar() {
               ref={searchRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search menu…"
+              placeholder={t("sidebar.search")}
               className={cn(
                 "focus:border-brand-400 focus:ring-brand-100 h-11 w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-14 text-sm text-gray-900 placeholder-gray-400 outline-none transition-colors focus:bg-white focus:ring-2 dark:border-gray-700 dark:bg-gray-800/60 dark:text-white dark:placeholder-gray-500 dark:focus:bg-gray-800",
               )}
@@ -499,7 +559,7 @@ export function Sidebar() {
                   "absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200",
                   FOCUS,
                 )}
-                aria-label="Clear search"
+                aria-label={t("sidebar.clearSearch")}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -544,7 +604,7 @@ export function Sidebar() {
                     <item.icon className="h-5 w-5 shrink-0" />
                     {/* Hover tooltip */}
                     <span className="pointer-events-none absolute left-full z-50 ml-2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity delay-150 duration-150 group-hover/rail:opacity-100 dark:bg-gray-700">
-                      {item.label}
+                      {itemLabel(item)}
                     </span>
                   </NavLink>
                 );
@@ -554,7 +614,7 @@ export function Sidebar() {
         ) : searchResults ? (
           searchResults.length === 0 ? (
             <p className="px-3 py-6 text-center text-sm text-gray-400">
-              No matches for “{query.trim()}”
+              {t("sidebar.noMatches", { query: query.trim() })}
             </p>
           ) : (
             searchResults.map((item) => {
@@ -562,9 +622,9 @@ export function Sidebar() {
               return (
                 <NavLink key={item.to} to={item.to} end className={itemClass(isActive)}>
                   <Glyph icon={item.icon} className={glyphClass(isActive)} />
-                  <span className="flex-1 truncate">{item.label}</span>
+                  <span className="flex-1 truncate">{itemLabel(item)}</span>
                   <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
-                    {item.section}
+                    {sectionLabel(item.section)}
                   </span>
                 </NavLink>
               );
@@ -595,7 +655,7 @@ export function Sidebar() {
                       hasActive && "text-brand-600 dark:text-brand-400",
                     )}
                   />
-                  <span className="flex-1 text-left">{section.name}</span>
+                  <span className="flex-1 text-left">{sectionLabel(section.name)}</span>
                   <ChevronDown
                     className={cn(
                       "h-4 w-4 shrink-0 transition-transform duration-200",
@@ -616,7 +676,7 @@ export function Sidebar() {
                         return (
                           <NavLink key={item.to} to={item.to} end className={itemClass(isActive)}>
                             <Glyph icon={item.icon} className={glyphClass(isActive)} />
-                            <span className="truncate">{item.label}</span>
+                            <span className="truncate">{itemLabel(item)}</span>
                           </NavLink>
                         );
                       })}
@@ -634,8 +694,8 @@ export function Sidebar() {
         <button
           type="button"
           onClick={toggleRail}
-          title="Expand sidebar"
-          aria-label="Expand sidebar"
+          title={t("sidebar.expand")}
+          aria-label={t("sidebar.expand")}
           className={cn(
             "mx-auto mb-1 mt-1 flex h-9 w-9 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-200",
             FOCUS,
@@ -645,10 +705,7 @@ export function Sidebar() {
         </button>
       ) : (
         <div className="flex items-center justify-between px-4 py-1.5 text-[11px] text-gray-400">
-          <span>
-            Press <kbd className="rounded border border-gray-200 px-1 dark:border-gray-700">/</kbd>{" "}
-            to search
-          </span>
+          <span>{t("sidebar.pressToSearch")}</span>
           <span className="font-medium">{APP_VERSION}</span>
         </div>
       )}
@@ -666,7 +723,7 @@ export function Sidebar() {
                   {user.firstName} {user.lastName}
                 </p>
                 <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                  {roleLabel(role)}
+                  {translatedRole}
                 </p>
               </div>
             )}
@@ -674,7 +731,8 @@ export function Sidebar() {
         )}
         <button
           onClick={logout}
-          title="Logout"
+          title={t("sidebar.logout")}
+          aria-label={t("sidebar.logout")}
           className={cn(
             "flex h-10 items-center gap-3 rounded-lg text-[15px] font-medium text-gray-600 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-300 dark:hover:bg-red-500/10 dark:hover:text-red-400",
             FOCUS,
@@ -682,7 +740,7 @@ export function Sidebar() {
           )}
         >
           <LogOut className="h-5 w-5 shrink-0" />
-          {!rail && "Logout"}
+          {!rail && t("sidebar.logout")}
         </button>
       </div>
     </aside>
