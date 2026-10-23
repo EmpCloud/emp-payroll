@@ -97,7 +97,10 @@ export function calculateUaeGratuityAmount(input: {
 }
 
 /** Validation independent of a payroll month; dated salary references are checked at calculation. */
-export function validateUaeProfile(profile: UaeEmployeeProfile): void {
+export function validateUaeProfile(
+  profile: UaeEmployeeProfile,
+  { requirePaymentDetails = true }: { requirePaymentDetails?: boolean } = {},
+): void {
   if (!profile || !["federal", "difc", "adgm"].includes(profile.jurisdiction))
     fail("Select the applicable UAE employment jurisdiction.");
   date(profile.effectiveFrom, "Profile effective date");
@@ -185,7 +188,7 @@ export function validateUaeProfile(profile: UaeEmployeeProfile): void {
   if (profile.wps.exemption) {
     evidence(profile.wps.exemption.reason, "WPS exemption reason");
     evidence(profile.wps.exemption.reference, "WPS exemption");
-  } else if (profile.jurisdiction === "federal") {
+  } else if (profile.jurisdiction === "federal" && requirePaymentDetails) {
     evidence(profile.wps.employeeId, "WPS employee identifier");
     evidence(profile.wps.routingCode, "WPS routing code");
     evidence(profile.wps.accountNumber, "WPS account");

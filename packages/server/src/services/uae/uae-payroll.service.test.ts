@@ -185,6 +185,47 @@ describe("UAE payroll persistence and reporting with real calculation", () => {
     vi.unstubAllEnvs();
   });
 
+  it.each(["create", "edit"])(
+    "saves a %s UAE profile before WPS details are available",
+    (operation) => {
+      const existing = operation === "edit" ? employee() : null;
+      const incomplete = profile({ effectiveFrom: "2026-10-01", wps: {} });
+      const update = uaeProfileUpdate(
+        existing,
+        { salaryAmount: 1000000, uaeProfile: incomplete },
+        "AE",
+      );
+      expect(JSON.parse(update.uae_profile)).toEqual(incomplete);
+      const history = JSON.parse(update.uae_profile_history);
+      expect(history).toHaveLength(operation === "edit" ? 2 : 1);
+      expect(history.at(-1).wps).toEqual({});
+      if (existing) expect(history[0].wps).toEqual(profile().wps);
+    },
+  );
+
+  it.each([{}, { employeeId: "00915012345663" }])(
+    "rejects payroll with incomplete WPS details before any writes: %j",
+    async (wps) => {
+      fixture.rows("global_employees")[0].uae_profile = JSON.stringify(profile({ wps }));
+      await expect(create()).rejects.toThrow(/WPS/);
+      noWrites();
+      expect(fixture.db.transaction).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    { reason: "", reference: "EXEMPT-1" },
+    { reason: "Documented exemption", reference: "" },
+  ])("rejects incomplete WPS exemption evidence when saving a profile: %j", (exemption) => {
+    expect(() =>
+      uaeProfileUpdate(
+        null,
+        { salaryAmount: 1000000, uaeProfile: profile({ wps: { exemption } }) },
+        "AE",
+      ),
+    ).toThrow();
+  });
+
   it("validates every employee before writing any run or items", async () => {
     fixture.rows("global_employees").push(employee({ id: "employee-2", uae_profile: null }));
     await expect(create()).rejects.toMatchObject({ code: "UAE_PROFILE_REQUIRED" });

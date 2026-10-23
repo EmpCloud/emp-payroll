@@ -6,6 +6,7 @@ vi.mock("../db/empcloud", () => ({ findUserById: vi.fn() }));
 import { GlobalPayrollService } from "./global-payroll.service";
 import { getDB } from "../db/adapters";
 import { findUserById } from "../db/empcloud";
+import { addGlobalEmployeeSchema, updateGlobalEmployeeSchema } from "../api/validators";
 
 const mockedGetDB = vi.mocked(getDB);
 const mockedFindUserById = vi.mocked(findUserById);
@@ -26,6 +27,97 @@ function makeMockDb(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+describe("Global employee optional banking", () => {
+  const input = {
+    firstName: "QA-UAE",
+    lastName: "Sample-One",
+    email: "qa.uae.one@example.com",
+    countryId: "14670642-cbf0-473b-a41a-29c483a02e49",
+    employmentType: "direct_hire",
+    contractType: "full_time",
+    jobTitle: "QA Demo Analyst",
+    department: "QA",
+    startDate: "2026-10-01",
+    salaryAmount: 1000000,
+    salaryFrequency: "monthly",
+    salaryCurrency: "AED",
+    taxId: "",
+    bankName: "",
+    bankAccount: "",
+    bankRouting: "",
+    notes: "",
+    uaeProfile: {
+      jurisdiction: "federal",
+      effectiveFrom: "2026-10-01",
+      nationality: "IN",
+      basicSalary: 1000000,
+      allowances: [],
+      normalDailyHours: 8,
+      workPattern: "full_time",
+      pension: { scheme: "none" },
+      iloe: { mode: "employee_paid" },
+      healthInsuranceEmployer: 50000,
+      savings: { scheme: "gratuity", continuousServiceStartDate: "2026-10-01" },
+      wps: {},
+    },
+  };
+
+  it("accepts and saves the reported UAE onboarding request with blank bank details", async () => {
+    expect(addGlobalEmployeeSchema.safeParse({ body: input }).success).toBe(true);
+    const db = makeMockDb();
+    db.findById.mockResolvedValue({ id: input.countryId, code: "AE", currency: "AED" });
+    mockedGetDB.mockReturnValue(db as any);
+    const result = await new GlobalPayrollService().addGlobalEmployee("5", input);
+    expect(result).toMatchObject({ status: "onboarding", bank_name: null });
+    expect(db.create).toHaveBeenCalledWith(
+      "global_employees",
+      expect.objectContaining({ uae_profile: JSON.stringify(input.uaeProfile) }),
+    );
+  });
+
+  it.each([undefined, "", "   ", "Emirates NBD"])(
+    "accepts optional bank name %j on create and edit",
+    (bankName) => {
+      expect(addGlobalEmployeeSchema.safeParse({ body: { ...input, bankName } }).success).toBe(
+        true,
+      );
+      expect(
+        updateGlobalEmployeeSchema.safeParse({ params: { id: "employee-1" }, body: { bankName } })
+          .success,
+      ).toBe(true);
+    },
+  );
+
+  it.each(["Bank123", "<script>", "a".repeat(101)])(
+    "still rejects invalid nonempty bank name %j on create and edit",
+    (bankName) => {
+      expect(addGlobalEmployeeSchema.safeParse({ body: { ...input, bankName } }).success).toBe(
+        false,
+      );
+      expect(
+        updateGlobalEmployeeSchema.safeParse({ params: { id: "employee-1" }, body: { bankName } })
+          .success,
+      ).toBe(false);
+    },
+  );
+
+  it("clears a bank name on edit and leaves it unchanged when omitted", async () => {
+    const db = makeMockDb();
+    db.findOne.mockResolvedValue({ id: "employee-1", country_id: input.countryId });
+    db.findById.mockResolvedValue({ id: input.countryId, code: "AE", currency: "AED" });
+    mockedGetDB.mockReturnValue(db as any);
+    const service = new GlobalPayrollService();
+    await service.updateGlobalEmployee("5", "employee-1", { bankName: "   " });
+    expect(db.update).toHaveBeenLastCalledWith("global_employees", "employee-1", {
+      bank_name: null,
+    });
+    await service.updateGlobalEmployee("5", "employee-1", { department: "QA" });
+    expect(db.update).toHaveBeenLastCalledWith("global_employees", "employee-1", {
+      department: "QA",
+    });
+  });
+});
 
 describe("GlobalPayrollService employee self-service identity links", () => {
   let service: GlobalPayrollService;
