@@ -292,7 +292,7 @@ describe("UAE payroll persistence and reporting with real calculation", () => {
     expect(html).toContain("Aisha Example");
     expect(html).not.toContain("Changed");
     expect(html).toContain("Frozen UAE LLC");
-    expect(html).toContain("Net pay: AED 10000.00");
+    expect(html).toContain('aria-label="Net pay: AED 10,000.00"');
     expect(item().uae_calculation).toBe(original.uae_calculation);
     expect((await details()).items[0].employee_name).toBe("Aisha Example");
     fixture.clearWrites();
@@ -725,7 +725,7 @@ describe("UAE payroll persistence and reporting with real calculation", () => {
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>");
     expect(html).toContain("Loan repayment");
-    expect(html).toContain("Print payslip");
+    expect(html).toContain("Print / Save PDF");
     expect(html).not.toContain("AE070331234567890123456");
   });
 
