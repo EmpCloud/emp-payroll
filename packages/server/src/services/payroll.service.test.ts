@@ -5,6 +5,11 @@ vi.mock("../db/empcloud", () => ({
   findUsersByOrgId: vi.fn(),
   findOrgById: vi.fn(),
   getEmpCloudDB: vi.fn(),
+  findEmployeeProfileByUserId: vi.fn().mockResolvedValue(null),
+}));
+vi.mock("../db/empexit", () => ({
+  findEffectiveExitsForUsers: vi.fn().mockResolvedValue(new Map()),
+  isEmpExitEnabled: vi.fn(() => false),
 }));
 vi.mock("../config", () => ({
   config: { cloudHrms: { enabled: false } },
@@ -12,15 +17,6 @@ vi.mock("../config", () => ({
 vi.mock("./cloud-hrms.service", () => ({
   getMonthlyAttendance: vi.fn(),
   toLocalAttendanceFormat: vi.fn(),
-}));
-vi.mock("./compliance/india-statutory.service", () => ({
-  computePF: vi.fn(() => ({
-    employeeEPF: 1800,
-    totalEmployer: 3250,
-    totalEmployee: 1800,
-  })),
-  computeESI: vi.fn(() => null),
-  computeProfessionalTax: vi.fn(() => ({ taxAmount: 200 })),
 }));
 vi.mock("./tax/india-tax.service", () => ({
   computeIncomeTax: vi.fn(() => ({
@@ -33,7 +29,7 @@ vi.mock("./tax/india-tax.service", () => ({
 import { PayrollService } from "./payroll.service";
 import { getDB } from "../db/adapters";
 import { findUsersByOrgId, getEmpCloudDB } from "../db/empcloud";
-import { computePF, computeESI } from "./compliance/india-statutory.service";
+import { makePayrollFixture } from "./test-utils/payroll-fixture";
 
 const mockedGetDB = vi.mocked(getDB);
 const mockedFindUsers = vi.mocked(findUsersByOrgId);
@@ -129,50 +125,13 @@ describe("PayrollService", () => {
 
   describe("computePayroll", () => {
     function setupComputeMocks(employeeCount: number) {
-      // getRun
-      mockDb.findOne
-        .mockResolvedValueOnce({
-          id: "run-1",
-          empcloud_org_id: 1,
-          status: "draft",
-          month: 3,
-          year: 2026,
-        }) // getRun for computePayroll
-        .mockResolvedValueOnce({ state: "KA" }); // org settings
-
-      // Setup per-employee mocks
-      for (let i = 0; i < employeeCount; i++) {
-        mockDb.findOne
-          .mockResolvedValueOnce({ pf_details: null, tax_info: null }) // profile
-          .mockResolvedValueOnce({
-            // salary
-            gross_salary: 600000,
-            components: JSON.stringify([
-              { code: "BASIC", monthlyAmount: 25000 },
-              { code: "HRA", monthlyAmount: 12500 },
-              { code: "SPECIAL", monthlyAmount: 12500 },
-            ]),
-            is_active: true,
-          })
-          .mockResolvedValueOnce(null); // attendance (local fallback)
-      }
-
-      // After computation, getRun is called again
-      mockDb.findOne.mockResolvedValueOnce({
-        id: "run-1",
-        empcloud_org_id: 1,
-        status: "computed",
-        total_gross: 50000,
-        total_net: 43000,
-      });
-
-      mockedFindUsers.mockResolvedValue(
-        Array.from({ length: employeeCount }, (_, i) => ({
-          id: i + 100,
-          first_name: `Emp${i}`,
-          last_name: `Test${i}`,
-        })) as any,
-      );
+      const fixture = makePayrollFixture({ employeeCount, month: 3 });
+      mockDb = fixture.db as ReturnType<typeof makeMockDb>;
+      mockedGetDB.mockReturnValue(mockDb as any);
+      mockedFindUsers.mockResolvedValue(fixture.employees as any);
+      mockedGetEmpCloudDB.mockReturnValue(fixture.empcloudDb);
+      service = new PayrollService();
+      return fixture;
     }
 
     it("should compute payroll and generate payslips for each employee", async () => {
@@ -208,8 +167,8 @@ describe("PayrollService", () => {
 
       // Both employees have same salary structure, so employer cost should match
       expect(emp1Cost).toBe(emp2Cost);
-      // Employer cost = gross + employeeEmployerContributions (PF totalEmployer = 3250)
-      expect(emp1Cost).toBe(50000 + 3250); // gross 50000 + employer PF 3250
+      // Employer cost = gross + employeeEmployerContributions (PF totalEmployer = 1950)
+      expect(emp1Cost).toBe(50000 + 1950); // gross 50000 + employer PF 1950
     });
 
     it("should generate payslip with correct earnings and deductions", async () => {
@@ -240,34 +199,14 @@ describe("PayrollService", () => {
     });
 
     it("should skip employees without active salary", async () => {
-      mockDb.findOne
-        .mockResolvedValueOnce({
-          id: "run-1",
-          empcloud_org_id: 1,
-          status: "draft",
-          month: 3,
-          year: 2026,
-        })
-        .mockResolvedValueOnce({ state: "KA" })
-        .mockResolvedValueOnce(null) // profile
-        .mockResolvedValueOnce(null); // no salary — skip
-
-      // After computation
-      mockDb.findOne.mockResolvedValueOnce({ id: "run-1", empcloud_org_id: 1, status: "computed" });
-
-      mockedFindUsers.mockResolvedValue([{ id: 100, first_name: "Emp", last_name: "Test" }] as any);
-
+      const fixture = setupComputeMocks(1);
+      delete fixture.salaries[100];
       await service.computePayroll("run-1", "1");
-
-      const payslipCalls = mockDb.create.mock.calls.filter((c: any[]) => c[0] === "payslips");
-      expect(payslipCalls).toHaveLength(0);
-
+      expect(mockDb.create.mock.calls.filter((call) => call[0] === "payslips")).toHaveLength(0);
       expect(mockDb.update).toHaveBeenCalledWith(
         "payroll_runs",
         "run-1",
-        expect.objectContaining({
-          employee_count: 0,
-        }),
+        expect.objectContaining({ employee_count: 0 }),
       );
     });
 
@@ -276,51 +215,8 @@ describe("PayrollService", () => {
     // negative net pay. The employee should be skipped and the skip
     // surfaced in the run notes + return value.
     it("should skip employees whose salary structure has no earning components (#268)", async () => {
-      // Provide a working empcloud DB stub so the attendance query doesn't
-      // explode before reaching the guard. The skip path triggers BEFORE
-      // PF/ESI/TDS, but it does run after the attendance lookup, so we
-      // need a chainable knex-like mock.
-      // The service does two empcloud DB queries:
-      //   1) attendance_records: chain ends with `.select(...)` and is awaited
-      //      (returning an array → the rows go into `[attRecord]`)
-      //   2) leave_applications: chain ends with `.first()` (returning a row)
-      // Build a thenable chain so both shapes resolve correctly.
-      const attRows = [{ present_days: 0, absent_days: 0, leave_days: 0 }];
-      const leaveRow = { paid_leave: 0, unpaid_leave: 0 };
-      const queryStub: any = {};
-      queryStub.where = vi.fn().mockReturnValue(queryStub);
-      queryStub.whereBetween = vi.fn().mockReturnValue(queryStub);
-      queryStub.join = vi.fn().mockReturnValue(queryStub);
-      queryStub.select = vi.fn().mockReturnValue(queryStub);
-      queryStub.first = vi.fn().mockResolvedValue(leaveRow);
-      // Make the chain awaitable: `await empcloudDb(...).where(...).select(...)`
-      // resolves to the attendance rows array.
-      queryStub.then = (resolve: (v: any) => any) => Promise.resolve(attRows).then(resolve);
-      const empcloudDbFn: any = vi.fn(() => queryStub);
-      empcloudDbFn.raw = vi.fn((s: string) => s);
-      mockedGetEmpCloudDB.mockReturnValue(empcloudDbFn);
-
-      mockDb.findOne
-        .mockResolvedValueOnce({
-          id: "run-1",
-          empcloud_org_id: 1,
-          status: "draft",
-          month: 3,
-          year: 2026,
-        })
-        .mockResolvedValueOnce({ state: "KA" }) // org settings
-        .mockResolvedValueOnce({ pf_details: null, tax_info: null }) // profile
-        .mockResolvedValueOnce({
-          // salary with empty components — the bug shape that broke #268
-          gross_salary: 10191667,
-          components: JSON.stringify([]),
-          is_active: true,
-        });
-
-      // After computation
-      mockDb.findOne.mockResolvedValueOnce({ id: "run-1", empcloud_org_id: 1, status: "computed" });
-
-      mockedFindUsers.mockResolvedValue([{ id: 100, first_name: "Emp", last_name: "Test" }] as any);
+      const fixture = setupComputeMocks(1);
+      fixture.salaries[100].components = [];
 
       const result: any = await service.computePayroll("run-1", "1");
 

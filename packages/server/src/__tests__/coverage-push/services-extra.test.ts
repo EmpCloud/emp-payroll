@@ -175,23 +175,53 @@ describe("GlobalPayrollService", () => {
     expect(db.update).toHaveBeenCalled();
   });
 
-  it("createPayrollRun — creates run with items", async () => {
-    db.findMany.mockResolvedValue({
+  it("createPayrollRun — creates non-India run with salary items", async () => {
+    db.findMany.mockResolvedValueOnce({
       data: [
         {
           id: "ge1",
-          gross_monthly_salary: 100000,
+          salary_amount: 5000,
+          salary_frequency: "monthly",
           country_id: "c1",
-          currency_code: "INR",
+          salary_currency: "GBP",
           employee_name: "John",
         },
       ],
       total: 1,
     });
-    db.findById.mockResolvedValue({ id: "c1", code: "IN", compliance_notes: null, name: "India" });
+    db.findById
+      .mockResolvedValueOnce({
+        id: "c1",
+        code: "GB",
+        currency: "GBP",
+        compliance_notes: null,
+        name: "United Kingdom",
+      })
+      .mockResolvedValueOnce({ id: "m", status: "draft" });
     db.findOne.mockResolvedValue(null); // no duplicate run
-    await svc.createPayrollRun("1", "c1", 3, 2026);
-    expect(db.create).toHaveBeenCalled();
+    const result = await svc.createPayrollRun("1", "c1", 3, 2026);
+    expect(result.employee_count).toBe(1);
+    expect(db.create).toHaveBeenCalledWith(
+      "global_payroll_items",
+      expect.objectContaining({
+        payroll_run_id: "m",
+        global_employee_id: "ge1",
+        gross_salary: 5000,
+        net_salary: expect.any(Number),
+        currency: "GBP",
+      }),
+    );
+    expect(db.create).toHaveBeenCalledTimes(2);
+  });
+
+  it("createPayrollRun — requires domestic statutory payroll for India before writing", async () => {
+    db.findById.mockResolvedValue({ id: "c1", code: "IN", name: "India" });
+    await expect(svc.createPayrollRun("1", "c1", 3, 2026)).rejects.toMatchObject({
+      statusCode: 409,
+      code: "INDIA_PAYROLL_REQUIRES_STATUTORY_PROFILE",
+    });
+    expect(db.create).not.toHaveBeenCalled();
+    expect(db.update).not.toHaveBeenCalled();
   });
 
   it("listPayrollRuns — lists", async () => {

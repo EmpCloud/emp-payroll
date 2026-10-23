@@ -11,6 +11,7 @@ import { api, apiGet } from "@/api/client";
 import { useQuery } from "@tanstack/react-query";
 import { Download, FileText, Shield, Building2, IndianRupee, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { getIndiaPFDueDate } from "@emp-payroll/shared";
 
 const MONTHS = [
   "",
@@ -58,7 +59,9 @@ export function ReportsPage() {
       return;
     }
     try {
-      const { data } = await api.get(`/payroll/${runId}/reports/${type}`, { responseType: "blob" });
+      const { data, headers } = await api.get(`/payroll/${runId}/reports/${type}`, {
+        responseType: "blob",
+      });
       const ext = type === "pf" ? "txt" : "csv";
       const url = URL.createObjectURL(new Blob([data]));
       const a = document.createElement("a");
@@ -67,8 +70,24 @@ export function ReportsPage() {
       a.click();
       URL.revokeObjectURL(url);
       toast.success(`${type.toUpperCase()} report downloaded`);
-    } catch {
-      toast.error(`Failed to generate ${type.toUpperCase()} report`);
+      if (type === "pf" && headers["x-pf-admin-charges-due"] != null) {
+        toast(
+          `Establishment PF administration charge due: ${formatCurrency(Number(headers["x-pf-admin-charges-due"]))}`,
+          { duration: 7000 },
+        );
+      }
+    } catch (error: any) {
+      let body = error?.response?.data;
+      if (body instanceof Blob) {
+        try {
+          body = JSON.parse(await body.text());
+        } catch {
+          body = null;
+        }
+      }
+      toast.error(body?.error?.message || `Failed to generate ${type.toUpperCase()} report`, {
+        duration: 8000,
+      });
     }
   }
 
@@ -127,7 +146,11 @@ export function ReportsPage() {
             <ReportCard
               icon={Shield}
               title="PF ECR"
-              description="Electronic Challan cum Return for EPFO filing"
+              description={
+                selectedRunData
+                  ? `Electronic Challan cum Return. Filing/payment due: ${getIndiaPFDueDate(Number(selectedRunData.year), Number(selectedRunData.month))}.`
+                  : "Electronic Challan cum Return for EPFO filing"
+              }
               format="TXT (ECR Format)"
               onDownload={() => downloadReport("pf")}
             />

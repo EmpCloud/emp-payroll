@@ -1,59 +1,14 @@
 import { getDB } from "../db/adapters";
 import { AppError } from "../api/middleware/error.middleware";
-import { computePF, computeESI } from "./compliance/india-statutory.service";
+import { computeESI } from "./compliance/india-statutory.service";
+import { generatePFECRFile } from "./pf-ecr.service";
 
 export class ReportsService {
   private db = getDB();
 
   /** PF ECR (Electronic Challan cum Return) format */
-  async generatePFECR(
-    runId: string,
-    orgId: string,
-  ): Promise<{ filename: string; content: string }> {
-    const { payslips, employees, org } = await this.getRunData(runId, orgId);
-
-    const lines: string[] = [];
-    // ECR Header
-    lines.push(`#~#${org?.pf_establishment_code || ""}#~#TRRN#~#${org?.name || ""}#~#`);
-
-    for (const ps of payslips) {
-      const emp = employees[ps.employee_id];
-      if (!emp) continue;
-      const pfDetails = this.parseJSON(emp.pf_details);
-      const components = this.parseJSON(
-        (await this.db.findOne<any>("employee_salaries", { employee_id: emp.id, is_active: true }))
-          ?.components,
-      );
-      const basicMonthly = components.find((c: any) => c.code === "BASIC")?.monthlyAmount || 0;
-
-      const pf = computePF({
-        employeeId: emp.id,
-        month: ps.month,
-        year: ps.year,
-        basicSalary: basicMonthly,
-      });
-
-      // UAN, Name, Gross Wages, EPF Wages, EPS Wages, EDLI Wages, EPF Contribution, EPS Contribution, Diff
-      lines.push(
-        [
-          this.parseJSON(emp.tax_info).uan || "",
-          `${emp.first_name} ${emp.last_name}`,
-          Math.round(Number(ps.gross_earnings)),
-          pf.pfWages,
-          pf.pfWages,
-          pf.pfWages,
-          pf.employeeEPF,
-          pf.employerEPS,
-          0,
-          pfDetails.pfNumber || "",
-        ].join("#~#"),
-      );
-    }
-
-    return {
-      filename: `PF-ECR-${ps_period(payslips[0])}.txt`,
-      content: lines.join("\n"),
-    };
+  async generatePFECR(runId: string, orgId: string) {
+    return generatePFECRFile(this.db, runId, orgId);
   }
 
   /** ESI Monthly Return */

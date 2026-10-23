@@ -1,6 +1,8 @@
 import { v4 as uuid } from "uuid";
 import { getDB } from "../db/adapters";
 import { getEmpCloudDB, findUserById } from "../db/empcloud";
+import { UaeExitService } from "./uae/uae-exit.service";
+import { AppError } from "../api/middleware/error.middleware";
 
 export interface InitiateExitInput {
   orgId: number;
@@ -106,6 +108,44 @@ export async function getExit(id: string, orgId: number) {
 export async function updateExit(id: string, orgId: number, data: Record<string, any>) {
   const db = getDB();
   const updates: Record<string, any> = {};
+  const current = await db.findOne<any>("employee_exits", { id, org_id: orgId });
+  if (!current) return false;
+  const uae = await new UaeExitService(db).context(String(orgId), id);
+  if (uae.isUae) {
+    const protectedFields = [
+      "fnf_calculated",
+      "fnf_paid",
+      "pending_salary",
+      "leave_encashment",
+      "gratuity",
+      "bonus_due",
+      "deductions",
+      "fnf_total",
+    ];
+    if (protectedFields.some((key) => data[key] !== undefined))
+      throw new AppError(
+        409,
+        "UAE_SETTLEMENT_EVIDENCE_REQUIRED",
+        "UAE settlement amounts and paid status come from approved payroll and bank evidence",
+      );
+    if (
+      data.last_working_date !== undefined &&
+      uae.employees.some((employee) =>
+        ["locked", "approved", "paid"].includes(employee.run?.status),
+      )
+    )
+      throw new AppError(
+        409,
+        "IMMUTABLE_UAE_SETTLEMENT",
+        "Reconcile the locked or approved payroll before changing the exit date",
+      );
+    if (["completed", "fnf_processed"].includes(data.status) && !uae.fnfPaid)
+      throw new AppError(
+        409,
+        "UAE_SETTLEMENT_UNPAID",
+        "Confirm the UAE settlement payment before completing the exit",
+      );
+  }
 
   const allowed = [
     "status",
@@ -171,6 +211,12 @@ export async function calculateFnF(id: string, orgId: number) {
   if (!exit) return null;
 
   const db = getDB();
+  if ((await new UaeExitService(db).context(String(orgId), id)).isUae)
+    throw new AppError(
+      409,
+      "UAE_SETTLEMENT_INPUTS_REQUIRED",
+      "Prepare the UAE settlement using reviewed leave, notice and service inputs in this exit's UAE payroll section",
+    );
 
   // #117 — The query referenced a table that doesn't exist
   // (`employee_salary_assignments`). The actual payroll table is

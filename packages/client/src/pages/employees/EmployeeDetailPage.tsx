@@ -7,8 +7,10 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { Input } from "@/components/ui/Input";
 import { SelectField } from "@/components/ui/SelectField";
+import { PFMembershipFields, readPFMembershipFields } from "@/components/ui/PFMembershipFields";
 import { Modal } from "@/components/ui/Modal";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
+import { computePFPreview } from "@/lib/pf-preview";
 import {
   useEmployee,
   useEmployeeSalary,
@@ -46,6 +48,7 @@ import { api } from "@/api/client";
 import toast from "react-hot-toast";
 import {
   resolveSalaryComponents,
+  type PFDetails,
   SalaryResolverError,
   type ResolverComponent,
 } from "@emp-payroll/shared";
@@ -270,32 +273,24 @@ export function EmployeeDetailPage() {
       ? JSON.parse(salary.components)
       : salary.components
     : [];
-  const monthlyBasic = components.find((c: any) => c.code === "BASIC")?.monthlyAmount || 0;
+  const monthlyBasic = Number(components.find((c: any) => c.code === "BASIC")?.monthlyAmount) || 0;
   const monthlyHRA = components.find((c: any) => c.code === "HRA")?.monthlyAmount || 0;
-  // #365 — Monthly EPF displayed on the read-only Salary Details card,
-  // mirroring the cap math used by both the payroll engine and the
-  // SalaryAssignForm preview so HR sees the SAME number everywhere
-  // (slip / Salary Details card / preview).
-  // Resolution chain: opted out -> 0; rate from employee profile, falling
-  // back to org default (12%); apply org wage-basis (full basic vs ₹15K
-  // ceiling); finally cap with pfMaxEmployeeContribution.
-  const _orgSettings: any = orgSettingsRes?.data;
-  const _pfOptedOut = pfDetails?.isOptedOut === true;
-  const _pfRate =
-    Number(pfDetails?.contributionRate ?? _orgSettings?.pfDefaultEmployeeRate ?? 12) || 12;
-  const _applyFullBasic = _orgSettings?.pfApplyFullBasic === true;
-  const _maxCap =
-    _orgSettings?.pfMaxEmployeeContribution != null
-      ? Number(_orgSettings.pfMaxEmployeeContribution)
-      : null;
-  let monthlyEPFForCard = 0;
-  if (!_pfOptedOut && monthlyBasic > 0) {
-    const _pfBase = _applyFullBasic ? monthlyBasic : Math.min(monthlyBasic, 15000);
-    monthlyEPFForCard = Math.round((_pfBase * _pfRate) / 100);
-    if (_maxCap != null && Number.isFinite(_maxCap) && monthlyEPFForCard > _maxCap) {
-      monthlyEPFForCard = Math.round(_maxCap);
-    }
-  }
+  const currentPeriod = new Date()
+    .toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })
+    .split("-")
+    .map(Number);
+  const cardPF = computePFPreview({
+    employeeId: id!,
+    year: currentPeriod[0],
+    month: currentPeriod[1],
+    components,
+    pfDetails,
+    orgOverrides: orgSettingsRes?.data,
+    dateOfJoining: emp.date_of_joining?.slice(0, 10),
+    dateOfExit: emp.dateOfExit?.slice(0, 10),
+  });
+  const monthlyEPFForCard = cardPF.employeeEPF;
+  const _pfOptedOut = !cardPF.isCovered;
 
   async function handleEdit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -466,11 +461,12 @@ export function EmployeeDetailPage() {
                 [
                   "Monthly EPF (Employee)",
                   _pfOptedOut
-                    ? "Opted out"
+                    ? "Not covered"
                     : monthlyEPFForCard > 0
                       ? formatCurrency(monthlyEPFForCard)
                       : "—",
                 ],
+                ["Monthly VPF (Employee)", formatCurrency(cardPF.employeeVPF)],
                 ["Employee Code", emp.employee_code || "—"],
               ].map(([label, value]) => (
                 <DetailRow
@@ -481,6 +477,11 @@ export function EmployeeDetailPage() {
                 />
               ))}
             </dl>
+            {cardPF.warnings.map((warning) => (
+              <p key={warning} role="alert" className="mt-2 text-xs text-amber-700">
+                {warning}
+              </p>
+            ))}
           </CardContent>
         </Card>
 
@@ -549,7 +550,30 @@ export function EmployeeDetailPage() {
                   ["UAN", taxInfo.uan || "—"],
                   ["PF Number", pfDetails.pfNumber || "—"],
                   ["PF Rate", `${pfDetails.contributionRate || 12}%`],
-                  ["PF Opted Out", pfDetails.isOptedOut ? "Yes" : "No"],
+                  [
+                    "Recorded PF exclusion",
+                    pfDetails.isOptedOut || pfDetails.exclusionReason ? "Yes" : "No",
+                  ],
+                  ["Current PF coverage", cardPF.isCovered ? "Covered" : "Not covered"],
+                  ["PF exclusion reason", pfDetails.exclusionReason || "Not recorded"],
+                  [
+                    "Recorded EPS membership",
+                    pfDetails.isEpsMember == null
+                      ? "Existing rules"
+                      : pfDetails.isEpsMember
+                        ? "Member"
+                        : "Excluded",
+                  ],
+                  ["Current EPS coverage", cardPF.isEpsMember ? "Covered" : "Not covered"],
+                  ["EPS exclusion reason", pfDetails.epsExclusionReason || "Not recorded"],
+                  ["PF membership start", pfDetails.pfMembershipDate || "Not recorded"],
+                  ["EPS membership start", pfDetails.epsMembershipDate || "Not recorded"],
+                  [
+                    "PF eligibility review wages",
+                    pfDetails.membershipWages == null
+                      ? "Not recorded"
+                      : formatCurrency(pfDetails.membershipWages),
+                  ],
                 ],
               },
               {
@@ -962,6 +986,8 @@ export function EmployeeDetailPage() {
             }
           })()}
           pfDetails={pfDetails}
+          dateOfJoining={emp.date_of_joining?.slice(0, 10)}
+          dateOfExit={emp.dateOfExit?.slice(0, 10)}
           taxInfo={taxInfo}
           loading={salaryAssigning}
           onSubmit={async (data) => {
@@ -1149,8 +1175,10 @@ export function EmployeeDetailPage() {
                   state: ((fd.get("ptState") as string) || "").trim() || null,
                 }),
                 apiPut(`/employees/${id}/pf-details`, {
+                  ...pfDetails,
+                  ...readPFMembershipFields(fd),
                   pfNumber: fd.get("pfNumber") as string,
-                  contributionRate: Number(fd.get("pfRate")) || 12,
+                  contributionRate: fd.get("pfRate") === "" ? 12 : Number(fd.get("pfRate")),
                   isOptedOut: fd.get("pfOptOut") === "true",
                 }),
                 apiPut(`/employees/${id}/esi-details`, {
@@ -1268,18 +1296,22 @@ export function EmployeeDetailPage() {
                 name="pfRate"
                 label="PF Rate (%)"
                 type="number"
-                defaultValue={String(pfDetails.contributionRate || 12)}
+                min="0"
+                max="100"
+                step="0.01"
+                defaultValue={String(pfDetails.contributionRate ?? 12)}
               />
               <SelectField
                 id="pfOptOut"
                 name="pfOptOut"
-                label="PF Opted Out?"
-                defaultValue={pfDetails.isOptedOut ? "true" : "false"}
+                label="Recorded PF exclusion?"
+                defaultValue={pfDetails.isOptedOut || pfDetails.exclusionReason ? "true" : "false"}
                 options={[
-                  { value: "false", label: "No — deduct PF" },
-                  { value: "true", label: "Yes — opt out" },
+                  { value: "false", label: "No recorded exclusion" },
+                  { value: "true", label: "Yes — specify recorded reason" },
                 ]}
               />
+              <PFMembershipFields details={pfDetails} />
             </div>
           </div>
           <div>
@@ -1764,6 +1796,8 @@ function SalaryAssignForm({
   currentCTC,
   currentOverrides,
   pfDetails,
+  dateOfJoining,
+  dateOfExit,
   taxInfo,
   loading,
   onSubmit,
@@ -1773,7 +1807,9 @@ function SalaryAssignForm({
   structures: any[];
   currentCTC?: number;
   currentOverrides?: Record<string, number>;
-  pfDetails?: { isOptedOut?: boolean; contributionRate?: number | string };
+  pfDetails?: Partial<PFDetails>;
+  dateOfJoining?: string;
+  dateOfExit?: string;
   // Only `deductPT` is consumed here — the preview honours the per-employee
   // "Deduct Professional Tax?" toggle so it doesn't show a ₹200 PT line for
   // employees that have PT switched off.
@@ -1784,16 +1820,14 @@ function SalaryAssignForm({
 }) {
   const [structureId, setStructureId] = useState(structures[0]?.id || "");
   const [ctc, setCTC] = useState(currentCTC || 0);
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const [effectiveFrom, setEffectiveFrom] = useState<string>(todayStr);
   // Per-employee component pins: { componentCode: monthlyAmount }. Pinning a
   // component fixes its ₹/month; the rest auto-adjust to keep gross exact.
   // Pre-filled from the current salary so a revise doesn't silently drop pins.
   const [overrides, setOverrides] = useState<Record<string, number>>(currentOverrides || {});
 
-  // Pull the org's PF/ESI overrides so the EPF preview matches what the
-  // payroll engine actually computes. The previous version hardcoded the
-  // ₹15,000 wage ceiling in the preview, so any HR who flipped
-  // "PF Wage Calculation = Apply to actual" or set a custom max-cap saw a
-  // PREVIEW that disagreed with the resulting payslip.
+  // Use the same statutory rules and organization settings as payroll.
   const user = getUser();
   const { data: orgSettingsRes } = useOrgSettings(user?.orgId ? String(user.orgId) : "");
   const orgSettings = orgSettingsRes?.data;
@@ -1851,66 +1885,37 @@ function SalaryAssignForm({
   }
   const earningRows = resolved.filter((c) => c.type === "earning");
   const reimbursementRows = resolved.filter((c) => c.type === "reimbursement");
-  // #365 — Apply org's EPF max-cap to structure-defined EPF deductions in
-  // the preview so HR sees the same number that payroll will actually
-  // deduct. Without this, a structure with "EPF = 12% of BASIC" showed
-  // the raw uncapped value (e.g. ₹2,700) in the deductions list while
-  // the actual payslip honoured the ₹1,800 org cap.
-  const _normCodeEpf = (code: string | undefined) =>
-    (code || "").toUpperCase().replace(/[^A-Z]/g, "");
-  const _isEpfishCode = (code: string | undefined) => {
-    const c = _normCodeEpf(code);
-    if (!c) return false;
-    if (c.includes("EPF")) return true;
-    return c === "PF" || c.startsWith("PFE") || c.startsWith("PFC");
-  };
-  const deductionRows = resolved
-    .filter((c) => c.type === "deduction")
-    .map((c) => {
-      if (!_isEpfishCode(c.code)) return c;
-      const cap =
-        orgSettings?.pfMaxEmployeeContribution != null
-          ? Number(orgSettings.pfMaxEmployeeContribution)
-          : null;
-      if (cap != null && Number.isFinite(cap) && cap >= 0 && c.monthlyAmount > cap) {
-        return { ...c, monthlyAmount: Math.round(cap) };
-      }
-      return c;
-    });
-  const monthlyBasic = earningRows.find((c) => c.code === "BASIC")?.monthlyAmount || 0;
-  // Monthly Gross is EARNINGS only -- deductions reduce net, reimbursements
-  // are paid on top but not part of taxable gross.
-  const monthlyGross = earningRows.reduce((s, c) => s + c.monthlyAmount, 0);
-  const monthlyStructureDeductions = deductionRows.reduce((s, c) => s + c.monthlyAmount, 0);
-  const monthlyReimbursements = reimbursementRows.reduce((s, c) => s + c.monthlyAmount, 0);
-  // EPF preview math -- mirrors the server's india-statutory.service so
-  // the preview never lies about what payroll will actually deduct.
-  // Resolution order (the preview honours all of them):
-  //   1. employee opted out  -> EPF = 0
-  //   2. employee contributionRate -> overrides default (default 12%)
-  //   3. org pfDefaultEmployeeRate -> overrides 12% across the org
-  //   4. org pfApplyFullBasic == true  -> use the FULL basic, no ceiling
-  //      org pfApplyFullBasic == false / unset -> apply the ₹15,000 ceiling
-  //   5. org pfMaxEmployeeContribution -> hard rupee cap on the result
-  //      (e.g. ₹1,800 = the conservative "12% of ₹15K" cap most orgs use)
-  const pfOptedOut = pfDetails?.isOptedOut === true;
-  const orgDefaultRate = orgSettings?.pfDefaultEmployeeRate;
-  const employeeRate = pfDetails?.contributionRate;
-  const pfRate = Number(employeeRate ?? orgDefaultRate ?? 12) || 12;
-  const applyFullBasic = orgSettings?.pfApplyFullBasic === true;
-  const maxCap =
-    orgSettings?.pfMaxEmployeeContribution != null
-      ? Number(orgSettings.pfMaxEmployeeContribution)
-      : null;
-
-  let monthlyEPF = 0;
-  if (!pfOptedOut) {
-    const pfBase = applyFullBasic ? monthlyBasic : Math.min(monthlyBasic, 15000);
-    monthlyEPF = Math.round((pfBase * pfRate) / 100);
-    if (maxCap != null && Number.isFinite(maxCap)) {
-      monthlyEPF = Math.min(monthlyEPF, maxCap);
-    }
-  }
+  const previewDate =
+    effectiveFrom >= "1900-01-01" && effectiveFrom <= "9998-12-31" ? effectiveFrom : todayStr;
+  const [previewYear, previewMonth] = previewDate.split("-").map(Number);
+  const previewPF = computePFPreview({
+    employeeId,
+    year: previewYear,
+    month: previewMonth,
+    components: resolved,
+    pfDetails,
+    dateOfJoining,
+    dateOfExit,
+    orgOverrides: orgSettings,
+  });
+  // Statutory PF is shown once, from the same calculation used by payroll.
+  const deductionRows = resolved.filter((c) => {
+    const code = c.code.toUpperCase().replace(/[^A-Z]/g, "");
+    return (
+      c.type === "deduction" &&
+      !(
+        code.includes("EPF") ||
+        code === "PF" ||
+        code.startsWith("PFE") ||
+        code.startsWith("PFC") ||
+        code === "VPF"
+      )
+    );
+  });
+  const monthlyGross = earningRows.reduce((sum, c) => sum + c.monthlyAmount, 0);
+  const monthlyStructureDeductions = deductionRows.reduce((sum, c) => sum + c.monthlyAmount, 0);
+  const monthlyReimbursements = reimbursementRows.reduce((sum, c) => sum + c.monthlyAmount, 0);
+  const monthlyEPF = previewPF.employeeEPF;
   // Professional Tax — flat ₹200/month estimate. PT is state-specific
   // (₹200 is the common top slab; some states levy less, Delhi/Haryana
   // none) and the engine computes the real figure at payroll-run time.
@@ -1920,52 +1925,12 @@ function SalaryAssignForm({
   // employee's "Deduct PT" toggle: when PT is off, no ₹200 is applied.
   const ptDeducted = taxInfo?.deductPT !== false;
   const monthlyPT = ptDeducted ? 200 : 0;
-  // Employer-side preview — Indian PF: employer also pays 12% of PF wages,
-  // split as 8.33% to EPS (capped at ₹15K basic = ₹1,250) and the REMAINDER
-  // to EPF. The EPF share is `12% total − EPS`, not a direct 3.67% — the
-  // direct rate mis-rounds (3.67% of ₹15,000 = ₹550.5 → ₹551; correct is
-  // ₹1,800 − ₹1,250 = ₹550). Plus EDLI 0.5% (cap ₹75) and Admin 0.5% (cap
-  // ₹75). Both ESI: 3.25% of gross capped at ESI ceiling (₹21,000).
-  // Surfaces these on the preview so HR and the employee see the full Cost
-  // to Company, not just take-home. Mirrors what india-statutory.service
-  // computes at payroll-run time -- numbers in the preview match the payslip.
-  const monthlyEmployerEPS = pfOptedOut
-    ? 0
-    : Math.round((Math.min(monthlyBasic, 15000) * 8.33) / 100);
-  const monthlyEmployerEPF = pfOptedOut
-    ? 0
-    : Math.max(
-        0,
-        Math.round(((applyFullBasic ? monthlyBasic : Math.min(monthlyBasic, 15000)) * 12) / 100) -
-          monthlyEmployerEPS,
-      );
-  // EDLI / PF Admin are also gated by the org's per-charge toggles
-  // (migration 034). `!== false` so a not-yet-loaded orgSettings keeps
-  // them on -- matching the engine default and the old behaviour.
-  const edliEnabled = orgSettings?.pfEdliEnabled !== false;
-  const pfAdminEnabled = orgSettings?.pfAdminEnabled !== false;
-  const monthlyEDLI =
-    pfOptedOut || !edliEnabled
-      ? 0
-      : Math.min(75, Math.round((Math.min(monthlyBasic, 15000) * 0.5) / 100));
-  const monthlyPFAdmin =
-    pfOptedOut || !pfAdminEnabled
-      ? 0
-      : Math.min(75, Math.round((Math.min(monthlyBasic, 15000) * 0.5) / 100));
-  const totalEmployerContribution =
-    monthlyEmployerEPS + monthlyEmployerEPF + monthlyEDLI + monthlyPFAdmin;
+  const monthlyEmployerEPS = previewPF.employerEPS;
+  const monthlyEmployerEPF = previewPF.employerEPF;
+  const monthlyEDLI = previewPF.edliCharges;
+  const monthlyPFAdmin = previewPF.adminCharges;
+  const totalEmployerContribution = previewPF.totalEmployer;
   const employerPfInCtc = !!orgSettings?.employerPfInCtc;
-
-  // Effective From defaults to today but MAY be backdated — HR often
-  // records a revision after the fact (e.g. an increment effective from the
-  // 1st of a month that's already started, or a back-dated appraisal). The
-  // earlier hard "no past dates" guard (#360) blocked that legitimate case,
-  // so it's been removed. Server-side `assignToEmployee` deactivates the
-  // prior active row and inserts the new one at this effective_from (past
-  // or not); the FY-projection helper orders segments by effective_from,
-  // so a back-dated revision slots into the timeline correctly.
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const [effectiveFrom, setEffectiveFrom] = useState<string>(todayStr);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -2117,34 +2082,36 @@ function SalaryAssignForm({
                 </>
               )}
 
+              <p className="text-xs text-gray-500">
+                Contracted monthly breakdown; PF estimate for {previewMonth}/{previewYear} includes
+                recorded membership and joining/exit dates. Actual payroll also prorates earnings
+                and accounts for unpaid attendance. September 2026 uses the ceiling before and from
+                17 September.
+              </p>
+              {previewPF.warnings.map((warning) => (
+                <p key={warning} role="alert" className="text-xs text-amber-700">
+                  {warning}
+                </p>
+              ))}
               <div className="flex justify-between text-sm text-red-600">
                 <span>
                   EPF Deduction
-                  {pfOptedOut
-                    ? " (opted out)"
-                    : (() => {
-                        // Spell out which org override is in effect so HR
-                        // can verify the preview matches the rule they set
-                        // on Settings > Statutory Overrides. Order: cap >
-                        // wage-mode > rate.
-                        const bits: string[] = [];
-                        if (pfRate !== 12) bits.push(`${pfRate}%`);
-                        bits.push(applyFullBasic ? "on actual Basic" : "₹15K ceiling");
-                        if (
-                          maxCap != null &&
-                          Math.round(
-                            ((applyFullBasic ? monthlyBasic : Math.min(monthlyBasic, 15000)) *
-                              pfRate) /
-                              100,
-                          ) > maxCap
-                        ) {
-                          bits.push(`capped at ₹${maxCap}/mo`);
-                        }
-                        return bits.length > 0 ? ` (${bits.join(", ")})` : "";
-                      })()}
+                  {previewPF.isCovered
+                    ? orgSettings?.pfApplyFullBasic
+                      ? " (actual PF wages)"
+                      : previewPF.periods.length > 1
+                        ? " (period-specific ceilings)"
+                        : ` (${formatCurrency(previewPF.wageCeiling)} ceiling)`
+                    : " (not covered)"}
                 </span>
                 <span>{monthlyEPF > 0 ? `-${formatCurrency(monthlyEPF)}` : formatCurrency(0)}</span>
               </div>
+              {previewPF.employeeVPF > 0 && (
+                <div className="flex justify-between text-sm text-red-600">
+                  <span>Voluntary PF</span>
+                  <span>-{formatCurrency(previewPF.employeeVPF)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm text-red-600">
                 <span>Professional Tax (est.){ptDeducted ? "" : " (not deducted)"}</span>
                 <span>{monthlyPT > 0 ? `-${formatCurrency(monthlyPT)}` : formatCurrency(0)}</span>
@@ -2156,7 +2123,7 @@ function SalaryAssignForm({
                     monthlyGross +
                       monthlyReimbursements -
                       monthlyStructureDeductions -
-                      monthlyEPF -
+                      previewPF.totalEmployee -
                       monthlyPT,
                   )}
                 </span>
@@ -2174,13 +2141,13 @@ function SalaryAssignForm({
                   <div className="space-y-1">
                     {monthlyEmployerEPF > 0 && (
                       <div className="flex justify-between text-xs text-blue-900">
-                        <span>Employer EPF (3.67%)</span>
+                        <span>Employer EPF (after EPS allocation)</span>
                         <span>{formatCurrency(monthlyEmployerEPF)}</span>
                       </div>
                     )}
                     {monthlyEmployerEPS > 0 && (
                       <div className="flex justify-between text-xs text-blue-900">
-                        <span>Employer EPS (8.33%, capped at ₹15K basic)</span>
+                        <span>Employer EPS (8.33%, statutory ceiling)</span>
                         <span>{formatCurrency(monthlyEmployerEPS)}</span>
                       </div>
                     )}
@@ -2217,6 +2184,8 @@ function SalaryAssignForm({
         id="effective"
         label="Effective From"
         type="date"
+        min="1900-01-01"
+        max="9998-12-31"
         value={effectiveFrom}
         onChange={(e) => setEffectiveFrom(e.target.value)}
         required

@@ -1,5 +1,6 @@
 import { getDB } from "../db/adapters";
 import { AppError } from "../api/middleware/error.middleware";
+import { generatePFECRFile } from "./pf-ecr.service";
 
 /**
  * Government portal file format generators.
@@ -10,70 +11,10 @@ import { AppError } from "../api/middleware/error.middleware";
 export class GovtFormatsService {
   private db = getDB();
 
-  /**
-   * Generate EPFO ECR (Electronic Challan cum Return) file.
-   * Format: UAN#Member Name#Gross Wages#EPF Wages#EPS Wages#EDLI Wages#EPF Contribution (EE)#EPS Contribution (ER)#EPF Difference (ER)#NCP Days#Refund of Advances
-   */
-  async generateEPFOFile(
-    runId: string,
-    orgId: string,
-  ): Promise<{ filename: string; content: string }> {
-    const { payslips, employees, org, run } = await this.getRunData(runId, orgId);
-
-    const lines: string[] = [];
-    for (const ps of payslips) {
-      const emp = employees[ps.employee_id];
-      if (!emp) continue;
-
-      const taxInfo = this.parseJSON(emp.tax_info);
-      const pfDetails = this.parseJSON(emp.pf_details);
-      const uan = taxInfo.uan || "";
-      if (!uan) continue;
-
-      const grossWages = Number(ps.gross_earnings);
-      const epfWages = Math.min(grossWages, 15000); // PF wage ceiling
-      const epsWages = Math.min(epfWages, 15000);
-      const edliWages = Math.min(epfWages, 15000);
-      const epfEE = Math.round(epfWages * 0.12);
-      const epsER = Math.round(Math.min(epsWages, 15000) * 0.0833);
-      const epfDiffER = epfEE - epsER;
-
-      lines.push(
-        [
-          uan,
-          `${emp.first_name} ${emp.last_name}`.toUpperCase(),
-          grossWages,
-          epfWages,
-          epsWages,
-          edliWages,
-          epfEE,
-          epsER,
-          epfDiffER,
-          0, // NCP days
-          0, // Refund
-        ].join("#"),
-      );
-    }
-
-    const months = [
-      "",
-      "JAN",
-      "FEB",
-      "MAR",
-      "APR",
-      "MAY",
-      "JUN",
-      "JUL",
-      "AUG",
-      "SEP",
-      "OCT",
-      "NOV",
-      "DEC",
-    ];
-    return {
-      filename: `EPFO-ECR-${months[run.month]}-${run.year}.txt`,
-      content: lines.join("\n"),
-    };
+  /** Generate the same snapshot-based return as the statutory PF report. */
+  async generateEPFOFile(runId: string, orgId: string) {
+    const file = await generatePFECRFile(this.db, runId, orgId);
+    return { ...file, filename: file.filename.replace("PF-ECR-", "EPFO-ECR-") };
   }
 
   /**

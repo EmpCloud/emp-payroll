@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  uaeProfileSchema,
+  uaeInputsSchema,
+  uaeEmployerSchema,
+  uaeScheduleSchema,
+} from "./uae-payroll";
 import { Request, Response, NextFunction } from "express";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -113,6 +119,40 @@ const bankNameSchema = z
   .max(100)
   .regex(bankNameRegex, "Bank name must only contain letters, spaces, and . , & -");
 
+const pfMembershipDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((value) => {
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  }, "Use a valid date in YYYY-MM-DD format");
+const pfRateSchema = z.number().finite().min(0).max(100);
+
+export const pfDetailsSchema = z
+  .object({
+    pfNumber: z.string().optional(),
+    uan: z.string().optional(),
+    isEnrolled: z.boolean().optional(),
+    providentFund: z.boolean().optional(),
+    isOptedOut: z.boolean().optional(),
+    contributionRate: pfRateSchema.optional(),
+    employerContributionRate: pfRateSchema.optional(),
+    isVoluntaryPF: z.boolean().optional(),
+    vpfRate: pfRateSchema.optional(),
+    exclusionReason: z.enum(["wage_ceiling", "exempt"]).nullable().optional(),
+    epsExclusionReason: z.enum(["wage_ceiling", "ineligible"]).nullable().optional(),
+    isEpsMember: z.boolean().nullable().optional(),
+    pfMembershipDate: pfMembershipDateSchema.nullable().optional(),
+    epsMembershipDate: pfMembershipDateSchema.nullable().optional(),
+    membershipWages: z.number().finite().nonnegative().nullable().optional(),
+  })
+  .passthrough();
+
+export const updatePfDetailsSchema = z.object({
+  params: z.object({ id: z.string() }),
+  body: pfDetailsSchema,
+});
+
 export const createEmployeeSchema = z.object({
   body: z.object({
     // #1658 — emp_code is permissive on format (orgs use widely different
@@ -162,13 +202,7 @@ export const createEmployeeSchema = z.object({
         uan: z.string().optional(),
       })
       .optional(),
-    pfDetails: z
-      .object({
-        pfNumber: z.string().optional(),
-        isOptedOut: z.boolean().default(false),
-        contributionRate: z.number().default(12),
-      })
-      .optional(),
+    pfDetails: pfDetailsSchema.optional(),
   }),
 });
 
@@ -247,6 +281,7 @@ export const updateEmployeeSchema = z.object({
     designation: z.string().max(100).optional(),
     reportingManagerId: z.string().uuid().nullable().optional(),
     address: z.record(z.any()).optional(),
+    pfDetails: pfDetailsSchema.optional(),
   }),
 });
 
@@ -333,13 +368,7 @@ export const bulkSalaryAssignSchema = z.object({
             .trim()
             .regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/, "PAN must match the format AAAAA9999A")
             .optional(),
-          pfDetails: z
-            .object({
-              pfNumber: z.string().trim().min(1).optional(),
-              uan: z.string().trim().min(1).optional(),
-            })
-            .partial()
-            .optional(),
+          pfDetails: pfDetailsSchema.optional(),
           bankDetails: z
             .object({
               accountNumber: z.string().optional(),
@@ -750,6 +779,7 @@ export const addGlobalEmployeeSchema = z.object({
     salaryAmount: z.number().positive(),
     salaryCurrency: z.string().length(3).optional(),
     salaryFrequency: z.enum(["monthly", "biweekly", "weekly", "annual"]).default("monthly"),
+    uaeProfile: uaeProfileSchema.optional(),
     empcloudUserId: z.union([z.string(), z.number()]).optional(),
     taxId: z.string().max(50).optional(),
     bankName: bankNameSchema.optional(),
@@ -763,6 +793,10 @@ export const addGlobalEmployeeSchema = z.object({
 export const updateGlobalEmployeeSchema = z.object({
   params: z.object({ id: z.string() }),
   body: z.object({
+    empcloudUserId: z
+      .union([z.string().regex(/^\d+$/), z.number().int().positive()])
+      .nullable()
+      .optional(),
     firstName: firstNameSchema.optional(),
     lastName: lastNameSchema.optional(),
     email: z.string().email().optional(),
@@ -776,6 +810,7 @@ export const updateGlobalEmployeeSchema = z.object({
     salaryAmount: z.number().positive().optional(),
     salaryCurrency: z.string().length(3).optional(),
     salaryFrequency: z.enum(["monthly", "biweekly", "weekly", "annual"]).optional(),
+    uaeProfile: uaeProfileSchema.optional(),
     status: z.enum(["active", "onboarding", "offboarding", "terminated"]).optional(),
     taxId: z.string().max(50).optional(),
     bankName: bankNameSchema.optional(),
@@ -789,8 +824,11 @@ export const updateGlobalEmployeeSchema = z.object({
 export const createGlobalPayrollRunSchema = z.object({
   body: z.object({
     countryId: z.string().min(1),
-    month: z.number().min(1).max(12),
-    year: z.number().min(2020).max(2100),
+    month: z.number().int().min(1).max(12),
+    year: z.number().int().min(2020).max(2100),
+    uaeInputs: uaeInputsSchema.optional(),
+    uaeEmployer: uaeEmployerSchema.optional(),
+    uaeSchedule: uaeScheduleSchema.optional(),
   }),
 });
 

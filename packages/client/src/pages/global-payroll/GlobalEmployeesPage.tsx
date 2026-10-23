@@ -14,6 +14,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Loader2, Globe, Pencil, UserX } from "lucide-react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import type { UaeEmployeeProfile } from "@emp-payroll/shared";
+import { newUaeProfile, UaeProfileForm } from "@/components/uae/UaeProfileForm";
+import { assertUaeProfile } from "@/lib/uae-payroll";
+import { UaeEmployeeLink } from "@/components/uae/UaeEmployeeLink";
 
 const EMPLOYMENT_TYPES = [
   { value: "", labelKey: "globalEmployeesPage.filters.allTypes" },
@@ -108,6 +112,9 @@ export function GlobalEmployeesPage() {
   // pre-populates form from this row).
   const [editingId, setEditingId] = useState<string | null>(null);
   const [terminatingId, setTerminatingId] = useState<string | null>(null);
+  const [uaeProfile, setUaeProfile] = useState<UaeEmployeeProfile | null>(null);
+  const [linkedUserId, setLinkedUserId] = useState<number | null>(null);
+  const [endDate, setEndDate] = useState("");
 
   // #180 — Source the org's department list so the Add Employee form can
   // offer a dropdown instead of a free-text input. Mirrors the pattern in
@@ -154,6 +161,11 @@ export function GlobalEmployeesPage() {
 
   const countries = countriesRes?.data || [];
   const employees = empRes?.data || [];
+  const isUae =
+    countries.find((country: any) => String(country.id) === String(form.countryId))?.code === "AE";
+  const uaeMonthlySalary = uaeProfile
+    ? uaeProfile.basicSalary + uaeProfile.allowances.reduce((sum, line) => sum + line.amount, 0)
+    : null;
 
   const employmentTypeOptions = EMPLOYMENT_TYPES.map(({ value, labelKey }) => ({
     value,
@@ -205,10 +217,16 @@ export function GlobalEmployeesPage() {
     setShowAdd(false);
     setEditingId(null);
     setForm(emptyForm);
+    setUaeProfile(null);
+    setLinkedUserId(null);
+    setEndDate("");
   };
 
   const openEdit = (row: any) => {
     setEditingId(row.id);
+    setUaeProfile(row.uae_profile ? structuredClone(row.uae_profile) : null);
+    setLinkedUserId(row.empcloud_user_id ? Number(row.empcloud_user_id) : null);
+    setEndDate(row.end_date ? String(row.end_date).slice(0, 10) : "");
     setForm({
       firstName: row.first_name || "",
       lastName: row.last_name || "",
@@ -240,16 +258,29 @@ export function GlobalEmployeesPage() {
       !form.countryId ||
       !form.jobTitle ||
       !form.startDate ||
-      !form.salaryAmount
+      (!form.salaryAmount && !(isUae && uaeProfile))
     ) {
       toast.error(t("globalEmployeesPage.validation.required"));
       return;
     }
     setSaving(true);
     try {
+      if (isUae && uaeProfile) assertUaeProfile(uaeProfile);
       const payload = {
         ...form,
         salaryAmount: Math.round(Number(form.salaryAmount) * 100),
+        ...(isUae
+          ? { empcloudUserId: editingId ? linkedUserId : (linkedUserId ?? undefined) }
+          : {}),
+        ...(isUae && editingId && endDate ? { endDate } : {}),
+        ...(isUae && uaeProfile
+          ? {
+              uaeProfile,
+              salaryAmount: uaeMonthlySalary,
+              salaryFrequency: "monthly",
+              salaryCurrency: "AED",
+            }
+          : {}),
       };
       if (editingId) {
         await apiPut(`/global/employees/${editingId}`, payload);
@@ -261,9 +292,12 @@ export function GlobalEmployeesPage() {
       closeModal();
       qc.invalidateQueries({ queryKey: ["global-employees"] });
       qc.invalidateQueries({ queryKey: ["global-dashboard"] });
+      qc.invalidateQueries({ queryKey: ["global-employees-for-runs"] });
+      if (editingId) qc.invalidateQueries({ queryKey: ["global-employee", editingId] });
     } catch (err: any) {
       toast.error(
         err.response?.data?.error?.message ||
+          err.message ||
           (editingId
             ? t("globalEmployeesPage.messages.updateFailed")
             : t("globalEmployeesPage.messages.addFailed")),
@@ -482,6 +516,7 @@ export function GlobalEmployeesPage() {
       <Modal
         open={showAdd}
         onClose={closeModal}
+        className={isUae ? "max-w-3xl" : undefined}
         title={
           editingId
             ? t("globalEmployeesPage.modal.editTitle")
@@ -564,17 +599,60 @@ export function GlobalEmployeesPage() {
             <Input
               label={t("globalEmployeesPage.modal.salaryAmount")}
               type="number"
-              value={form.salaryAmount}
+              value={
+                isUae && uaeProfile
+                  ? Number.isFinite(uaeMonthlySalary)
+                    ? String(uaeMonthlySalary! / 100)
+                    : ""
+                  : form.salaryAmount
+              }
+              readOnly={isUae && !!uaeProfile}
               onChange={(e) => setForm({ ...form, salaryAmount: e.target.value })}
             />
             <SelectField
               label={t("globalEmployeesPage.modal.payFrequency")}
               options={salaryFrequencyOptions}
-              value={form.salaryFrequency}
+              value={isUae && uaeProfile ? "monthly" : form.salaryFrequency}
+              disabled={isUae && !!uaeProfile}
               onChange={(e) => setForm({ ...form, salaryFrequency: e.target.value })}
             />
           </div>
 
+          {isUae && (
+            <fieldset className="space-y-3 rounded-lg border p-4">
+              <legend className="px-1 font-semibold">UAE payroll configuration</legend>
+              <UaeEmployeeLink
+                key={editingId || "new"}
+                value={linkedUserId}
+                onChange={setLinkedUserId}
+              />
+              {editingId && (
+                <Input
+                  label="Recorded employment end date (for final settlement)"
+                  aria-label="Recorded employment end date"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              )}
+              {uaeProfile ? (
+                <UaeProfileForm value={uaeProfile} onChange={setUaeProfile} />
+              ) : (
+                <>
+                  <p className="text-sm text-amber-800">
+                    Needs configuration before payroll. The monthly salary total is calculated from
+                    the UAE basic salary and fixed allowances.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => setUaeProfile(newUaeProfile(form.startDate))}
+                  >
+                    Configure UAE payroll
+                  </Button>
+                </>
+              )}
+            </fieldset>
+          )}
           <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
             {t("globalEmployeesPage.modal.bankingTax")}
           </p>

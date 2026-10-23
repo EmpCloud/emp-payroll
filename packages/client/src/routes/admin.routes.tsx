@@ -11,6 +11,9 @@ const DashboardPage = lazy(() =>
 const EmployeeListPage = lazy(() =>
   import("@/pages/employees/EmployeeListPage").then((m) => ({ default: m.EmployeeListPage })),
 );
+const ExitManagementPage = lazy(() =>
+  import("@/pages/exits/ExitManagementPage").then((m) => ({ default: m.ExitManagementPage })),
+);
 const EmployeeDetailPage = lazy(() =>
   import("@/pages/employees/EmployeeDetailPage").then((m) => ({ default: m.EmployeeDetailPage })),
 );
@@ -143,6 +146,7 @@ export function AdminRoutes() {
     <>
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/employees" element={<EmployeeListPage />} />
+      <Route path="/exits" element={<ExitManagementPage />} />
       <Route path="/employees/new" element={<EmployeeCreatePage />} />
       <Route path="/employees/import" element={<EmployeeImportPage />} />
       <Route path="/employees/:id" element={<EmployeeDetailPage />} />

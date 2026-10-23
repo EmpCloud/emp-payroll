@@ -1,7 +1,6 @@
 import { getDB } from "../db/adapters";
 import { AppError } from "../api/middleware/error.middleware";
 import {
-  computePF,
   computeESI,
   computeProfessionalTax,
   applyRounding,
@@ -9,6 +8,7 @@ import {
 } from "./compliance/india-statutory.service";
 import { computeIncomeTax } from "./tax/india-tax.service";
 import { TaxRegime, applySalaryOverrides } from "@emp-payroll/shared";
+import { computePayrollPF, isEmployeePFCode, isVPFCode } from "./compliance/payroll-pf";
 import {
   findUsersByOrgId,
   findOrgById,
@@ -394,6 +394,7 @@ async function resolveCalendarLop(
   holidaySet: Set<string>,
   todayIso: string,
   optionalHolidaySet: Set<string> = new Set<string>(),
+  lopByDate?: Map<string, number>,
 ): Promise<number> {
   // Per-day attendance status.
   const attRows = (await empcloudDb("attendance_records")
@@ -476,6 +477,7 @@ async function resolveCalendarLop(
   let lop = 0;
   let cur = startDate;
   while (cur <= endDate) {
+    const previousLop = lop;
     // Future / today: dates only increase, so once we reach today we're done —
     // the rest of the month is assumed worked and never charged.
     if (cur >= todayIso) break;
@@ -551,6 +553,7 @@ async function resolveCalendarLop(
         }
       }
     }
+    if (lop > previousLop) lopByDate?.set(cur, lop - previousLop);
     const d = new Date(cur + "T00:00:00Z");
     d.setUTCDate(d.getUTCDate() + 1);
     cur = d.toISOString().split("T")[0];
@@ -674,14 +677,10 @@ export class PayrollService {
       throw new AppError(400, "INVALID_STATUS", "Only draft payroll runs can be computed");
     }
 
-    // Make compute idempotent. A previous failed compute (or a /rerun
-    // that found the run already in draft and short-circuited the
-    // payslip delete) can leave orphan payslip rows. The next compute
-    // then trips the (payroll_run_id, empcloud_user_id) UNIQUE index
-    // on the very first employee already present, taking the entire
-    // run down with it. Wipe before we begin so /compute is always
-    // safe to retry.
-    await this.db.deleteMany("payslips", { payroll_run_id: runId });
+    // Validate every employee before replacing draft payslips or changing loan
+    // and reimbursement balances. An eligibility/attendance review must leave
+    // the draft retryable without financial side effects.
+    const pendingWrites: Array<() => Promise<unknown>> = [];
 
     // Get org payroll settings for state info
     const orgSettings = await this.db.findOne<any>("organization_payroll_settings", {
@@ -721,7 +720,7 @@ export class PayrollService {
     // days that have not yet elapsed are assumed worked and are never charged
     // as LOP. For a fully-past month every day is < todayIso, so the whole
     // month is evaluated. (payroll basis: full calendar month)
-    const todayIso = dayjs().format("YYYY-MM-DD");
+    const todayIso = dayjs().tz(PAYROLL_TZ).format("YYYY-MM-DD");
     // Holiday set for the working-days base: `company_events`
     // (event_type='holiday', multi-day ranges expanded) UNION the legacy
     // `organization_holidays` table. Previously only the legacy table was
@@ -864,13 +863,15 @@ export class PayrollService {
       // payslips.
       const isoDate = (v: unknown): string | null => {
         if (!v) return null;
-        if (v instanceof Date) return v.toISOString().slice(0, 10);
+        // mysql2 DATE values represent a local calendar date. Converting an
+        // IST midnight to UTC would move a 17 September join to 16 September.
+        if (v instanceof Date) return toDateIso(v);
         const s = String(v);
         // Already an ISO-ish string like "2025-01-15" or
         // "2025-01-15T00:00:00.000Z" -- safe to slice the head.
         if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
         const d = new Date(s);
-        return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+        return Number.isNaN(d.getTime()) ? null : toDateIso(d);
       };
       const doj = isoDate(ecAny.date_of_joining);
       // Prefer emp-exit's last_working_date over empcloud.users.date_of_exit.
@@ -900,25 +901,6 @@ export class PayrollService {
           reason: `Exited ${doe} — before the pay period (${monthStart} → ${monthEnd})`,
         });
         continue;
-      }
-
-      // Mid-month exit clip. When the employee's last working day falls
-      // INSIDE the pay period (e.g. exits on 20 May for a May run), the
-      // engine must cap paid_days at (doe - monthStart + 1). Without this
-      // we treat them like a full-month employee and over-pay — the bug
-      // that caused Santhosh's May payslip to be ₹8.1L instead of ~₹5.2L.
-      // The actual clip happens further down once `paidDays` is computed
-      // from the attendance source. We just capture the cap here.
-      let exitPaidUpperBound: number | null = null;
-      if (doe && doe >= monthStart && doe <= monthEnd) {
-        const msPerDay = 86400000;
-        // Half-open day count works because both strings are YYYY-MM-DD
-        // at UTC 00:00; floor handles any DST drift defensively.
-        const dayCount =
-          Math.floor(
-            (Date.parse(doe + "T00:00:00Z") - Date.parse(monthStart + "T00:00:00Z")) / msPerDay,
-          ) + 1;
-        exitPaidUpperBound = Math.max(0, dayCount);
       }
 
       // Get payroll profile for this employee
@@ -1112,30 +1094,29 @@ export class PayrollService {
       // could mask real absences behind weekend padding (a present record on a
       // holiday + auto-paid weekends hid one of an employee's two absences).
       const totalDays = daysInMonth;
+      const activeStart = doj && doj > monthStart ? doj : monthStart;
+      const activeEnd = doe && doe < monthEnd ? doe : monthEnd;
+      const activeDays = Math.max(
+        0,
+        Math.round((Date.parse(activeEnd) - Date.parse(activeStart)) / 86400000) + 1,
+      );
+      const lopByDate = new Map<string, number>();
       let lopDays = empcloudHasAttendance
         ? await resolveCalendarLop(
             empcloudDb,
             ecEmp.id,
             Number(orgId),
-            monthStart,
-            monthEnd,
+            activeStart,
+            activeEnd,
             holidaySeen,
             todayIso,
             optionalHolidaySeen,
+            lopByDate,
           )
         : summaryLop;
-      let paidDays = Math.max(0, totalDays - lopDays);
-      // Apply the mid-month exit upper bound. Anything beyond
-      // (last_working_date - monthStart + 1) is unpaid LOP. We bump up
-      // `lopDays` symmetrically so downstream calculations (Form 16, LWF,
-      // PT-by-paid-days, etc.) see a consistent (paid + LOP = totalDays)
-      // invariant.
-      if (exitPaidUpperBound !== null && paidDays > exitPaidUpperBound) {
-        const trimmed = paidDays - exitPaidUpperBound;
-        paidDays = exitPaidUpperBound;
-        lopDays += trimmed;
-      }
-
+      const unpaidDays = lopDays;
+      const paidDays = Math.max(0, activeDays - unpaidDays);
+      lopDays = totalDays - paidDays;
       // Template-driven component list — read the latest `salary_components`
       // rows for this employee's structure_id and compute amounts off the
       // employee's CTC. The pre-existing JSON snapshot in
@@ -1260,45 +1241,18 @@ export class PayrollService {
       // past the deductions block — since they need the base net pay.
       const netPctComps: any[] = [];
       let grossEarnings = 0;
-      let basicMonthly = 0;
 
       // Separate earnings from custom deductions defined in salary structure
       const deductions: any[] = [];
       let totalDed = 0;
 
-      // #365 — Apply org-level EPF cap to structure-defined EPF rows.
-      // When HR sets a structure deduction like "EPF = 12% of BASIC",
-      // the resolver computes raw 12% × basic without consulting the
-      // org's pf_max_employee_contribution / pf_apply_full_basic
-      // overrides. The cap-aware engine path below skips when a
-      // structure-EPF row exists, so the structure's uncapped value
-      // ended up on the payslip. Apply the same cap here so a
-      // structure-defined EPF behaves identically to the engine-derived
-      // EPF when the org has set an override.
-      const _normCodeForCap = (code: string | undefined): string =>
-        (code || "").toUpperCase().replace(/[^A-Z]/g, "");
-      const _isEpfishForCap = (code: string | undefined): boolean => {
-        const c = _normCodeForCap(code);
-        if (!c) return false;
-        if (c.includes("EPF")) return true;
-        return c === "PF" || c.startsWith("PFE") || c.startsWith("PFC");
-      };
-      const _orgOverridesForCap = buildOrgStatutoryOverrides(orgSettings);
-      const _epfMaxCap = _orgOverridesForCap.pfMaxEmployeeContribution;
-
       for (const comp of componentList) {
         if (comp.type === "deduction") {
+          // PF/VPF always comes from the statutory result below. A template
+          // label must not bypass effective-date rules or duplicate deductions.
+          if (isEmployeePFCode(comp.code) || isVPFCode(comp.code)) continue;
           // Custom deduction from salary structure (canteen, welfare fund, etc.)
-          let amount = Math.round(Number(comp.monthlyAmount || 0) * proRatio);
-          if (
-            _isEpfishForCap(comp.code) &&
-            typeof _epfMaxCap === "number" &&
-            Number.isFinite(_epfMaxCap) &&
-            _epfMaxCap >= 0 &&
-            amount > _epfMaxCap
-          ) {
-            amount = Math.round(_epfMaxCap * proRatio);
-          }
+          const amount = Math.round(Number(comp.monthlyAmount || 0) * proRatio);
           if (amount > 0) {
             deductions.push({ code: comp.code, name: comp.name || comp.code, amount });
             totalDed += amount;
@@ -1327,7 +1281,6 @@ export class PayrollService {
             amount,
           });
           grossEarnings += amount;
-          if (comp.code === "BASIC") basicMonthly = amount;
         }
       }
 
@@ -1406,7 +1359,15 @@ export class PayrollService {
       const hasEarningComponent = componentList.some(
         (c: any) => c.type !== "deduction" && Number(c.monthlyAmount || 0) > 0,
       );
-      if (!hasEarningComponent || grossEarnings <= 0) {
+      // A confirmed wholly unpaid month still needs a zero-contribution ECR
+      // record. Missing attendance alone is not evidence of unpaid absence.
+      const confirmedUnpaidMonth =
+        hasEarningComponent &&
+        empcloudHasAttendance &&
+        activeDays > 0 &&
+        unpaidDays >= activeDays &&
+        grossEarnings === 0;
+      if (!hasEarningComponent || (grossEarnings <= 0 && !confirmedUnpaidMonth)) {
         // Differentiate "no salary structure" from "no attendance" so HR
         // can fix the right thing. The previous lumped "EMPTY_SALARY_STRUCTURE"
         // message was misleading when the structure was fine but
@@ -1427,86 +1388,59 @@ export class PayrollService {
         continue;
       }
 
-      // BUG-003 — Double EPF deduction. If the salary structure already
-      // defines an EPF-style deduction, the statutory engine MUST NOT
-      // add another standard EPF row on top. Without this check Priya
-      // Patel saw "EEPF D ₹1,801" + "EPF ₹1,800" both deducted, and
-      // Abhishek saw "EEPF D ₹86" + "Employee PF ₹152" too -- a
-      // previous narrow match list ("EPF" / "EEPF" / "PF" /
-      // "EMPLOYEEPF" / "EEPFDED") missed real-world variants like
-      // "EEPF D" (which strips to "EEPFD") and any future code that
-      // simply CONTAINS "PF" / "EPF". Broadened to a substring test so
-      // any code containing "EPF" or starting with "PF" matches. The
-      // structure-defined row wins (HR set it explicitly), engine
-      // skips its statutory equivalent. ESI mirrors the same rule.
-      const normCode = (code: string | undefined): string =>
-        (code || "").toUpperCase().replace(/[^A-Z]/g, "");
-      const isEpfishCode = (code: string | undefined): boolean => {
-        const c = normCode(code);
-        if (!c) return false;
-        // Any code containing "EPF" (matches EPF, EEPF, EEPFD, EMPEPF,
-        // VPF wouldn't match -- VPF is voluntary and NOT a duplicate).
-        if (c.includes("EPF")) return true;
-        // Bare "PF" prefix (covers "PF", "PF1", "PFEMP", but not "EPF"
-        // since that's already caught above). The empty/CONTRIBPF case
-        // is a deliberate inclusion.
-        return c === "PF" || c.startsWith("PFE") || c.startsWith("PFC");
-      };
-      const isEsiishCode = (code: string | undefined): boolean => {
-        const c = normCode(code);
-        return !!c && c.includes("ESI");
-      };
-      const structureHasEpf = componentList.some(
-        (c: any) => c.type === "deduction" && isEpfishCode(c.code),
-      );
       const structureHasEsi = componentList.some(
-        (c: any) => c.type === "deduction" && isEsiishCode(c.code),
+        (c: any) =>
+          c.type === "deduction" &&
+          String(c.code || "")
+            .toUpperCase()
+            .includes("ESI"),
       );
-
-      // PF
       const pfDetails = profile?.pf_details
         ? typeof profile.pf_details === "string"
           ? JSON.parse(profile.pf_details)
           : profile.pf_details
         : {};
-      // Track per-component employer contributions so the payslip and
-      // payroll detail page can show "the employer also pays X / Y / Z on
-      // top of gross" -- previously the breakdown was computed but only
-      // the rolled-up total was kept (employer_contributions on the
-      // payslip was always JSON.stringify([])), so HR had no way to see
-      // where the employer cost came from.
+      const orgOverrides = buildOrgStatutoryOverrides(orgSettings);
+      const pf = computePayrollPF({
+        employeeId: String(ecEmp.id),
+        month: run.month,
+        year: run.year,
+        components: componentList,
+        earnings,
+        pfDetails,
+        orgOverrides,
+        dateOfJoining: doj ?? undefined,
+        dateOfExit: doe ?? undefined,
+        hasDatedAttendance: empcloudHasAttendance,
+        lopByDate,
+        unpaidDays,
+      });
       const employerContribs: Array<{ code: string; name: string; amount: number }> = [];
-      if (!pfDetails?.isOptedOut && !structureHasEpf) {
-        // Pass org-level statutory overrides (migration 029) so PF can
-        // honour pf_apply_full_basic, pf_max_employee_contribution, and
-        // pf_default_employee_rate when the org has set them.
-        const orgOverrides = buildOrgStatutoryOverrides(orgSettings);
-        const pf = computePF({
-          employeeId: String(ecEmp.id),
-          month: run.month,
-          year: run.year,
-          basicSalary: basicMonthly,
-          contributionRate: pfDetails?.contributionRate || undefined,
-          isVoluntaryPF: !!pfDetails?.vpfRate,
-          vpfRate: pfDetails?.vpfRate || 0,
-          orgOverrides,
+      const templatePF = componentList.find(
+        (c: any) => c.type === "deduction" && isEmployeePFCode(c.code),
+      );
+      if (pf.employeeEPF > 0)
+        deductions.push({
+          code: templatePF?.code || "EPF",
+          name: templatePF?.name || "Employee PF",
+          amount: pf.employeeEPF,
         });
-        deductions.push({ code: "EPF", name: "Employee PF", amount: pf.employeeEPF });
-        totalDed += pf.employeeEPF;
-        employeeEmployerContributions += pf.totalEmployer;
-        if (pf.employerEPF > 0)
-          employerContribs.push({ code: "EMP_EPF", name: "Employer EPF", amount: pf.employerEPF });
-        if (pf.employerEPS > 0)
-          employerContribs.push({ code: "EMP_EPS", name: "Employer EPS", amount: pf.employerEPS });
-        if (pf.adminCharges > 0)
-          employerContribs.push({
-            code: "EPF_ADMIN",
-            name: "EPF Admin Charges",
-            amount: pf.adminCharges,
-          });
-        if (pf.edliCharges > 0)
-          employerContribs.push({ code: "EDLI", name: "EDLI Charges", amount: pf.edliCharges });
-      }
+      if (pf.employeeVPF > 0)
+        deductions.push({ code: "VPF", name: "Voluntary PF", amount: pf.employeeVPF });
+      totalDed += pf.totalEmployee;
+      employeeEmployerContributions += pf.totalEmployer;
+      if (pf.employerEPF > 0)
+        employerContribs.push({ code: "EMP_EPF", name: "Employer EPF", amount: pf.employerEPF });
+      if (pf.employerEPS > 0)
+        employerContribs.push({ code: "EMP_EPS", name: "Employer EPS", amount: pf.employerEPS });
+      if (pf.adminCharges > 0)
+        employerContribs.push({
+          code: "EPF_ADMIN",
+          name: "EPF Admin Charges",
+          amount: pf.adminCharges,
+        });
+      if (pf.edliCharges > 0)
+        employerContribs.push({ code: "EDLI", name: "EDLI Charges", amount: pf.edliCharges });
 
       // ESI — check eligibility from profile
       const esiDetails = profile?.esi_details
@@ -1564,7 +1498,7 @@ export class PayrollService {
       //     a Bangalore-HQ company with a Mumbai-resident employee
       //     applies Maharashtra slabs to that one person.
       const ptDisabledOrgWide = !!Number(orgSettings?.pt_disabled);
-      if (!ptDisabledOrgWide && taxInfo?.deductPT !== false) {
+      if (grossEarnings > 0 && !ptDisabledOrgWide && taxInfo?.deductPT !== false) {
         const ptState =
           (typeof taxInfo?.state === "string" && taxInfo.state.trim()) ||
           orgSettings?.state ||
@@ -1623,6 +1557,7 @@ export class PayrollService {
         limit: 100,
       });
       let taxAlreadyPaid = 0;
+      let employeePfPriorThisFy = 0;
       // Night allowance already paid in earlier months of THIS FY. Folded
       // into the annual projection so the engine taxes the full year's
       // night pay, not just the run-rate from the current month forward.
@@ -1640,15 +1575,18 @@ export class PayrollService {
         if (!psYear || !psMonth) continue;
         const psDate = `${psYear}-${String(psMonth).padStart(2, "0")}-01`;
         if (psDate < fyStartDate || psDate > fyEndDate) continue;
+        // Only earlier periods belong to YTD; exclude current/future runs.
         // Don't include the very same period (defensive — should be
-        // wiped already by deleteMany at the top of compute).
-        if (psYear === run.year && psMonth === run.month) continue;
+        // replaced after this computation passes validation).
+        if (psYear * 12 + psMonth >= Number(run.year) * 12 + Number(run.month)) continue;
         totalGrossPriorThisFy += Number(ps.gross_earnings) || 0;
         const dedList =
           typeof ps.deductions === "string" ? JSON.parse(ps.deductions || "[]") : ps.deductions;
         if (Array.isArray(dedList)) {
           for (const d of dedList) {
             if (d?.code === "TDS") taxAlreadyPaid += Number(d.amount) || 0;
+            if (isEmployeePFCode(d?.code) || isVPFCode(d?.code))
+              employeePfPriorThisFy += Number(d.amount) || 0;
           }
         }
         // Night allowance lines are tagged with `meta.nights` — sum them
@@ -1671,7 +1609,51 @@ export class PayrollService {
         }
       }
 
-      if (taxInfo?.deductTDS !== false) {
+      if (grossEarnings > 0 && taxInfo?.deductTDS !== false) {
+        // Actual prior deductions plus this run and effective-dated future
+        // contributions, including VPF. A fixed Basic x 12% x 12 projection
+        // cannot represent the September ceiling change or EPS/PF exclusions.
+        let employeePfAnnual = employeePfPriorThisFy + pf.totalEmployee;
+        for (let offset = 1; taxInfo?.regime === "old" && offset < monthsRemaining; offset++) {
+          const projected = new Date(Date.UTC(Number(run.year), Number(run.month) - 1 + offset, 1));
+          const year = projected.getUTCFullYear();
+          const month = projected.getUTCMonth() + 1;
+          const periodDays = new Date(Date.UTC(year, month, 0)).getUTCDate();
+          const first = projected.toISOString().slice(0, 10);
+          const last = `${year}-${String(month).padStart(2, "0")}-${periodDays}`;
+          const from = doj && doj > first ? doj : first;
+          const to = doe && doe < last ? doe : last;
+          if (from > to) continue;
+          const activeFraction =
+            (Math.round((Date.parse(to) - Date.parse(from)) / 86400000) + 1) / periodDays;
+          employeePfAnnual += computePayrollPF({
+            employeeId: String(ecEmp.id),
+            month,
+            year,
+            components: componentList,
+            earnings: componentList
+              .filter((c: any) => c.type !== "deduction")
+              .map((c: any) => ({
+                code: c.code,
+                amount: Number(c.monthlyAmount || 0) * activeFraction,
+              })),
+            // EPS is the employer's allocation and does not affect the
+            // employee's section 80C projection. Review it in the actual
+            // wage month, without blocking an earlier month's tax estimate.
+            pfDetails: {
+              ...pfDetails,
+              isEpsMember: false,
+              epsExclusionReason: "ineligible",
+              epsMembershipDate: null,
+            },
+            orgOverrides,
+            dateOfJoining: doj ?? undefined,
+            dateOfExit: doe ?? undefined,
+            hasDatedAttendance: false,
+            lopByDate: new Map(),
+            unpaidDays: 0,
+          }).totalEmployee;
+        }
         // BUG-002 / BUG-001 — PAN merge. The HR/payroll profile's `tax_info.pan`
         // is often empty because the source of truth lives on the EmpCloud
         // side (`employee_profiles.pan_number` -- where the employee fills
@@ -1746,7 +1728,7 @@ export class PayrollService {
           rentPaidAnnual: 0,
           isMetroCity: false,
           declarations: [],
-          employeePfAnnual: structureBasicMonthly * 0.12 * 12,
+          employeePfAnnual,
           monthsWorked: monthsRemaining,
           taxAlreadyPaid,
           priorEmployerTds,
@@ -1806,7 +1788,7 @@ export class PayrollService {
           );
           const outstanding = Math.max(0, Math.round(Number(loan.outstanding_amount)));
           const emi = Math.min(baseEmi, outstanding);
-          if (emi > 0) {
+          if (emi > 0 && grossEarnings > 0) {
             // Snapshot the loan state BEFORE applying this EMI so
             // deleteRun() can revert exactly even if a later run /
             // manual edit / loan top-up has happened since. Without
@@ -1830,11 +1812,13 @@ export class PayrollService {
               },
             } as any);
             totalDed += emi;
-            await this.db.update("loans", loan.id, {
-              installments_paid: previousInstallmentsPaid + 1,
-              outstanding_amount: newOutstanding,
-              ...(newStatus !== previousStatus ? { status: newStatus } : {}),
-            });
+            pendingWrites.push(() =>
+              this.db.update("loans", loan.id, {
+                installments_paid: previousInstallmentsPaid + 1,
+                outstanding_amount: newOutstanding,
+                ...(newStatus !== previousStatus ? { status: newStatus } : {}),
+              }),
+            );
           }
         }
         if (activeLoans.data.length > 0) break; // Found loans, don't query again
@@ -1879,11 +1863,13 @@ export class PayrollService {
             },
           } as any);
           grossEarnings += amount;
-          await this.db.update("reimbursements", String(claim.id), {
-            status: "paid",
-            paid_in_month: Number(run.month),
-            paid_in_year: Number(run.year),
-          });
+          pendingWrites.push(() =>
+            this.db.update("reimbursements", String(claim.id), {
+              status: "paid",
+              paid_in_month: Number(run.month),
+              paid_in_year: Number(run.year),
+            }),
+          );
         }
       }
 
@@ -1977,6 +1963,13 @@ export class PayrollService {
         employerPfInCtc ? roundedGross : roundedGross + employeeEmployerContributions,
         roundingPolicy,
       );
+      // Expense repayments are not remuneration for the ECR gross-wage field.
+      pf.grossWages =
+        grossEarnings -
+        earnings.reduce(
+          (sum, line) => sum + (line.code === "REIMB" ? Number(line.amount || 0) : 0),
+          0,
+        );
 
       // Create payslip.
       // `employee_id` is a legacy UUID column (the pre-EmpCloud schema's FK
@@ -1988,30 +1981,33 @@ export class PayrollService {
       // (payroll_run_id, empcloud_user_id) which is the correct semantic
       // key; generating a fresh UUID here keeps the insert valid both
       // before and after that migration runs.
-      await this.db.create("payslips", {
-        payroll_run_id: runId,
-        employee_id: uuidv4(),
-        empcloud_user_id: ecEmp.id,
-        month: run.month,
-        year: run.year,
-        paid_days: paidDays,
-        total_days: totalDays,
-        lop_days: lopDays,
-        earnings: JSON.stringify(earnings),
-        deductions: JSON.stringify(deductions),
-        // Per-component employer contributions (Employer EPF / EPS / EDLI
-        // / Admin / Employer ESI). Sum of `amount` here equals
-        // employeeEmployerContributions, which feeds total_employer_cost
-        // below. Stored so the payslip / payroll detail page can render
-        // "Employer also pays X" without recomputing.
-        employer_contributions: JSON.stringify(employerContribs),
-        reimbursements: JSON.stringify([]),
-        gross_earnings: roundedGross,
-        total_deductions: roundedDed,
-        net_pay: netPay,
-        total_employer_cost: roundedEmployerCost,
-        status: "generated",
-      });
+      pendingWrites.push(() =>
+        this.db.create("payslips", {
+          payroll_run_id: runId,
+          employee_id: uuidv4(),
+          empcloud_user_id: ecEmp.id,
+          month: run.month,
+          year: run.year,
+          paid_days: paidDays,
+          total_days: totalDays,
+          lop_days: lopDays,
+          earnings: JSON.stringify(earnings),
+          deductions: JSON.stringify(deductions),
+          // Per-component employer contributions (Employer EPF / EPS / EDLI
+          // / Admin / Employer ESI). Sum of `amount` here equals
+          // employeeEmployerContributions, which feeds total_employer_cost
+          // below. Stored so the payslip / payroll detail page can render
+          // "Employer also pays X" without recomputing.
+          employer_contributions: JSON.stringify(employerContribs),
+          pf_contribution: JSON.stringify(pf),
+          reimbursements: JSON.stringify([]),
+          gross_earnings: roundedGross,
+          total_deductions: roundedDed,
+          net_pay: netPay,
+          total_employer_cost: roundedEmployerCost,
+          status: "generated",
+        }),
+      );
 
       totalGross += roundedGross;
       totalDeductions += roundedDed;
@@ -2020,11 +2016,10 @@ export class PayrollService {
       employeeCount++;
     }
 
-    // #268 — Append a structured note about any employees we had to skip
-    // because of empty/invalid salary structure, so the admin sees it
-    // immediately in the run summary instead of finding out via support
-    // tickets. Preserve any existing notes the admin set when creating
-    // the run.
+    await this.db.deleteMany("payslips", { payroll_run_id: runId });
+    for (const write of pendingWrites) await write();
+
+    // Keep skipped-employee and missing-PAN notes visible in the run summary.
     let runNotes: string | null = run.notes || null;
     if (skipped.length > 0) {
       const skipSummary = `[skipped ${skipped.length} employee(s) — empty/invalid salary structure: ${skipped

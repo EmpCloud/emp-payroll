@@ -78,7 +78,9 @@ export const HRA_NON_METRO_PERCENT = 40;
 // ---------------------------------------------------------------------------
 // Provident Fund (PF / EPF)
 // ---------------------------------------------------------------------------
-export const PF_WAGE_CEILING = 15000; // monthly PF wage ceiling
+export const PF_PREVIOUS_WAGE_CEILING = 15000;
+export const PF_WAGE_CEILING_EFFECTIVE_DATE = "2026-09-17";
+export const PF_WAGE_CEILING = 25000; // use getIndiaPFWageCeiling for historical payroll
 export const PF_EMPLOYEE_RATE = 12; // % of PF wages
 export const PF_EMPLOYER_RATE = 12; // employer's total PF contribution %
 // Conventional label only. EPFO computes the employer EPF share as the
@@ -89,7 +91,7 @@ export const PF_EMPLOYER_EPF_RATE = 3.67; // employer EPF % (label only)
 export const PF_EMPLOYER_EPS_RATE = 8.33; // employer EPS %
 export const PF_ADMIN_CHARGES_RATE = 0.5; // admin charges %
 export const PF_EDLI_CHARGES_RATE = 0.5; // EDLI charges %
-export const PF_EPS_SALARY_CEILING = 15000; // EPS wage ceiling
+export const PF_EPS_SALARY_CEILING = 25000; // current ordinary EPS wage ceiling
 
 // ---------------------------------------------------------------------------
 // Employee State Insurance (ESI)

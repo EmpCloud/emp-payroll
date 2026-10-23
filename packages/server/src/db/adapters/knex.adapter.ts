@@ -6,12 +6,14 @@
 
 import knex from "knex";
 import type { Knex } from "knex";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { v4 as uuidv4 } from "uuid";
 import { IDBAdapter, QueryOptions, QueryResult, TransactionContext } from "./interface";
 
 export class KnexAdapter implements IDBAdapter {
   private db: Knex | null = null;
   private config: Knex.Config;
+  private transactionConnection = new AsyncLocalStorage<Knex.Transaction>();
 
   constructor(config: {
     client: "mysql2" | "pg" | "sqlite3";
@@ -79,6 +81,8 @@ export class KnexAdapter implements IDBAdapter {
   }
 
   private getDb(): Knex {
+    const transaction = this.transactionConnection.getStore();
+    if (transaction) return transaction;
     if (!this.db) throw new Error("Database not connected. Call connect() first.");
     return this.db;
   }
@@ -235,7 +239,7 @@ export class KnexAdapter implements IDBAdapter {
           await trx.rollback();
         },
       };
-      return fn(ctx);
+      return this.transactionConnection.run(trx, () => fn(ctx));
     });
   }
 

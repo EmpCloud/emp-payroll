@@ -324,6 +324,9 @@ router.get(
     const file = await rptSvc.generatePFECR(param(req, "id"), String(req.user!.empcloudOrgId));
     res.setHeader("Content-Type", "text/plain");
     res.setHeader("Content-Disposition", `attachment; filename=${file.filename}`);
+    res.setHeader("X-PF-Due-Date", file.dueDate);
+    res.setHeader("X-PF-Admin-Charges-Due", String(file.summary.adminChargesDue));
+    res.append("Access-Control-Expose-Headers", "X-PF-Due-Date, X-PF-Admin-Charges-Due");
     res.send(file.content);
   }),
 );
@@ -418,6 +421,9 @@ router.get(
     const file = await govSvc.generateEPFOFile(param(req, "id"), String(req.user!.empcloudOrgId));
     res.setHeader("Content-Type", "text/plain");
     res.setHeader("Content-Disposition", `attachment; filename=${file.filename}`);
+    res.setHeader("X-PF-Due-Date", file.dueDate);
+    res.setHeader("X-PF-Admin-Charges-Due", String(file.summary.adminChargesDue));
+    res.append("Access-Control-Expose-Headers", "X-PF-Due-Date, X-PF-Admin-Charges-Due");
     res.send(file.content);
   }),
 );

@@ -161,6 +161,14 @@ export interface PFDetails {
   employerContributionRate: number; // default 12
   isVoluntaryPF: boolean;
   vpfRate?: number;
+  isOptedOut?: boolean | null;
+  exclusionReason?: "wage_ceiling" | "exempt" | null;
+  isEpsMember?: boolean | null;
+  epsExclusionReason?: "wage_ceiling" | "ineligible" | null;
+  pfMembershipDate?: string | null;
+  epsMembershipDate?: string | null;
+  /** Statutory monthly wages captured at the 17 September 2026 eligibility review, or later entry/review. */
+  membershipWages?: number | null;
 }
 
 export interface ESIDetails {
@@ -369,15 +377,68 @@ export interface PFContribution {
   employeeId: string;
   month: number;
   year: number;
-  pfWages: number; // capped at 15000
+  pfWages: number;
+  epsWages: number;
+  edliWages: number;
+  isCovered: boolean;
+  isEpsMember: boolean;
+  wageCeiling: number;
+  periods: IndiaPFPeriod[];
+  warnings: string[];
+  ncpDays?: number;
+  grossWages?: number; // ECR gross wages exclude expense reimbursements
   employeeEPF: number; // 12% of PF wages
-  employerEPF: number; // 3.67% of PF wages
+  employerEPF: number; // employer total less the rounded EPS allocation
   employerEPS: number; // 8.33% of PF wages (capped)
   employeeVPF: number;
   adminCharges: number; // 0.5%
   edliCharges: number; // 0.5%
+  adminChargesEnabled: boolean;
+  edliChargesEnabled: boolean;
   totalEmployer: number;
   totalEmployee: number;
+}
+
+export interface IndiaPFWagePeriod {
+  startDate: string;
+  endDate: string;
+  wages: number; // actual earned statutory wages within these dates, after unpaid absence
+}
+
+export interface IndiaPFPeriod extends IndiaPFWagePeriod {
+  pfWages: number;
+  epsWages: number;
+  edliWages: number;
+  wageCeiling: number;
+  isCovered: boolean;
+  isEpsMember: boolean;
+}
+
+export interface IndiaPFOverrides {
+  pfApplyFullBasic?: boolean | null;
+  pfMaxEmployeeContribution?: number | null;
+  pfDefaultEmployeeRate?: number | null;
+  pfEdliEnabled?: boolean | null;
+  pfAdminEnabled?: boolean | null;
+}
+
+export interface ComputeIndiaPFParams {
+  employeeId: string;
+  month: number;
+  year: number;
+  basicSalary: number;
+  daAmount?: number;
+  retainingAllowance?: number;
+  monthlyWages?: number; // unprorated statutory wages for membership eligibility
+  contributionRate?: number;
+  employerContributionRate?: number;
+  isVoluntaryPF?: boolean;
+  vpfRate?: number;
+  pfDetails?: Partial<PFDetails>;
+  dateOfJoining?: string;
+  dateOfExit?: string;
+  orgOverrides?: IndiaPFOverrides;
+  wagePeriods?: IndiaPFWagePeriod[];
 }
 
 export interface ESIContribution {

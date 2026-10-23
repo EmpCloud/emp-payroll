@@ -6,6 +6,7 @@
 import { getDB } from "../db/adapters";
 import { QueryOptions } from "../db/adapters/interface";
 import { AppError } from "../api/middleware/error.middleware";
+import { pfDetailsSchema } from "../api/validators";
 import {
   findUserById,
   findUsersByOrgId,
@@ -529,7 +530,13 @@ export class EmployeeService {
       if (data.address) profileUpdates.address = JSON.stringify(data.address);
       if (data.bankDetails) profileUpdates.bank_details = JSON.stringify(data.bankDetails);
       if (data.taxInfo) profileUpdates.tax_info = JSON.stringify(data.taxInfo);
-      if (data.pfDetails) profileUpdates.pf_details = JSON.stringify(data.pfDetails);
+      if (data.pfDetails) {
+        const existingPF =
+          typeof profile.pf_details === "string"
+            ? JSON.parse(profile.pf_details || "{}")
+            : profile.pf_details || {};
+        profileUpdates.pf_details = JSON.stringify({ ...existingPF, ...data.pfDetails });
+      }
       if (data.esiDetails) profileUpdates.esi_details = JSON.stringify(data.esiDetails);
 
       if (Object.keys(profileUpdates).length > 0) {
@@ -645,12 +652,13 @@ export class EmployeeService {
    * Update PF details in payroll profile.
    */
   async updatePfDetails(empcloudUserId: number, empcloudOrgId: number, pfDetails: any) {
-    await this.getByEmpCloudId(empcloudUserId, empcloudOrgId);
+    const employee = await this.getByEmpCloudId(empcloudUserId, empcloudOrgId);
     const profile = await this.ensurePayrollProfile(empcloudUserId, empcloudOrgId);
+    const merged = { ...employee.pfDetails, ...pfDetails };
     await this.payrollDb.update("employee_payroll_profiles", profile.id, {
-      pf_details: JSON.stringify(pfDetails),
+      pf_details: JSON.stringify(merged),
     });
-    return pfDetails;
+    return merged;
   }
 
   /**
@@ -780,6 +788,18 @@ export class EmployeeService {
       const lookupKey = row.key?.empCode || row.key?.email || "(no key)";
       const keyLabel = csvName ? `${csvName} / ${lookupKey}` : lookupKey;
       try {
+        if (row.pfDetails) {
+          const validation = pfDetailsSchema.safeParse(row.pfDetails);
+          if (!validation.success) {
+            throw new AppError(
+              400,
+              "INVALID_PF_DETAILS",
+              validation.error.issues
+                .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+                .join("; "),
+            );
+          }
+        }
         // --- Resolve the employee (code first, then email) ---
         // BUG-Bulk-StatusFilter — the lookup used to require status=1
         // ("active"). The Download Employees export, however, dumps every

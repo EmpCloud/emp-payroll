@@ -3,6 +3,7 @@
  * Targets all 0% coverage service files to push overall coverage to 90%+.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { computeIndiaPF } from "@emp-payroll/shared";
 
 // ---------------------------------------------------------------------------
 // Mock getDB for IDBAdapter-based services
@@ -95,28 +96,39 @@ describe("ReportsService", () => {
     mockDb.findOne
       .mockResolvedValueOnce({ id: "r1", org_id: "1", month: 3, year: 2026, total_net: 50000 }) // run
       .mockResolvedValueOnce({
-        components: JSON.stringify([{ code: "BASIC", monthlyAmount: 15000 }]),
-      }); // salary
+        id: "e1",
+        org_id: "1",
+        first_name: "John",
+        last_name: "Doe",
+        pf_details: { uan: "100100100100" },
+      }); // organization-scoped legacy employee
     mockDb.findMany.mockResolvedValue({
-      data: [{ employee_id: "e1", month: 3, year: 2026, gross_earnings: 30000 }],
+      data: [
+        {
+          employee_id: "e1",
+          month: 3,
+          year: 2026,
+          gross_earnings: 30000,
+          lop_days: 0,
+          pf_contribution: computeIndiaPF({
+            employeeId: "e1",
+            month: 3,
+            year: 2026,
+            basicSalary: 15000,
+          }),
+        },
+      ],
       total: 1,
       page: 1,
       limit: 10000,
       totalPages: 1,
     });
-    mockDb.findById
-      .mockResolvedValueOnce({
-        id: "e1",
-        first_name: "John",
-        last_name: "Doe",
-        pf_details: '{"pfNumber":"PF001"}',
-        tax_info: '{"uan":"100100100100"}',
-      })
-      .mockResolvedValueOnce({ name: "Org", pf_establishment_code: "ABCDE" });
-
     const result = await service.generatePFECR("r1", "1");
-    expect(result.filename).toContain("PF-ECR");
-    expect(result.content).toContain("John Doe");
+    expect(result.filename).toBe("PF-ECR-MAR-2026.txt");
+    expect(result.content).toBe(
+      "100100100100#~#JOHN DOE#~#30000#~#15000#~#15000#~#15000#~#1800#~#1250#~#550#~#0#~#0",
+    );
+    expect(mockDb.findOne).toHaveBeenCalledWith("employees", { id: "e1", org_id: "1" });
   });
 
   it("generateESIReturn — generates ESI CSV with contributions", async () => {
@@ -588,45 +600,69 @@ describe("GovtFormatsService", () => {
   });
 
   it("generateEPFOFile — generates EPFO ECR file", async () => {
-    mockDb.findOne.mockResolvedValue({ id: "r1", org_id: "1", month: 3, year: 2026 });
-    mockDb.findMany.mockResolvedValue({
-      data: [{ employee_id: "e1", gross_earnings: 25000 }],
-      total: 1,
-    });
-    mockDb.findById
+    mockDb.findOne
+      .mockResolvedValueOnce({ id: "r1", org_id: "1", month: 3, year: 2026 })
       .mockResolvedValueOnce({
         id: "e1",
+        org_id: "1",
         first_name: "John",
         last_name: "Doe",
         tax_info: '{"uan":"100100100100"}',
         pf_details: "{}",
-      })
-      .mockResolvedValueOnce({ name: "Org" });
-
-    const result = await service.generateEPFOFile("r1", "1");
-    expect(result.filename).toContain("EPFO-ECR");
-    expect(result.content).toContain("100100100100");
-    expect(result.content).toContain("JOHN DOE");
-  });
-
-  it("generateEPFOFile — skips employees without UAN", async () => {
-    mockDb.findOne.mockResolvedValue({ id: "r1", org_id: "1", month: 3, year: 2026 });
+      });
     mockDb.findMany.mockResolvedValue({
-      data: [{ employee_id: "e1", gross_earnings: 25000 }],
+      data: [
+        {
+          employee_id: "e1",
+          gross_earnings: 25000,
+          lop_days: 0,
+          pf_contribution: JSON.stringify(
+            computeIndiaPF({ employeeId: "e1", month: 3, year: 2026, basicSalary: 20000 }),
+          ),
+        },
+      ],
       total: 1,
     });
-    mockDb.findById
+
+    const result = await service.generateEPFOFile("r1", "1");
+    expect(result.filename).toBe("EPFO-ECR-MAR-2026.txt");
+    expect(result.content).toBe(
+      "100100100100#~#JOHN DOE#~#25000#~#15000#~#15000#~#15000#~#1800#~#1250#~#550#~#0#~#0",
+    );
+  });
+
+  it("generateEPFOFile — rejects covered employees without UAN", async () => {
+    mockDb.findOne
+      .mockResolvedValueOnce({ id: "r1", org_id: "1", month: 3, year: 2026 })
       .mockResolvedValueOnce({
         id: "e1",
+        org_id: "1",
         first_name: "No",
         last_name: "UAN",
         tax_info: "{}",
         pf_details: "{}",
-      })
-      .mockResolvedValueOnce({ name: "Org" });
+      });
+    mockDb.findMany.mockResolvedValue({
+      data: [
+        {
+          employee_id: "e1",
+          gross_earnings: 25000,
+          lop_days: 0,
+          pf_contribution: computeIndiaPF({
+            employeeId: "e1",
+            month: 3,
+            year: 2026,
+            basicSalary: 20000,
+          }),
+        },
+      ],
+      total: 1,
+    });
 
-    const result = await service.generateEPFOFile("r1", "1");
-    expect(result.content).toBe(""); // no lines
+    await expect(service.generateEPFOFile("r1", "1")).rejects.toMatchObject({
+      statusCode: 409,
+      code: "PF_UAN_INVALID",
+    });
   });
 
   it("generateForm24Q — throws 404 for missing org", async () => {

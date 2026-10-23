@@ -8,9 +8,38 @@ import {
 } from "../../services/exit.service";
 import { authenticate, authorize } from "../middleware/auth.middleware";
 import { wrap } from "../helpers";
+import { UaeExitService } from "../../services/uae/uae-exit.service";
+import { validate } from "../validators";
+import { uaeExitSchema } from "../validators/uae-payroll";
 
 const router = Router();
 router.use(authenticate);
+
+router.get(
+  "/:id/uae-settlement",
+  authorize("hr_admin", "hr_manager"),
+  wrap(async (req, res) => {
+    const data = await new UaeExitService().context(
+      String(req.user!.empcloudOrgId),
+      String(req.params.id),
+    );
+    res.json({ success: true, data });
+  }),
+);
+router.post(
+  "/:id/uae-settlement",
+  authorize("hr_admin", "hr_manager"),
+  validate(uaeExitSchema),
+  wrap(async (req, res) => {
+    const data = await new UaeExitService().prepare(
+      String(req.user!.empcloudOrgId),
+      String(req.params.id),
+      req.body,
+      String(req.user!.empcloudUserId),
+    );
+    res.json({ success: true, data });
+  }),
+);
 
 // List all exits
 router.get(

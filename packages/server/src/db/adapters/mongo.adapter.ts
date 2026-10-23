@@ -4,6 +4,7 @@
 // ============================================================================
 
 import mongoose, { Schema, Model, Document } from "mongoose";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { v4 as uuidv4 } from "uuid";
 import { IDBAdapter, QueryOptions, QueryResult, TransactionContext } from "./interface";
 
@@ -16,13 +17,22 @@ function getOrCreateModel(tableName: string): Model<any> {
   }
 
   // Flexible schema — allows any fields (schemaless but with timestamps)
-  const schema = new Schema({}, {
-    strict: false,
-    timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
-    collection: tableName,
-  });
+  const schema = new Schema(
+    {},
+    {
+      strict: false,
+      timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+      collection: tableName,
+    },
+  );
 
   schema.index({ id: 1 }, { unique: true });
+  if (tableName === "global_payroll_runs") {
+    schema.index(
+      { uae_period_key: 1 },
+      { unique: true, partialFilterExpression: { uae_period_key: { $type: "string" } } },
+    );
+  }
 
   const model = mongoose.model(tableName, schema);
   modelRegistry.set(tableName, model);
@@ -32,6 +42,7 @@ function getOrCreateModel(tableName: string): Model<any> {
 export class MongoAdapter implements IDBAdapter {
   private uri: string;
   private connected = false;
+  private transactionSession = new AsyncLocalStorage<mongoose.ClientSession>();
 
   constructor(config: { uri: string }) {
     this.uri = config.uri;
@@ -66,13 +77,19 @@ export class MongoAdapter implements IDBAdapter {
 
   async findById<T>(table: string, id: string): Promise<T | null> {
     const model = getOrCreateModel(table);
-    const doc = await model.findOne({ id }).lean();
+    const doc = await model
+      .findOne({ id })
+      .session(this.transactionSession.getStore() ?? null)
+      .lean();
     return doc ? this.cleanDoc<T>(doc) : null;
   }
 
   async findOne<T>(table: string, where: Record<string, any>): Promise<T | null> {
     const model = getOrCreateModel(table);
-    const doc = await model.findOne(where).lean();
+    const doc = await model
+      .findOne(where)
+      .session(this.transactionSession.getStore() ?? null)
+      .lean();
     return doc ? this.cleanDoc<T>(doc) : null;
   }
 
@@ -90,7 +107,13 @@ export class MongoAdapter implements IDBAdapter {
         } else if (Array.isArray(value)) {
           query[key] = { $in: value };
         } else if (typeof value === "object" && value.op) {
-          const opMap: Record<string, string> = { ">": "$gt", ">=": "$gte", "<": "$lt", "<=": "$lte", "!=": "$ne" };
+          const opMap: Record<string, string> = {
+            ">": "$gt",
+            ">=": "$gte",
+            "<": "$lt",
+            "<=": "$lte",
+            "!=": "$ne",
+          };
           query[key] = { [opMap[value.op] || "$eq"]: value.value };
         } else {
           query[key] = value;
@@ -98,9 +121,15 @@ export class MongoAdapter implements IDBAdapter {
       }
     }
 
-    const total = await model.countDocuments(query);
+    const total = await model
+      .countDocuments(query)
+      .session(this.transactionSession.getStore() ?? null);
 
-    let cursor = model.find(query).skip(skip).limit(limit);
+    let cursor = model
+      .find(query)
+      .session(this.transactionSession.getStore() ?? null)
+      .skip(skip)
+      .limit(limit);
     if (options?.sort) {
       cursor = cursor.sort({ [options.sort.field]: options.sort.order === "asc" ? 1 : -1 });
     } else {
@@ -121,45 +150,55 @@ export class MongoAdapter implements IDBAdapter {
   async create<T>(table: string, data: Partial<T>): Promise<T> {
     const model = getOrCreateModel(table);
     const id = (data as any).id || uuidv4();
-    const doc = await model.create({ ...data, id });
+    const [doc] = await model.create([{ ...data, id }], {
+      session: this.transactionSession.getStore(),
+    });
     return this.cleanDoc<T>(doc.toObject());
   }
 
   async createMany<T>(table: string, data: Partial<T>[]): Promise<T[]> {
     const model = getOrCreateModel(table);
     const records = data.map((d) => ({ ...d, id: (d as any).id || uuidv4() }));
-    const docs = await model.insertMany(records);
+    const docs = await model.insertMany(records, { session: this.transactionSession.getStore() });
     return docs.map((d: any) => this.cleanDoc<T>(d.toObject()));
   }
 
   async update<T>(table: string, id: string, data: Partial<T>): Promise<T> {
     const model = getOrCreateModel(table);
     delete (data as any).id;
-    await model.updateOne({ id }, { $set: data });
+    await model.updateOne({ id }, { $set: data }, { session: this.transactionSession.getStore() });
     return this.findById<T>(table, id) as Promise<T>;
   }
 
-  async updateMany(table: string, where: Record<string, any>, data: Record<string, any>): Promise<number> {
+  async updateMany(
+    table: string,
+    where: Record<string, any>,
+    data: Record<string, any>,
+  ): Promise<number> {
     const model = getOrCreateModel(table);
-    const result = await model.updateMany(where, { $set: data });
+    const result = await model.updateMany(
+      where,
+      { $set: data },
+      { session: this.transactionSession.getStore() },
+    );
     return result.modifiedCount;
   }
 
   async delete(table: string, id: string): Promise<boolean> {
     const model = getOrCreateModel(table);
-    const result = await model.deleteOne({ id });
+    const result = await model.deleteOne({ id }, { session: this.transactionSession.getStore() });
     return result.deletedCount > 0;
   }
 
   async deleteMany(table: string, where: Record<string, any>): Promise<number> {
     const model = getOrCreateModel(table);
-    const result = await model.deleteMany(where);
+    const result = await model.deleteMany(where, { session: this.transactionSession.getStore() });
     return result.deletedCount;
   }
 
   async count(table: string, where?: Record<string, any>): Promise<number> {
     const model = getOrCreateModel(table);
-    return model.countDocuments(where || {});
+    return model.countDocuments(where || {}).session(this.transactionSession.getStore() ?? null);
   }
 
   async sum(table: string, field: string, where?: Record<string, any>): Promise<number> {
@@ -167,23 +206,40 @@ export class MongoAdapter implements IDBAdapter {
     const pipeline: any[] = [];
     if (where) pipeline.push({ $match: where });
     pipeline.push({ $group: { _id: null, total: { $sum: `$${field}` } } });
-    const result = await model.aggregate(pipeline);
+    const result = await model
+      .aggregate(pipeline)
+      .session(this.transactionSession.getStore() ?? null);
     return result[0]?.total || 0;
   }
 
   async transaction<T>(fn: (trx: TransactionContext) => Promise<T>): Promise<T> {
+    const ambient = this.transactionSession.getStore();
+    if (ambient) {
+      // MongoDB has no nested transactions/savepoints. Nested service work joins
+      // the outer unit; an error propagates to its owner and rolls everything back.
+      return fn({
+        commit: async () => {},
+        rollback: async () => {
+          throw new Error("Nested transaction requested rollback");
+        },
+      });
+    }
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
       const ctx: TransactionContext = {
-        commit: async () => { await session.commitTransaction(); },
-        rollback: async () => { await session.abortTransaction(); },
+        commit: async () => {
+          await session.commitTransaction();
+        },
+        rollback: async () => {
+          await session.abortTransaction();
+        },
       };
-      const result = await fn(ctx);
-      await session.commitTransaction();
+      const result = await this.transactionSession.run(session, () => fn(ctx));
+      if (session.inTransaction()) await session.commitTransaction();
       return result;
     } catch (error) {
-      await session.abortTransaction();
+      if (session.inTransaction()) await session.abortTransaction();
       throw error;
     } finally {
       session.endSession();
@@ -194,7 +250,7 @@ export class MongoAdapter implements IDBAdapter {
     // For MongoDB, raw queries use the native driver
     const db = mongoose.connection.db;
     if (!db) throw new Error("Database not connected");
-    return db.command(JSON.parse(query)) as T;
+    return db.command(JSON.parse(query), { session: this.transactionSession.getStore() }) as T;
   }
 
   private cleanDoc<T>(doc: any): T {

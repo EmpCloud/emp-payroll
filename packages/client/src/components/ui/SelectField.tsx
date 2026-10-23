@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string;
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; disabled?: boolean }[];
 }
 
 export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(
@@ -19,14 +19,14 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(
         ref={ref}
         id={id}
         className={cn(
-          "block w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:bg-gray-50",
+          "focus:border-brand-500 focus:ring-brand-500 block w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:bg-gray-50",
           error ? "border-red-500" : "border-gray-300",
           className,
         )}
         {...props}
       >
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
+          <option key={opt.value} value={opt.value} disabled={opt.disabled}>
             {opt.label}
           </option>
         ))}

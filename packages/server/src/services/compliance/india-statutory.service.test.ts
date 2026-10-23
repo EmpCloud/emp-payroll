@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computePF, computeESI, computeProfessionalTax } from "./india-statutory.service";
+import { getIndiaPFWageCeiling, getIndiaPFDueDate } from "@emp-payroll/shared";
 
 // =============================================================================
 // PROVIDENT FUND (PF)
@@ -111,6 +112,301 @@ describe("computePF", () => {
 // =============================================================================
 // EMPLOYEE STATE INSURANCE (ESI)
 // =============================================================================
+
+describe("September 2026 PF revision", () => {
+  const base = { employeeId: "emp-1", year: 2026, month: 9, basicSalary: 20000 };
+
+  it("keeps historical ceilings and uses the publication date", () => {
+    expect(getIndiaPFWageCeiling("2026-09-16")).toBe(15000);
+    expect(getIndiaPFWageCeiling("2026-09-17")).toBe(25000);
+    expect(computePF({ ...base, month: 8 }).employeeEPF).toBe(1800);
+    expect(computePF({ ...base, month: 10 }).employeeEPF).toBe(2400);
+  });
+
+  it("splits September at the two calendar ceilings and rounds EPS before residual EPF", () => {
+    const pf = computePF(base);
+    expect(pf.pfWages).toBe(17333.33);
+    expect(pf.employeeEPF).toBe(2080);
+    expect(pf.employerEPS).toBe(1444);
+    expect(pf.employerEPF).toBe(636);
+    expect(pf.periods.map((p) => p.wageCeiling)).toEqual([15000, 25000]);
+    expect(pf.periods.map((p) => p.startDate)).toEqual(["2026-09-01", "2026-09-17"]);
+  });
+
+  it("enrolls a confirmed wage-ceiling exclusion only from September 17", () => {
+    const pf = computePF({
+      ...base,
+      pfDetails: { isOptedOut: true, exclusionReason: "wage_ceiling", membershipWages: 20000 },
+    });
+    expect(pf.pfWages).toBe(9333.33);
+    expect(pf.epsWages).toBe(9333.33);
+    expect(pf.employeeEPF).toBe(1120);
+    expect(pf.employerEPS).toBe(777);
+    expect(pf.isCovered).toBe(true);
+    expect(pf.periods[0].isCovered).toBe(false);
+    expect(pf.warnings).toEqual([]);
+    expect(
+      computePF({
+        ...base,
+        month: 8,
+        pfDetails: { isOptedOut: true, exclusionReason: "wage_ceiling", membershipWages: 20000 },
+      }).employeeEPF,
+    ).toBe(0);
+  });
+
+  it("treats a recorded wage-ceiling exclusion as historical even without the legacy optout flag", () => {
+    expect(
+      computePF({ ...base, pfDetails: { exclusionReason: "wage_ceiling", membershipWages: 20000 } })
+        .employeeEPF,
+    ).toBe(1120);
+    expect(
+      computePF({
+        ...base,
+        month: 8,
+        pfDetails: { exclusionReason: "wage_ceiling", membershipWages: 20000 },
+      }).employeeEPF,
+    ).toBe(0);
+    expect(
+      computePF({
+        ...base,
+        pfDetails: {
+          isEpsMember: true,
+          epsExclusionReason: "wage_ceiling",
+          membershipWages: 20000,
+        },
+      }).employerEPS,
+    ).toBe(777);
+  });
+
+  it("requires EPS membership history for above-ceiling new hires without changing existing members", () => {
+    const joiner = { ...base, month: 10, basicSalary: 35000, dateOfJoining: "2026-10-01" };
+    expect(computePF(joiner).warnings[0]).toContain("Review EPS history");
+    expect(computePF({ ...joiner, dateOfJoining: "2026-01-01" }).warnings).toEqual([]);
+    expect(computePF({ ...joiner, pfDetails: { isEpsMember: true } }).warnings).toEqual([]);
+    expect(
+      computePF({
+        ...joiner,
+        pfDetails: {
+          isEpsMember: false,
+          epsExclusionReason: "wage_ceiling",
+          membershipWages: 35000,
+        },
+      }).employerEPS,
+    ).toBe(0);
+  });
+
+  it("keeps statutory exemptions and flags unknown exclusion reasons for review", () => {
+    expect(
+      computePF({ ...base, pfDetails: { isOptedOut: true, exclusionReason: "exempt" } }).isCovered,
+    ).toBe(false);
+    const unknown = computePF({ ...base, pfDetails: { isOptedOut: true } });
+    expect(unknown.employeeEPF).toBe(0);
+    expect(unknown.warnings[0]).toContain("Review PF exclusion");
+    expect(computePF({ ...base, pfDetails: { isEnrolled: false } }).employeeEPF).toBe(2080);
+    expect(
+      computePF({ ...base, basicSalary: 40000, pfDetails: { isOptedOut: true } }).warnings[0],
+    ).toContain("Review PF exclusion");
+    expect(
+      computePF({ ...base, basicSalary: 40000, pfDetails: { isEpsMember: false } }).warnings[0],
+    ).toContain("Review EPS exclusion");
+  });
+
+  it("requires fixed eligibility wages for ceiling exclusions and retains membership after pay rises", () => {
+    const unknown = computePF({ ...base, pfDetails: { exclusionReason: "wage_ceiling" } });
+    expect(unknown.warnings[0]).toContain("record statutory monthly wages");
+    expect(unknown.isCovered).toBe(false);
+    expect(
+      computePF({ ...base, pfDetails: { isEpsMember: false, epsExclusionReason: "wage_ceiling" } })
+        .warnings[0],
+    ).toContain("record statutory monthly wages");
+    const pfDetails = {
+      exclusionReason: "wage_ceiling" as const,
+      epsExclusionReason: "wage_ceiling" as const,
+      membershipWages: 20000,
+    };
+    expect(computePF({ ...base, month: 8, pfDetails }).isCovered).toBe(false);
+    const increased = computePF({ ...base, month: 10, basicSalary: 30000, pfDetails });
+    expect(increased.isCovered).toBe(true);
+    expect(increased.isEpsMember).toBe(true);
+    expect(increased.employeeEPF).toBe(3000);
+    expect(increased.employerEPS).toBe(2083);
+    expect(increased.warnings).toEqual([]);
+    expect(
+      computePF({ ...base, pfDetails: { ...pfDetails, membershipWages: 15000 } }).warnings[0],
+    ).toContain("do not establish an exclusion");
+  });
+
+  it("keeps a genuine above-ceiling excluded employee out even when earned wages fall below the ceiling", () => {
+    const pf = computePF({
+      ...base,
+      month: 10,
+      basicSalary: 12000,
+      monthlyWages: 40000,
+      pfDetails: { isOptedOut: true, exclusionReason: "wage_ceiling", membershipWages: 40000 },
+    });
+    expect(pf.employeeEPF).toBe(0);
+    expect(pf.isCovered).toBe(false);
+  });
+
+  it("adds EPS from the effective date without reducing existing higher EPF contributions", () => {
+    const pf = computePF({
+      ...base,
+      orgOverrides: { pfApplyFullBasic: true },
+      pfDetails: { isEpsMember: false, epsExclusionReason: "wage_ceiling", membershipWages: 20000 },
+    });
+    expect(pf.employeeEPF).toBe(2400);
+    expect(pf.epsWages).toBe(9333.33);
+    expect(pf.employerEPS).toBe(777);
+    expect(pf.employerEPF).toBe(1623);
+    expect(pf.edliWages).toBe(17333.33);
+    expect(pf.edliCharges).toBe(87);
+    expect(pf.adminCharges).toBe(100);
+  });
+
+  it("preserves existing EPS membership above the new ceiling", () => {
+    const pf = computePF({
+      ...base,
+      month: 10,
+      basicSalary: 40000,
+      pfDetails: { isEpsMember: true },
+    });
+    expect(pf.employerEPS).toBe(2083);
+    expect(pf.employerEPF).toBe(917);
+  });
+
+  it("does not turn age or other EPS ineligibility into pension enrollment", () => {
+    const pf = computePF({
+      ...base,
+      pfDetails: { isEpsMember: false, epsExclusionReason: "ineligible" },
+    });
+    expect(pf.employerEPS).toBe(0);
+    expect(pf.employerEPF).toBe(2080);
+    expect(pf.warnings).toEqual([]);
+    expect(computePF({ ...base, pfDetails: { isEpsMember: false } }).warnings[0]).toContain(
+      "Review EPS exclusion",
+    );
+  });
+
+  it("protects the revised statutory minimum from a saved 1800 employee cap", () => {
+    const orgOverrides = { pfMaxEmployeeContribution: 1800 };
+    expect(computePF({ ...base, basicSalary: 40000, orgOverrides }).employeeEPF).toBe(2360);
+    expect(computePF({ ...base, month: 10, basicSalary: 40000, orgOverrides }).employeeEPF).toBe(
+      3000,
+    );
+    expect(computePF({ ...base, month: 8, basicSalary: 40000, orgOverrides }).employeeEPF).toBe(
+      1800,
+    );
+  });
+
+  it("uses dated earned wages for LOP without additionally shrinking the ceiling", () => {
+    const pf = computePF({
+      ...base,
+      monthlyWages: 40000,
+      wagePeriods: [
+        { startDate: "2026-09-01", endDate: "2026-09-16", wages: 5000 },
+        { startDate: "2026-09-17", endDate: "2026-09-30", wages: 18000 },
+      ],
+    });
+    expect(pf.pfWages).toBe(16666.67);
+    expect(pf.employeeEPF).toBe(2000);
+    expect(
+      computePF({ ...base, month: 10, basicSalary: 16000, monthlyWages: 40000 }).employeeEPF,
+    ).toBe(1920);
+  });
+
+  it("does not prorate already-earned joiner wages a second time", () => {
+    const pf = computePF({
+      ...base,
+      basicSalary: 6000,
+      monthlyWages: 18000,
+      dateOfJoining: "2026-09-21",
+      pfDetails: { pfMembershipDate: "2026-09-21", epsMembershipDate: "2026-09-21" },
+      wagePeriods: [{ startDate: "2026-09-21", endDate: "2026-09-30", wages: 6000 }],
+    });
+    expect(pf.pfWages).toBe(6000);
+    expect(pf.employeeEPF).toBe(720);
+    expect(pf.employerEPS).toBe(500);
+  });
+
+  it("honors membership and exit dates without charging uncovered periods", () => {
+    const pf = computePF({
+      ...base,
+      basicSalary: 10000,
+      monthlyWages: 20000,
+      dateOfExit: "2026-09-15",
+      pfDetails: { isOptedOut: true, exclusionReason: "wage_ceiling", membershipWages: 20000 },
+    });
+    expect(pf.employeeEPF).toBe(0);
+    expect(pf.isCovered).toBe(false);
+  });
+
+  it("supports notified 10% establishments and rejects silently underfunded rates", () => {
+    const pf = computePF({
+      ...base,
+      month: 10,
+      basicSalary: 25000,
+      contributionRate: 10,
+      employerContributionRate: 10,
+    });
+    expect(pf.employeeEPF).toBe(2500);
+    expect(pf.employerEPS).toBe(2083);
+    expect(pf.employerEPF).toBe(417);
+    expect(pf.warnings).toEqual([]);
+    const invalid = computePF({ ...base, month: 10, contributionRate: 6 });
+    expect(invalid.employeeEPF).toBe(2400);
+    expect(invalid.warnings[0]).toContain("Review PF contribution rates");
+  });
+
+  it("includes retaining allowance and keeps employer contributions separate from VPF", () => {
+    const pf = computePF({
+      ...base,
+      month: 10,
+      basicSalary: 15000,
+      daAmount: 3000,
+      retainingAllowance: 2000,
+      isVoluntaryPF: true,
+      vpfRate: 5,
+    });
+    expect(pf.pfWages).toBe(20000);
+    expect(pf.employeeVPF).toBe(1000);
+    expect(pf.employerEPF + pf.employerEPS).toBe(2400);
+  });
+
+  it("retains independent charge toggles and half-rupee rounding", () => {
+    const pf = computePF({
+      ...base,
+      month: 10,
+      basicSalary: 15000,
+      orgOverrides: { pfEdliEnabled: false, pfAdminEnabled: false },
+    });
+    expect(pf.employerEPS).toBe(1250);
+    expect(pf.edliCharges).toBe(0);
+    expect(pf.adminCharges).toBe(0);
+    expect(pf.adminChargesEnabled).toBe(false);
+  });
+
+  it("extends only September's ECR and payment deadline", () => {
+    expect(getIndiaPFDueDate(2026, 9)).toBe("2026-10-31");
+    expect(getIndiaPFDueDate(2026, 10)).toBe("2026-11-15");
+    expect(getIndiaPFDueDate(2026, 12)).toBe("2027-01-15");
+  });
+
+  it("rejects invalid periods and nonfinite money before calculating", () => {
+    expect(() => computePF({ ...base, basicSalary: NaN })).toThrow("nonnegative");
+    expect(() => computePF({ ...base, pfDetails: { pfMembershipDate: "2026-02-30" } })).toThrow(
+      "Invalid PF date",
+    );
+    expect(() =>
+      computePF({
+        ...base,
+        wagePeriods: [
+          { startDate: "2026-09-01", endDate: "2026-09-17", wages: 10000 },
+          { startDate: "2026-09-17", endDate: "2026-09-30", wages: 10000 },
+        ],
+      }),
+    ).toThrow("must not overlap");
+  });
+});
 
 describe("computeESI", () => {
   const base = { employeeId: "emp-1", month: 3, year: 2026 };

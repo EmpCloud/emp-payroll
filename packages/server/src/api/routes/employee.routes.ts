@@ -8,6 +8,7 @@ import {
   createEmployeeSchema,
   updateEmployeeSchema,
   updateBankDetailsSchema,
+  updatePfDetailsSchema,
 } from "../validators";
 import { wrap, param } from "../helpers";
 
@@ -491,6 +492,7 @@ router.get(
 router.put(
   "/:id/pf-details",
   authorize("hr_admin", "hr_manager"),
+  validate(updatePfDetailsSchema),
   wrap(async (req, res) => {
     const data = await svc.updatePfDetails(numParam(req, "id"), req.user!.empcloudOrgId, req.body);
     res.json({ success: true, data });
