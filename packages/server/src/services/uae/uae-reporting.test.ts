@@ -96,13 +96,14 @@ describe("approved UAE payslip HTML", () => {
     expect(html).toContain("•••• 3456");
     expect(html).not.toContain(item.employee.bankAccount);
     expect(html).toContain("File uploaded — payment not confirmed");
-    expect(html).toContain("Gross pay: AED 10000.00");
-    expect(html).toContain("Net pay: AED 9000.00");
-    expect(html).toContain("Employer benefits — not deducted from net pay");
+    expect(html).toContain('aria-label="Gross pay: AED 10,000.00"');
+    expect(html).toContain('aria-label="Net pay: AED 9,000.00"');
+    expect(html).toContain("Employer benefits");
+    expect(html).toContain("Not deducted from net pay.");
     expect(html).toContain("2026-11-01");
     expect(html).toContain("@media print");
     expect(html).toContain('onclick="window.print()"');
-    expect(html).toContain(".print-action{display:none}");
+    expect(html).toContain(".toolbar{display:none}");
     expect(renderUaePayslip({ snapshot: item, paymentStatus: "uploaded" })).toBe(html);
   });
 
@@ -112,7 +113,7 @@ describe("approved UAE payslip HTML", () => {
     });
     expect(html).toContain("Final settlement breakdown");
     expect(html).toContain("Settlement amounts are already included");
-    expect(html).toContain("Net pay: AED 9000.00");
+    expect(html).toContain('aria-label="Net pay: AED 9,000.00"');
     expect(html).toContain("Payment not confirmed");
   });
 

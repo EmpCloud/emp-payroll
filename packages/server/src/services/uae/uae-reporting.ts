@@ -225,20 +225,65 @@ export function renderUaePayslip(data: {
     "UAE_REPORT_STATUS_INVALID",
     "Unknown payment status.",
   );
-  const section = (title: string, lines: UaeReportLine[]) =>
-    `<section><h2>${title}</h2><table><thead><tr><th>Description</th><th>Amount (AED)</th></tr></thead><tbody>${lines.length ? lines.map((line) => `<tr><td>${escapeHtml(line.label)}</td><td>${money(line.amount)}</td></tr>`).join("") : '<tr><td colspan="2">None</td></tr>'}</tbody></table></section>`;
+  // Group digits only for display; bank files continue to use the ungrouped money format.
+  const displayMoney = (value: number) => {
+    const [whole, fraction] = money(value).split(".");
+    return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.${fraction}`;
+  };
+  const periodLabel = new Intl.DateTimeFormat("en-GB", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${snapshot.periodStart}T00:00:00Z`));
+  const section = (
+    title: string,
+    lines: UaeReportLine[],
+    options: { note?: string; total?: number; empty?: string } = {},
+  ) => `<section class="line-section"><div class="section-heading"><h2>${title}</h2>${options.note ? `<p>${options.note}</p>` : ""}</div>
+<table aria-label="${title}"><thead><tr><th scope="col">Description</th><th scope="col">Amount (AED)</th></tr></thead><tbody>${lines.length ? lines.map((line) => `<tr><td>${escapeHtml(line.label)}</td><td class="amount">${displayMoney(line.amount)}</td></tr>`).join("") : `<tr><td class="empty">${options.empty ?? "No items for this period"}</td><td class="amount">0.00</td></tr>`}</tbody>${options.total !== undefined ? `<tfoot><tr><th scope="row">Total ${title.toLowerCase()}</th><td class="amount">${displayMoney(options.total)}</td></tr></tfoot>` : ""}</table></section>`;
   const detail = (label: string, value?: string) =>
-    value ? `<div><strong>${label}:</strong> ${escapeHtml(value)}</div>` : "";
+    value ? `<div class="detail"><dt>${label}</dt><dd>${escapeHtml(value)}</dd></div>` : "";
   const account = snapshot.employee.bankAccount ?? snapshot.wps?.account;
   const maskedAccount = account ? `•••• ${String(account).slice(-4)}` : undefined;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Payslip — ${escapeHtml(snapshot.employee.name)}</title><style>
-body{font-family:Arial,sans-serif;color:#182433;margin:32px;line-height:1.5}main{max-width:850px;margin:auto}h1{margin-bottom:4px}h2{font-size:17px;margin:22px 0 8px}table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}th:last-child,td:last-child{text-align:right}.summary{margin-top:24px;padding:16px;background:#f2f5f7}.note{font-size:12px;color:#52606d}.print-action{padding:10px 16px;cursor:pointer}@media print{body{margin:15mm}section,.summary{break-inside:avoid}.print-action{display:none}}
-</style></head><body><main><button class="print-action" type="button" onclick="window.print()">Print payslip</button><h1>Payslip</h1>
-${detail("Employer", snapshot.employer.name)}${detail("Address", snapshot.employer.address)}${detail("Registration number", snapshot.employer.registrationNumber)}<hr>
-${detail("Employee", snapshot.employee.name)}${detail("Employee code", snapshot.employee.employeeCode ?? snapshot.employee.id)}${detail("Job title", snapshot.employee.jobTitle)}${detail("Pay period", `${snapshot.periodStart} to ${snapshot.periodEnd}`)}${detail("Payment due", snapshot.dueDate)}${detail("Payment status", statusLabels[status])}${detail("Bank account", maskedAccount)}
-${section("Earnings", snapshot.earnings)}${section("Employee deductions", snapshot.deductions)}${section("Employer benefits — not deducted from net pay", snapshot.employerBenefits)}
-${snapshot.finalSettlement ? `${section("Final settlement breakdown", snapshot.finalSettlement)}<p class="note">Settlement amounts are already included in the earnings or deductions above.</p>` : ""}
-<div class="summary"><div>Gross pay: AED ${money(snapshot.grossPay)}</div><div>Employee deductions: AED ${money(snapshot.totalDeductions)}</div><strong>Net pay: AED ${money(snapshot.netPay)}</strong></div><p class="note">This statement records the approved payroll calculation. A generated or uploaded payment file does not confirm receipt of wages.</p></main></body></html>`;
+*{box-sizing:border-box}
+body{margin:0;padding:28px 24px 48px;background:#f1f4f8;color:#18283b;font:14px/1.5 Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.toolbar{max-width:960px;margin:0 auto 18px;display:flex;justify-content:space-between;align-items:center;gap:16px;color:#536478;font-size:13px}
+.print-action{border:0;border-radius:7px;padding:11px 18px;background:#224e80;color:white;font:600 13px Arial,sans-serif;cursor:pointer;white-space:nowrap}
+.print-action:hover{background:#183c65}.print-action:focus-visible{outline:3px solid #4489cd;outline-offset:3px}
+main{max-width:960px;margin:auto;padding:36px 40px 24px;background:white;border:1px solid #dce3eb;border-top:5px solid #224e80;border-radius:12px;box-shadow:0 8px 30px #1834520d}
+.document-header{display:flex;justify-content:space-between;gap:32px;padding-bottom:24px;border-bottom:1px solid #dce3eb}
+.employer{min-width:0;max-width:65%}.eyebrow{margin:0 0 7px;color:#64758a;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.employer-name{font-size:22px;line-height:1.3;margin:0 0 8px;overflow-wrap:anywhere}
+.employer-address,.registration{margin:3px 0;font-size:12px;color:#536478;overflow-wrap:anywhere}
+.document-title{text-align:right;flex-shrink:0}h1{margin:0;font-size:29px;line-height:1.2;letter-spacing:-.6px}.period{margin:8px 0 0;color:#536478;font-size:14px}
+.employee-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin:24px 0 18px}.employee-heading h2{margin:0;font-size:20px;line-height:1.35;overflow-wrap:anywhere}
+.status{display:inline-block;max-width:270px;border:1px solid #ebd2a3;border-radius:6px;padding:6px 10px;background:#fff7e8;color:#865816;font-size:11px;font-weight:600;text-align:center}
+.status[data-payment-status="paid"]{background:#edf7f1;border-color:#b9ddc9;color:#226448}
+.status[data-payment-status="failed"],.status[data-payment-status="rejected"],.status[data-payment-status="refunded"]{background:#fff0ee;border-color:#edc2bb;color:#9b382b}
+.details{display:grid;grid-template-columns:1fr 1fr;gap:16px 32px;margin:0;padding:18px 20px;background:#f7f9fc;border:1px solid #e3e9f0;border-radius:8px}
+.detail{min-width:0}dt{color:#64758a;font-size:11px;margin-bottom:3px}dd{margin:0;font-weight:600;font-size:12px;overflow-wrap:anywhere}
+.pay-breakdown{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;margin-top:26px;align-items:start}
+.line-section{min-width:0;margin-top:24px}.pay-breakdown .line-section{margin-top:0}.section-heading{margin-bottom:10px}.section-heading h2{font-size:14px;margin:0;font-weight:700}.section-heading p{font-size:11px;color:#64758a;margin:3px 0 0}
+table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px}th,td{padding:10px 12px;text-align:left;vertical-align:top;border-bottom:1px solid #e5eaf0;overflow-wrap:anywhere}
+thead th{background:#f1f5fa;color:#536478;font-size:10px;font-weight:600}th:last-child,td:last-child{width:40%;text-align:right}.amount{font-variant-numeric:tabular-nums;white-space:nowrap}
+tfoot th,tfoot td{font-weight:700;background:#f7f9fc;border-bottom:0}.empty{color:#64758a;font-style:italic}
+.summary{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:22px 24px;margin-top:28px;border:1px solid #b7cbdc;border-radius:8px;background:#edf4fa}
+.summary-breakdown{min-width:0;font-size:12px}.summary-row{display:flex;justify-content:space-between;gap:24px;margin:4px 0;color:#536478}.summary-row strong{color:#18283b;font-variant-numeric:tabular-nums;white-space:nowrap}
+.net-pay{text-align:right}.net-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#405d7b}.net-amount{font-size:29px;font-weight:700;line-height:1.3;color:#183f68;font-variant-numeric:tabular-nums;white-space:nowrap}.currency{font-size:15px;font-weight:600;margin-right:5px}
+footer{margin-top:22px;padding-top:16px;border-top:1px solid #e3e9f0;font-size:10px;color:#64758a}footer p{margin:0}.footer-label{display:block;margin-bottom:5px;color:#536478;font-weight:600}
+@media(max-width:640px){body{padding:16px 12px 28px}.toolbar{font-size:11px}main{padding:24px 20px 20px}.document-header{flex-direction:column;gap:16px}.employer{max-width:none}.document-title{text-align:left}h1{font-size:24px}.employee-heading{flex-direction:column;gap:12px}.status{max-width:none}.details{grid-template-columns:1fr;padding:16px;gap:14px}.pay-breakdown{grid-template-columns:1fr;gap:24px}.summary{flex-direction:column;align-items:stretch;padding:18px}.net-pay{text-align:left;border-top:1px solid #cbd9e6;padding-top:14px}.net-amount{font-size:27px}}
+@page{size:A4;margin:14mm}
+@media print{body{background:white;padding:0;color:#18283b;font-size:11px}.toolbar{display:none}main{max-width:none;border:0;border-radius:0;box-shadow:none;padding:0}.document-header{padding-bottom:18px}.employee-heading{margin:18px 0 14px}.details{gap:12px 24px;padding:14px 16px}.pay-breakdown{margin-top:20px;gap:20px}.line-section{margin-top:20px}th,td{padding:8px 10px}.summary{margin-top:22px;padding:18px 20px}.document-header,.employee-heading,.details,.summary,footer,tr{break-inside:avoid}.section-heading{break-after:avoid}thead{display:table-header-group}tfoot{display:table-row-group}footer{margin-top:18px}}
+</style></head><body><div class="toolbar"><span>Salary statement · ${periodLabel}</span><button class="print-action" type="button" onclick="window.print()">Print / Save PDF</button></div>
+<main><header class="document-header"><div class="employer"><p class="eyebrow">Employer</p><h2 class="employer-name">${escapeHtml(snapshot.employer.name)}</h2>${snapshot.employer.address ? `<p class="employer-address">${escapeHtml(snapshot.employer.address)}</p>` : ""}${snapshot.employer.registrationNumber ? `<p class="registration">Registration number: ${escapeHtml(snapshot.employer.registrationNumber)}</p>` : ""}</div><div class="document-title"><h1>Payslip</h1><p class="period">${periodLabel}</p></div></header>
+<div class="employee-heading"><div><p class="eyebrow">Employee</p><h2>${escapeHtml(snapshot.employee.name)}</h2></div><span class="status" data-payment-status="${status}">${statusLabels[status]}</span></div>
+<dl class="details">${detail(snapshot.employee.employeeCode ? "Employee code" : "Employee ID", snapshot.employee.employeeCode ?? snapshot.employee.id)}${detail("Job title", snapshot.employee.jobTitle)}${detail("Pay period", `${snapshot.periodStart} to ${snapshot.periodEnd}`)}${detail("Payment due", snapshot.dueDate)}${detail("Bank account", maskedAccount)}</dl>
+<div class="pay-breakdown">${section("Earnings", snapshot.earnings, { total: snapshot.grossPay })}${section("Employee deductions", snapshot.deductions, { total: snapshot.totalDeductions, empty: "No deductions this period" })}</div>
+${section("Employer benefits", snapshot.employerBenefits, { note: "Not deducted from net pay.", empty: "No employer benefits this period" })}
+${snapshot.finalSettlement ? section("Final settlement breakdown", snapshot.finalSettlement, { note: "Settlement amounts are already included in the earnings or deductions above." }) : ""}
+<section class="summary" aria-label="Pay summary"><div class="summary-breakdown"><div class="summary-row" aria-label="Gross pay: AED ${displayMoney(snapshot.grossPay)}"><span>Gross pay</span><strong>AED ${displayMoney(snapshot.grossPay)}</strong></div><div class="summary-row" aria-label="Employee deductions: AED ${displayMoney(snapshot.totalDeductions)}"><span>Employee deductions</span><strong>AED ${displayMoney(snapshot.totalDeductions)}</strong></div></div><div class="net-pay" aria-label="Net pay: AED ${displayMoney(snapshot.netPay)}"><div class="net-label">Net pay</div><div class="net-amount"><span class="currency">AED</span>${displayMoney(snapshot.netPay)}</div></div></section>
+<footer><span class="footer-label">Confidential · Employee salary statement</span><p>This statement records the approved payroll calculation. A generated or uploaded payment file does not confirm receipt of wages.</p></footer></main></body></html>`;
 }
 
 function bankField(value: string | undefined, pattern: RegExp, label: string): string {
