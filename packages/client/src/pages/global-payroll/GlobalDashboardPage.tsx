@@ -285,6 +285,11 @@ export function GlobalDashboardPage() {
                       <td className="py-3">
                         <span className="mr-2">{COUNTRY_FLAGS[cb.code] || ""}</span>
                         {cb.name}
+                        {cb.calculation_notice && (
+                          <p className="mt-1 max-w-sm text-xs text-amber-700 dark:text-amber-300">
+                            {cb.calculation_notice}
+                          </p>
+                        )}
                       </td>
                       <td className="py-3 text-right">{formatCount(cb.employee_count)}</td>
                       <td className="py-3 text-right">

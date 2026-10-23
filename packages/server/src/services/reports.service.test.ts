@@ -1,17 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../db/adapters", () => ({ getDB: vi.fn() }));
+vi.mock("./pf-ecr.service", () => ({ generatePFECRFile: vi.fn() }));
+
+import { generatePFECRFile } from "./pf-ecr.service";
 vi.mock("./compliance/india-statutory.service", () => ({
-  computePF: vi.fn(),
   computeESI: vi.fn(),
 }));
 
 import { ReportsService } from "./reports.service";
 import { getDB } from "../db/adapters";
-import { computePF, computeESI } from "./compliance/india-statutory.service";
+import { computeESI } from "./compliance/india-statutory.service";
 
 const mockedGetDB = vi.mocked(getDB);
-const mockedComputePF = vi.mocked(computePF);
 const mockedComputeESI = vi.mocked(computeESI);
 
 function makeMockDb(overrides: Record<string, unknown> = {}) {
@@ -59,91 +60,20 @@ function setupRunData(
 // PF ECR REPORT
 // =============================================================================
 
-describe("ReportsService — generatePFECR", () => {
-  let service: ReportsService;
-  let mockDb: ReturnType<typeof makeMockDb>;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockDb = makeMockDb();
-    mockedGetDB.mockReturnValue(mockDb as any);
-    service = new ReportsService();
-
-    mockedComputePF.mockReturnValue({
-      employeeId: "e1",
-      month: 3,
-      year: 2026,
-      pfWages: 15000,
-      employeeEPF: 1800,
-      employerEPF: 551,
-      employerEPS: 1250,
-      employeeVPF: 0,
-      adminCharges: 75,
-      edliCharges: 75,
-      totalEmployer: 1951,
-      totalEmployee: 1800,
-    });
-  });
-
-  it("should include ECR header with #~# separator", async () => {
-    setupRunData(mockDb, [], {}, { id: "run-1", org_id: "1", month: 3, year: 2026 });
-
-    const result = await service.generatePFECR("run-1", "1");
-    expect(result.content).toContain("#~#");
-    const firstLine = result.content.split("\n")[0];
-    expect(firstLine.startsWith("#~#")).toBe(true);
-  });
-
-  it("should use #~# as field separator in data lines", async () => {
-    const emp1 = {
-      id: "e1",
-      first_name: "Rahul",
-      last_name: "Kumar",
-      tax_info: JSON.stringify({ uan: "100123456789" }),
-      pf_details: JSON.stringify({ pfNumber: "PF001" }),
+describe("ReportsService - generatePFECR", () => {
+  it("uses the shared snapshot-based ECR export", async () => {
+    const db = makeMockDb();
+    mockedGetDB.mockReturnValue(db as any);
+    const file = {
+      filename: "PF-ECR-SEP-2026.txt",
+      content: "saved-ecr",
+      dueDate: "2026-10-31",
+      summary: {},
     };
-
-    setupRunData(
-      mockDb,
-      [{ employee_id: "e1", gross_earnings: 50000, month: 3, year: 2026 }],
-      { e1: emp1 },
-      { id: "run-1", org_id: "1", month: 3, year: 2026 },
-    );
-
-    const result = await service.generatePFECR("run-1", "1");
-    const dataLine = result.content.split("\n")[1]; // second line = data
-    const parts = dataLine.split("#~#");
-    expect(parts.length).toBeGreaterThanOrEqual(8);
-    expect(parts[0]).toBe("100123456789"); // UAN
-    expect(parts[1]).toBe("Rahul Kumar"); // Name
-  });
-
-  it("should include PF wages from computePF result", async () => {
-    const emp1 = {
-      id: "e1",
-      first_name: "Test",
-      last_name: "User",
-      tax_info: JSON.stringify({ uan: "100123456789" }),
-      pf_details: null,
-    };
-
-    setupRunData(
-      mockDb,
-      [{ employee_id: "e1", gross_earnings: 50000, month: 3, year: 2026 }],
-      { e1: emp1 },
-      { id: "run-1", org_id: "1", month: 3, year: 2026 },
-    );
-
-    const result = await service.generatePFECR("run-1", "1");
-    // PF wages = 15000 (from mock)
-    expect(result.content).toContain("15000");
-    expect(result.content).toContain("1800"); // employeeEPF
-    expect(result.content).toContain("1250"); // employerEPS
-  });
-
-  it("should throw 404 when run not found", async () => {
-    mockDb.findOne.mockResolvedValue(null);
-    await expect(service.generatePFECR("bad-id", "1")).rejects.toThrow("Payroll run not found");
+    vi.mocked(generatePFECRFile).mockResolvedValue(file as any);
+    const result = await new ReportsService().generatePFECR("run-1", "1");
+    expect(generatePFECRFile).toHaveBeenCalledWith(db, "run-1", "1");
+    expect(result).toBe(file);
   });
 });
 

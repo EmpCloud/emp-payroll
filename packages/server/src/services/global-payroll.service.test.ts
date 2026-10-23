@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../db/adapters", () => ({ getDB: vi.fn() }));
+vi.mock("../db/empcloud", () => ({ findUserById: vi.fn() }));
 
 import { GlobalPayrollService } from "./global-payroll.service";
 import { getDB } from "../db/adapters";
+import { findUserById } from "../db/empcloud";
 
 const mockedGetDB = vi.mocked(getDB);
+const mockedFindUserById = vi.mocked(findUserById);
 
 function makeMockDb(overrides: Record<string, unknown> = {}) {
   return {
@@ -18,10 +21,85 @@ function makeMockDb(overrides: Record<string, unknown> = {}) {
     update: vi.fn().mockResolvedValue({}),
     updateMany: vi.fn().mockResolvedValue(undefined),
     deleteMany: vi.fn().mockResolvedValue(undefined),
+    transaction: vi.fn(async (fn: () => Promise<unknown>) => fn()),
     raw: vi.fn().mockResolvedValue([]),
     ...overrides,
   };
 }
+
+describe("GlobalPayrollService employee self-service identity links", () => {
+  let service: GlobalPayrollService;
+  let db: ReturnType<typeof makeMockDb>;
+  const input = {
+    countryId: "ae",
+    firstName: "Aisha",
+    lastName: "Example",
+    email: "aisha@example.test",
+    empcloudUserId: 42,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedFindUserById.mockReset();
+    db = makeMockDb();
+    db.findById.mockResolvedValue({ id: "ae", code: "AE", currency: "AED" });
+    mockedGetDB.mockReturnValue(db as any);
+    service = new GlobalPayrollService();
+  });
+
+  it("rejects cross-organisation and mismatched-email identity links before employee creation", async () => {
+    mockedFindUserById.mockResolvedValue({ id: 42, organization_id: 2, email: input.email } as any);
+    await expect(service.addGlobalEmployee("1", input)).rejects.toMatchObject({
+      code: "INVALID_EMPLOYEE_LINK",
+    });
+    mockedFindUserById.mockResolvedValue({
+      id: 42,
+      organization_id: 1,
+      email: "someone-else@example.test",
+    } as any);
+    await expect(service.addGlobalEmployee("1", input)).rejects.toMatchObject({
+      code: "INVALID_EMPLOYEE_LINK",
+    });
+    expect(db.create).not.toHaveBeenCalled();
+  });
+
+  it("stores a verified employee link with case-insensitive email matching", async () => {
+    mockedFindUserById.mockResolvedValue({
+      id: 42,
+      organization_id: 1,
+      email: "AISHA@example.test",
+    } as any);
+    await service.addGlobalEmployee("1", input);
+    expect(mockedFindUserById).toHaveBeenCalledWith(42);
+    expect(db.create).toHaveBeenCalledWith(
+      "global_employees",
+      expect.objectContaining({ empcloud_user_id: 42, empcloud_org_id: 1 }),
+    );
+  });
+
+  it("validates an existing employee's linked identity when updating email and allows explicit unlink", async () => {
+    db.findOne.mockResolvedValue({
+      id: "employee-1",
+      country_id: "ae",
+      email: input.email,
+      empcloud_user_id: 42,
+    });
+    mockedFindUserById.mockResolvedValue({ id: 42, organization_id: 1, email: input.email } as any);
+    await expect(
+      service.updateGlobalEmployee("1", "employee-1", { email: "other@example.test" }),
+    ).rejects.toMatchObject({ code: "INVALID_EMPLOYEE_LINK" });
+    expect(db.update).not.toHaveBeenCalled();
+    await service.updateGlobalEmployee("1", "employee-1", {
+      empcloudUserId: null,
+      email: "other@example.test",
+    });
+    expect(db.update).toHaveBeenCalledWith(
+      "global_employees",
+      "employee-1",
+      expect.objectContaining({ empcloud_user_id: null }),
+    );
+  });
+});
 
 // =============================================================================
 // COUNTRY DEDUCTION CALCULATIONS (via createPayrollRun)
@@ -67,7 +145,7 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
     });
   }
 
-  it("should compute India (IN) deductions: EPF 12%, ESI, 15% tax", async () => {
+  it("requires domestic statutory data for India before creating any payroll records", async () => {
     setupCreateRun({ id: "c1", code: "IN", currency: "INR", name: "India" }, [
       {
         id: "ge1",
@@ -78,21 +156,13 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
       },
     ]);
 
-    await service.createPayrollRun("1", "c1", 3, 2026);
-
-    const createCalls = mockDb.create.mock.calls.filter(
-      (c: any[]) => c[0] === "global_payroll_items",
-    );
-    expect(createCalls).toHaveLength(1);
-
-    const item = createCalls[0][1];
-    // EPF: 12% of 60000 = 7200
-    expect(item.pension_employee).toBe(7200);
-    expect(item.pension_employer).toBe(7200);
-    // Tax: 15% of 60000 = 9000
-    expect(item.tax_amount).toBe(9000);
-    // PT: min(20000, 0.2% of 60000) = min(20000, 120) = 120
-    expect(item.other_deductions).toBe(120);
+    await expect(service.createPayrollRun("1", "c1", 9, 2026)).rejects.toMatchObject({
+      statusCode: 409,
+      code: "INDIA_PAYROLL_REQUIRES_STATUTORY_PROFILE",
+    });
+    expect(mockDb.create).not.toHaveBeenCalled();
+    expect(mockDb.update).not.toHaveBeenCalled();
+    expect(mockDb.findMany).not.toHaveBeenCalled();
   });
 
   it("should compute US deductions: FICA 7.65%, 22% tax", async () => {
@@ -182,7 +252,7 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
     expect(item.tax_amount).toBeGreaterThanOrEqual(0);
   });
 
-  it("should compute UAE (AE) with zero income tax and GPSSA social security", async () => {
+  it("routes UAE payroll through the dated employee pension profile", async () => {
     // salary_amount is stored in the smallest currency unit (fils): 2,000,000 = AED 20,000/mo.
     setupCreateRun({ id: "c5", code: "AE", currency: "AED", name: "UAE" }, [
       {
@@ -191,10 +261,38 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
         salary_frequency: "monthly",
         salary_currency: "AED",
         employment_type: "eor",
+        status: "active",
+        start_date: "2020-01-01",
+        first_name: "Aisha",
+        last_name: "Example",
+        uae_profile: {
+          jurisdiction: "federal",
+          effectiveFrom: "2026-06-01",
+          nationality: "AE",
+          basicSalary: 1500000,
+          allowances: [{ name: "Housing", amount: 500000 }],
+          normalDailyHours: 8,
+          pension: {
+            scheme: "gpssa_old",
+            sector: "private",
+            firstInsuredOn: "2020-01-01",
+            contributionSalary: 2000000,
+            salaryYear: 2026,
+            authorityReference: "GPSSA-123",
+          },
+          iloe: { mode: "employee_paid" },
+          healthInsuranceEmployer: 0,
+          savings: { scheme: "gratuity" },
+          wps: {
+            employeeId: "00915012345663",
+            routingCode: "802420101",
+            accountNumber: "AE070331234567890123456",
+          },
+        },
       },
     ]);
 
-    await service.createPayrollRun("1", "c5", 3, 2026);
+    await service.createPayrollRun("1", "c5", 10, 2026, {}, { name: "Example UAE LLC" });
 
     const createCalls = mockDb.create.mock.calls.filter(
       (c: any[]) => c[0] === "global_payroll_items",
@@ -203,10 +301,10 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
 
     // UAE has no personal income tax.
     expect(item.tax_amount).toBe(0);
-    // GPSSA pension now flows through the config engine (5% employee on AED 20,000 = AED 1,000),
-    // mapped to social_security_employee. Config funds are not split into the pension_* fields.
-    expect(item.social_security_employee).toBeGreaterThan(0);
-    expect(item.pension_employee).toBe(0);
+    expect(item.social_security_employee).toBe(0);
+    expect(item.pension_employee).toBe(100000);
+    expect(item.pension_employer).toBe(250000);
+    expect(JSON.parse(item.uae_calculation).schemeMetadata.pensionScheme).toBe("gpssa_old");
   });
 
   it("should compute Singapore (SG) CPF contributions via the config engine", async () => {
@@ -284,12 +382,12 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
   });
 
   it("should compute net salary = gross - employee deductions", async () => {
-    setupCreateRun({ id: "c5", code: "AE", currency: "AED", name: "UAE" }, [
+    setupCreateRun({ id: "c5", code: "US", currency: "USD", name: "United States" }, [
       {
         id: "ge1",
-        salary_amount: 2000000, // AED 20,000/mo in fils
+        salary_amount: 2000000, // USD 20,000/mo in cents
         salary_frequency: "monthly",
-        salary_currency: "AED",
+        salary_currency: "USD",
         employment_type: "eor",
       },
     ]);
@@ -341,19 +439,19 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
   });
 
   it("should update run totals after processing all employees", async () => {
-    setupCreateRun({ id: "c5", code: "AE", currency: "AED", name: "UAE" }, [
+    setupCreateRun({ id: "c5", code: "US", currency: "USD", name: "United States" }, [
       {
         id: "ge1",
-        salary_amount: 2000000, // AED 20,000/mo in fils
+        salary_amount: 2000000, // USD 20,000/mo in cents
         salary_frequency: "monthly",
-        salary_currency: "AED",
+        salary_currency: "USD",
         employment_type: "eor",
       },
       {
         id: "ge2",
-        salary_amount: 3000000, // AED 30,000/mo in fils
+        salary_amount: 3000000, // USD 30,000/mo in cents
         salary_frequency: "monthly",
-        salary_currency: "AED",
+        salary_currency: "USD",
         employment_type: "eor",
       },
     ]);
@@ -373,10 +471,10 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
     expect(updateCalls).toHaveLength(1);
 
     const totals = updateCalls[0][2];
-    expect(totals.total_gross).toBe(5000000); // AED 50,000 combined gross, in fils
+    expect(totals.total_gross).toBe(5000000); // USD 50,000 combined gross, in cents
     expect(totals.total_gross).toBe(sumGross);
     expect(totals.total_net).toBe(sumNet);
-    expect(totals.total_net).toBeLessThan(totals.total_gross); // UAE now has GPSSA + ILOE deductions
+    expect(totals.total_net).toBeLessThan(totals.total_gross);
   });
 
   it("should throw 404 when country not found", async () => {
@@ -387,14 +485,24 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
   });
 
   it("should throw 409 for duplicate run", async () => {
-    mockDb.findById.mockResolvedValue({ id: "c1", code: "IN", currency: "INR", name: "India" });
+    mockDb.findById.mockResolvedValue({
+      id: "c1",
+      code: "US",
+      currency: "USD",
+      name: "United States",
+    });
     mockDb.findOne.mockResolvedValue({ id: "existing", status: "draft" });
 
     await expect(service.createPayrollRun("1", "c1", 3, 2026)).rejects.toThrow("already exists");
   });
 
   it("should throw 400 when no active employees found", async () => {
-    mockDb.findById.mockResolvedValue({ id: "c1", code: "IN", currency: "INR", name: "India" });
+    mockDb.findById.mockResolvedValue({
+      id: "c1",
+      code: "US",
+      currency: "USD",
+      name: "United States",
+    });
     mockDb.findOne.mockResolvedValue(null);
     mockDb.findMany.mockResolvedValue({ data: [], total: 0 });
 
@@ -436,6 +544,50 @@ describe("GlobalPayrollService — createPayrollRun (deduction calculations)", (
     expect(item.pension_employee).toBe(Math.round(5000 * 0.05));
     expect(item.health_insurance_employee).toBe(Math.round(5000 * 0.03));
     expect(item.tax_amount).toBe(Math.round(5000 * 0.15));
+  });
+});
+
+// =============================================================================
+// COST ANALYSIS
+// =============================================================================
+
+describe("GlobalPayrollService - cost analysis", () => {
+  it("labels India totals as estimates without changing other countries", async () => {
+    const db = makeMockDb();
+    mockedGetDB.mockReturnValue(db as any);
+    db.findMany.mockResolvedValue({
+      data: [
+        {
+          id: "in-1",
+          country_id: "india",
+          salary_amount: 3000000,
+          salary_frequency: "monthly",
+          employment_type: "eor",
+        },
+        {
+          id: "us-1",
+          country_id: "usa",
+          salary_amount: 300000,
+          salary_frequency: "monthly",
+          employment_type: "direct_hire",
+        },
+      ],
+      total: 2,
+    });
+    db.findById.mockImplementation(async (_table: string, id: string) =>
+      id === "india"
+        ? { code: "IN", name: "India", currency: "INR" }
+        : { code: "US", name: "United States", currency: "USD" },
+    );
+    const result = await new GlobalPayrollService().getCostAnalysis("1");
+    const india = result.countryBreakdown.find((country) => country.code === "IN")!;
+    const usa = result.countryBreakdown.find((country) => country.code === "US")!;
+    expect(india.calculation_notice).toContain("statutory PF is not calculated");
+    expect(india.calculation_notice).toContain("domestic Payroll Runs");
+    expect(india.total_gross).toBe(3000000);
+    expect(india.total_employer_cost).toBe(3360000);
+    expect(usa.calculation_notice).toBeUndefined();
+    expect(db.create).not.toHaveBeenCalled();
   });
 });
 

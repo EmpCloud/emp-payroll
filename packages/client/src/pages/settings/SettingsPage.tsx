@@ -639,7 +639,7 @@ export function SettingsPage() {
 // interacting knobs (wage basis / rate / cap) behind one decision most HR
 // teams actually make:
 //
-//   1. "Statutory minimum"  : ceiling ₹15K, 12%, cap ₹1,800
+//   1. "Statutory minimum"  : period-specific ceiling, 12%, no extra rupee cap
 //      (the law-minimum every Indian employer can default to)
 //   2. "On Full Basic"      : actual basic, 12%, no cap
 //      (typical Indian IT — PF deducted on the full basic, no ceiling)
@@ -662,9 +662,7 @@ function presetFor(settings: any): PfPreset {
   const rate = settings?.pfDefaultEmployeeRate;
   const cap = settings?.pfMaxEmployeeContribution;
   const isStatutory =
-    (basis === false || basis == null) &&
-    (rate === 12 || rate == null) &&
-    (cap === 1800 || cap == null);
+    (basis === false || basis == null) && (rate === 12 || rate == null) && cap == null;
   if (isStatutory) return "statutory";
   const isFullBasic = basis === true && (rate === 12 || rate == null) && cap == null;
   if (isFullBasic) return "full_basic";
@@ -698,7 +696,7 @@ function StatutoryOverridesCard({ settings }: { settings: any }) {
     if (p === "statutory") {
       setWageMode("ceiling");
       setDefaultRate("12");
-      setMaxCap("1800");
+      setMaxCap("");
     } else if (p === "full_basic") {
       setWageMode("actual");
       setDefaultRate("12");
@@ -729,12 +727,12 @@ function StatutoryOverridesCard({ settings }: { settings: any }) {
                 {
                   key: "statutory",
                   title: "Statutory minimum",
-                  body: "12% × min(Basic+DA, ₹15,000) — caps at ₹1,800/month. Law-minimum default.",
+                  body: "12% of PF wages up to the ceiling for the payroll period. ₹25,000 from 17 September 2026; ₹15,000 before that date.",
                 },
                 {
                   key: "full_basic",
                   title: "On Full Basic",
-                  body: "12% × actual Basic+DA, no ₹15K ceiling, no cap. Typical Indian IT employers.",
+                  body: "12% of actual PF wages, without the EPF wage ceiling. EPS and EDLI retain their statutory ceilings.",
                 },
                 {
                   key: "custom",
@@ -777,9 +775,9 @@ function StatutoryOverridesCard({ settings }: { settings: any }) {
                 if (preset !== "custom") setPreset("custom");
               }}
               options={[
-                { value: "", label: "Use default (₹15,000 ceiling)" },
-                { value: "ceiling", label: "Restrict to ₹15,000 ceiling" },
-                { value: "actual", label: "Apply to actual Basic + DA" },
+                { value: "", label: "Use statutory ceiling for payroll period" },
+                { value: "ceiling", label: "Restrict to statutory ceiling" },
+                { value: "actual", label: "Apply to actual PF wages" },
               ]}
             />
           </div>
@@ -806,7 +804,7 @@ function StatutoryOverridesCard({ settings }: { settings: any }) {
               type="number"
               step="1"
               min="0"
-              placeholder="1800 — blank = no cap"
+              placeholder="Blank = statutory rules only"
               value={maxCap}
               onChange={(e) => {
                 setMaxCap(e.target.value);
@@ -820,6 +818,11 @@ function StatutoryOverridesCard({ settings }: { settings: any }) {
             from the PF rate / basis math. This affects how the offer-letter
             CTC is interpreted, not how PF is computed. */}
         <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <p className="mb-3 text-xs text-gray-600">
+            September 2026 uses the earlier ceiling for 1–16 September and the revised ceiling for
+            17–30 September. From 17 September, custom caps cannot reduce contributions below the
+            statutory minimum. Employer contributions are not employee wage deductions.
+          </p>
           <Toggle
             id="employer_pf_in_ctc"
             defaultChecked={!!settings?.employerPfInCtc}

@@ -3,13 +3,8 @@
 // ============================================================================
 
 import {
-  PF_WAGE_CEILING,
-  PF_EMPLOYEE_RATE,
-  PF_EMPLOYER_RATE,
-  PF_EMPLOYER_EPS_RATE,
-  PF_ADMIN_CHARGES_RATE,
-  PF_EDLI_CHARGES_RATE,
-  PF_EPS_SALARY_CEILING,
+  computeIndiaPF,
+  type ComputeIndiaPFParams,
   ESI_WAGE_CEILING,
   ESI_EMPLOYEE_RATE,
   ESI_EMPLOYER_RATE,
@@ -72,96 +67,8 @@ export function applyRounding(amount: number, policy?: string | null): number {
 // ---------------------------------------------------------------------------
 // Provident Fund
 // ---------------------------------------------------------------------------
-export function computePF(params: {
-  employeeId: string;
-  month: number;
-  year: number;
-  basicSalary: number;
-  daAmount?: number;
-  isVoluntaryPF?: boolean;
-  vpfRate?: number;
-  contributionRate?: number;
-  orgOverrides?: OrgStatutoryOverrides;
-}): PFContribution {
-  const {
-    employeeId,
-    month,
-    year,
-    basicSalary,
-    daAmount = 0,
-    isVoluntaryPF = false,
-    vpfRate = 0,
-    orgOverrides,
-  } = params;
-
-  // Effective contribution rate resolution order (most specific first):
-  //   1. explicit per-employee rate passed in (employee profile)
-  //   2. org-level default rate (migration 029)
-  //   3. India constant (12%)
-  // This lets HR set an org-wide default (e.g. 12% for everyone) and still
-  // allow per-employee VPF overrides on top.
-  const effectiveRate =
-    typeof params.contributionRate === "number"
-      ? params.contributionRate
-      : typeof orgOverrides?.pfDefaultEmployeeRate === "number"
-        ? orgOverrides.pfDefaultEmployeeRate
-        : PF_EMPLOYEE_RATE;
-
-  // PF wages = Basic + DA. Org may opt to apply the rate to actual basic+DA
-  // (true) instead of capping at PF_WAGE_CEILING (₹15,000, the default).
-  // EPS wages always cap at PF_EPS_SALARY_CEILING regardless -- that ceiling
-  // is mandated by the EPS scheme itself, not configurable per employer.
-  const pfWages = orgOverrides?.pfApplyFullBasic
-    ? basicSalary + daAmount
-    : Math.min(basicSalary + daAmount, PF_WAGE_CEILING);
-  const epsWages = Math.min(basicSalary + daAmount, PF_EPS_SALARY_CEILING);
-
-  let employeeEPF = Math.round((pfWages * effectiveRate) / 100);
-  // Hard ₹ cap on the employee's monthly EPF deduction. Common request:
-  // "cap at ₹1,800 even if basic × rate would be higher" -- e.g. an org
-  // with apply-full-basic=true and a basic of ₹50,000 would otherwise
-  // deduct ₹6,000 at 12%. The cap protects the employee's take-home and
-  // keeps the org compliant with its stated PF policy.
-  if (
-    typeof orgOverrides?.pfMaxEmployeeContribution === "number" &&
-    orgOverrides.pfMaxEmployeeContribution >= 0 &&
-    employeeEPF > orgOverrides.pfMaxEmployeeContribution
-  ) {
-    employeeEPF = Math.round(orgOverrides.pfMaxEmployeeContribution);
-  }
-  const employerEPS = Math.round((epsWages * PF_EMPLOYER_EPS_RATE) / 100);
-  // EPFO method: the employer EPF share is the 12% total minus the rounded
-  // EPS share — NOT a direct 3.67% of PF wages. The direct-rate version
-  // mis-rounds (3.67% of ₹15,000 = ₹550.5 → ₹551; correct is ₹1,800 −
-  // ₹1,250 = ₹550). Clamp at 0 in case a custom epsWages exceeds the total.
-  const employerTotal = Math.round((pfWages * PF_EMPLOYER_RATE) / 100);
-  const employerEPF = Math.max(0, employerTotal - employerEPS);
-  // EDLI / PF Admin are employer-side charges the org can switch off
-  // independently (migration 034). NULL/undefined keeps them on -- only an
-  // explicit `false` zeroes the charge, so existing orgs see no change.
-  const adminCharges =
-    orgOverrides?.pfAdminEnabled === false
-      ? 0
-      : Math.round((pfWages * PF_ADMIN_CHARGES_RATE) / 100);
-  const edliCharges =
-    orgOverrides?.pfEdliEnabled === false ? 0 : Math.round((pfWages * PF_EDLI_CHARGES_RATE) / 100);
-
-  const employeeVPF = isVoluntaryPF ? Math.round(((basicSalary + daAmount) * vpfRate) / 100) : 0;
-
-  return {
-    employeeId,
-    month,
-    year,
-    pfWages,
-    employeeEPF,
-    employerEPF,
-    employerEPS,
-    employeeVPF,
-    adminCharges,
-    edliCharges,
-    totalEmployer: employerEPF + employerEPS + adminCharges + edliCharges,
-    totalEmployee: employeeEPF + employeeVPF,
-  };
+export function computePF(params: ComputeIndiaPFParams): PFContribution {
+  return computeIndiaPF(params);
 }
 
 // ---------------------------------------------------------------------------

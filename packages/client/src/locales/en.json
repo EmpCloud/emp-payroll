@@ -1538,6 +1538,9 @@
       "country": "Country *",
       "selectCountry": "Select a country...",
       "noCountries": "No countries with active EOR/direct-hire employees",
+      "noCountriesAvailable": "No active countries are available.",
+      "countriesLoadFailed": "Could not load countries. Please try again.",
+      "retryCountries": "Retry loading countries",
       "calculationNotice": "This will automatically calculate deductions for all active EOR and direct-hire employees in the selected country."
     },
     "detailModal": {

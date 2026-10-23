@@ -104,6 +104,7 @@ test.describe("Settings Page", () => {
 
   test("Statutory Registration section shows PF and ESI fields", async ({ page }) => {
     await page.goto("/settings");
+    await page.getByRole("button", { name: "Statutory", exact: true }).click();
 
     await expect(
       page.getByRole("heading", { name: "Settings" }).first()
@@ -123,14 +124,19 @@ test.describe("Settings Page", () => {
     await expect(esiField).toBeVisible({ timeout: 5000 });
 
     // PF Wage Ceiling select
-    const pfRestrict = page.locator("#pf_restrict");
+    const pfRestrict = page.locator("#pf_wage_mode");
     await expect(pfRestrict).toBeVisible({ timeout: 5000 });
-    await expect(pfRestrict.locator("option", { hasText: "Restricted to ₹15,000" })).toBeAttached();
-    await expect(pfRestrict.locator("option", { hasText: "Actual Basic (no ceiling)" })).toBeAttached();
+    await expect(pfRestrict.locator("option", { hasText: "Restrict to statutory ceiling" })).toBeAttached();
+    await expect(pfRestrict.locator("option", { hasText: "Apply to actual PF wages" })).toBeAttached();
+    await page.getByRole("button", { name: /Statutory minimum/ }).click();
+    await expect(pfRestrict).toHaveValue("ceiling");
+    await expect(page.locator("#pf_max_contribution")).toHaveValue("");
+    await expect(page.getByText(/₹25,000 from 17 September 2026/)).toBeVisible();
   });
 
   test("edit PF and ESI fields and change PF Wage Ceiling", async ({ page }) => {
     await page.goto("/settings");
+    await page.getByRole("button", { name: "Statutory", exact: true }).click();
 
     await expect(
       page.getByRole("heading", { name: "Settings" }).first()
@@ -150,7 +156,7 @@ test.describe("Settings Page", () => {
     await expect(esiField).toHaveValue("31000123450000099", { timeout: 5000 });
 
     // Change PF Wage Ceiling
-    const pfRestrict = page.locator("#pf_restrict");
+    const pfRestrict = page.locator("#pf_wage_mode");
     await pfRestrict.selectOption("actual");
     await expect(pfRestrict).toHaveValue("actual", { timeout: 5000 });
   });

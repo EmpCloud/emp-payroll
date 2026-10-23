@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard,
   Users,
+  UserMinus,
   Wallet,
   Play,
   FileText,
@@ -93,6 +94,13 @@ const navItems: NavItem[] = [
   },
 
   { to: "/employees", label: "Employees", icon: Users, roles: ADMIN_ROLES, section: "People" },
+  {
+    to: "/exits",
+    label: "Exit Management",
+    icon: UserMinus,
+    roles: ADMIN_ROLES,
+    section: "People",
+  },
   {
     to: "/employees/org-chart",
     label: "Org Chart",

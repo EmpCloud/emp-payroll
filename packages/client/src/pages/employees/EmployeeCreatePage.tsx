@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SelectField } from "@/components/ui/SelectField";
+import { PFMembershipFields, readPFMembershipFields } from "@/components/ui/PFMembershipFields";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { useCreateEmployee, useDepartments } from "@/api/hooks";
 import { ArrowLeft } from "lucide-react";
@@ -130,8 +131,9 @@ export function EmployeeCreatePage() {
         },
         pfDetails: {
           pfNumber: get("uan") || undefined,
-          isOptedOut: false,
+          isOptedOut: get("pfOptOut") === "true",
           contributionRate: 12,
+          ...readPFMembershipFields(fd),
         },
       });
       toast.success("Employee created successfully");
@@ -350,6 +352,15 @@ export function EmployeeCreatePage() {
               />
               <Input id="uan" name="uan" label="UAN / PF Number" placeholder="BGBNG/12345/009" />
               <SelectField
+                id="pfOptOut"
+                name="pfOptOut"
+                label="Recorded PF exclusion?"
+                options={[
+                  { value: "false", label: "No recorded exclusion" },
+                  { value: "true", label: "Yes — specify recorded reason" },
+                ]}
+              />
+              <SelectField
                 id="tax_regime"
                 name="tax_regime"
                 label="Tax Regime"
@@ -358,6 +369,7 @@ export function EmployeeCreatePage() {
                   { value: "old", label: "Old Regime" },
                 ]}
               />
+              <PFMembershipFields />
             </div>
           </CardContent>
         </Card>

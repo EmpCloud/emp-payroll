@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { discoveredPaths } from "./route-recorder";
+import { uaeApiPaths } from "./uae-openapi";
 
 const apiDoc = {
   openapi: "3.0.3",
@@ -7,7 +8,7 @@ const apiDoc = {
     title: "EMP Payroll API",
     version: "0.1.0",
     description:
-      "Open-source payroll management API — India statutory compliance (PF, ESI, PT, TDS)",
+      "Payroll management API with India statutory compliance and jurisdiction-aware UAE payroll, payslips and WPS reporting",
   },
   servers: [{ url: "/api/v1", description: "API v1" }],
   components: {
@@ -33,6 +34,7 @@ const apiDoc = {
   },
   security: [{ bearerAuth: [] }],
   paths: {
+    ...uaeApiPaths,
     "/auth/login": {
       post: {
         tags: ["Auth"],

@@ -1,5 +1,17 @@
 import { Router } from "express";
+import { createHash } from "node:crypto";
 import { GlobalPayrollService } from "../../services/global-payroll.service";
+import { UaePayrollService } from "../../services/uae/uae-payroll.service";
+import {
+  recalculateUaeSchema,
+  exportUaeWpsSchema,
+  uaePaymentSchema,
+  uaeRevisionSchema,
+  uaeUnlockSchema,
+  uaeLiabilityQuerySchema,
+} from "../validators/uae-payroll";
+import { UAE_BANK_FORMATS } from "../../services/uae/uae-bank-exports";
+import { UaeGratuityReportService } from "../../services/uae/uae-gratuity-report.service";
 import { authenticate, authorize } from "../middleware/auth.middleware";
 import {
   validate,
@@ -13,8 +25,34 @@ import { wrap, param } from "../helpers";
 
 const router = Router();
 const svc = new GlobalPayrollService();
+const uae = new UaePayrollService();
+const payslipCsp = `default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-hashes' 'sha256-${createHash("sha256").update("window.print()").digest("base64")}'; frame-ancestors 'none'; base-uri 'none'`;
 
 router.use(authenticate);
+
+router.get(
+  "/my-payslips",
+  wrap(async (req, res) => {
+    const data = await uae.myPayslips(
+      String(req.user!.empcloudOrgId),
+      String(req.user!.empcloudUserId),
+    );
+    res.json({ success: true, data });
+  }),
+);
+router.get(
+  "/my-payslips/:itemId",
+  wrap(async (req, res) => {
+    const html = await uae.myPayslip(
+      String(req.user!.empcloudOrgId),
+      String(req.user!.empcloudUserId),
+      param(req, "itemId"),
+    );
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Content-Security-Policy", payslipCsp);
+    res.type("html").send(html);
+  }),
+);
 
 // ---------------------------------------------------------------------------
 // Dashboard & Analytics
@@ -143,6 +181,10 @@ router.post(
       req.body.countryId,
       req.body.month,
       req.body.year,
+      req.body.uaeInputs,
+      req.body.uaeEmployer,
+      String(req.user!.empcloudUserId),
+      req.body.uaeSchedule,
     );
     res.status(201).json({ success: true, data });
   }),
@@ -182,6 +224,7 @@ router.post(
       String(req.user!.empcloudOrgId),
       param(req, "id"),
       String(req.user!.empcloudUserId),
+      req.body?.expectedRevision,
     );
     res.json({ success: true, data });
   }),
@@ -192,6 +235,116 @@ router.post(
   authorize("hr_admin"),
   wrap(async (req, res) => {
     const data = await svc.markPayrollRunPaid(String(req.user!.empcloudOrgId), param(req, "id"));
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  "/payroll-runs/:id/uae/recalculate",
+  authorize("hr_admin", "hr_manager"),
+  validate(recalculateUaeSchema),
+  wrap(async (req, res) => {
+    const data = await uae.recalculate(
+      String(req.user!.empcloudOrgId),
+      param(req, "id"),
+      req.body.uaeInputs,
+      String(req.user!.empcloudUserId),
+      req.body.uaeSchedule,
+      req.body.expectedRevision,
+    );
+    res.json({ success: true, data });
+  }),
+);
+
+router.get(
+  "/payroll-runs/:id/uae/payslips/:itemId",
+  authorize("hr_admin", "hr_manager"),
+  wrap(async (req, res) => {
+    const html = await uae.payslip(
+      String(req.user!.empcloudOrgId),
+      param(req, "id"),
+      param(req, "itemId"),
+    );
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Content-Security-Policy", payslipCsp);
+    res.type("html").send(html);
+  }),
+);
+
+router.post(
+  "/payroll-runs/:id/uae/wps",
+  authorize("hr_admin"),
+  validate(exportUaeWpsSchema),
+  wrap(async (req, res) => {
+    const file = await uae.exportWps(
+      String(req.user!.empcloudOrgId),
+      param(req, "id"),
+      req.body,
+      String(req.user!.empcloudUserId),
+    );
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
+    res.type(file.contentType).send(file.content);
+  }),
+);
+
+router.post(
+  "/payroll-runs/:id/uae/payments",
+  authorize("hr_admin"),
+  validate(uaePaymentSchema),
+  wrap(async (req, res) => {
+    const data = await uae.recordPayment(
+      String(req.user!.empcloudOrgId),
+      param(req, "id"),
+      req.body,
+      String(req.user!.empcloudUserId),
+    );
+    res.json({ success: true, data });
+  }),
+);
+
+router.get("/uae/bank-formats", authorize("hr_admin", "hr_manager"), (_req, res) => {
+  res.json({ success: true, data: UAE_BANK_FORMATS });
+});
+router.get(
+  "/uae/gratuity-liability",
+  authorize("hr_admin", "hr_manager"),
+  validate(uaeLiabilityQuerySchema),
+  wrap(async (req, res) => {
+    const data = await new UaeGratuityReportService().report(
+      String(req.user!.empcloudOrgId),
+      Number(req.query.month),
+      Number(req.query.year),
+    );
+    res.json({ success: true, data });
+  }),
+);
+router.post(
+  "/payroll-runs/:id/uae/lock",
+  authorize("hr_admin", "hr_manager"),
+  validate(uaeRevisionSchema),
+  wrap(async (req, res) => {
+    const data = await uae.lock(
+      String(req.user!.empcloudOrgId),
+      param(req, "id"),
+      req.body.expectedRevision,
+      String(req.user!.empcloudUserId),
+    );
+    res.json({ success: true, data });
+  }),
+);
+router.post(
+  "/payroll-runs/:id/uae/unlock",
+  authorize("hr_admin"),
+  validate(uaeUnlockSchema),
+  wrap(async (req, res) => {
+    const data = await uae.unlock(
+      String(req.user!.empcloudOrgId),
+      param(req, "id"),
+      req.body.expectedRevision,
+      req.body.reason,
+      String(req.user!.empcloudUserId),
+    );
     res.json({ success: true, data });
   }),
 );

@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { UaeExitSettlement, type UaeExitContext } from "@/components/uae/UaeExitSettlement";
 
 const EXIT_TYPES = [
   { value: "resignation", label: "Resignation" },
@@ -69,6 +70,25 @@ export function ExitManagementPage() {
   });
 
   const exits = res?.data || [];
+  const {
+    data: uaeExitResponse,
+    isPending: uaeExitLoading,
+    isError: uaeExitError,
+    refetch: refetchUaeExit,
+  } = useQuery({
+    queryKey: ["uae-exit", detailItem?.id],
+    queryFn: () => apiGet<UaeExitContext>(`/exits/${detailItem.id}/uae-settlement`),
+    enabled: !!detailItem,
+  });
+  const uaeExit = uaeExitResponse?.data;
+  const isUaeExit = uaeExit?.isUae === true;
+  const allowManualFnf = uaeExit?.isUae === false;
+  const checklistValue = (key: string) =>
+    isUaeExit && key === "fnf_calculated"
+      ? uaeExit.fnfCalculated
+      : isUaeExit && key === "fnf_paid"
+        ? uaeExit.fnfPaid
+        : detailItem?.[key];
 
   async function searchEmployees(q: string) {
     setEmpSearch(q);
@@ -271,7 +291,7 @@ export function ExitManagementPage() {
         open={!!detailItem}
         onClose={() => setDetailItem(null)}
         title={`Exit: ${detailItem?.employee_name || ""}`}
-        className="max-w-2xl"
+        className={isUaeExit ? "max-w-4xl" : "max-w-2xl"}
       >
         {detailItem && (
           <div className="space-y-6">
@@ -295,7 +315,11 @@ export function ExitManagementPage() {
               <div>
                 <p className="text-gray-500">Last Working Date</p>
                 <p className="font-medium">
-                  {detailItem.last_working_date ? formatDate(detailItem.last_working_date) : "—"}
+                  {(isUaeExit ? uaeExit.lastWorkingDate : detailItem.last_working_date)
+                    ? formatDate(
+                        isUaeExit ? uaeExit.lastWorkingDate! : detailItem.last_working_date,
+                      )
+                    : "—"}
                 </p>
               </div>
               {detailItem.reason && (
@@ -313,14 +337,15 @@ export function ExitManagementPage() {
                 {CHECKLIST_ITEMS.map((item) => (
                   <button
                     key={item.key}
+                    disabled={!allowManualFnf && ["fnf_calculated", "fnf_paid"].includes(item.key)}
                     onClick={() => toggleChecklist(detailItem, item.key)}
-                    className={`flex items-center gap-2 rounded-lg border p-3 text-sm transition-colors ${
-                      detailItem[item.key]
+                    className={`flex items-center gap-2 rounded-lg border p-3 text-sm transition-colors disabled:cursor-default ${
+                      checklistValue(item.key)
                         ? "border-green-200 bg-green-50 text-green-700"
                         : "hover:border-brand-200 border-gray-200 text-gray-600"
                     }`}
                   >
-                    {detailItem[item.key] ? (
+                    {checklistValue(item.key) ? (
                       <CheckCircle className="h-4 w-4 text-green-600" />
                     ) : (
                       <Circle className="h-4 w-4 text-gray-300" />
@@ -332,46 +357,68 @@ export function ExitManagementPage() {
             </div>
 
             {/* FnF Section */}
-            <div>
-              <div className="mb-3 flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-gray-700">Full & Final Settlement</h4>
-                {!detailItem.fnf_calculated && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleCalculateFnF(detailItem.id)}
-                  >
-                    <Calculator className="h-4 w-4" /> Calculate FnF
-                  </Button>
+            {uaeExitLoading && (
+              <p role="status" className="text-sm text-gray-500">
+                Checking settlement jurisdiction…
+              </p>
+            )}
+            {uaeExitError && (
+              <p role="alert" className="text-sm text-red-700">
+                Settlement details could not be loaded.{" "}
+                <button className="underline" onClick={() => refetchUaeExit()}>
+                  Retry
+                </button>
+              </p>
+            )}
+            {isUaeExit && (
+              <UaeExitSettlement
+                key={`${detailItem.id}-${uaeExit.lastWorkingDate || ""}`}
+                context={uaeExit}
+                closed={["completed", "cancelled"].includes(detailItem.status)}
+              />
+            )}
+            {allowManualFnf && (
+              <div>
+                <div className="mb-3 flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-gray-700">Full & Final Settlement</h4>
+                  {!detailItem.fnf_calculated && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCalculateFnF(detailItem.id)}
+                    >
+                      <Calculator className="h-4 w-4" /> Calculate FnF
+                    </Button>
+                  )}
+                </div>
+                {detailItem.fnf_calculated ? (
+                  <div className="space-y-2 rounded-lg bg-gray-50 p-4">
+                    {[
+                      ["Pending Salary", detailItem.pending_salary],
+                      ["Leave Encashment", detailItem.leave_encashment],
+                      ["Gratuity", detailItem.gratuity],
+                      ["Bonus Due", detailItem.bonus_due],
+                      ["Deductions", -Number(detailItem.deductions)],
+                    ].map(([label, amount]) => (
+                      <div key={label as string} className="flex justify-between text-sm">
+                        <span className="text-gray-500">{label}</span>
+                        <span
+                          className={`font-medium ${Number(amount) < 0 ? "text-red-600" : "text-gray-900"}`}
+                        >
+                          {formatCurrency(Math.abs(Number(amount)))}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between border-t pt-2 text-sm font-bold">
+                      <span>Total FnF</span>
+                      <span className="text-brand-700">{formatCurrency(detailItem.fnf_total)}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">FnF not yet calculated</p>
                 )}
               </div>
-              {detailItem.fnf_calculated ? (
-                <div className="space-y-2 rounded-lg bg-gray-50 p-4">
-                  {[
-                    ["Pending Salary", detailItem.pending_salary],
-                    ["Leave Encashment", detailItem.leave_encashment],
-                    ["Gratuity", detailItem.gratuity],
-                    ["Bonus Due", detailItem.bonus_due],
-                    ["Deductions", -Number(detailItem.deductions)],
-                  ].map(([label, amount]) => (
-                    <div key={label as string} className="flex justify-between text-sm">
-                      <span className="text-gray-500">{label}</span>
-                      <span
-                        className={`font-medium ${Number(amount) < 0 ? "text-red-600" : "text-gray-900"}`}
-                      >
-                        {formatCurrency(Math.abs(Number(amount)))}
-                      </span>
-                    </div>
-                  ))}
-                  <div className="flex justify-between border-t pt-2 text-sm font-bold">
-                    <span>Total FnF</span>
-                    <span className="text-brand-700">{formatCurrency(detailItem.fnf_total)}</span>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-400">FnF not yet calculated</p>
-              )}
-            </div>
+            )}
 
             {/* Status Actions */}
             <div className="flex justify-end gap-2 border-t pt-4">
@@ -380,12 +427,15 @@ export function ExitManagementPage() {
                   Start Processing
                 </Button>
               )}
-              {detailItem.status === "fnf_pending" && (
+              {detailItem.status === "fnf_pending" && allowManualFnf && (
                 <Button size="sm" onClick={() => updateStatus(detailItem.id, "fnf_processed")}>
                   Mark FnF Processed
                 </Button>
               )}
-              {detailItem.status === "fnf_processed" && (
+              {((detailItem.status === "fnf_processed" && allowManualFnf) ||
+                (isUaeExit &&
+                  uaeExit.fnfPaid &&
+                  !["completed", "cancelled"].includes(detailItem.status))) && (
                 <Button size="sm" onClick={() => updateStatus(detailItem.id, "completed")}>
                   Complete Exit
                 </Button>

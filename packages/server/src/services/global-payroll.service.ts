@@ -1,10 +1,14 @@
 import { getDB } from "../db/adapters";
+import { findUserById } from "../db/empcloud";
 import { AppError } from "../api/middleware/error.middleware";
 import { computeZAPayroll } from "./tax/za-tax.service";
 import { computeUSPayroll } from "./tax/us-tax.service";
 import { computeUKPayroll } from "./tax/uk-tax.service";
 import { COUNTRY_CONFIGS } from "./tax/country-configs";
 import { deductionsFromConfig } from "./tax/country-payroll.service";
+import type { UaePeriodInput } from "@emp-payroll/shared";
+import { UaePayrollService, decodeUaeEmployee, uaeProfileUpdate } from "./uae/uae-payroll.service";
+import type { UaeSchedule } from "./uae/uae-calendar";
 
 // ---------------------------------------------------------------------------
 // Country-specific tax/deduction calculation helpers
@@ -59,7 +63,7 @@ function calculateDeductions(grossMonthly: number, country: any): DeductionResul
 
   switch (code) {
     case "IN": {
-      // EPF
+      // shortcut: India cost analysis estimates PF from gross; statutory payroll requires the domestic module.
       pension_employee = Math.round(grossMonthly * 0.12);
       pension_employer = Math.round(grossMonthly * 0.12);
       // ESI (if below threshold)
@@ -247,6 +251,24 @@ const DEFAULT_CHECKLIST: Array<{ item: string; category: string }> = [
 export class GlobalPayrollService {
   private db = getDB();
 
+  private async validateEmployeeLink(orgId: string, userId: unknown, email: string) {
+    if (userId == null || userId === "") return;
+    const id = Number(userId);
+    if (!Number.isSafeInteger(id) || id <= 0)
+      throw new AppError(400, "INVALID_EMPLOYEE_LINK", "Select a valid EmpCloud employee");
+    const user = await findUserById(id);
+    if (
+      !user ||
+      Number(user.organization_id) !== Number(orgId) ||
+      user.email.toLowerCase() !== email.toLowerCase()
+    )
+      throw new AppError(
+        400,
+        "INVALID_EMPLOYEE_LINK",
+        "The linked EmpCloud employee must belong to this organisation and have the same email",
+      );
+  }
+
   // ---------------------------------------------------------------------------
   // Countries
   // ---------------------------------------------------------------------------
@@ -286,6 +308,8 @@ export class GlobalPayrollService {
     // Verify country exists
     const country = await this.db.findById<any>("countries", data.countryId);
     if (!country) throw new AppError(404, "NOT_FOUND", "Country not found");
+    const uaeFields = uaeProfileUpdate(null, data, country.code);
+    await this.validateEmployeeLink(orgId, data.empcloudUserId, data.email);
 
     // #123 — Block duplicate adds of the same employee (by email within the
     // org). Previously nothing prevented clicking Save twice, so a single
@@ -328,6 +352,7 @@ export class GlobalPayrollService {
       bank_routing: data.bankRouting || null,
       contract_document_url: data.contractDocumentUrl || null,
       notes: data.notes || null,
+      ...uaeFields,
     });
 
     // Auto-create compliance checklist
@@ -341,7 +366,7 @@ export class GlobalPayrollService {
       });
     }
 
-    return employee;
+    return decodeUaeEmployee(employee as any);
   }
 
   async listGlobalEmployees(
@@ -369,7 +394,7 @@ export class GlobalPayrollService {
 
     // Filter by search if provided
     let data = result.data.map((e: any) => ({
-      ...e,
+      ...decodeUaeEmployee(e),
       country_name: countryMap[e.country_id]?.name || "Unknown",
       country_code: countryMap[e.country_id]?.code || "",
       country_currency_symbol: countryMap[e.country_id]?.currency_symbol || "",
@@ -404,7 +429,7 @@ export class GlobalPayrollService {
     });
 
     return {
-      ...emp,
+      ...decodeUaeEmployee(emp),
       country: country
         ? {
             ...country,
@@ -428,7 +453,27 @@ export class GlobalPayrollService {
     });
     if (!emp) throw new AppError(404, "NOT_FOUND", "Global employee not found");
 
-    const updateData: Record<string, any> = {};
+    const country = await this.db.findById<any>("countries", data.countryId ?? emp.country_id);
+    if (!country) throw new AppError(404, "NOT_FOUND", "Country not found");
+    if (emp.uae_profile && data.countryId && data.countryId !== emp.country_id)
+      throw new AppError(
+        409,
+        "UAE_EMPLOYMENT_TRANSFER",
+        "Create a separate employment record for a cross-country transfer to preserve UAE history",
+      );
+    const updateData: Record<string, any> = uaeProfileUpdate(emp, data, country.code);
+    if (data.empcloudUserId !== undefined || (data.email !== undefined && emp.empcloud_user_id)) {
+      await this.validateEmployeeLink(
+        orgId,
+        data.empcloudUserId === undefined ? emp.empcloud_user_id : data.empcloudUserId,
+        data.email ?? emp.email,
+      );
+    }
+    if (data.empcloudUserId !== undefined)
+      updateData.empcloud_user_id =
+        data.empcloudUserId == null || data.empcloudUserId === ""
+          ? null
+          : Number(data.empcloudUserId);
     if (data.firstName !== undefined) updateData.first_name = data.firstName;
     if (data.lastName !== undefined) updateData.last_name = data.lastName;
     if (data.email !== undefined) updateData.email = data.email;
@@ -451,7 +496,7 @@ export class GlobalPayrollService {
       updateData.contract_document_url = data.contractDocumentUrl;
     if (data.notes !== undefined) updateData.notes = data.notes;
 
-    return this.db.update("global_employees", empId, updateData);
+    return decodeUaeEmployee(await this.db.update<any>("global_employees", empId, updateData));
   }
 
   async terminateGlobalEmployee(orgId: string, empId: string, reason?: string) {
@@ -477,11 +522,38 @@ export class GlobalPayrollService {
   // Global Payroll Runs
   // ---------------------------------------------------------------------------
 
-  async createPayrollRun(orgId: string, countryId: string, month: number, year: number) {
+  async createPayrollRun(
+    orgId: string,
+    countryId: string,
+    month: number,
+    year: number,
+    uaeInputs?: Record<string, UaePeriodInput>,
+    uaeEmployer?: { name: string; address?: string; registrationNumber?: string },
+    actor = "system",
+    uaeSchedule?: UaeSchedule,
+  ) {
     const numOrgId = Number(orgId);
 
     const country = await this.db.findById<any>("countries", countryId);
     if (!country) throw new AppError(404, "NOT_FOUND", "Country not found");
+    if (country.code === "AE")
+      return new UaePayrollService(this.db).createRun(
+        orgId,
+        countryId,
+        month,
+        year,
+        uaeInputs,
+        uaeEmployer,
+        actor,
+        uaeSchedule,
+      );
+    if (country.code === "IN") {
+      throw new AppError(
+        409,
+        "INDIA_PAYROLL_REQUIRES_STATUTORY_PROFILE",
+        "Use domestic Payroll Runs for India after configuring statutory wages and EPF/EPS membership. Global employee records do not contain the information needed to calculate Indian PF.",
+      );
+    }
 
     // Check for duplicate run
     const existing = await this.db.findOne<any>("global_payroll_runs", {
@@ -642,12 +714,17 @@ export class GlobalPayrollService {
 
     return {
       ...result,
-      data: result.data.map((r: any) => ({
-        ...r,
-        country_name: countryMap[r.country_id]?.name || "Unknown",
-        country_code: countryMap[r.country_id]?.code || "",
-        currency_symbol: countryMap[r.country_id]?.currency_symbol || "",
-      })),
+      data: await Promise.all(
+        result.data.map(async (r: any) => ({
+          ...r,
+          country_name: countryMap[r.country_id]?.name || "Unknown",
+          country_code: countryMap[r.country_id]?.code || "",
+          currency_symbol: countryMap[r.country_id]?.currency_symbol || "",
+          ...(r.uae_employer
+            ? { uae_calendar: await new UaePayrollService(this.db).calendar(orgId, r) }
+            : {}),
+        })),
+      ),
     };
   }
 
@@ -661,7 +738,7 @@ export class GlobalPayrollService {
     const country = await this.db.findById<any>("countries", run.country_id);
 
     const items = await this.db.findMany<any>("global_payroll_items", {
-      filters: { payroll_run_id: runId },
+      filters: { payroll_run_id: runId, empcloud_org_id: Number(orgId) },
       limit: 1000,
     });
 
@@ -669,7 +746,10 @@ export class GlobalPayrollService {
     const empIds = [...new Set(items.data.map((i: any) => i.global_employee_id))];
     const empMap: Record<string, any> = {};
     for (const eid of empIds) {
-      const emp = await this.db.findById<any>("global_employees", eid as string);
+      const emp = await this.db.findOne<any>("global_employees", {
+        id: eid,
+        empcloud_org_id: Number(orgId),
+      });
       if (emp) empMap[eid as string] = emp;
     }
 
@@ -685,15 +765,21 @@ export class GlobalPayrollService {
           : "Unknown",
         employee_email: empMap[i.global_employee_id]?.email || "",
       })),
+      ...(country?.code === "AE" && run.uae_employer
+        ? await new UaePayrollService(this.db).details(orgId, run, items.data)
+        : {}),
     };
   }
 
-  async approvePayrollRun(orgId: string, runId: string, userId: string) {
+  async approvePayrollRun(orgId: string, runId: string, userId: string, expectedRevision?: number) {
     const run = await this.db.findOne<any>("global_payroll_runs", {
       id: runId,
       empcloud_org_id: Number(orgId),
     });
     if (!run) throw new AppError(404, "NOT_FOUND", "Payroll run not found");
+    const country = await this.db.findById<any>("countries", run.country_id);
+    if (country?.code === "AE")
+      return new UaePayrollService(this.db).approve(orgId, runId, userId, expectedRevision);
     if (run.status !== "draft" && run.status !== "processing") {
       throw new AppError(400, "INVALID_STATUS", `Cannot approve a run with status "${run.status}"`);
     }
@@ -710,6 +796,13 @@ export class GlobalPayrollService {
       empcloud_org_id: Number(orgId),
     });
     if (!run) throw new AppError(404, "NOT_FOUND", "Payroll run not found");
+    const country = await this.db.findById<any>("countries", run.country_id);
+    if (country?.code === "AE")
+      throw new AppError(
+        409,
+        "UAE_PAYMENT_EVIDENCE_REQUIRED",
+        "Record each employee's disbursement evidence in UAE payment reconciliation",
+      );
     if (run.status !== "approved") {
       throw new AppError(400, "INVALID_STATUS", "Only approved runs can be marked as paid");
     }
@@ -1037,6 +1130,7 @@ export class GlobalPayrollService {
         total_employer_cost: number;
         total_net: number;
         avg_salary: number;
+        calculation_notice?: string;
       }
     > = {};
 
@@ -1076,6 +1170,18 @@ export class GlobalPayrollService {
           total_employer_cost: 0,
           total_net: 0,
           avg_salary: 0,
+          ...(country.code === "IN"
+            ? {
+                calculation_notice:
+                  "Estimate only: statutory PF is not calculated. Use domestic Payroll Runs with statutory wages and EPF/EPS membership.",
+              }
+            : {}),
+          ...(country.code === "AE"
+            ? {
+                calculation_notice:
+                  "Salary-only estimate. UAE payroll runs use effective employee profiles, pension coverage, insurance and savings inputs.",
+              }
+            : {}),
         };
       }
 

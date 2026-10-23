@@ -19,6 +19,7 @@ import {
   MapPin,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { UaeProfileCard } from "@/components/uae/UaeProfileCard";
 
 const STATUS_BADGE: Record<string, "active" | "draft" | "inactive"> = {
   active: "active",
@@ -273,8 +274,12 @@ export function GlobalEmployeeDetailPage() {
             </CardContent>
           </Card>
 
+          {(emp.country?.code === "AE" || emp.country_code === "AE") && (
+            <UaeProfileCard employee={emp} />
+          )}
+
           {/* Country Compliance Rules */}
-          {emp.country && (
+          {emp.country && emp.country.code !== "AE" && emp.country_code !== "AE" && (
             <Card>
               <CardContent className="p-6">
                 <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">

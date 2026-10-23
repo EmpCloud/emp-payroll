@@ -37,7 +37,13 @@ const TEMPLATE_HEADERS = [
   "UAN",
   "PF Number",
   "PF Rate",
-  "PF Opted Out",
+  "Recorded PF Exclusion",
+  "PF Exclusion Reason",
+  "Recorded EPS Member",
+  "EPS Exclusion Reason",
+  "PF Membership Date",
+  "EPS Membership Date",
+  "PF Eligibility Review Wages",
   "ESI Eligible",
   "ESI Number",
   "Dispensary",
@@ -186,7 +192,13 @@ export function BulkUpdateModal({ open, onClose, onSuccess }: BulkUpdateModalPro
       pf.uan || tax.uan || "",
       pf.pfNumber || "",
       pf.contributionRate ?? "",
-      boolCell(pf.isOptedOut),
+      boolCell(pf.exclusionReason ? true : pf.isOptedOut),
+      pf.exclusionReason || "",
+      boolCell(pf.isEpsMember),
+      pf.epsExclusionReason || "",
+      dateCell(pf.pfMembershipDate),
+      dateCell(pf.epsMembershipDate),
+      pf.membershipWages ?? "",
       boolCell(esi.isEligible),
       esi.esiNumber || "",
       esi.dispensary || "",
@@ -331,7 +343,10 @@ export function BulkUpdateModal({ open, onClose, onSuccess }: BulkUpdateModalPro
     const uan = pick(row, "UAN", "UAN Number");
     const pfNumber = pick(row, "PF Number", "PF No");
     const pfRate = pick(row, "PF Rate", "Contribution Rate");
-    const pfOptedOut = parseBool("PF Opted Out", pick(row, "PF Opted Out", "Opted Out"));
+    const pfOptedOut = parseBool(
+      "Recorded PF Exclusion",
+      pick(row, "Recorded PF Exclusion", "PF Opted Out", "Opted Out"),
+    );
     if (providentFund !== undefined) pfDetails.providentFund = providentFund;
     if (uan) pfDetails.uan = uan;
     if (pfNumber) pfDetails.pfNumber = pfNumber;
@@ -341,6 +356,38 @@ export function BulkUpdateModal({ open, onClose, onSuccess }: BulkUpdateModalPro
       else errors.push(`PF Rate: "${pfRate}" is not valid — enter a number between 0 and 100`);
     }
     if (pfOptedOut !== undefined) pfDetails.isOptedOut = pfOptedOut;
+    const epsMember = parseBool(
+      "Recorded EPS Member",
+      pick(row, "Recorded EPS Member", "EPS Member", "isEpsMember"),
+    );
+    if (epsMember !== undefined) pfDetails.isEpsMember = epsMember;
+    for (const [header, field, allowed] of [
+      ["PF Exclusion Reason", "exclusionReason", ["wage_ceiling", "exempt"]],
+      ["EPS Exclusion Reason", "epsExclusionReason", ["wage_ceiling", "ineligible"]],
+    ] as const) {
+      const value = pick(row, header, field).toLowerCase();
+      if (value && (allowed as readonly string[]).includes(value)) pfDetails[field] = value;
+      else if (value) errors.push(`${header}: use ${allowed.join(" or ")}`);
+    }
+    for (const [header, field] of [
+      ["PF Membership Date", "pfMembershipDate"],
+      ["EPS Membership Date", "epsMembershipDate"],
+    ]) {
+      const value = pick(row, header, field);
+      if (value && isValidDate(value)) pfDetails[field] = value;
+      else if (value) errors.push(`${header}: use a valid YYYY-MM-DD date`);
+    }
+    const membershipWages = pick(
+      row,
+      "PF Eligibility Review Wages",
+      "Membership Wages",
+      "membershipWages",
+    );
+    if (membershipWages) {
+      const wages = Number(membershipWages);
+      if (Number.isFinite(wages) && wages >= 0) pfDetails.membershipWages = wages;
+      else errors.push("PF Eligibility Review Wages: enter a non-negative amount");
+    }
 
     const esiDetails: Record<string, any> = {};
     const esiEligible = parseBool("ESI Eligible", pick(row, "ESI Eligible", "ESI"));
@@ -484,7 +531,15 @@ export function BulkUpdateModal({ open, onClose, onSuccess }: BulkUpdateModalPro
               <p className="mb-1 font-semibold">Notes:</p>
               <ul className="list-inside list-disc space-y-1">
                 <li>Rows are matched by Employee Code first, then Email.</li>
-                <li>Yes/No columns: TDS, Professional Tax, Provident Fund, PF Opted Out, ESI.</li>
+                <li>
+                  Yes/No columns: TDS, Professional Tax, Provident Fund, Recorded PF Exclusion,
+                  Recorded EPS Member, ESI.
+                </li>
+                <li>
+                  PF review wages are the fixed monthly statutory wages at the 17 September 2026
+                  review or later entry. Eligible wage-ceiling exclusions gain coverage from that
+                  date.
+                </li>
                 <li>Dates: YYYY-MM-DD. Gender: male / female / other. Regime: old / new.</li>
                 <li>PAN (AAAAA9999A) and IFSC are validated; bad rows are skipped.</li>
               </ul>

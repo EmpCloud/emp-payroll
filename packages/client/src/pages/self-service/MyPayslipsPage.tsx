@@ -7,7 +7,9 @@ import { SelectField } from "@/components/ui/SelectField";
 import { Modal } from "@/components/ui/Modal";
 import { formatCurrency } from "@/lib/utils";
 import { useMyPayslips } from "@/api/hooks";
-import { apiPost } from "@/api/client";
+import { apiGet, apiPost } from "@/api/client";
+import { useQuery } from "@tanstack/react-query";
+import { MyUaePayslips, type MyUaePayslip } from "@/components/uae/MyUaePayslips";
 import { Download, FileText, Loader2, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
@@ -25,6 +27,15 @@ export function MyPayslipsPage() {
   const [fyStart, setFyStart] = useState(String(currentFYStart));
   const { data: res, isLoading } = useMyPayslips();
   const allPayslips = res?.data?.data || [];
+  const {
+    data: uaeRes,
+    isLoading: loadingUae,
+    isError: uaeError,
+  } = useQuery({
+    queryKey: ["my-uae-payslips"],
+    queryFn: () => apiGet<MyUaePayslip[]>("/global/my-payslips"),
+  });
+  const uaePayslips = uaeRes?.data || [];
   const financialYearOptions = FY_STARTS.map((year) => ({
     value: `${year}`,
     label: t("myPayslipsPage.financialYear", {
@@ -62,7 +73,7 @@ export function MyPayslipsPage() {
     return val || [];
   };
 
-  if (isLoading) {
+  if (isLoading || loadingUae) {
     return (
       <div className="flex h-64 items-center justify-center">
         <Loader2 className="text-brand-600 h-8 w-8 animate-spin" />
@@ -74,26 +85,37 @@ export function MyPayslipsPage() {
     <div className="space-y-6">
       <PageHeader title={t("myPayslipsPage.title")} description={t("myPayslipsPage.description")} />
 
-      <div className="flex gap-3">
-        <div className="w-40">
-          <SelectField
-            id="fy-filter"
-            label=""
-            aria-label={t("myPayslipsPage.financialYearFilter")}
-            value={fyStart}
-            onChange={(e) => setFyStart(e.target.value)}
-            options={financialYearOptions}
-          />
+      {uaeError && (
+        <p role="alert" className="text-sm text-amber-800">
+          UAE payslips could not be loaded. Refresh to try again.
+        </p>
+      )}
+      <MyUaePayslips payslips={uaePayslips} />
+
+      {(allPayslips.length > 0 || uaePayslips.length === 0) && (
+        <div className="flex gap-3">
+          <div className="w-40">
+            <SelectField
+              id="fy-filter"
+              label=""
+              aria-label={t("myPayslipsPage.financialYearFilter")}
+              value={fyStart}
+              onChange={(e) => setFyStart(e.target.value)}
+              options={financialYearOptions}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {payslips.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <FileText className="mx-auto h-12 w-12 text-gray-300" />
-            <p className="mt-4 text-gray-500">{t("myPayslipsPage.empty")}</p>
-          </CardContent>
-        </Card>
+        uaePayslips.length > 0 && allPayslips.length === 0 ? null : (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <FileText className="mx-auto h-12 w-12 text-gray-300" />
+              <p className="mt-4 text-gray-500">{t("myPayslipsPage.empty")}</p>
+            </CardContent>
+          </Card>
+        )
       ) : (
         <div className="space-y-4">
           {payslips.map((ps: any) => {

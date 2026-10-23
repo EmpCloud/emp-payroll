@@ -1752,6 +1752,18 @@ describe("OrgService", () => {
 describe("ExitService", () => {
   let mod: any;
   beforeEach(async () => {
+    mockDb.findOne.mockImplementation(async (table: string) =>
+      table === "employee_exits"
+        ? {
+            id: "ex-1",
+            org_id: 1,
+            employee_id: 101,
+            status: "initiated",
+            last_working_date: "2026-06-30",
+          }
+        : null,
+    );
+    mockDb.findMany.mockResolvedValue({ data: [], total: 0, page: 1, limit: 1000, totalPages: 0 });
     mod = await import("../../services/exit.service");
   });
 

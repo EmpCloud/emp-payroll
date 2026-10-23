@@ -1194,32 +1194,11 @@ export const COUNTRY_CONFIGS: Record<string, CountryPayrollConfig> = {
     name: "United Arab Emirates",
     currency: "AED",
     subunitDivisor: 100,
-    taxYear: "2025/26",
-    incomeTax: {
-      system: "none",
-      annualBands: [],
-      annualAllowance: 0,
-      annualRebate: 0,
-    },
-    funds: [
-      {
-        name: "GPSSA Pension & Social Security",
-        purpose: "pension",
-        employeeRate: 5,
-        employerRate: 12.5,
-        monthlyCap: 50000,
-        monthlyFloor: 1000,
-      },
-      {
-        name: "ILOE Unemployment Insurance",
-        purpose: "unemployment",
-        employeeRate: 0,
-        employerRate: 0,
-        employeeFlatMonthly: 5,
-      },
-    ],
+    taxYear: "2026",
+    incomeTax: { system: "none", annualBands: [], annualAllowance: 0, annualRebate: 0 },
+    funds: [],
     notes:
-      "Tax year 2025/26. The UAE levies NO personal income tax on employment income (incomeTax.system='none'; independently confirmed via PwC Worldwide Tax Summaries and multiple 2026 sources) \u2014 the only individual-facing statutory monthly payroll items are GPSSA social-security pension and the ILOE unemployment premium. GPSSA pension applies to UAE/GCC NATIONALS ONLY; non-GCC expatriate/foreign employees pay NO monthly social security and instead accrue an end-of-service gratuity (EOSB) that is an EMPLOYER liability paid on termination, not a monthly deduction, so it is deliberately NOT modelled as a fund \u2014 expat employees therefore have ZERO fund contributions except the flat ILOE premium below. Two GPSSA regimes coexist: (1) OLD law (Federal Law No. 7 of 1999) governs nationals first registered BEFORE 31 Oct 2023 (still the majority of employed nationals): private-sector total 20% of the contribution-calculation salary = employee 5% + employer 12.5% + government 2.5% (the government pays the 2.5% as an Emiratisation subsidy so it is NOT an employer cost), with the contribution salary floored at AED 1,000 and capped at AED 50,000/month. This is exactly what the funds block models (employeeRate 5, employerRate 12.5 = net employer cost, floor 1,000, cap 50,000) because it is PwC's headline UAE rate and covers most current national employees; the 2.5% government share is correctly excluded from employerRate. (2) NEW law (Federal Decree-Law No. 57 of 2023, effective 31 Oct 2023, contributions payable from 1 Jan 2024) applies only to nationals entering the workforce for the FIRST time on/after that date: total 26% = employee 11% + employer 15%, with the government still subsidising 2.5% of the employer share for those earning under AED 20,000 (net employer 12.5% below that threshold), and the private-sector contribution-salary cap raised to AED 70,000/month (public-sector cap AED 100,000/month; floor still AED 1,000). Payroll for post-31-Oct-2023 first-time national hires should use employee 11% / employer 15% and cap 70,000 in place of the modelled old-law figures. Abu Dhabi nationals fall under a separate scheme (ADPF) \u2014 per PwC employee 5% / employer 15% / government 6% = 26%, cap up to AED 100,000 for new members \u2014 not modelled here. ILOE (Involuntary Loss of Employment) insurance is mandatory for ALL private-sector and federal-government employees, BOTH nationals and expatriate residents, and is EMPLOYEE-paid as a flat premium: AED 5/month where basic salary <= AED 16,000, or AED 10/month where basic salary > AED 16,000 (VAT is added on top). Modelled as employeeFlatMonthly = 5 (the representative lower tier, since most basic salaries are below AED 16,000); use AED 10/month for higher earners. ILOE exemptions: business owners/investors, domestic workers, temporary-contract workers, under-18s, and pensioned retirees who take new jobs. No income-tax-based levies exist (the UAE's 5% VAT and 9% corporate tax are not employee payroll levies). All load-bearing numbers were independently re-verified against current 2025/26 sources \u2014 no income tax; GPSSA old-law 5%/12.5%(+2.5% gov), floor AED 1,000, cap AED 50,000; new-law 11%/15%, cap AED 70,000; ILOE AED 5/10 at the AED 16,000 line \u2014 confidence high.",
+      "Salary-only estimate: the UAE has no personal income tax. Statutory UAE payroll uses the dedicated employee-profile engine, including jurisdiction, nationality, registered pension authority and membership history, contribution salary, ILOE collection arrangement, employer insurance and savings. Do not apply GPSSA or an ILOE deduction to every UAE employee. GPSSA new-law private contribution salary is AED 3,000-70,000. Use Global Payroll with a complete UAE profile for an actual payroll calculation.",
   },
   // Sweden — confidence: high. Income year 2026 (Sweden's tax year is the calendar year; figures current as of July 2026).
   SE: {
