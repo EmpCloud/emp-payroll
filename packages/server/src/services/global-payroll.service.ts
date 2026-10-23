@@ -347,7 +347,7 @@ export class GlobalPayrollService {
       salary_frequency: data.salaryFrequency || "monthly",
       status: "onboarding",
       tax_id: data.taxId || null,
-      bank_name: data.bankName || null,
+      bank_name: data.bankName?.trim() || null,
       bank_account: data.bankAccount || null,
       bank_routing: data.bankRouting || null,
       contract_document_url: data.contractDocumentUrl || null,
@@ -489,7 +489,7 @@ export class GlobalPayrollService {
     if (data.salaryFrequency !== undefined) updateData.salary_frequency = data.salaryFrequency;
     if (data.status !== undefined) updateData.status = data.status;
     if (data.taxId !== undefined) updateData.tax_id = data.taxId;
-    if (data.bankName !== undefined) updateData.bank_name = data.bankName;
+    if (data.bankName !== undefined) updateData.bank_name = data.bankName.trim() || null;
     if (data.bankAccount !== undefined) updateData.bank_account = data.bankAccount;
     if (data.bankRouting !== undefined) updateData.bank_routing = data.bankRouting;
     if (data.contractDocumentUrl !== undefined)

@@ -80,7 +80,7 @@ export function uaeProfileUpdate(employee: Row | null, data: Row, countryCode: s
     throw new AppError(400, "INVALID_UAE_COUNTRY", "UAE profiles are only valid for UAE employees");
   try {
     const profile = uaeProfileSchema.parse(data.uaeProfile) as UaeEmployeeProfile;
-    validateUaeProfile(profile);
+    validateUaeProfile(profile, { requirePaymentDetails: false });
     const currency = data.salaryCurrency ?? employee?.salary_currency ?? "AED";
     const frequency = data.salaryFrequency ?? employee?.salary_frequency ?? "monthly";
     if (currency !== "AED" || frequency !== "monthly")

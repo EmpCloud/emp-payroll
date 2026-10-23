@@ -79,7 +79,7 @@ export const uaeApiPaths = {
       tags: ["Global payroll"],
       summary: "Create an international employee, optionally with a UAE statutory profile",
       description:
-        "HR admin/manager. UAE profile uses integer fils, monthly AED salary and explicit jurisdiction/nationality. Basic plus allowances must equal salaryAmount. Profiles may be omitted during onboarding, but UAE calculation then fails closed. Government/domestic employment require separate regimes.",
+        "HR admin/manager. UAE profile uses integer fils, monthly AED salary and explicit jurisdiction/nationality. Basic plus allowances must equal salaryAmount. Profiles may be omitted during onboarding, but UAE calculation then fails closed. WPS details may be incomplete while saving an employee; federal payroll requires complete payment details or a documented exemption. Government/domestic employment require separate regimes.",
       requestBody: request(
         {
           firstName: "Example",
@@ -111,7 +111,7 @@ export const uaeApiPaths = {
       parameters: [runId],
       summary: "Update employee and append an effective UAE profile version",
       description:
-        "HR admin/manager. Salary amendments require the matching complete uaeProfile. Profile amendments take effect on a month boundary; approved payroll snapshots remain unchanged.",
+        "HR admin/manager. Salary amendments require the matching complete uaeProfile. WPS details may remain incomplete during profile setup; payroll still enforces payment readiness and any exemption must include its reason and reference. Profile amendments take effect on a month boundary; approved payroll snapshots remain unchanged.",
       requestBody: request(
         { salaryAmount: 900000, uaeProfile: uaeProfileExample },
         "Complete profile replacement; history is maintained by the server.",
