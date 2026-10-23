@@ -410,6 +410,80 @@ describe("UAE payroll persistence and reporting with real calculation", () => {
     expect(run().status).toBe("approved");
   });
 
+  it.each(
+    ["uae_profile", "uae_calculation", "uae_employee", "uae_input"].flatMap((field) =>
+      ["string", "object"].map((storage) => ({ field, storage })),
+    ),
+  )(
+    "locks revision 2 and approves after database key reordering of $field as $storage",
+    async ({ field, storage }) => {
+      const inputs = {
+        "employee-1": {
+          variableEarnings: [
+            { name: "Commission", amount: 12345 },
+            { name: "Bonus", amount: 23456 },
+          ],
+        },
+      };
+      const created = await create(inputs);
+      await service.recalculate("1", created.id, inputs, "42", undefined, 1);
+      expect(run().uae_revision).toBe(2);
+      const reorderObjectKeys = (value: unknown): unknown => {
+        if (Array.isArray(value)) return value.map(reorderObjectKeys);
+        if (value && typeof value === "object")
+          return Object.fromEntries(
+            Object.entries(value)
+              .reverse()
+              .map(([key, entry]) => [key, reorderObjectKeys(entry)]),
+          );
+        return value;
+      };
+      const saved = fixture.rows("global_payroll_items")[0];
+      const reordered = reorderObjectKeys(JSON.parse(saved[field]));
+      saved[field] = storage === "string" ? JSON.stringify(reordered) : reordered;
+      const originalSnapshot = structuredClone(saved);
+      await service.lock("1", created.id, 2, "42");
+      expect(run().status).toBe("locked");
+      await service.approve("1", created.id, "42", 3);
+      expect(run().status).toBe("approved");
+      expect(fixture.rows("global_payroll_items")[0]).toEqual(originalSnapshot);
+    },
+  );
+
+  it.each(["nested value", "array order", "value type"])(
+    "rejects a real snapshot change in %s without writes",
+    async (change) => {
+      const earnings = [
+        { name: "Commission", amount: 12345 },
+        { name: "Bonus", amount: 23456 },
+      ];
+      const created = await create({ "employee-1": { variableEarnings: earnings } });
+      if (change === "nested value") {
+        const current = fixture.rows("global_employees")[0];
+        const updatedProfile = JSON.parse(current.uae_profile);
+        updatedProfile.wps.accountNumber = "AE070331234567890123457";
+        current.uae_profile = JSON.stringify(updatedProfile);
+      } else if (change === "array order") {
+        fixture.rows("global_payroll_runs")[0].uae_inputs = JSON.stringify({
+          "employee-1": { variableEarnings: [...earnings].reverse() },
+        });
+      } else {
+        const saved = fixture.rows("global_payroll_items")[0];
+        const calculation = JSON.parse(saved.uae_calculation);
+        calculation.earnings[0].amount = String(calculation.earnings[0].amount);
+        saved.uae_calculation = JSON.stringify(calculation);
+      }
+      const originalSnapshot = item();
+      fixture.clearWrites();
+      await expect(service.lock("1", created.id, 1, "42")).rejects.toMatchObject({
+        code: "STALE_UAE_INPUTS",
+      });
+      noWrites();
+      expect(item()).toEqual(originalSnapshot);
+      expect(run().status).toBe("draft");
+    },
+  );
+
   it("preserves a locked snapshot until an audited unlock with the current revision", async () => {
     const created = await create();
     await service.lock("1", created.id, run().uae_revision, "42");

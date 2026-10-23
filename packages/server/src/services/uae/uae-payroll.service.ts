@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isDeepStrictEqual } from "node:util";
 import type { UaeEmployeeProfile, UaePeriodInput, UaePayrollResult } from "@emp-payroll/shared";
 import { getDB } from "../../db/adapters";
 import type { IDBAdapter } from "../../db/adapters/interface";
@@ -489,8 +490,8 @@ export class UaePayrollService {
             !previous ||
             ["uae_profile", "uae_calculation", "uae_employee", "uae_input"].some(
               (key) =>
-                JSON.stringify(readUaeJson(previous[key], null)) !==
-                JSON.stringify(readUaeJson(item[key], null)),
+                // JSON columns may reorder object keys when snapshots are stored.
+                !isDeepStrictEqual(readUaeJson(previous[key], null), readUaeJson(item[key], null)),
             )
           );
         })
