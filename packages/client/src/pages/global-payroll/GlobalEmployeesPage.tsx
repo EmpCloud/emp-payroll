@@ -18,6 +18,7 @@ import type { UaeEmployeeProfile } from "@emp-payroll/shared";
 import { newUaeProfile, UaeProfileForm } from "@/components/uae/UaeProfileForm";
 import { assertUaeProfile } from "@/lib/uae-payroll";
 import { UaeEmployeeLink } from "@/components/uae/UaeEmployeeLink";
+import { GlobalEmployeeBulkModal } from "@/components/global-payroll/GlobalEmployeeBulkModal";
 
 const EMPLOYMENT_TYPES = [
   { value: "", labelKey: "globalEmployeesPage.filters.allTypes" },
@@ -107,6 +108,7 @@ export function GlobalEmployeesPage() {
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "");
   const [countryFilter, setCountryFilter] = useState(searchParams.get("country") || "");
   const [showAdd, setShowAdd] = useState(false);
+  const [bulkMode, setBulkMode] = useState<"create" | "update" | null>(null);
   const [saving, setSaving] = useState(false);
   // When set, the Add Employee modal acts as Edit (PUT instead of POST,
   // pre-populates form from this row).
@@ -457,12 +459,24 @@ export function GlobalEmployeesPage() {
         title={t("globalEmployeesPage.title")}
         description={t("globalEmployeesPage.description")}
         actions={
-          <Button onClick={() => setShowAdd(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t("globalEmployeesPage.actions.addEmployee")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setBulkMode("create")}>
+              Bulk upload
+            </Button>
+            <Button variant="outline" onClick={() => setBulkMode("update")}>
+              Bulk update
+            </Button>
+            <Button onClick={() => setShowAdd(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t("globalEmployeesPage.actions.addEmployee")}
+            </Button>
+          </div>
         }
       />
+
+      {bulkMode && (
+        <GlobalEmployeeBulkModal key={bulkMode} mode={bulkMode} onClose={() => setBulkMode(null)} />
+      )}
 
       {/* Filters */}
       <Card>
