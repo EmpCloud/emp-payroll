@@ -3,7 +3,7 @@ import { defineConfig } from "@playwright/test";
 // Isolated UI regressions: no login fixture, backend or database is required.
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: "global-payroll-countries.spec.ts",
+  testMatch: ["global-payroll-countries.spec.ts", "global-employee-bulk.spec.ts"],
   timeout: 15000,
   retries: 0,
   workers: 1,

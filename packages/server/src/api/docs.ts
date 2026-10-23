@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { discoveredPaths } from "./route-recorder";
 import { uaeApiPaths } from "./uae-openapi";
+import { globalEmployeeBulkApiPaths } from "./global-employee-bulk-openapi";
 
 const apiDoc = {
   openapi: "3.0.3",
@@ -35,6 +36,7 @@ const apiDoc = {
   security: [{ bearerAuth: [] }],
   paths: {
     ...uaeApiPaths,
+    ...globalEmployeeBulkApiPaths,
     "/auth/login": {
       post: {
         tags: ["Auth"],
