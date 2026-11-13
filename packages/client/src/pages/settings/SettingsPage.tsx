@@ -721,13 +721,21 @@ function StatutoryOverridesCard({ settings }: { settings: any }) {
         {/* PF preset picker */}
         <div className="space-y-3">
           <label className="block text-sm font-medium text-gray-700">PF Calculation Method</label>
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+            <p className="font-semibold">Current PF wage ceiling: ₹25,000/month</p>
+            <p className="mt-1">
+              Effective 17 September 2026. At the standard 12% rate, employee PF is up to
+              ₹3,000/month on capped PF wages. This is the contribution amount, not the wage
+              ceiling.
+            </p>
+          </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {(
               [
                 {
                   key: "statutory",
                   title: "Statutory minimum",
-                  body: "12% of PF wages up to the ceiling for the payroll period. ₹25,000 from 17 September 2026; ₹15,000 before that date.",
+                  body: "12% of PF wages, capped at ₹25,000/month: up to ₹3,000 employee PF for a full month under the revised ceiling.",
                 },
                 {
                   key: "full_basic",
@@ -775,8 +783,8 @@ function StatutoryOverridesCard({ settings }: { settings: any }) {
                 if (preset !== "custom") setPreset("custom");
               }}
               options={[
-                { value: "", label: "Use statutory ceiling for payroll period" },
-                { value: "ceiling", label: "Restrict to statutory ceiling" },
+                { value: "", label: "Use statutory ceiling (currently ₹25,000)" },
+                { value: "ceiling", label: "Restrict to statutory ceiling (currently ₹25,000)" },
                 { value: "actual", label: "Apply to actual PF wages" },
               ]}
             />
@@ -800,7 +808,7 @@ function StatutoryOverridesCard({ settings }: { settings: any }) {
           <div>
             <Input
               id="pf_max_contribution"
-              label="Max Cap (₹/month)"
+              label="Employee contribution cap (₹/month)"
               type="number"
               step="1"
               min="0"
@@ -819,8 +827,9 @@ function StatutoryOverridesCard({ settings }: { settings: any }) {
             CTC is interpreted, not how PF is computed. */}
         <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
           <p className="mb-3 text-xs text-gray-600">
-            September 2026 uses the earlier ceiling for 1–16 September and the revised ceiling for
-            17–30 September. From 17 September, custom caps cannot reduce contributions below the
+            Historical payroll uses the ₹15,000 wage ceiling before 17 September 2026. September
+            2026 uses the earlier ceiling for 1–16 September and the revised ceiling for 17–30
+            September. From 17 September, custom caps cannot reduce contributions below the
             statutory minimum. Employer contributions are not employee wage deductions.
           </p>
           <Toggle

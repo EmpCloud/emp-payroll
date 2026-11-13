@@ -131,7 +131,8 @@ test.describe("Settings Page", () => {
     await page.getByRole("button", { name: /Statutory minimum/ }).click();
     await expect(pfRestrict).toHaveValue("ceiling");
     await expect(page.locator("#pf_max_contribution")).toHaveValue("");
-    await expect(page.getByText(/₹25,000 from 17 September 2026/)).toBeVisible();
+    await expect(page.getByText("Current PF wage ceiling: ₹25,000/month")).toBeVisible();
+    await expect(page.getByText(/Effective 17 September 2026/)).toBeVisible();
   });
 
   test("edit PF and ESI fields and change PF Wage Ceiling", async ({ page }) => {
