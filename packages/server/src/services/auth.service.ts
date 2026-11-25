@@ -11,6 +11,7 @@ import { getDB } from "../db/adapters";
 import {
   findUserByEmail,
   findUserById,
+  resolveUserPermissions,
   findOrgById,
   getUserDepartmentName,
   updateUserPassword,
@@ -30,6 +31,21 @@ interface TokenPair {
 
 export class AuthService {
   private payrollDb = getDB();
+
+  private async requirePayrollAccess(user: EmpCloudUser): Promise<string[]> {
+    const permissions = await resolveUserPermissions(user.id, user.role, user.organization_id);
+    if (
+      user.role !== "super_admin" &&
+      !permissions.some((permission) => permission.startsWith("payroll:"))
+    ) {
+      throw new AppError(
+        403,
+        "PAYROLL_ACCESS_DENIED",
+        "You do not have permission to access Payroll. Contact your administrator.",
+      );
+    }
+    return permissions;
+  }
 
   // -----------------------------------------------------------------------
   // LOGIN — authenticate against EmpCloud users table
@@ -57,6 +73,8 @@ export class AuthService {
       throw new AppError(403, "ORG_INACTIVE", "Your organization account is inactive");
     }
 
+    const permissions = await this.requirePayrollAccess(ecUser);
+
     // 4. Ensure payroll profile exists (auto-create on first login)
     const payrollProfile = await this.ensurePayrollProfile(ecUser, ecOrg);
 
@@ -73,6 +91,7 @@ export class AuthService {
       firstName: ecUser.first_name,
       lastName: ecUser.last_name,
       orgName: ecOrg.name,
+      permissions,
     };
 
     const tokens = this.generateTokens(payload);
@@ -146,6 +165,8 @@ export class AuthService {
       date_of_joining: new Date().toISOString().slice(0, 10),
     });
 
+    const permissions = await this.requirePayrollAccess(ecUser);
+
     // Create payroll profile
     const payrollProfile = await this.createPayrollProfile(ecUser);
 
@@ -158,6 +179,7 @@ export class AuthService {
       firstName: ecUser.first_name,
       lastName: ecUser.last_name,
       orgName,
+      permissions,
     };
 
     const tokens = this.generateTokens(payload);
@@ -221,18 +243,13 @@ export class AuthService {
       throw new AppError(403, "ORG_INACTIVE", "Organization is inactive");
     }
 
+    const ecPermissions = await this.requirePayrollAccess(ecUser);
+
     // Ensure payroll profile exists (auto-create on first SSO login)
     const payrollProfile = await this.ensurePayrollProfile(ecUser, ecOrg);
 
     // Get department name for response
     const departmentName = await getUserDepartmentName(ecUser.department_id);
-
-    // RBAC v1 — copy effective permissions out of the EmpCloud RS256 JWT
-    // into payroll's AuthPayload. EmpCloud computes them at issue/refresh
-    // time so the keys here reflect the user's current custom roles.
-    const ecPermissions = Array.isArray((decoded as any).permissions)
-      ? ((decoded as any).permissions as string[])
-      : [];
 
     const payload: AuthPayload = {
       empcloudUserId: ecUser.id,
@@ -283,6 +300,7 @@ export class AuthService {
         throw new AppError(401, "USER_NOT_FOUND", "User account is inactive or deleted");
       }
 
+      const permissions = await this.requirePayrollAccess(ecUser);
       const ecOrg = await findOrgById(ecUser.organization_id);
       const payrollProfile = await this.findPayrollProfile(ecUser.id);
 
@@ -295,10 +313,7 @@ export class AuthService {
         firstName: ecUser.first_name,
         lastName: ecUser.last_name,
         orgName: ecOrg?.name || "",
-        // Preserve the permissions claim across refresh. To pick up role
-        // changes the user must re-SSO from EmpCloud (15-min access TTL
-        // bounds the staleness window).
-        permissions: payload.permissions ?? [],
+        permissions,
       });
     } catch (err: any) {
       if (err instanceof AppError) throw err;

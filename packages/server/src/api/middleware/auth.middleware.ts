@@ -62,6 +62,7 @@ export function authenticate(req: Request, _res: Response, next: NextFunction) {
         firstName: "System",
         lastName: "Service",
         orgName: "System",
+        permissions: ["payroll:view_all", "payroll:view_reports"],
       };
       return next();
     }
@@ -88,13 +89,42 @@ export function authenticate(req: Request, _res: Response, next: NextFunction) {
 
   try {
     const payload = jwt.verify(token, config.jwt.secret) as AuthPayload;
-    req.user = payload;
-    next();
+    void authenticatePayrollUser(payload, req, next);
   } catch (err: any) {
     if (err.name === "TokenExpiredError") {
       return next(new AppError(401, "TOKEN_EXPIRED", "Access token has expired"));
     }
     return next(new AppError(401, "INVALID_TOKEN", "Invalid access token"));
+  }
+}
+
+async function authenticatePayrollUser(
+  payload: AuthPayload,
+  req: Request,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const user = await findUserById(payload.empcloudUserId);
+    if (!user || user.status !== 1 || user.organization_id !== payload.empcloudOrgId) {
+      return next(new AppError(401, "UNAUTHORIZED", "User account is inactive or unavailable"));
+    }
+    const permissions = await resolveUserPermissions(user.id, user.role, user.organization_id);
+    if (
+      user.role !== "super_admin" &&
+      !permissions.some((permission) => permission.startsWith("payroll:"))
+    ) {
+      return next(
+        new AppError(
+          403,
+          "PAYROLL_ACCESS_DENIED",
+          "You do not have permission to access Payroll. Contact your administrator.",
+        ),
+      );
+    }
+    req.user = { ...payload, role: mapEmpCloudRole(user.role), permissions };
+    next();
+  } catch {
+    next(new AppError(503, "AUTH_UNAVAILABLE", "Unable to verify Payroll access"));
   }
 }
 
@@ -140,6 +170,19 @@ async function authenticateApiKey(rawKey: string, req: Request, next: NextFuncti
       ecUser.organization_id,
     );
 
+    if (
+      ecUser.role !== "super_admin" &&
+      !permissions.some((permission) => permission.startsWith("payroll:"))
+    ) {
+      return next(
+        new AppError(
+          403,
+          "PAYROLL_ACCESS_DENIED",
+          "You do not have permission to access Payroll. Contact your administrator.",
+        ),
+      );
+    }
+
     // Existing payroll profile (if any) — not auto-created for key-based access.
     const profile = await getDB()
       .findOne<{ id: string }>("employee_payroll_profiles", { empcloud_user_id: ecUser.id })
@@ -181,12 +224,9 @@ export function requirePermission(...required: string[]) {
     if (req.user.role === "super_admin") return next();
 
     const granted = req.user.permissions;
-    if (!granted || granted.length === 0) {
+    if (!granted) {
       // Legacy fallback — pre-RBAC tokens. Treat org-level admins as having
       // every permission so we don't lock out users who haven't re-logged in.
-      if (req.user.role === "org_admin" || req.user.role === "hr_admin") {
-        return next();
-      }
       return next(
         new AppError(403, "FORBIDDEN", `This action requires one of: ${required.join(", ")}`),
       );
@@ -207,10 +247,7 @@ export function requireAllPermissions(...required: string[]) {
     if (req.user.role === "super_admin") return next();
 
     const granted = req.user.permissions;
-    if (!granted || granted.length === 0) {
-      if (req.user.role === "org_admin" || req.user.role === "hr_admin") {
-        return next();
-      }
+    if (!granted) {
       return next(
         new AppError(403, "FORBIDDEN", `This action requires all of: ${required.join(", ")}`),
       );

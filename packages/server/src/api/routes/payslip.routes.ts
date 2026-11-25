@@ -1,18 +1,29 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { PayslipService } from "../../services/payslip.service";
 import { ExportService } from "../../services/export.service";
 import { PayslipPDFService } from "../../services/payslip-pdf.service";
-import { authenticate, authorize } from "../middleware/auth.middleware";
+import { authenticate, authorize, requirePermission } from "../middleware/auth.middleware";
 import { wrap, param } from "../helpers";
 
 const router = Router();
 const svc = new PayslipService();
+
+const requirePayslipAccess = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const payslip = await svc.getById(param(req, "id"), String(req.user!.empcloudOrgId));
+    if (Number(payslip.empcloud_user_id) === req.user!.empcloudUserId) return next();
+    return requirePermission("payroll:view_all")(req, res, next);
+  } catch (err) {
+    return next(err);
+  }
+};
 
 router.use(authenticate);
 
 router.get(
   "/",
   authorize("hr_admin", "hr_manager"),
+  requirePermission("payroll:view_all"),
   wrap(async (req, res) => {
     const data = await svc.list(String(req.user!.empcloudOrgId), {
       page: Number(req.query.page) || 1,
@@ -28,6 +39,7 @@ router.get(
 router.get(
   "/export/csv",
   authorize("hr_admin", "hr_manager"),
+  requirePermission("payroll:view_all", "payroll:export"),
   wrap(async (req, res) => {
     const exportSvc = new ExportService();
     const csv = await exportSvc.exportPayslipsCSV(
@@ -42,6 +54,7 @@ router.get(
 
 router.get(
   "/employee/:empId",
+  requirePermission("payroll:view_all"),
   wrap(async (req, res) => {
     const data = await svc.getByEmployee(param(req, "empId"));
     res.json({ success: true, data });
@@ -50,6 +63,7 @@ router.get(
 
 router.get(
   "/:id",
+  requirePayslipAccess,
   wrap(async (req, res) => {
     const data = await svc.getById(param(req, "id"), String(req.user!.empcloudOrgId));
     res.json({ success: true, data });
@@ -58,6 +72,7 @@ router.get(
 
 router.get(
   "/:id/pdf",
+  requirePayslipAccess,
   wrap(async (req, res) => {
     const pdfSvc = new PayslipPDFService();
     const html = await pdfSvc.generateHTML(param(req, "id"));

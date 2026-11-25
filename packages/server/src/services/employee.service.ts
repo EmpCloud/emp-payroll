@@ -231,6 +231,29 @@ export class EmployeeService {
     };
   }
 
+  async salaryTemplate(empcloudOrgId: number, page: number) {
+    const result = await this.list(empcloudOrgId, { page, limit: 100 });
+    const data = await Promise.all(
+      result.data.map(async (employee: any) => {
+        const salary = await this.payrollDb.findOne<any>("employee_salaries", {
+          empcloud_user_id: employee.id,
+          is_active: true,
+        });
+        return {
+          id: employee.id,
+          employeeCode: employee.employee_code,
+          firstName: employee.first_name,
+          lastName: employee.last_name,
+          email: employee.email,
+          department: employee.department,
+          designation: employee.designation,
+          annualCtc: salary?.ctc ?? null,
+        };
+      }),
+    );
+    return { data, totalPages: result.totalPages };
+  }
+
   /**
    * List EmpCloud employees who are NOT yet assigned to payroll (available for import).
    */
