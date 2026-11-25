@@ -65,6 +65,294 @@ describe("Payroll computation with the real effective-dated PF engine", () => {
     restoreTaxSpy = undefined;
   });
 
+  it.each([0, 1000])(
+    "includes gross-based night allowance in ESI even with loan EMI %s",
+    async (emi) => {
+      fixture.salaries[100].gross_salary = 12000 * 12;
+      fixture.salaries[100].components = [
+        { code: "BASIC", type: "earning", monthlyAmount: 12000 },
+        {
+          code: "NIGHT",
+          type: "earning",
+          monthlyAmount: 0,
+          calculationType: "per_night_pct",
+          rate: 10,
+        },
+      ];
+      fixture.profiles[100].esi_details = { isEligible: true };
+      fixture.attendance[100].forEach((row) => {
+        row.att_shift_is_night = 1;
+        row.shift_id = 1;
+      });
+      if (emi)
+        fixture.loans[100] = [
+          {
+            id: "loan",
+            emi_amount: emi,
+            outstanding_amount: 5000,
+            installments_paid: 0,
+            status: "active",
+          },
+        ];
+      await service.computePayroll("run-1", "1");
+      const [slip] = payslips();
+      expect(JSON.parse(slip.earnings).find((line: any) => line.code === "NIGHT").amount).toBe(
+        1200,
+      );
+      expect(JSON.parse(slip.deductions).find((line: any) => line.code === "ESI").amount).toBe(99);
+      expect(
+        JSON.parse(slip.employer_contributions).find((line: any) => line.code === "EMP_ESI").amount,
+      ).toBe(429);
+      expect(JSON.parse(slip.deductions).find((line: any) => line.code === "EPF").amount).toBe(
+        1440,
+      );
+    },
+  );
+
+  function ctcSalary(monthlyCtc = 30000) {
+    fixture.settings.employer_pf_in_ctc = true;
+    fixture.settings.pf_edli_enabled = false;
+    fixture.settings.pf_admin_enabled = false;
+    fixture.salaries[100].ctc = monthlyCtc * 12;
+    fixture.salaries[100].gross_salary = monthlyCtc * 12;
+    fixture.salaries[100].structure_id = "ctc-structure";
+    fixture.templates["ctc-structure"] = [
+      {
+        code: "BASIC",
+        type: "earning",
+        calculation_type: "percentage",
+        percentage_of: "GROSS",
+        value: 60,
+      },
+      {
+        code: "HRA",
+        type: "earning",
+        calculation_type: "percentage",
+        percentage_of: "GROSS",
+        value: 24,
+      },
+      {
+        code: "SA",
+        type: "earning",
+        calculation_type: "percentage",
+        percentage_of: "GROSS",
+        value: 11,
+      },
+      {
+        code: "CA",
+        type: "earning",
+        calculation_type: "percentage",
+        percentage_of: "GROSS",
+        value: 5,
+      },
+    ];
+  }
+
+  function employerTotal(payslip: any) {
+    return JSON.parse(payslip.employer_contributions).reduce(
+      (sum: number, line: any) => sum + line.amount,
+      0,
+    );
+  }
+
+  it("includes employer PF within the screenshot's 30000 monthly CTC", async () => {
+    ctcSalary();
+    await service.computePayroll("run-1", "1");
+    const [payslip] = payslips();
+    const earnings = JSON.parse(payslip.earnings);
+    expect(payslip.gross_earnings).toBe(27985);
+    expect(earnings.find((line: any) => line.code === "BASIC").amount).toBe(16791);
+    expect(payslip.total_deductions).toBe(2015);
+    expect(employerTotal(payslip)).toBe(2015);
+    expect(payslip.net_pay).toBe(25970);
+    expect(payslip.total_employer_cost).toBe(30000);
+    expect(payslip.gross_earnings + employerTotal(payslip)).toBe(30000);
+    expect(JSON.parse(payslip.deductions).every((line: any) => !line.code.startsWith("EMP_"))).toBe(
+      true,
+    );
+  });
+
+  it("keeps employer PF additional when the CTC setting is disabled", async () => {
+    ctcSalary();
+    fixture.settings.employer_pf_in_ctc = false;
+    await service.computePayroll("run-1", "1");
+    const [payslip] = payslips();
+    expect(payslip).toMatchObject({
+      gross_earnings: 30000,
+      total_deductions: 2160,
+      net_pay: 27840,
+      total_employer_cost: 32160,
+    });
+  });
+
+  it.each(["nearest_10", "nearest_100"])(
+    "keeps inclusive CTC reconciled with %s configured",
+    async (rounding) => {
+      ctcSalary();
+      fixture.settings.rounding_policy = rounding;
+      await service.computePayroll("run-1", "1");
+      const [payslip] = payslips();
+      expect(payslip.total_employer_cost).toBe(30000);
+      expect(payslip.gross_earnings + employerTotal(payslip)).toBe(30000);
+      expect(payslip.net_pay).toBe(25970);
+    },
+  );
+
+  it("recalculates a custom percentage deduction on the allocated Basic", async () => {
+    ctcSalary();
+    fixture.templates["ctc-structure"].push({
+      code: "WELFARE",
+      type: "deduction",
+      calculation_type: "percentage",
+      percentage_of: "BASIC",
+      value: 1,
+    });
+    await service.computePayroll("run-1", "1");
+    const [payslip] = payslips();
+    expect(JSON.parse(payslip.deductions).find((line: any) => line.code === "WELFARE").amount).toBe(
+      168,
+    );
+    expect(payslip.net_pay).toBe(25802);
+  });
+
+  it("includes enabled EDLI and admin charges inside the CTC budget", async () => {
+    ctcSalary(50000);
+    fixture.settings.pf_edli_enabled = true;
+    fixture.settings.pf_admin_enabled = true;
+    await service.computePayroll("run-1", "1");
+    const [payslip] = payslips();
+    expect(payslip).toMatchObject({
+      gross_earnings: 46750,
+      total_deductions: 3000,
+      net_pay: 43750,
+      total_employer_cost: 50000,
+    });
+    expect(employerTotal(payslip)).toBe(3250);
+  });
+
+  it("keeps annual 810000 CTC inclusive instead of inflating company cost to 849000", async () => {
+    ctcSalary(67500);
+    fixture.settings.pf_edli_enabled = true;
+    fixture.settings.pf_admin_enabled = true;
+    await service.computePayroll("run-1", "1");
+    const [payslip] = payslips();
+    expect(payslip).toMatchObject({
+      gross_earnings: 64250,
+      total_deductions: 3000,
+      net_pay: 61250,
+      total_employer_cost: 67500,
+    });
+    expect(employerTotal(payslip)).toBe(3250);
+    expect((payslip.gross_earnings + employerTotal(payslip)) * 12).toBe(810000);
+  });
+
+  it("includes employer ESI alongside PF for eligible employees", async () => {
+    ctcSalary(20000);
+    fixture.profiles[100].esi_details = { isEligible: true };
+    await service.computePayroll("run-1", "1");
+    const [payslip] = payslips();
+    const employer = JSON.parse(payslip.employer_contributions);
+    expect(employer.find((line: any) => line.code === "EMP_ESI").amount).toBeGreaterThan(0);
+    expect(Math.abs(payslip.gross_earnings + employerTotal(payslip) - 20000)).toBeLessThanOrEqual(
+      1,
+    );
+    expect(payslip.total_employer_cost).toBe(payslip.gross_earnings + employerTotal(payslip));
+    expect(payslip.net_pay).toBe(payslip.gross_earnings - payslip.total_deductions);
+  });
+
+  it("prorates the resolved gross for a partial month and retains actual employer cost", async () => {
+    setup({ month: 11 });
+    vi.setSystemTime(new Date("2026-12-01T12:00:00Z"));
+    ctcSalary(100000);
+    fixture.employees[0].date_of_joining = "2026-11-16";
+    await service.computePayroll("run-1", "1");
+    const [payslip] = payslips();
+    expect(payslip.paid_days).toBe(15);
+    expect(Math.abs(payslip.gross_earnings - 48500)).toBeLessThanOrEqual(1);
+    expect(payslip.total_employer_cost).toBe(payslip.gross_earnings + employerTotal(payslip));
+    expect(payslip.net_pay).toBe(payslip.gross_earnings - payslip.total_deductions);
+  });
+
+  it("preserves pinned Basic while reducing flexible earnings to include employer PF", async () => {
+    ctcSalary();
+    fixture.salaries[100].overrides = { BASIC: 18000 };
+    await service.computePayroll("run-1", "1");
+    const [payslip] = payslips();
+    expect(JSON.parse(payslip.earnings).find((line: any) => line.code === "BASIC").amount).toBe(
+      18000,
+    );
+    expect(payslip).toMatchObject({
+      gross_earnings: 27840,
+      total_deductions: 2160,
+      net_pay: 25680,
+      total_employer_cost: 30000,
+    });
+  });
+
+  it("requires review when fixed earnings leave no room for employer contributions", async () => {
+    ctcSalary();
+    fixture.templates["ctc-structure"] = [
+      { code: "BASIC", type: "earning", calculation_type: "fixed", value: 18000 },
+      { code: "HRA", type: "earning", calculation_type: "fixed", value: 12000 },
+    ];
+    await expect(service.computePayroll("run-1", "1")).rejects.toThrow();
+    expectNoWrites();
+  });
+
+  it("keeps a fully unpaid CTC-inclusive month at zero pay and zero contributions", async () => {
+    ctcSalary();
+    for (const day of fixture.attendance[100]) day.status = "absent";
+    await service.computePayroll("run-1", "1");
+    const [payslip] = payslips();
+    expect(payslip).toMatchObject({
+      gross_earnings: 0,
+      total_deductions: 0,
+      net_pay: 0,
+      total_employer_cost: 0,
+      paid_days: 0,
+    });
+    expect(employerTotal(payslip)).toBe(0);
+    expect(JSON.parse(payslip.pf_contribution)).toMatchObject({
+      employeeEPF: 0,
+      totalEmployer: 0,
+      ncpDays: 31,
+    });
+  });
+
+  it("allocates CTC while retaining the September PF ceiling split", async () => {
+    setup({ month: 9 });
+    ctcSalary(50000);
+    await service.computePayroll("run-1", "1");
+    const [payslip] = payslips();
+    const pf = JSON.parse(payslip.pf_contribution);
+    expect(pf.periods.map((period: any) => period.wageCeiling)).toEqual([15000, 25000]);
+    expect(pf.employeeEPF).toBe(2360);
+    expect(pf.totalEmployer).toBe(2360);
+    expect(payslip).toMatchObject({
+      gross_earnings: 47640,
+      total_deductions: 2360,
+      net_pay: 45280,
+      total_employer_cost: 50000,
+    });
+  });
+
+  it("does not enroll an above-ceiling employee in ESI just because the month is partial", async () => {
+    setup({ month: 11 });
+    vi.setSystemTime(new Date("2026-12-01T12:00:00Z"));
+    ctcSalary(30000);
+    fixture.profiles[100].esi_details = { isEligible: true };
+    fixture.employees[0].date_of_joining = "2026-11-16";
+    await service.computePayroll("run-1", "1");
+    const [payslip] = payslips();
+    expect(payslip.gross_earnings).toBeLessThan(21000);
+    expect(payslip.paid_days).toBe(15);
+    expect(JSON.parse(payslip.deductions).some((line: any) => line.code === "ESI")).toBe(false);
+    expect(
+      JSON.parse(payslip.employer_contributions).some((line: any) => line.code === "EMP_ESI"),
+    ).toBe(false);
+    expect(payslip.total_employer_cost).toBe(payslip.gross_earnings + employerTotal(payslip));
+  });
+
   it("replaces a template's old 1800 PF with October 3000 and records the employer split", async () => {
     fixture.salaries[100].structure_id = "standard";
     fixture.templates.standard = [

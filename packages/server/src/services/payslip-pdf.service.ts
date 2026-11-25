@@ -207,6 +207,13 @@ export class PayslipPDFService {
       typeof payslip.employer_contributions === "string"
         ? JSON.parse(payslip.employer_contributions || "[]")
         : payslip.employer_contributions || [];
+    // Use the calculation snapshot, never today's setting, for historical payslips.
+    const pfSnapshot =
+      typeof payslip.pf_contribution === "string"
+        ? JSON.parse(payslip.pf_contribution || "{}")
+        : payslip.pf_contribution;
+    const employerCtc = pfSnapshot?.employer_ctc;
+    const employerIncludedInCtc = employerCtc?.included === true;
     const totalEmployerContribs = employerContribs.reduce(
       (s: number, c: any) => s + Number(c.amount || 0),
       0,
@@ -503,14 +510,24 @@ export class PayslipPDFService {
        and can verify what their offer-letter CTC covers. */
     employerRows
       ? `<div class="section employer-note">
-           <div class="section-header employer">Employer Contributions · Paid by company, not deducted</div>
+           <div class="section-header employer">Employer Contributions &middot; ${employerIncludedInCtc ? "Included in CTC" : "Paid by company, not deducted"}</div>
            <table>
              <thead><tr><th>Component</th><th class="amt">Amount</th></tr></thead>
              <tbody>
                ${employerRows}
                <tr class="total-row"><td>Total Employer Contribution</td><td class="amt">${fmt(totalEmployerContribs)}</td></tr>
+               ${
+                 employerIncludedInCtc
+                   ? `
+                 <tr><td>Gross Earnings</td><td class="amt">${fmt(payslip.gross_earnings)}</td></tr>
+                 <tr class="total-row"><td>Company Cost for This Period</td><td class="amt">${fmt(payslip.total_employer_cost)}</td></tr>
+                 <tr><td>Agreed Monthly CTC</td><td class="amt">${fmt(employerCtc.monthlyCtc)}</td></tr>
+               `
+                   : ""
+               }
              </tbody>
            </table>
+           ${employerIncludedInCtc ? `<p class="company-detail" style="padding: 10px 16px">CTC includes gross earnings and employer contributions. Employee PF and other employee deductions are taken from gross earnings to arrive at net pay. Period amounts reflect paid days and any additional earnings.</p>` : ""}
          </div>`
       : ""
   }

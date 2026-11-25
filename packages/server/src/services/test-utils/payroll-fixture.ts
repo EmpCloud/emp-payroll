@@ -89,7 +89,7 @@ export function makePayrollFixture(
     let employeeId = 100;
     let columns: string[] = [];
     const rows = () => {
-      if (table === "attendance_records") {
+      if (table === "attendance_records" || table === "attendance_records as ar") {
         const daily = attendance[employeeId] ?? [];
         if (columns.some((column) => column.includes("SUM("))) {
           return [

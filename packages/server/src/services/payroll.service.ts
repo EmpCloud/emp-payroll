@@ -7,8 +7,20 @@ import {
   type OrgStatutoryOverrides,
 } from "./compliance/india-statutory.service";
 import { computeIncomeTax } from "./tax/india-tax.service";
-import { TaxRegime, applySalaryOverrides } from "@emp-payroll/shared";
-import { computePayrollPF, isEmployeePFCode, isVPFCode } from "./compliance/payroll-pf";
+import {
+  TaxRegime,
+  applySalaryOverrides,
+  computeIndiaPF,
+  resolveSalaryComponents,
+  resolveCtcInclusiveComponents,
+  ESI_WAGE_CEILING,
+} from "@emp-payroll/shared";
+import {
+  computePayrollPF,
+  monthlyPFWages,
+  isEmployeePFCode,
+  isVPFCode,
+} from "./compliance/payroll-pf";
 import {
   findUsersByOrgId,
   findOrgById,
@@ -1167,6 +1179,19 @@ export class PayrollService {
           // actual count further down.
           return { ...base, annualAmount: 0, monthlyAmount: 0, rate: Number(t.value || 0) };
         });
+        if (Number(orgSettings?.employer_pf_in_ctc) && tplRows.data.length) {
+          componentList = resolveSalaryComponents(
+            tplRows.data.map((t: any) => ({
+              code: t.code,
+              name: t.name,
+              type: t.type,
+              calculationType: t.calculation_type,
+              value: Number(t.value || 0),
+              percentageOf: t.percentage_of,
+            })),
+            Number(salary.ctc ?? salary.gross_salary),
+          );
+        }
       }
       if (componentList.length === 0) {
         // Fallback: legacy salaries without a structure_id, or structures
@@ -1189,6 +1214,78 @@ export class PayrollService {
         : null;
       if (empOverrides && Object.keys(empOverrides).length) {
         applySalaryOverrides(componentList, Number(salary.gross_salary || 0) / 12, empOverrides);
+      }
+
+      const employerPfInCtc = !!Number(orgSettings?.employer_pf_in_ctc);
+      const orgOverrides = buildOrgStatutoryOverrides(orgSettings);
+      const pfDetails =
+        typeof profile?.pf_details === "string"
+          ? JSON.parse(profile.pf_details)
+          : profile?.pf_details || {};
+      const esiDetails =
+        typeof profile?.esi_details === "string"
+          ? JSON.parse(profile.esi_details)
+          : profile?.esi_details || {};
+      let contractedGrossMonthly = Number(salary.gross_salary || 0) / 12;
+      let ctcAllocation:
+        | {
+            included: boolean;
+            monthlyCtc: number;
+            monthlyGross: number;
+            monthlyEmployerCost: number;
+            roundingAdjustment: number;
+          }
+        | undefined;
+      if (employerPfInCtc) {
+        const monthlyCtc = Number(salary.ctc ?? salary.gross_salary) / 12;
+        try {
+          // Solve the full-month contract before attendance proration. Fixed
+          // amounts/pins stay fixed; flexible earnings retain their ratios.
+          const allocated = resolveCtcInclusiveComponents(
+            componentList,
+            monthlyCtc,
+            (components, gross) => {
+              const wages = monthlyPFWages(components);
+              const employerPF = computeIndiaPF({
+                employeeId: String(ecEmp.id),
+                month: run.month,
+                year: run.year,
+                basicSalary: wages,
+                monthlyWages: wages,
+                pfDetails,
+                orgOverrides,
+              }).totalEmployer;
+              const employerESI =
+                esiDetails.isEligible === false
+                  ? 0
+                  : (computeESI({
+                      employeeId: String(ecEmp.id),
+                      month: run.month,
+                      year: run.year,
+                      grossSalary: gross,
+                      orgOverrides,
+                    })?.employerContribution ?? 0);
+              return employerPF + employerESI;
+            },
+            empOverrides || {},
+            [orgOverrides.esiWageCeiling || ESI_WAGE_CEILING],
+          );
+          componentList = allocated.components;
+          contractedGrossMonthly = allocated.monthlyGross;
+          ctcAllocation = {
+            included: true,
+            monthlyCtc,
+            monthlyGross: allocated.monthlyGross,
+            monthlyEmployerCost: allocated.monthlyEmployerCost,
+            roundingAdjustment: allocated.roundingAdjustment,
+          };
+        } catch (error: any) {
+          throw new AppError(
+            409,
+            "CTC_ALLOCATION_REQUIRED",
+            `Employee ${ecName}: ${error.message}`,
+          );
+        }
       }
 
       // BUG-004 — Capture the un-prorated (contracted) Basic and HRA so the
@@ -1237,9 +1334,8 @@ export class PayrollService {
       // (see below) so the `× Day Pay` mode can multiply the fully-summed
       // base gross.
       const nightComps: any[] = [];
-      // "% of Net Pay" night-allowance components, deferred even further —
-      // past the deductions block — since they need the base net pay.
-      const netPctComps: any[] = [];
+      // Percentage night allowances are calculated before statutory deductions.
+      const percentageNightComps: any[] = [];
       let grossEarnings = 0;
 
       // Separate earnings from custom deductions defined in salary structure
@@ -1251,6 +1347,7 @@ export class PayrollService {
           // PF/VPF always comes from the statutory result below. A template
           // label must not bypass effective-date rules or duplicate deductions.
           if (isEmployeePFCode(comp.code) || isVPFCode(comp.code)) continue;
+          if (employerPfInCtc && String(comp.code).toUpperCase().includes("ESI")) continue;
           // Custom deduction from salary structure (canteen, welfare fund, etc.)
           const amount = Math.round(Number(comp.monthlyAmount || 0) * proRatio);
           if (amount > 0) {
@@ -1258,10 +1355,8 @@ export class PayrollService {
             totalDed += amount;
           }
         } else if (comp.calculationType === "per_night_pct") {
-          // "% of Net Pay" night allowance — deferred all the way past the
-          // deductions block (it needs the base NET, which isn't known until
-          // PF/ESI/PT/TDS are computed). Collected separately from nightComps.
-          netPctComps.push(comp);
+          // Resolve against contracted gross and the actual nights worked.
+          percentageNightComps.push(comp);
         } else if (
           comp.calculationType === "per_night" ||
           comp.calculationType === "per_night_daily" ||
@@ -1306,7 +1401,7 @@ export class PayrollService {
       // Contracted daily salary for the *_daily multiplier modes —
       // un-prorated so a worked night/OT day pays the same regardless of
       // LOP elsewhere in the month.
-      const contractedDailySalary = Number(salary.gross_salary || 0) / 12 / Math.max(1, totalDays);
+      const contractedDailySalary = contractedGrossMonthly / Math.max(1, totalDays);
       for (const comp of nightComps) {
         const rate = Number(comp.rate ?? comp.value ?? 0);
         let amount = 0;
@@ -1346,6 +1441,28 @@ export class PayrollService {
           grossEarnings += amount;
           // Both night allowance and overtime are variable taxable pay —
           // fold into the same bucket that feeds the annual TDS projection.
+          nightAllowanceThisMonth += amount;
+        }
+      }
+
+      // Night percentage is based on contracted gross and worked nights,
+      // before employee deductions and statutory contribution calculations.
+      for (const comp of percentageNightComps) {
+        const pct = Number(comp.rate ?? comp.value ?? 0);
+        const amount = Math.max(
+          0,
+          Math.round(
+            (((contractedGrossMonthly * pct) / 100) * nightShiftDays) / Math.max(1, totalDays),
+          ),
+        );
+        if (amount > 0) {
+          earnings.push({
+            code: comp.code,
+            name: comp.name || comp.code,
+            amount,
+            meta: { grossPct: pct, nights: nightShiftDays, totalDays },
+          });
+          grossEarnings += amount;
           nightAllowanceThisMonth += amount;
         }
       }
@@ -1395,12 +1512,6 @@ export class PayrollService {
             .toUpperCase()
             .includes("ESI"),
       );
-      const pfDetails = profile?.pf_details
-        ? typeof profile.pf_details === "string"
-          ? JSON.parse(profile.pf_details)
-          : profile.pf_details
-        : {};
-      const orgOverrides = buildOrgStatutoryOverrides(orgSettings);
       const pf = computePayrollPF({
         employeeId: String(ecEmp.id),
         month: run.month,
@@ -1443,26 +1554,22 @@ export class PayrollService {
         employerContribs.push({ code: "EDLI", name: "EDLI Charges", amount: pf.edliCharges });
 
       // ESI — check eligibility from profile
-      const esiDetails = profile?.esi_details
-        ? typeof profile.esi_details === "string"
-          ? JSON.parse(profile.esi_details)
-          : profile.esi_details
-        : {};
-      if (esiDetails?.isEligible !== false && !structureHasEsi) {
+      const contractedEsiEligible =
+        !employerPfInCtc ||
+        contractedGrossMonthly <= (orgOverrides.esiWageCeiling || ESI_WAGE_CEILING);
+      if (
+        esiDetails?.isEligible !== false &&
+        contractedEsiEligible &&
+        (!structureHasEsi || employerPfInCtc)
+      ) {
         const esi = computeESI({
           employeeId: String(ecEmp.id),
           month: run.month,
           year: run.year,
-          // Use the base gross (BEFORE night allowance) for ESI. The ESI
-          // ₹21K eligibility ceiling and contribution must track the
-          // employee's regular wage, not a variable night premium —
-          // otherwise a low-wage ESI employee could be flipped OUT of
-          // ESI in a month they happen to work nights, and their ESI
-          // base would swing month to month. `baseGrossForNight` is the
-          // gross before the night second-pass; for employees with no
-          // night component it equals the full grossEarnings, so this is
-          // non-regressive.
-          grossSalary: baseGrossForNight,
+          // Contribution wages include night pay and overtime. Coverage is
+          // assessed separately so overtime cannot remove an insured employee.
+          grossSalary: grossEarnings,
+          eligibilityWages: contractedGrossMonthly,
           orgOverrides: buildOrgStatutoryOverrides(orgSettings),
         });
         if (esi) {
@@ -1499,8 +1606,15 @@ export class PayrollService {
       //     applies Maharashtra slabs to that one person.
       const ptDisabledOrgWide = !!Number(orgSettings?.pt_disabled);
       if (grossEarnings > 0 && !ptDisabledOrgWide && taxInfo?.deductPT !== false) {
+        const employeeLocation = ecAny.location_id
+          ? await empcloudDb("organization_locations")
+              .where({ id: ecAny.location_id, organization_id: Number(orgId) })
+              .first()
+          : null;
         const ptState =
           (typeof taxInfo?.state === "string" && taxInfo.state.trim()) ||
+          employeeLocation?.state ||
+          (/\b(bangalore|bengaluru)\b/i.test(employeeLocation?.name || "") ? "KA" : null) ||
           orgSettings?.state ||
           "KA";
         // BUG-013 — PT slab basis. PT is a fixed monthly statutory levy
@@ -1714,7 +1828,7 @@ export class PayrollService {
           // expected annual income instead of over/under-projecting.
           annualGross:
             baseGrossPriorThisFy +
-            (Number(salary.gross_salary) / 12) * monthsRemaining +
+            contractedGrossMonthly * monthsRemaining +
             priorEmployerGross +
             projectedAnnualNightAllowance,
           // BUG-004 — These three feed the ANNUAL tax projection and must
@@ -1873,51 +1987,15 @@ export class PayrollService {
         }
       }
 
-      // "% of Net Pay" night allowance — computed LAST because it needs the
-      // base net (gross − all deductions). Paid once when the employee worked
-      // ≥1 night (not scaled by nights). Added to gross so it lands in net.
-      // Its own tax isn't withheld this month (TDS is already computed), but
-      // each line is tagged meta.netPct so next month's FY projection sees it
-      // and trues up the withholding — the same self-correcting path the
-      // other variable night/OT pay uses.
-      if (netPctComps.length > 0 && nightShiftDays > 0) {
-        const baseNetForPct = Math.max(0, grossEarnings - totalDed);
-        for (const comp of netPctComps) {
-          const pct = Number(comp.rate ?? comp.value ?? 0);
-          // BUG-26: the per_night_pct allowance must be PRO-RATED by how many
-          // nights were actually worked — otherwise a 10-night employee and a
-          // 19-night employee both get the full `baseNet × pct%` (identical
-          // amounts), which is clearly wrong for a "per night" component.
-          // (Real case: Uday Verma split-month 10 nights vs Uma Singh 19
-          // nights both got Rs 4,820.) Scale by nights / total_days so the
-          // allowance reflects the proportion of the month spent on nights.
-          //   amount = baseNet × pct% × (nights / total_days)
-          const nightFraction = totalDays > 0 ? nightShiftDays / totalDays : 0;
-          const amount = Math.max(0, Math.round(baseNetForPct * (pct / 100) * nightFraction));
-          if (amount > 0) {
-            earnings.push({
-              code: comp.code,
-              name: comp.name || comp.code,
-              amount,
-              meta: {
-                netPct: pct,
-                baseNet: baseNetForPct,
-                nights: nightShiftDays,
-                totalDays,
-              },
-            });
-            grossEarnings += amount;
-          }
-        }
-      }
-
       // Apply org-level rounding policy (migration 029) to the per-employee
       // totals so the payslip and the payroll-run roll-up use consistent
       // numbers. Default ("none" or unset) is a no-op so existing orgs see
       // no change. Only the totals are rounded -- per-component line items
       // stay at their natural Math.round precision so the math still adds
       // up: rounding the totals is what HR cares about for bank transfers.
-      const roundingPolicy = orgSettings?.rounding_policy ?? null;
+      // Rounding gross to tens/hundreds after allocating CTC can exceed the
+      // agreed budget and break line-item totals. Inclusive CTC uses rupees.
+      const roundingPolicy = employerPfInCtc ? "nearest_1" : (orgSettings?.rounding_policy ?? null);
       const roundedGross = applyRounding(grossEarnings, roundingPolicy);
 
       // Belt-and-braces net-pay floor. The TDS cap further up already
@@ -1947,22 +2025,11 @@ export class PayrollService {
       }
       const roundedDed = applyRounding(totalDedFloored, roundingPolicy);
       const netPay = roundedGross - roundedDed;
-      // Total Cost to Company (TCC) framing depends on the org-wide
-      // "Employer PF in CTC" toggle (migration 032):
-      //   OFF (default): TCC = gross + employer contributions on top.
-      //                  This is the additive model — the offer letter
-      //                  CTC is the employee gross, and employer PF/ESI
-      //                  are extra company expense.
-      //   ON          : TCC = gross. The offer letter CTC already
-      //                  includes employer contributions, so we DON'T
-      //                  add them on top -- the employer_contributions
-      //                  list still records the breakdown for filings,
-      //                  but the headline TCC matches what HR negotiated.
-      const employerPfInCtc = !!orgSettings?.employer_pf_in_ctc;
-      const roundedEmployerCost = applyRounding(
-        employerPfInCtc ? roundedGross : roundedGross + employeeEmployerContributions,
-        roundingPolicy,
-      );
+      // Gross was already allocated inside CTC when enabled. Always report
+      // actual company cost, including actual period contributions and extras.
+      const roundedEmployerCost = employerPfInCtc
+        ? roundedGross + employeeEmployerContributions
+        : applyRounding(roundedGross + employeeEmployerContributions, roundingPolicy);
       // Expense repayments are not remuneration for the ECR gross-wage field.
       pf.grossWages =
         grossEarnings -
@@ -1999,7 +2066,10 @@ export class PayrollService {
           // below. Stored so the payslip / payroll detail page can render
           // "Employer also pays X" without recomputing.
           employer_contributions: JSON.stringify(employerContribs),
-          pf_contribution: JSON.stringify(pf),
+          pf_contribution: JSON.stringify({
+            ...pf,
+            ...(ctcAllocation ? { employer_ctc: ctcAllocation } : {}),
+          }),
           reimbursements: JSON.stringify([]),
           gross_earnings: roundedGross,
           total_deductions: roundedDed,

@@ -11,6 +11,7 @@ import { PFMembershipFields, readPFMembershipFields } from "@/components/ui/PFMe
 import { Modal } from "@/components/ui/Modal";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { computePFPreview } from "@/lib/pf-preview";
+import { allocateCtcPreview, previewESI } from "@/lib/salary-ctc-preview";
 import {
   useEmployee,
   useEmployeeSalary,
@@ -48,8 +49,8 @@ import { api } from "@/api/client";
 import toast from "react-hot-toast";
 import {
   resolveSalaryComponents,
+  professionalTaxAmount,
   type PFDetails,
-  SalaryResolverError,
   type ResolverComponent,
 } from "@emp-payroll/shared";
 
@@ -268,17 +269,48 @@ export function EmployeeDetailPage() {
     typeof emp.pf_details === "string" ? JSON.parse(emp.pf_details) : emp.pf_details || {};
   const esiDetails =
     typeof emp.esi_details === "string" ? JSON.parse(emp.esi_details) : emp.esi_details || {};
-  const components = salary?.components
+  let components = salary?.components
     ? typeof salary.components === "string"
       ? JSON.parse(salary.components)
       : salary.components
     : [];
-  const monthlyBasic = Number(components.find((c: any) => c.code === "BASIC")?.monthlyAmount) || 0;
-  const monthlyHRA = components.find((c: any) => c.code === "HRA")?.monthlyAmount || 0;
   const currentPeriod = new Date()
     .toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })
     .split("-")
     .map(Number);
+  let cardCtcError: string | null = null;
+  if (salary && orgSettingsRes?.data?.employerPfInCtc) {
+    try {
+      const storedOverrides =
+        typeof salary.overrides === "string"
+          ? JSON.parse(salary.overrides)
+          : salary.overrides || {};
+      components = allocateCtcPreview(
+        components,
+        Number(salary.ctc ?? salary.gross_salary) / 12,
+        {
+          employeeId: id!,
+          year: currentPeriod[0],
+          month: currentPeriod[1],
+          pfDetails,
+          orgOverrides: orgSettingsRes?.data,
+        },
+        esiDetails.isEligible !== false,
+        orgSettingsRes?.data?.esiWageCeiling,
+        storedOverrides,
+      ).components;
+    } catch (err) {
+      cardCtcError = err instanceof Error ? err.message : "Unable to calculate CTC breakdown.";
+      components = [];
+    }
+  }
+  const annualGrossPreview = orgSettingsRes?.data?.employerPfInCtc
+    ? components
+        .filter((c: any) => c.type === "earning" || !c.type)
+        .reduce((sum: number, c: any) => sum + Number(c.monthlyAmount || 0), 0) * 12
+    : Number(salary?.gross_salary || 0);
+  const monthlyBasic = Number(components.find((c: any) => c.code === "BASIC")?.monthlyAmount) || 0;
+  const monthlyHRA = components.find((c: any) => c.code === "HRA")?.monthlyAmount || 0;
   const cardPF = computePFPreview({
     employeeId: id!,
     year: currentPeriod[0],
@@ -411,8 +443,14 @@ export function EmployeeDetailPage() {
         />
         <StatCard
           title="Annual Gross"
-          value={salary ? formatCurrency(salary.gross_salary) : "—"}
-          subtitle={salary ? "Before deductions" : "Not assigned"}
+          value={salary && !cardCtcError ? formatCurrency(annualGrossPreview) : "—"}
+          subtitle={
+            cardCtcError
+              ? "Review CTC allocation"
+              : salary
+                ? "Estimated before deductions"
+                : "Not assigned"
+          }
           icon={Banknote}
           accentClassName="bg-sky-50 text-sky-600"
         />
@@ -477,6 +515,11 @@ export function EmployeeDetailPage() {
                 />
               ))}
             </dl>
+            {cardCtcError && (
+              <p role="alert" className="mt-2 text-xs text-amber-700">
+                {cardCtcError}
+              </p>
+            )}
             {cardPF.warnings.map((warning) => (
               <p key={warning} role="alert" className="mt-2 text-xs text-amber-700">
                 {warning}
@@ -986,9 +1029,14 @@ export function EmployeeDetailPage() {
             }
           })()}
           pfDetails={pfDetails}
+          esiDetails={esiDetails}
           dateOfJoining={emp.date_of_joining?.slice(0, 10)}
           dateOfExit={emp.dateOfExit?.slice(0, 10)}
           taxInfo={taxInfo}
+          locationState={
+            emp.location_state ||
+            (/\b(bangalore|bengaluru)\b/i.test(emp.location_name || "") ? "KA" : undefined)
+          }
           loading={salaryAssigning}
           onSubmit={async (data) => {
             setSalaryAssigning(true);
@@ -1795,7 +1843,9 @@ function SalaryAssignForm({
   structures,
   currentCTC,
   currentOverrides,
+  locationState,
   pfDetails,
+  esiDetails,
   dateOfJoining,
   dateOfExit,
   taxInfo,
@@ -1808,12 +1858,20 @@ function SalaryAssignForm({
   currentCTC?: number;
   currentOverrides?: Record<string, number>;
   pfDetails?: Partial<PFDetails>;
+  esiDetails?: { isEligible?: boolean };
   dateOfJoining?: string;
   dateOfExit?: string;
   // Only `deductPT` is consumed here — the preview honours the per-employee
   // "Deduct Professional Tax?" toggle so it doesn't show a ₹200 PT line for
   // employees that have PT switched off.
-  taxInfo?: { deductPT?: boolean };
+  locationState?: string;
+  taxInfo?: {
+    deductPT?: boolean;
+    deductTDS?: boolean;
+    state?: string;
+    regime?: "old" | "new";
+    pan?: string;
+  };
   loading: boolean;
   onSubmit: (data: any) => void;
   onCancel: () => void;
@@ -1848,6 +1906,29 @@ function SalaryAssignForm({
     percentageOf: c.percentage_of || undefined,
   }));
 
+  const previewDate =
+    effectiveFrom >= "1900-01-01" && effectiveFrom <= "9998-12-31" ? effectiveFrom : todayStr;
+  const [previewYear, previewMonth] = previewDate.split("-").map(Number);
+  const employerPfInCtc = !!orgSettings?.employerPfInCtc;
+  const resolvePreview = () => {
+    const initial = resolveSalaryComponents(definitions, ctc, { overrides });
+    if (!employerPfInCtc) return initial;
+    return allocateCtcPreview(
+      initial,
+      ctc / 12,
+      {
+        employeeId,
+        year: previewYear,
+        month: previewMonth,
+        pfDetails,
+        orgOverrides: orgSettings,
+      },
+      esiDetails?.isEligible !== false,
+      orgSettings?.esiWageCeiling,
+      overrides,
+    ).components;
+  };
+
   // The resolver returns each component with its `type` ("earning" /
   // "deduction" / "reimbursement"). Older code lumped all rows together
   // under "Monthly Breakdown" AND summed everything into Monthly Gross,
@@ -1869,25 +1950,21 @@ function SalaryAssignForm({
   // realistic component values and the error is just typing noise.
   if (ctc >= 12000 && definitions.length) {
     try {
-      resolved = resolveSalaryComponents(definitions, ctc, { overrides });
+      resolved = resolvePreview();
     } catch (err) {
-      resolveError =
-        err instanceof SalaryResolverError ? err.message : "Could not compute breakdown.";
+      resolveError = err instanceof Error ? err.message : "Could not compute breakdown.";
     }
   } else if (ctc > 0 && definitions.length) {
     // Try resolving silently — show the breakdown if it works, but don't
     // surface a typing-time error.
     try {
-      resolved = resolveSalaryComponents(definitions, ctc, { overrides });
+      resolved = resolvePreview();
     } catch {
       /* swallow */
     }
   }
   const earningRows = resolved.filter((c) => c.type === "earning");
   const reimbursementRows = resolved.filter((c) => c.type === "reimbursement");
-  const previewDate =
-    effectiveFrom >= "1900-01-01" && effectiveFrom <= "9998-12-31" ? effectiveFrom : todayStr;
-  const [previewYear, previewMonth] = previewDate.split("-").map(Number);
   const previewPF = computePFPreview({
     employeeId,
     year: previewYear,
@@ -1901,6 +1978,7 @@ function SalaryAssignForm({
   // Statutory PF is shown once, from the same calculation used by payroll.
   const deductionRows = resolved.filter((c) => {
     const code = c.code.toUpperCase().replace(/[^A-Z]/g, "");
+    if (employerPfInCtc && code.includes("ESI")) return false;
     return (
       c.type === "deduction" &&
       !(
@@ -1923,14 +2001,51 @@ function SalaryAssignForm({
   // Pay", so the breakdown never reconciled — Gross − EPF was always ₹200
   // above the shown Net. Now it's its own line AND it honours the
   // employee's "Deduct PT" toggle: when PT is off, no ₹200 is applied.
-  const ptDeducted = taxInfo?.deductPT !== false;
-  const monthlyPT = ptDeducted ? 200 : 0;
+  const ptDeducted = taxInfo?.deductPT !== false && !orgSettings?.ptDisabled;
+  const monthlyPT = ptDeducted
+    ? professionalTaxAmount(
+        taxInfo?.state || locationState || orgSettings?.state || "KA",
+        monthlyGross,
+        previewMonth,
+        previewYear,
+      )
+    : 0;
   const monthlyEmployerEPS = previewPF.employerEPS;
   const monthlyEmployerEPF = previewPF.employerEPF;
   const monthlyEDLI = previewPF.edliCharges;
   const monthlyPFAdmin = previewPF.adminCharges;
-  const totalEmployerContribution = previewPF.totalEmployer;
-  const employerPfInCtc = !!orgSettings?.employerPfInCtc;
+  const esi = previewESI(
+    monthlyGross,
+    esiDetails?.isEligible !== false,
+    orgSettings?.esiWageCeiling,
+  );
+  if (!employerPfInCtc && deductionRows.some((c) => c.code.toUpperCase().includes("ESI"))) {
+    esi.employee = 0;
+    esi.employer = 0;
+  }
+  const totalEmployerContribution = previewPF.totalEmployer + esi.employer;
+
+  const tdsEnabled = taxInfo?.deductTDS !== false;
+  const taxInput = {
+    employeeId,
+    regime: taxInfo?.regime || "new",
+    annualGross: monthlyGross * 12,
+    basicAnnual: (resolved.find((c) => c.code === "BASIC")?.monthlyAmount || 0) * 12,
+    hraAnnual: (resolved.find((c) => c.code === "HRA")?.monthlyAmount || 0) * 12,
+    employeePfAnnual: previewPF.totalEmployee * 12,
+    rentPaidAnnual: 0,
+    isMetroCity: false,
+    declarations: [],
+    panNumber: taxInfo?.pan || null,
+  };
+  const tdsPreview = useQuery({
+    queryKey: ["salary-revision-tds", taxInput],
+    queryFn: () => apiPost<any>("/tax/calculator/simulate", taxInput),
+    enabled: tdsEnabled && monthlyGross > 0 && !resolveError,
+    staleTime: 30000,
+  });
+  const monthlyTds = tdsEnabled ? Number(tdsPreview.data?.data?.monthlyTds || 0) : 0;
+  const netPreviewReady = !tdsEnabled || (tdsPreview.isSuccess && !tdsPreview.isFetching);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -2112,6 +2227,24 @@ function SalaryAssignForm({
                   <span>-{formatCurrency(previewPF.employeeVPF)}</span>
                 </div>
               )}
+              {esi.employee > 0 && (
+                <div className="flex justify-between text-sm text-red-600">
+                  <span>Employee ESI (est.)</span>
+                  <span>-{formatCurrency(esi.employee)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm text-red-600">
+                <span>Income Tax / TDS (est.)</span>
+                <span>
+                  {!tdsEnabled
+                    ? "Not deducted"
+                    : tdsPreview.isError
+                      ? "Unavailable"
+                      : !netPreviewReady
+                        ? "Calculating..."
+                        : `-${formatCurrency(monthlyTds)}`}
+                </span>
+              </div>
               <div className="flex justify-between text-sm text-red-600">
                 <span>Professional Tax (est.){ptDeducted ? "" : " (not deducted)"}</span>
                 <span>{monthlyPT > 0 ? `-${formatCurrency(monthlyPT)}` : formatCurrency(0)}</span>
@@ -2119,13 +2252,17 @@ function SalaryAssignForm({
               <div className="text-brand-700 flex justify-between border-t border-gray-200 pt-2 text-sm font-bold">
                 <span>Approx Net Pay</span>
                 <span>
-                  {formatCurrency(
-                    monthlyGross +
-                      monthlyReimbursements -
-                      monthlyStructureDeductions -
-                      previewPF.totalEmployee -
-                      monthlyPT,
-                  )}
+                  {netPreviewReady
+                    ? formatCurrency(
+                        monthlyGross +
+                          monthlyReimbursements -
+                          monthlyStructureDeductions -
+                          previewPF.totalEmployee -
+                          monthlyPT -
+                          esi.employee -
+                          monthlyTds,
+                      )
+                    : "Pending TDS estimate"}
                 </span>
               </div>
 
@@ -2163,6 +2300,12 @@ function SalaryAssignForm({
                         <span>{formatCurrency(monthlyPFAdmin)}</span>
                       </div>
                     )}
+                    {esi.employer > 0 && (
+                      <div className="flex justify-between text-xs text-blue-900">
+                        <span>Employer ESI</span>
+                        <span>{formatCurrency(esi.employer)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between border-t border-blue-200 pt-1 text-xs font-semibold text-blue-900">
                       <span>Total Employer Contribution / month</span>
                       <span>{formatCurrency(totalEmployerContribution)}</span>
@@ -2170,7 +2313,7 @@ function SalaryAssignForm({
                   </div>
                   <p className="mt-2 text-[11px] text-blue-700">
                     {employerPfInCtc
-                      ? "Already included in the negotiated CTC. Total Cost to Company = Gross."
+                      ? `Included in the negotiated CTC. Gross plus employer contributions = ${formatCurrency(monthlyGross + totalEmployerContribution)} / month. Employee deductions come from gross.`
                       : `Paid by the company on top of CTC. Total Cost to Company = ${formatCurrency(monthlyGross + totalEmployerContribution)} / month.`}
                   </p>
                 </div>

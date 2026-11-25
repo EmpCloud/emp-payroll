@@ -5,6 +5,7 @@ export * from "./constants/us";
 export * from "./constants/uk";
 export * from "./constants/za";
 export { computeIndiaPF, getIndiaPFWageCeiling, getIndiaPFDueDate } from "./utils/india-pf";
+export { resolveCtcInclusiveComponents } from "./utils/ctc-inclusive";
 
 // Explicit named re-exports — Rollup's CJS analyzer can't see runtime symbols
 // through `export *` wildcards, which makes Vite client builds fail with
@@ -24,3 +25,5 @@ export type {
   ResolveOptions,
   ResolverWarning,
 } from "./utils/salary-resolver";
+
+export { professionalTaxAmount } from "./utils/professional-tax";
