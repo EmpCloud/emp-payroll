@@ -8,7 +8,7 @@ import {
   ESI_WAGE_CEILING,
   ESI_EMPLOYEE_RATE,
   ESI_EMPLOYER_RATE,
-  PT_SLABS,
+  professionalTaxAmount,
   PFContribution,
   ESIContribution,
   ProfessionalTax,
@@ -33,11 +33,8 @@ export interface OrgStatutoryOverrides {
   pfEdliEnabled?: boolean | null;
   pfAdminEnabled?: boolean | null;
   // Migration 032 — when true, the offer-letter CTC already includes the
-  // employer's PF / ESI / EDLI / admin contributions, so payroll reports
-  // total_employer_cost = gross_salary instead of gross + employer cost
-  // on top. Doesn't change the math the engine returns -- the employer
-  // contribution numbers are still accurate per row -- it just changes
-  // how the payroll-run roll-up frames "Total Cost to Company".
+  // employer's PF / ESI / EDLI / admin contributions. Payroll allocates
+  // regular gross inside that budget before computing employee deductions.
   employerPfInCtc?: boolean | null;
 }
 
@@ -79,6 +76,7 @@ export function computeESI(params: {
   month: number;
   year: number;
   grossSalary: number;
+  eligibilityWages?: number;
   orgOverrides?: OrgStatutoryOverrides;
 }): ESIContribution | null {
   const { employeeId, month, year, grossSalary, orgOverrides } = params;
@@ -92,7 +90,7 @@ export function computeESI(params: {
       : ESI_WAGE_CEILING;
 
   // ESI applicable only if gross <= effective ceiling
-  if (grossSalary > ceiling) {
+  if ((params.eligibilityWages ?? grossSalary) > ceiling) {
     return null;
   }
 
@@ -122,22 +120,7 @@ export function computeProfessionalTax(params: {
 }): ProfessionalTax {
   const { employeeId, month, year, state, grossSalary } = params;
 
-  const slabs = PT_SLABS[state.toUpperCase()];
-  let taxAmount = 0;
-
-  if (slabs && slabs.length > 0) {
-    for (const slab of slabs) {
-      if (grossSalary >= slab.min && grossSalary <= slab.max) {
-        taxAmount = slab.tax;
-        break;
-      }
-    }
-
-    // Maharashtra: Feb month has ₹300 for highest slab
-    if (state.toUpperCase() === "MH" && month === 2 && grossSalary > 10000) {
-      taxAmount = 300;
-    }
-  }
+  const taxAmount = professionalTaxAmount(state, grossSalary, month, year);
 
   return { employeeId, month, year, state, grossSalary, taxAmount };
 }

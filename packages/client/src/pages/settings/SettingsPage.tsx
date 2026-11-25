@@ -836,7 +836,7 @@ function StatutoryOverridesCard({ settings }: { settings: any }) {
             id="employer_pf_in_ctc"
             defaultChecked={!!settings?.employerPfInCtc}
             title="Employer PF / ESI is included in CTC"
-            description={`Tick this if your offer letter's CTC ALREADY bundles the employer's PF, ESI, EDLI and admin contributions. The Total Cost to Company on each payslip will then equal the gross (no extra "+₹X employer cost on top"). Leave unticked if your offers say "CTC + Employer Cost" separately.`}
+            description="When enabled, the agreed CTC is split into gross earnings and employer PF, ESI, EDLI and admin contributions. Employee PF and other employee deductions are then deducted from gross earnings to calculate net pay. When disabled, employer contributions are paid on top of gross earnings."
           />
         </div>
 

@@ -2395,7 +2395,7 @@
     "calcs": {
       "perNight": "Per Night ₹",
       "dayPay": "× Day Pay",
-      "netPayPercent": "% of Net Pay",
+      "netPayPercent": "% of Gross Pay",
       "perOtDay": "Per OT day ₹",
       "fixed": "Fixed",
       "balance": "Balance"
@@ -2405,7 +2405,7 @@
       "fixed": "Fixed ₹{{value}}",
       "perNight": "₹{{value}} / night",
       "wholeSalaryNight": "{{value}}× whole salary (night shift)",
-      "netPayNight": "{{value}}% of net pay (night shift)",
+      "netPayNight": "{{value}}% of gross pay (night shift)",
       "perOtDay": "₹{{value}} / OT day",
       "dayPayOt": "{{value}}× day pay / OT day",
       "balancing": "Balancing"

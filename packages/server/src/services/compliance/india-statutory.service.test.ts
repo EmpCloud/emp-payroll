@@ -458,6 +458,25 @@ describe("computeESI", () => {
 // =============================================================================
 
 describe("computeProfessionalTax", () => {
+  it.each([
+    [24999, 8, 0],
+    [25000, 8, 200],
+    [50000, 2, 300],
+  ])(
+    "uses Karnataka location and period for salary %s month %s",
+    (grossSalary, month, expected) => {
+      expect(
+        computeProfessionalTax({
+          employeeId: "1",
+          month,
+          year: 2026,
+          state: "Karnataka",
+          grossSalary,
+        }).taxAmount,
+      ).toBe(expected);
+    },
+  );
+
   const base = { employeeId: "emp-1", month: 3, year: 2026 };
 
   // Karnataka

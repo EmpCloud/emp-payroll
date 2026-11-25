@@ -88,14 +88,16 @@ async function mergeUserWithProfile(ecUser: EmpCloudUser, payrollDb: any): Promi
   // older EmpCloud schemas without the table are tolerated by treating
   // the lookup as null. ecUser.location_id is the FK.
   let locationName: string | null = null;
+  let locationState: string | null = null;
   if (ecUser.location_id) {
     try {
       const ecDb = getEmpCloudDB();
       const loc = await ecDb("organization_locations")
         .where({ id: ecUser.location_id })
-        .select("name")
+        .select("*")
         .first();
       locationName = loc?.name || null;
+      locationState = loc?.state || null;
     } catch {
       locationName = null;
     }
@@ -150,6 +152,7 @@ async function mergeUserWithProfile(ecUser: EmpCloudUser, payrollDb: any): Promi
     location_id: ecUser.location_id,
     location: locationName,
     location_name: locationName,
+    location_state: locationState,
     reportingManagerId: ecUser.reporting_manager_id,
     reporting_manager_id: ecUser.reporting_manager_id,
     employmentType: ecUser.employment_type,
