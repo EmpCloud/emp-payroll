@@ -51,7 +51,18 @@ async function logRunAction(
 // role gate AND the payroll-lock check. Specific actions below add per-permission
 // checks via requirePermission() so custom roles can grant access without bumping
 // a user up to hr_admin.
-router.use(authenticate, authorize("hr_admin", "hr_manager"), enforcePayrollLock);
+router.use(
+  authenticate,
+  authorize("hr_admin", "hr_manager"),
+  requirePermission(
+    "payroll:view_all",
+    "payroll:view_reports",
+    "payroll:run",
+    "payroll:approve_run",
+    "payroll:export",
+  ),
+  enforcePayrollLock,
+);
 
 router.get(
   "/",
@@ -246,6 +257,7 @@ router.get(
 
 router.get(
   "/:id/payslips",
+  requirePermission("payroll:view_all"),
   wrap(async (req, res) => {
     const data = await svc.getRunPayslips(param(req, "id"), String(req.user!.empcloudOrgId));
     res.json({ success: true, data });

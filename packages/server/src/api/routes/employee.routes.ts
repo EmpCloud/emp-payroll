@@ -43,6 +43,18 @@ router.get(
 );
 
 // Static routes BEFORE /:id param routes
+// Salary CSV data is restricted separately from the employee directory.
+router.get(
+  "/salary-template",
+  authorize("hr_admin", "hr_manager"),
+  requirePermission("salary:view_all", "payroll:view_all"),
+  wrap(async (req, res) => {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const data = await svc.salaryTemplate(req.user!.empcloudOrgId, page);
+    res.json({ success: true, data });
+  }),
+);
+
 router.get(
   "/search",
   wrap(async (req, res) => {

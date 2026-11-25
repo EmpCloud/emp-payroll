@@ -27,6 +27,17 @@ vi.mock("../db/adapters", () => ({
   closeDB: vi.fn(),
 }));
 
+vi.mock("../db/empcloud", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../db/empcloud")>()),
+  findUserById: vi.fn(async (id: number) => ({
+    id,
+    organization_id: 1,
+    status: 1,
+    role: id === 1 ? "hr_admin" : "employee",
+  })),
+  resolveUserPermissions: vi.fn(async () => ["payroll:view_own"]),
+}));
+
 vi.mock("../services/apikey.service", () => ({
   ApiKeyService: vi.fn().mockImplementation(() => ({
     validate: vi.fn().mockResolvedValue(null),
@@ -87,7 +98,7 @@ describe("Payroll Auth Middleware", () => {
       expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 401 }));
     });
 
-    it("decodes valid JWT from header", () => {
+    it("decodes valid JWT from header", async () => {
       const payload: AuthPayload = {
         empcloudUserId: 1,
         empcloudOrgId: 1,
@@ -104,11 +115,11 @@ describe("Payroll Auth Middleware", () => {
 
       authenticate(req, mockRes(), next);
 
-      expect(next).toHaveBeenCalledWith();
+      await vi.waitFor(() => expect(next).toHaveBeenCalledWith());
       expect(req.user).toMatchObject({ empcloudUserId: 1, role: "hr_admin" });
     });
 
-    it("decodes valid JWT from query param", () => {
+    it("decodes valid JWT from query param", async () => {
       const payload = {
         empcloudUserId: 2,
         empcloudOrgId: 1,
@@ -125,7 +136,7 @@ describe("Payroll Auth Middleware", () => {
 
       authenticate(req, mockRes(), next);
 
-      expect(next).toHaveBeenCalledWith();
+      await vi.waitFor(() => expect(next).toHaveBeenCalledWith());
       expect(req.user.empcloudUserId).toBe(2);
     });
 

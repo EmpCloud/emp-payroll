@@ -1,11 +1,12 @@
 import { useState, useRef } from "react";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
-import { Upload, FileText, CheckCircle2, AlertCircle } from "lucide-react";
+import { Upload, Download, FileText, CheckCircle2, AlertCircle } from "lucide-react";
 import { Input } from "./Input";
-import { apiPost } from "@/api/client";
+import { apiGet, apiPost } from "@/api/client";
 import { useSalaryStructures } from "@/api/hooks";
 import toast from "react-hot-toast";
+import { parseSalaryCSV, salaryTemplateCSV } from "./salary-csv";
 
 interface BulkSalaryCSVModalProps {
   open: boolean;
@@ -19,6 +20,7 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
   const [structureId, setStructureId] = useState("");
   const [effectiveFrom, setEffectiveFrom] = useState(new Date().toISOString().slice(0, 10));
   const [importing, setImporting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [result, setResult] = useState<{
     success: number;
     failed: number;
@@ -42,22 +44,32 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
       ? structuresPayload.data
       : [];
 
-  function parseCSV(text: string): Record<string, string>[] {
-    const lines = text.trim().split("\n");
-    if (lines.length < 2) return [];
-    const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
-    return lines.slice(1).map((line) => {
-      const values = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
-      const row: Record<string, string> = {};
-      headers.forEach((h, i) => {
-        // Skip empty values when the same header repeats so a stray
-        // duplicate column ("First Name,...,First Name,...") doesn't
-        // overwrite a real value with "".
-        if (row[h] && !values[i]) return;
-        row[h] = values[i] || "";
-      });
-      return row;
-    });
+  async function downloadTemplate() {
+    setDownloading(true);
+    try {
+      const employees: any[] = [];
+      let page = 1;
+      let totalPages = 1;
+      do {
+        const response = await apiGet<any>("/employees/salary-template", { page });
+        const result = response.data;
+        employees.push(...result.data);
+        totalPages = result.totalPages;
+        page++;
+      } while (page <= totalPages);
+      const url = URL.createObjectURL(
+        new Blob([salaryTemplateCSV(employees)], { type: "text/csv;charset=utf-8" }),
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "salary-update-template.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error?.message || "Unable to download salary template");
+    } finally {
+      setDownloading(false);
+    }
   }
 
   // Case- and separator-insensitive lookup. Tries each candidate against
@@ -82,7 +94,7 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
     setResult(null);
     const reader = new FileReader();
     reader.onload = (e) => {
-      const rows = parseCSV(e.target?.result as string);
+      const rows = parseSalaryCSV(e.target?.result as string);
       setPreview(rows.slice(0, 5));
     };
     reader.readAsText(f);
@@ -102,7 +114,7 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
     setImporting(true);
     const reader = new FileReader();
     reader.onload = async (e) => {
-      const rows = parseCSV(e.target?.result as string);
+      const rows = parseSalaryCSV(e.target?.result as string);
       let success = 0;
       let failed = 0;
       const errors: string[] = [];
@@ -128,6 +140,7 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
           // insensitive via `pick`, so "CTC", "ctc", "Annual CTC", "annual_ctc"
           // all resolve to the same logical field.
           const ctcStr = pick(row, ["Annual CTC", "CTC"]);
+          if (!ctcStr) continue;
           const ctc = Number(ctcStr);
 
           if (!employeeId) {
@@ -135,7 +148,7 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
             failed++;
             continue;
           }
-          if (!ctc || ctc <= 0) {
+          if (!Number.isFinite(ctc) || ctc <= 0) {
             errors.push(`${employeeId}: Invalid or missing CTC`);
             failed++;
             continue;
@@ -195,7 +208,16 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
         const payload: any = response?.data ?? {};
         const updated = Number(payload.updated ?? 0);
         const apiFailures = Number(payload.failed ?? 0);
-        setResult({ success: updated, failed: apiFailures, errors });
+        setResult({
+          success: updated,
+          failed: failed + apiFailures,
+          errors: [
+            ...errors,
+            ...(payload.results || [])
+              .filter((r: any) => !r.success)
+              .map((r: any) => `${r.employeeId}: ${r.error}`),
+          ],
+        });
         if (updated > 0) {
           toast.success(`Updated salary for ${updated} employee(s)`);
           onSuccess?.();
@@ -233,6 +255,15 @@ export function BulkSalaryCSVModal({ open, onClose, onSuccess }: BulkSalaryCSVMo
       <div className="space-y-4">
         {!file ? (
           <>
+            <Button variant="outline" onClick={downloadTemplate} disabled={downloading}>
+              <Download className="mr-2 h-4 w-4" />
+              {downloading ? "Preparing template..." : "Download employee salary template"}
+            </Button>
+            <p className="text-xs text-gray-500">
+              Includes all payroll employees and their current annual CTC. Enter a salary for
+              employees with a blank CTC; blank rows are skipped on import. All rows with a CTC will
+              be updated using the selected salary structure.
+            </p>
             <div
               onClick={() => inputRef.current?.click()}
               className="hover:border-brand-400 hover:bg-brand-50 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-8 transition-colors"
