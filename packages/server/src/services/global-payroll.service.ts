@@ -251,7 +251,7 @@ const DEFAULT_CHECKLIST: Array<{ item: string; category: string }> = [
 export class GlobalPayrollService {
   private db = getDB();
 
-  private async validateEmployeeLink(orgId: string, userId: unknown, email: string) {
+  async validateEmployeeLink(orgId: string, userId: unknown, email: string) {
     if (userId == null || userId === "") return;
     const id = Number(userId);
     if (!Number.isSafeInteger(id) || id <= 0)

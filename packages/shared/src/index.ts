@@ -1,5 +1,13 @@
 export * from "./types/index";
 export type * from "./types/uae-payroll";
+export type { GlobalEmployeeBulkMode, GlobalEmployeeBulkResult } from "./utils/global-employee-csv";
+export {
+  GLOBAL_EMPLOYEE_CSV_HEADERS,
+  GLOBAL_EMPLOYEE_CSV_MAX_ROWS,
+  GLOBAL_EMPLOYEE_CSV_MAX_BYTES,
+  parseGlobalEmployeeCsv,
+  stringifyGlobalEmployeeCsv,
+} from "./utils/global-employee-csv";
 export * from "./constants/india";
 export * from "./constants/us";
 export * from "./constants/uk";

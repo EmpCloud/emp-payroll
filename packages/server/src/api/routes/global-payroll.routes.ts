@@ -1,6 +1,11 @@
 import { Router } from "express";
 import { createHash } from "node:crypto";
 import { GlobalPayrollService } from "../../services/global-payroll.service";
+import { GlobalEmployeeBulkService } from "../../services/global-employee-bulk.service";
+import {
+  globalEmployeeBulkSchema,
+  globalEmployeeBulkTemplateSchema,
+} from "../validators/global-employee-bulk";
 import { UaePayrollService } from "../../services/uae/uae-payroll.service";
 import {
   recalculateUaeSchema,
@@ -25,6 +30,7 @@ import { wrap, param } from "../helpers";
 
 const router = Router();
 const svc = new GlobalPayrollService();
+const bulkEmployees = new GlobalEmployeeBulkService();
 const uae = new UaePayrollService();
 const payslipCsp = `default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-hashes' 'sha256-${createHash("sha256").update("window.print()").digest("base64")}'; frame-ancestors 'none'; base-uri 'none'`;
 
@@ -129,6 +135,44 @@ router.get(
       data: data.data,
       meta: { total: data.total, page: data.page, limit: data.limit, totalPages: data.totalPages },
     });
+  }),
+);
+
+router.get(
+  "/employees/bulk/template",
+  authorize("hr_admin", "hr_manager"),
+  validate(globalEmployeeBulkTemplateSchema),
+  wrap(async (req, res) => {
+    const { query } = globalEmployeeBulkTemplateSchema.parse({ query: req.query });
+    res.setHeader("Cache-Control", "no-store");
+    res.attachment(`global-employees-${query.mode}-template.csv`).type("text/csv");
+    res.send(await bulkEmployees.template(query.mode));
+  }),
+);
+
+router.get(
+  "/employees/bulk/export",
+  authorize("hr_admin", "hr_manager"),
+  wrap(async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.attachment("global-employees-update.csv").type("text/csv");
+    res.send(await bulkEmployees.export(String(req.user!.empcloudOrgId)));
+  }),
+);
+
+router.post(
+  "/employees/bulk",
+  authorize("hr_admin", "hr_manager"),
+  validate(globalEmployeeBulkSchema),
+  wrap(async (req, res) => {
+    const { body } = globalEmployeeBulkSchema.parse({ body: req.body });
+    const data = await bulkEmployees.process(String(req.user!.empcloudOrgId), {
+      mode: body.mode!,
+      csv: body.csv!,
+      apply: body.apply,
+    });
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ success: true, data });
   }),
 );
 
